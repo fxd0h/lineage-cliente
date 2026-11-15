@@ -232,6 +232,8 @@ void procesar_barra(App& a) {
     a.pagina_barra = std::min(a.pagina_barra, paginas(a) - 1);
     // La rueda sobre la barra o el selector: hacia arriba, la página siguiente (como "^").
     if (a.entrada.rueda && paginas(a) > 1 && sobre_atajos(a)) cambiar_pagina_barra(a, a.pagina_barra + a.entrada.rueda);
+    // Upstream's 1–0 / Alt+1–0 shortcut bar keys: simple UI only (the original UI has no such bar).
+    if (!a.cfg.ui_simple) return mantener_numero(a);
     if (a.entrada.alt_numero) usar_numero(a, a.entrada.alt_numero);
     // 1–0 sin Alt: con el chat cerrado (chat con Enter) y sin otro diálogo de texto abierto.
     if (a.entrada.numero && a.cfg.chat_con_enter && !a.escribiendo_chat && !escribiendo_en_ventana(a) && !a.cantidad.abierto)

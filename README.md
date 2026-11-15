@@ -222,7 +222,7 @@ title is shown as text.
 ## Controls
 
 **F1** shows all the keys in the game. Window hotkeys follow the original client: Ctrl+I inventory, Ctrl+A status,
-Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (Alt+I/C/S also work).
+Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (simple UI: also Alt+I/C/S).
 
 ### Interface and view
 
@@ -299,7 +299,7 @@ Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (A
     and undeletable items.
 - **Items on the ground:** click one to pick it up; if it is far, the character walks to it. The name shows on hover.
 - **Giving items:** drag an item from the inventory onto an NPC or pet; from a stack, it asks how many.
-- **1..0 (or Alt+1..Alt+0):** shortcut bar (bottom center). Drag a spell (from Alt+S) or an item (from Alt+I) onto
+- **1..0 (or Alt+1..Alt+0), simple UI only:** shortcut bar (bottom center). Drag a spell (from Alt+S) or an item (from Alt+I) onto
   a slot. Clicking it, or its number or Alt+number, uses it; right-click empties it; dragging between slots moves
   it. Middle-click on a slot selects it (gold frame), and the middle button on a character or monster uses the
   selected spell there; held, it repeats each time the wait ends (for an item, every half second). With nothing under the pointer it works like the slot's key (a targeted spell waits for the click). A dot next to the page number means the selected slot is on another page. Spell slots

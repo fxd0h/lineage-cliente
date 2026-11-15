@@ -426,7 +426,7 @@ void dibujar_ayuda_teclas(App& a) {
         {"/exclude Name", "Block / unblock a player (no name: list)"},
         {"/buddy, /addbuddy, /delbuddy", "Buddy list"},
         {"Middle click", "Select bar slot / use it on target"},
-        {"Ctrl+I / A / S", "Inventory / status / magic (Alt+I / C / S too)"},
+        {"Ctrl+I / A / S", "Inventory / status / magic"},
         {"Ctrl+C / V / Q / H", "Social / options / restart-quit / this help"},
         {"Ctrl +/- / Ctrl 0", "Zoom in / out / auto"},
         {"Arrows, mouse", "Walk; click a monster to attack"},

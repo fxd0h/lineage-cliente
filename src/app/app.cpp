@@ -121,17 +121,19 @@ void leer_entrada(App& a) {
             case SDLK_BACKSPACE: e.retroceso = true; break;
             case SDLK_PAGEUP: e.pagina_arriba = true; break;
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
-            // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26); Alt+I/C/S are kept from upstream.
+            // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26). Upstream's Alt+I/C/S and A only
+            // apply to the simple UI; the original UI keeps only the original keys.
             case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: {
                 const SDL_Keymod m = ev.key.mod;
                 if ((m & SDL_KMOD_ALT) && !(m & SDL_KMOD_CTRL)) {
+                    if (!a.cfg.ui_simple) break;
                     if (ev.key.key == SDLK_C) e.alt_c = true;
                     else if (ev.key.key == SDLK_I) e.alt_i = true;
                     else if (ev.key.key == SDLK_S) e.alt_s = true;
                 } else if ((m & SDL_KMOD_CTRL) && !(m & (SDL_KMOD_ALT | SDL_KMOD_SHIFT))) {
                     if (ev.key.repeat) break;
                     e.atajo_ctrl = static_cast<char>(ev.key.key - SDLK_A + 'A');
-                } else if (ev.key.key == SDLK_A && !(m & (SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_GUI | SDL_KMOD_SHIFT))) {
+                } else if (a.cfg.ui_simple && ev.key.key == SDLK_A && !(m & (SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_GUI | SDL_KMOD_SHIFT))) {
                     e.tecla_a = true;
                 }
                 break;
