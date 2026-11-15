@@ -1,5 +1,16 @@
 # Lineage Client (C++23 + SDL3)
 
+> **About this fork.** This is a fork of [javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente),
+> made so I could play Lineage 1 again on **Linux**. I had nothing better to spend tokens on, so I did this —
+> for old times' sake. *Por los viejos tiempos.*
+>
+> What the fork adds: a native Linux port (Vulkan/SPIR-V shaders, case-insensitive asset paths, Linux server
+> scripts), a look and feel closer to the original 2000–2008 client (original cursors, buff icons, overhead
+> bars, blessed-item outline, fixed 640×480 view scaled to any window with FSR/Anime4K/xBR/CRT filters),
+> and many rendering and gameplay fixes. Fork notes live in [docs/fork/](docs/fork/README.md). All credit
+> for the original client goes to Javier; this fork stays under the same GPL-3.0 license. No game assets are
+> included — you need your own Lineage installation.
+
 A new client for Lineage 1. It reads the resources of an original game installation (abandonware) and
 speaks the L1J protocol. It implements **deliverables 1 to 10** of the plan
 (`docs/analisis/PLAN_CLIENTE.md`): login, character selection and creation, moving in the world, chat
