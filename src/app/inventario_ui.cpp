@@ -205,6 +205,8 @@ void dibujar_inventario(App& a) {
             // A la barra de atajos (Alt+número lo usa).
             Slot s = t.buscar(a.arrastrando);
             if (s != SIN_SLOT) poner_atajo(a, casillero_bajo_puntero(a), {TipoAtajo::ITEM, a.arrastrando, t.col<I_GFX>()[s]});
+        } else if (a.arrastrando && autobuff_bajo_puntero(a) >= 0) {
+            poner_autobuff_item(a, autobuff_bajo_puntero(a), a.arrastrando);
         } else if (a.arrastrando && !sobre_alguna_ventana(a) && !sobre_barra(a)) {  // solo sobre el mundo
             // Sobre un NPC o una mascota se le da (C_GiveItem; el servidor decide si lo acepta); si
             // no, va al suelo.
