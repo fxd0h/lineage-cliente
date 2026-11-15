@@ -14,9 +14,12 @@ void draw_item_icon(Gpu& gpu, const RegionAtlas& r, int x, int y, float w, float
         gpu.dibujar_escalado(r, fx, fy, w, h, over, rgba(58, 0, 0), Mezcla::SILUETA_ADITIVA);
         return;
     }
+    gpu.dibujar_escalado(r, fx, fy, w, h, key, BLANCO);
     if (kind == BLESS_BLESSED && r.aura_dx != 0 && r.w != 0) {
-        // Blessed: a golden outline that follows the item's shape (as in the 3.x clients), drawn behind
-        // the icon from the precomputed dilated silhouette (2 px: stronger inner ring, softer outer ring).
+        // Blessed, as in the 2009 client (FUN_00445ac0, LUT 0x8f173c: v' = (2v + max) / 3): the silhouette
+        // dilated by 2 px and by 1 px each lighten the screen one third toward white, so the icon gets
+        // lighter and a 1-2 px whitish halo surrounds it. The aura image holds both passes (alpha 1/3 on
+        // the outer ring, 5/9 inside) and is drawn over the icon.
         RegionAtlas aura = r;
         aura.x = static_cast<u16>(r.x + r.aura_dx);
         aura.w = static_cast<u16>(r.w + AURA_PAD);
@@ -25,9 +28,8 @@ void draw_item_icon(Gpu& gpu, const RegionAtlas& r, int x, int y, float w, float
         const float sx = w / static_cast<float>(r.w), sy = h / static_cast<float>(r.h);
         const float pad = AURA_PAD / 2;
         gpu.dibujar_escalado(aura, fx - pad * sx, fy - pad * sy, static_cast<float>(aura.w) * sx,
-                             static_cast<float>(aura.h) * sy, key, rgba(255, 196, 60), Mezcla::SILUETA);
+                             static_cast<float>(aura.h) * sy, over, BLANCO, Mezcla::SILUETA);
     }
-    gpu.dibujar_escalado(r, fx, fy, w, h, over, BLANCO);
 }
 
 }  // namespace lin
