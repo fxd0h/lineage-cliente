@@ -530,7 +530,8 @@ bool tapa_a_otra(const App& a, IdVentana v);  // se solapa con otra abierta que 
 u8 opacidad_ventanas(const App& a);
 // Original client's framed windows (original_window.cpp): size, frame with close button (returns true
 // when it is clicked), ornaments drawn over the contents, and the image scroll bar.
-constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;
+constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;  // inventory and status
+constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // size of frame image 934
 bool uses_original_frame(const App& a, IdVentana v);
 void draw_original_status(App& a, int x, int y);  // status window: equipment and attributes tabs
 bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame);

@@ -2,6 +2,7 @@
 // images at fixed offsets from its corner, as drawn by the 2009 US client (S3EP1U.bin):
 //  - inventory (0x44d9a0): background 996 at (6,8), frame 997, category tabs 999+tab at (17,249),
 //    ornaments 998 at (0,11) over the items, trash can 1003/1004 at (163,252);
+//  - spellbook (0x4af3a0, see hechizos_ui.cpp): background 933 at (8,10), frame 934, ornaments 935 at (2,10);
 //  - status (0x4b4a00): background 1440 (equipment) or 982 (attributes) at (6,9), frame 1441 or 983,
 //    tab strip 985/986 at (22,248), ornaments 984 at (0,11).
 // The scroll bar uses the track 971 with arrows 1206–1209 and thumb 1211; close is the 1062 button.
@@ -25,7 +26,7 @@ const u64 KEY_BACKGROUND = clave_orden(CAPA_UI, 10), KEY_FRAME = clave_orden(CAP
 }  // namespace
 
 bool uses_original_frame(const App& a, IdVentana v) {
-    return !a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO);
+    return !a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO || v == IdVentana::HECHIZOS);
 }
 
 bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame) {

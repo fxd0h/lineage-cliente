@@ -434,24 +434,35 @@ void dibujar_teclas_f(App& a, int x, int y) {
 }
 
 // Fila de la ventana bajo el puntero -> hechizo (0 si no hay).
-// Ventana original (con la UI original, F2): el marco 934 con una grilla de 4 × 6 íconos y, a la
-// derecha, la tira de pestañas 936 + pestaña (11 pestañas de 19 px: niveles 1 a 10 y las
-// habilidades de clase, filas 11 a 28 de S_AddSkill). Posiciones medidas en las imágenes.
-constexpr u32 IMG_MAGIA = 934, IMG_PESTANAS = 936;
-constexpr int GRILLA_X = 37, GRILLA_Y = 43, CELDA = 34, COLUMNAS = 4, FILAS_GRILLA = 6;
-constexpr int PESTANAS = 11, ALTO_PESTANA = 19, PESTANAS_X = 207, PESTANAS_Y = 40;
+// Original UI spellbook (2009 client, 0x4af3a0): background 933 at (8,10), frame 934, the spell
+// icons in a 4 x 6 grid of 34 px cells, ornaments 935 at (2,10) on top and the S.power / M.resist
+// values in the boxes printed on 935. The tab strip 936..939 (one image per selected tab, four tabs
+// of about 19 px at its top) sits in the free column right of the grid. Positions measured on the images.
+// Tabs are spell level groups: levels 1-3, 4-6, 7-9 and the rest (level 10 and class skills); the
+// mouse wheel scrolls a page by rows when it has more than 24 spells.
+constexpr u32 IMG_SPELL_BG = 933, IMG_SPELL_FRAME = 934, IMG_SPELL_ORNAMENT = 935, IMG_SPELL_TABS = 936;
+constexpr int SPELL_BG_X = 8, SPELL_BG_Y = 10;
+constexpr int GRILLA_X = 36, GRILLA_Y = 42, CELDA = 34, COLUMNAS = 4, FILAS_GRILLA = 6;
+constexpr int PESTANAS = 4, ALTO_PESTANA = 19, PESTANAS_X = 173, PESTANAS_Y = 38;
+constexpr int SP_BOX_X = 76, SP_BOX_W = 19, MR_BOX_X = 147, MR_BOX_W = 22, STAT_BOX_Y = 260, STAT_BOX_H = 12;
 
-static bool ventana_original(const App& a) { return !a.cfg.ui_simple && a.g->img(IMG_MAGIA).valida(); }
+static bool ventana_original(const App& a) { return uses_original_frame(a, IdVentana::HECHIZOS); }
 
-// Hechizos sabidos de la pestaña actual.
+// Known spells of the current tab (S_AddSkill row = (id - 1) / 8 = spell level - 1).
 static int hechizos_pestana(const App& a, u16* ids, int cap) {
     int n = 0;
     for (u32 id = 1; id <= CANTIDAD_HECHIZOS && n < cap; ++id) {
         if (!a.mundo.jugador.sabe(id) || !a.hechizos[id].existe()) continue;
-        int fila = static_cast<int>((id - 1) / 8);
-        if (a.hechizos_pestana < PESTANAS - 1 ? fila == a.hechizos_pestana : fila >= PESTANAS - 1) ids[n++] = static_cast<u16>(id);
+        const int fila = static_cast<int>((id - 1) / 8);
+        if (std::min(fila / 3, PESTANAS - 1) == a.hechizos_pestana) ids[n++] = static_cast<u16>(id);
     }
     return n;
+}
+
+// First grid row shown, kept inside the page.
+static int primera_fila(const App& a, int n) {
+    const int filas = (n + COLUMNAS - 1) / COLUMNAS;
+    return std::clamp(static_cast<int>(a.hechizos_desplazamiento), 0, std::max(0, filas - FILAS_GRILLA));
 }
 
 u32 hechizo_bajo_puntero(const App& a) {
@@ -460,9 +471,9 @@ u32 hechizo_bajo_puntero(const App& a) {
         const Rect rv = rect_ventana(a, IdVentana::HECHIZOS);
         int cx = a.entrada.mx - (rv.x + GRILLA_X), cy = a.entrada.my - (rv.y + GRILLA_Y);
         if (cx < 0 || cy < 0 || cx >= COLUMNAS * CELDA || cy >= FILAS_GRILLA * CELDA) return 0;
-        u16 ids[COLUMNAS * FILAS_GRILLA];
-        int n = hechizos_pestana(a, ids, COLUMNAS * FILAS_GRILLA);
-        int i = (cy / CELDA) * COLUMNAS + cx / CELDA;
+        u16 ids[CANTIDAD_HECHIZOS];
+        const int n = hechizos_pestana(a, ids, CANTIDAD_HECHIZOS);
+        const int i = (primera_fila(a, n) + cy / CELDA) * COLUMNAS + cx / CELDA;
         return i < n ? ids[i] : 0;
     }
     u16 ids[CANTIDAD_HECHIZOS];
@@ -478,24 +489,30 @@ u32 hechizo_bajo_puntero(const App& a) {
 
 static void dibujar_original(App& a, int x0, int y0) {
     Graficos& g = *a.g;
-    const EntradaFrame& e = a.entrada;
-    // El marco tiene el interior transparente: se rellena detrás.
-    g.gpu().rectangulo(x0 + 8, y0 + 14, 191, 266, clave_orden(CAPA_UI, 9), rgba(14, 12, 10, opacidad_ventanas(a)));
-    g.gpu().dibujar(g.img(IMG_MAGIA), x0, y0, clave_orden(CAPA_UI, 10),
-                    rgba(255, 255, 255, static_cast<u8>(std::min(255, opacidad_ventanas(a) + 60))));
-    g.gpu().dibujar(g.img(IMG_PESTANAS + static_cast<u32>(a.hechizos_pestana)), x0 + PESTANAS_X, y0 + PESTANAS_Y,
-                    clave_orden(CAPA_UI, 10));
+    EntradaFrame& e = a.entrada;
+    if (draw_original_frame(a, x0, y0, IMG_SPELL_BG, SPELL_BG_X, SPELL_BG_Y, IMG_SPELL_FRAME)) a.ventana_hechizos = false;
+    // Tabs: one strip image per selected tab.
+    g.gpu().dibujar(g.img(IMG_SPELL_TABS + static_cast<u32>(a.hechizos_pestana)), x0 + PESTANAS_X, y0 + PESTANAS_Y,
+                    clave_orden(CAPA_UI, 16));
     for (int p = 0; p < PESTANAS; ++p)
-        if (e.clic && ui::sobre(e, x0 + PESTANAS_X, y0 + PESTANAS_Y + p * ALTO_PESTANA, 19, ALTO_PESTANA)) a.hechizos_pestana = p;
-    u16 ids[COLUMNAS * FILAS_GRILLA];
-    int n = hechizos_pestana(a, ids, COLUMNAS * FILAS_GRILLA);
+        if (e.clic && !a.arrastrando_hechizo && p != a.hechizos_pestana &&
+            ui::sobre(e, x0 + PESTANAS_X, y0 + PESTANAS_Y + p * ALTO_PESTANA, 19, ALTO_PESTANA)) {
+            a.hechizos_pestana = p;
+            a.hechizos_desplazamiento = 0;
+        }
+    u16 ids[CANTIDAD_HECHIZOS];
+    const int n = hechizos_pestana(a, ids, CANTIDAD_HECHIZOS);
+    const int filas = (n + COLUMNAS - 1) / COLUMNAS;
+    if (e.rueda && sobre_hechizos(a))
+        a.hechizos_desplazamiento = static_cast<u32>(std::clamp(primera_fila(a, n) - e.rueda, 0, std::max(0, filas - FILAS_GRILLA)));
+    const int first = primera_fila(a, n);
     const u32 bajo = hechizo_bajo_puntero(a);
     const u64 ki = clave_orden(CAPA_UI, 12), kt = clave_orden(CAPA_UI_TEXTO, 12);
-    for (int i = 0; i < n; ++i) {
-        const int x = x0 + GRILLA_X + (i % COLUMNAS) * CELDA, y = y0 + GRILLA_Y + (i / COLUMNAS) * CELDA;
+    for (int i = first * COLUMNAS; i < n && i < (first + FILAS_GRILLA) * COLUMNAS; ++i) {
+        const int x = x0 + GRILLA_X + (i % COLUMNAS) * CELDA, y = y0 + GRILLA_Y + (i / COLUMNAS - first) * CELDA;
         const Hechizo& h = a.hechizos[ids[i]];
         if (ids[i] == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, ki - (1ull << 24), rgba(90, 75, 30, 200));
-        // Sin MP suficiente, oscurecido.
+        // Without enough MP the icon is darkened.
         const u32 tinte = a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110);
         if (h.icono) g.gpu().dibujar(g.icono(h.icono), x, y, ki, tinte);
         else dibujar_etiqueta_hechizo(a, h, x, y, kt, a.mundo.jugador.mp >= h.mp ? rgba(255, 230, 120) : tinte);
@@ -506,12 +523,17 @@ static void dibujar_original(App& a, int x0, int y0) {
                 g.texto_sombra(t, static_cast<float>(x + 1), static_cast<float>(y + CELDA - 1 - ALTO_GLIFO), kt, rgba(255, 230, 120));
             }
     }
-    // Abajo: poder mágico (SP) y resistencia mágica (MR).
-    char t[16];
-    std::snprintf(t, sizeof t, "%d", a.mundo.jugador.sp);
-    g.texto(t, static_cast<float>(x0 + 78), static_cast<float>(y0 + 264), kt, rgba(255, 255, 254));
-    std::snprintf(t, sizeof t, "%d", a.mundo.jugador.mr);
-    g.texto(t, static_cast<float>(x0 + 149), static_cast<float>(y0 + 264), kt, rgba(255, 255, 254));
+    g.gpu().dibujar(g.img(IMG_SPELL_ORNAMENT), x0 + 2, y0 + 10, clave_orden(CAPA_UI, 15));
+    // Magic power (SP) and magic resistance (MR) in the boxes printed on the ornaments.
+    auto boxed = [&](int value, int bx, int bw) {
+        char t[16];
+        std::snprintf(t, sizeof t, "%d", value);
+        const int w = ancho_texto(t, std::strlen(t));
+        g.texto(t, static_cast<float>(x0 + bx + (bw - w) / 2), static_cast<float>(y0 + STAT_BOX_Y + (STAT_BOX_H - ALTO_GLIFO) / 2 + 1),
+                clave_orden(CAPA_UI_TEXTO, 16), rgba(255, 255, 254));
+    };
+    boxed(a.mundo.jugador.sp, SP_BOX_X, SP_BOX_W);
+    boxed(a.mundo.jugador.mr, MR_BOX_X, MR_BOX_W);
 }
 
 void dibujar_hechizos(App& a) {

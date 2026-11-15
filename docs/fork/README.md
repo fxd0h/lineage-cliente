@@ -53,7 +53,9 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - **Original framed windows** (`src/app/original_window.cpp`), layers and offsets read from the 2009
   binary: inventory (996 background, 997 frame, 998 ornaments, category tabs 999–1002, trash can
   1003, image scroll bar 971/1206–1211) with a 4 × 6 grid and worn items first; status window with
-  the equipment (1440/1441) and attributes (982/983) tabs (985/986), values in the image's boxes.
+  the equipment (1440/1441) and attributes (982/983) tabs (985/986), values in the image's boxes; spellbook (933 background, 934 frame, 935 ornaments, SP/MR in
+  its boxes, tab strip 936–939) with a 4 × 6 icon grid and four level-group tabs (1–3, 4–6, 7–9, rest;
+  the tab strip placement and grouping are inferred, not read from the binary).
 - **Panel:** F5–F12 boxes take items as well as spells; equipped items are listed first in the inventory.
 
 ### View and scaling
@@ -93,7 +95,7 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 
 ### Known gaps
 
-- Spellbook (images 933–939), shop and options windows are still upstream's.
+- Shop and options windows are still upstream's.
 - New-monster animations from `list.spz` (encrypted) are not decoded.
 - Windows port (DXIL shaders, Winsock, file mapping) not started.
 - No CI yet.

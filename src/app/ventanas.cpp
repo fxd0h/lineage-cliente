@@ -53,8 +53,11 @@ void guardar_posiciones(App& a) {
 Rect por_defecto(const App& a, IdVentana v) {
     const int y = ui::VENTANA_Y;
     // The original client's framed windows have the size of their frame image.
-    auto ancho = [&](IdVentana o) { return uses_original_frame(a, o) ? ORIGINAL_WINDOW_W : ui::VENTANA_ANCHO; };
-    const int w = ancho(v), h = uses_original_frame(a, v) ? ORIGINAL_WINDOW_H : ui::VENTANA_ALTO;
+    auto ancho = [&](IdVentana o) {
+        if (!uses_original_frame(a, o)) return ui::VENTANA_ANCHO;
+        return o == IdVentana::HECHIZOS ? SPELLBOOK_WINDOW_W : ORIGINAL_WINDOW_W;
+    };
+    const int w = ancho(v), h = !uses_original_frame(a, v) ? ui::VENTANA_ALTO : v == IdVentana::HECHIZOS ? SPELLBOOK_WINDOW_H : ORIGINAL_WINDOW_H;
     auto ocupa = [&](bool abierta_, IdVentana o) {
         const PosVentana& p = a.pos_ventanas[indice(o)];
         return abierta_ && !p.movida && !p.colocada ? ancho(o) + SEPARACION : 0;
