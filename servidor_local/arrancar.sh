@@ -9,8 +9,9 @@
 #   rechaza y no se guardan las casas (dueño, nombre, impuestos). "2026/11/10 22:00:00" sí.
 set -euo pipefail
 cd "$(dirname "$0")"
+source ./comun.sh
 ./arrancar_db.sh
 cd l1j-jp
 mkdir -p emblem  # C_Emblem guarda ahí los emblemas de los clanes (no viene en la distribución)
-exec "$(brew --prefix openjdk)/bin/java" -Duser.language=en -Duser.country=US -Duser.language.format=ja -Duser.country.format=JP -Duser.timezone=Asia/Tokyo \
+exec "$(java_bin)" -Duser.language=en -Duser.country=US -Duser.language.format=ja -Duser.country.format=JP -Duser.timezone=Asia/Tokyo \
     -Xms512m -Xmx1024m -cp "l1jserver.jar:lib/*:lib_extra/*" jp.l1j.Server

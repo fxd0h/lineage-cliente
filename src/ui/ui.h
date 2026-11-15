@@ -37,6 +37,8 @@ struct EntradaFrame {
     char texto[64] = {};          // texto escrito este frame (UTF-8; solo se acepta ASCII)
     int ntexto = 0;
     u64 ahora_ms = 0;
+    bool solto_fuera = false;     // botón izquierdo soltado este frame con el puntero fuera de la ventana
+    bool salio_con_boton = false; // el puntero salió de la ventana con el botón izquierdo mantenido (hasta soltarlo)
 };
 
 namespace ui {

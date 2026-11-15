@@ -5,6 +5,17 @@
 
 namespace lin {
 
+namespace {
+bool fuente_original = false;
+// Glifo y ancho de un punto Unicode de un texto UTF-8.
+GlifoTexto glifo_cp(u32 cp) {
+    if (fuente_original && cp >= 0x20 && cp < 0x7F) return {cp - 0x20, ANCHO_GLIFO_ASCII};
+    return {GLIFO_TTF_BASE + cp, static_cast<u8>(ancho_ttf(cp))};
+}
+}  // namespace
+
+void usar_fuente_original(bool si) { fuente_original = si; }
+
 bool FuenteBitmap::cargar(const std::string& carpeta) {
     if (!leer_archivo(carpeta + "font/eng.fnt", ascii) || ascii.size() < 95 * 12) return false;
     if (!leer_archivo(carpeta + "font/kor.fnt", coreana) || coreana.size() < 2401 * 24) coreana.clear();
@@ -66,7 +77,7 @@ void glifos_de_texto(const char* t, size_t n, std::vector<GlifoTexto>& salida) {
         for (size_t i = 0; i < n;) {
             u32 cp = 0;
             const size_t largo = largo_utf8(t, n, i, cp);
-            salida.push_back({GLIFO_TTF_BASE + cp, static_cast<u8>(ancho_ttf(cp))});
+            salida.push_back(glifo_cp(cp));
             i += largo;
         }
         return;
@@ -90,7 +101,7 @@ int ancho_texto(const char* t, size_t n) {
         for (size_t i = 0; i < n;) {
             u32 cp = 0;
             i += largo_utf8(t, n, i, cp);
-            w += ancho_ttf(cp);
+            w += glifo_cp(cp).ancho;
         }
         return w;
     }
@@ -116,7 +127,7 @@ size_t bytes_que_caben(const char* t, size_t n, int ancho_max) {
         if (utf8) {
             u32 cp = 0;
             largo = largo_utf8(t, n, i, cp);
-            cw = ancho_ttf(cp);
+            cw = glifo_cp(cp).ancho;
         } else {
             u8 c = static_cast<u8>(t[i]);
             largo = (c >= 0x81 && i + 1 < n) ? 2 : 1;

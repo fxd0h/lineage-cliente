@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <map>
+#include <mutex>
 #include <vector>
 #include "plataforma/archivo_mapeado.h"
 
@@ -7,7 +9,9 @@
 // y liberar con UnmapViewOfFile + CloseHandle. Las rutas deben convertirse de UTF-8 a UTF-16.
 #error "archivo_mapeado.cpp: falta la implementación para Windows"
 #else
+#include <dirent.h>
 #include <fcntl.h>
+#include <strings.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -26,9 +30,54 @@ ArchivoMapeado& ArchivoMapeado::operator=(ArchivoMapeado&& o) noexcept {
     return *this;
 }
 
+std::string ruta_real(const std::string& ruta) {
+#if defined(_WIN32) || defined(__APPLE__)
+    return ruta;
+#else
+    if (ruta.empty() || access(ruta.c_str(), F_OK) == 0) return ruta;
+    static std::mutex mu;
+    static std::map<std::string, std::vector<std::string>> cache;  // carpeta -> nombres
+    std::lock_guard<std::mutex> lk(mu);
+    std::string actual = ruta[0] == '/' ? "/" : "";
+    size_t i = 0;
+    while (i < ruta.size()) {
+        size_t j = ruta.find('/', i);
+        if (j == std::string::npos) j = ruta.size();
+        const std::string seg = ruta.substr(i, j - i);
+        const bool barra_final = j < ruta.size();
+        i = j + 1;
+        if (seg.empty()) continue;
+        std::string elegido = seg;
+        if (seg != "." && seg != "..") {
+            const std::string dir = actual.empty() ? "." : actual;
+            auto it = cache.find(dir);
+            if (it == cache.end()) {
+                std::vector<std::string> nombres;
+                if (DIR* d = opendir(dir.c_str())) {
+                    while (dirent* e = readdir(d)) nombres.emplace_back(e->d_name);
+                    closedir(d);
+                }
+                it = cache.emplace(dir, std::move(nombres)).first;
+            }
+            bool exacto = false, hallado = false;
+            for (const auto& n : it->second) {
+                if (n == seg) { exacto = true; break; }
+                if (!hallado && strcasecmp(n.c_str(), seg.c_str()) == 0) { elegido = n; hallado = true; }
+            }
+            if (exacto) elegido = seg;
+            else if (!hallado) return ruta;
+        }
+        actual += elegido;
+        if (barra_final) actual += '/';
+    }
+    return actual;
+#endif
+}
+
 // POSIX: válido para macOS y Linux.
-bool ArchivoMapeado::abrir(const std::string& ruta) {
+bool ArchivoMapeado::abrir(const std::string& ruta_) {
     cerrar();
+    const std::string ruta = ruta_real(ruta_);
     int fd = ::open(ruta.c_str(), O_RDONLY);
     if (fd < 0) return false;
     struct stat st;
@@ -63,7 +112,8 @@ void traer_a_memoria(Bytes tramo) {
     (void)suma;
 }
 
-bool leer_archivo(const std::string& ruta, std::vector<u8>& salida) {
+bool leer_archivo(const std::string& ruta_, std::vector<u8>& salida) {
+    const std::string ruta = ruta_real(ruta_);
     FILE* f = std::fopen(ruta.c_str(), "rb");  // MULTIPLATAFORMA (Windows): _wfopen con ruta UTF-16
     if (!f) return false;
     std::fseek(f, 0, SEEK_END);

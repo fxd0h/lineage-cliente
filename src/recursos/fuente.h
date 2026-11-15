@@ -42,5 +42,8 @@ int ancho_texto(const char* texto, size_t n);
 // Bytes del comienzo del texto que entran en `ancho_max` píxeles, sin partir caracteres CP949 y
 // cortando preferentemente en un espacio (para el ajuste de línea del chat). Al menos 1 carácter.
 size_t bytes_que_caben(const char* texto, size_t n, int ancho_max);
+// Con la fuente original, el ASCII imprimible de los textos UTF-8 se dibuja con eng.fnt (6×12),
+// como el cliente original; lo demás (acentos, símbolos) sigue en la TTF. Se fija al arrancar.
+void usar_fuente_original(bool si);
 
 }  // namespace lin

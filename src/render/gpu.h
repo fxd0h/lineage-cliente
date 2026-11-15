@@ -43,7 +43,7 @@ enum Capa : u8 {
 inline u64 clave_orden(Capa capa, u32 profundidad) { return (static_cast<u64>(capa) << 56) | (static_cast<u64>(profundidad) << 24); }
 
 constexpr u32 BLANCO = 0xFFFFFFFFu;
-inline u32 rgba(u8 r, u8 g, u8 b, u8 a = 255) { return r | (g << 8) | (b << 16) | (static_cast<u32>(a) << 24); }
+constexpr u32 rgba(u8 r, u8 g, u8 b, u8 a = 255) { return r | (g << 8) | (b << 16) | (static_cast<u32>(a) << 24); }
 
 constexpr int TAM_PAGINA = 2048;
 constexpr int PAGINAS_ATLAS = 8;           // 8 × 16 MB; LIN_ATLAS_PAGINAS y LIN_ATLAS_TAM achican el atlas para probar el reemplazo
@@ -143,6 +143,7 @@ private:
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
+    bool usar_spirv_ = false;  // Vulkan (Linux): shaders SPIR-V de render/shaders
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_mundo_ = nullptr;   // reemplazar el mundo (ola, visión)

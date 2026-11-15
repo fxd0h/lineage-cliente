@@ -63,6 +63,7 @@ struct Config {
     // (Enter envía, Esc cancela). false: se escribe siempre y la barra va con Alt+número.
     bool chat_con_enter = true;
     bool barra_personaje = false;  // barra de HP/MP sobre el propio personaje
+    bool fuente_original = true;   // texto ASCII con eng.fnt del juego (como el original)
     bool texto_dano = false;       // daño recibido / "Miss" flotante sobre el personaje
     bool globos_comic = false;     // lo que dice un personaje, en globo con recuadro y cola (no solo texto)
     // Compensación de ataque: al atacar, mostrar el golpe (swing propio y flinch del objetivo) ya,

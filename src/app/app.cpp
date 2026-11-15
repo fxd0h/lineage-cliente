@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "app/app.h"
+#include "mundo/ataque.h"
 #include "i18n/textos.h"
 #include "core/asignaciones.h"
 
@@ -31,8 +32,10 @@ bool cargar_recursos(App& a) {
         LIN_LOG("No se pudieron abrir los .pak en %s", a.cfg.carpeta_juego.c_str());
         return false;
     }
+    usar_fuente_original(a.cfg.fuente_original);
     if (!a.fuente.cargar(a.cfg.carpeta_juego)) LIN_LOG("Aviso: no se encontró font/eng.fnt");
     a.desc.cargar(a.rec, "desc-e.tbl");
+    a.zonas.cargar(a.rec);
     a.intro.cargar(a.rec, "intro-e.tbl");
     if (!a.mensajes.cargar(a.rec, "string-e.tbl")) LIN_LOG("Aviso: no se encontró string-e.tbl (mensajes del servidor)");
     // datos/sprite_table.txt junto al ejecutable o en el directorio actual.
@@ -57,6 +60,7 @@ void leer_entrada(App& a) {
     e.alt_numero = 0;
     e.numero = 0;
     e.tecla_a = false;
+    e.solto_fuera = false;
     int texto_antes = 0;  // para distinguir Alt+número de un carácter escrito con Option (ver abajo)
     e.rueda = 0;
     e.zoom = 0;
@@ -74,16 +78,26 @@ void leer_entrada(App& a) {
         case SDL_EVENT_MOUSE_MOTION: a.gpu.a_logico(ev.motion.x, ev.motion.y, e.mx, e.my); break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             a.gpu.a_logico(ev.button.x, ev.button.y, e.mx, e.my);
-            if (ev.button.button == SDL_BUTTON_LEFT) e.presionado = e.pulsado = true;
+            if (ev.button.button == SDL_BUTTON_LEFT) e.presionado = e.pulsado = true, e.salio_con_boton = false;
             if (ev.button.button == SDL_BUTTON_RIGHT) e.derecho_presionado = true;
             if (ev.button.button == SDL_BUTTON_MIDDLE) e.medio_presionado = true;
             break;
         case SDL_EVENT_MOUSE_BUTTON_UP:
             a.gpu.a_logico(ev.button.x, ev.button.y, e.mx, e.my);
-            if (ev.button.button == SDL_BUTTON_LEFT) { e.presionado = false; e.clic = true; }
+            if (ev.button.button == SDL_BUTTON_LEFT) {
+                // SDL captura el mouse mientras hay un botón apretado (SDL_HINT_MOUSE_AUTO_CAPTURE, por defecto),
+                // así que este evento llega aunque se suelte fuera de la ventana, con coordenadas fuera de ella.
+                int vw = 0, vh = 0;
+                SDL_GetWindowSize(a.ventana, &vw, &vh);
+                e.solto_fuera = e.salio_con_boton || punto_fuera_de_ventana(ev.button.x, ev.button.y, vw, vh);
+                e.salio_con_boton = false;
+                e.presionado = false;
+                e.clic = true;
+            }
             if (ev.button.button == SDL_BUTTON_RIGHT) { e.derecho_presionado = false; e.clic_derecho = true; }
             if (ev.button.button == SDL_BUTTON_MIDDLE) { e.medio_presionado = false; e.clic_medio = true; }
             break;
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE: e.salio_con_boton = e.presionado; break;
         case SDL_EVENT_MOUSE_WHEEL: e.rueda += ev.wheel.y > 0 ? 1 : (ev.wheel.y < 0 ? -1 : 0); break;
         case SDL_EVENT_TEXT_INPUT:
             if (SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_GUI)) break;  // atajos (zoom), no texto

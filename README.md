@@ -1,4 +1,4 @@
-# Lineage Client (C++20 + SDL3)
+# Lineage Client (C++23 + SDL3)
 
 A new client for Lineage 1. It reads the resources of an original game installation (abandonware) and
 speaks the L1J protocol. It implements **deliverables 1 to 10** of the plan
@@ -30,7 +30,7 @@ More documentation, mostly in Spanish, the working language of the project:
 
 ## Requirements (macOS)
 
-- Xcode Command Line Tools (Apple Clang with C++20)
+- Xcode Command Line Tools (Apple Clang with C++23)
 - CMake 3.25 or newer, and Ninja: `brew install cmake ninja`
 - The game installation (the folder with `Sprite*.pak`, `Tile.pak`, `Text.pak`, `map/`, `font/`)
 
@@ -449,16 +449,20 @@ Identifiers and comments in the code are in Spanish.
 
 ## Missing for Windows and Linux
 
+### Requirements (Linux)
+
+Ubuntu 24.04 tested (Vulkan GPU path). Needs `cmake`, `ninja-build`, a C++23 compiler, a Vulkan driver, and the SDL3 build dependencies (SDL3 is fetched by CMake): `libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdecor-0-dev libdrm-dev libgbm-dev libudev-dev`. `glslangValidator` is only needed to regenerate the shaders.
+
 `grep -rn MULTIPLATAFORMA` lists them in the code.
 
 | Where | What's missing |
 |---|---|
-| `src/render/gpu.cpp` | The shader is in MSL (Metal). Write it in HLSL, compile it with SDL_shadercross to SPIR-V (Vulkan/Linux) and DXIL (D3D12/Windows), and choose the format with `SDL_GetGPUShaderFormats()` |
+| `src/render/gpu.cpp`, `src/render/shaders/` | Linux: done. GLSL shaders compiled to SPIR-V by `herramientas/compilar_shaders.sh` (Vulkan); Metal keeps MSL. Windows: still needs DXIL/HLSL (D3D12), or Vulkan with the same SPIR-V |
 | `src/plataforma/archivo_mapeado.cpp` | Windows: `CreateFileMappingW` / `MapViewOfFile`, and UTF-8 → UTF-16 paths (`_wfopen`). Currently an `#error` |
 | `src/plataforma/socket.cpp` / `socket.h` | Windows: Winsock2 (`WSAStartup`, `closesocket`, `SOCKET` type). Currently an `#error`. Linux is already covered (POSIX and `MSG_NOSIGNAL`) |
-| `src/plataforma/rutas.cpp`, `src/mundo/mundo.cpp` | Linux is case-sensitive: look for `Sprite.pak`, `map/`... ignoring case |
+| `src/plataforma/archivo_mapeado.cpp` (`ruta_real`) | Linux: done. Paths are resolved ignoring case (`Sprite.pak`, `map/`, `Music1012.mp3`...) |
 | `CMakeLists.txt` | MSVC: equivalent options are in place, untested. `.app` / `.exe` / AppImage packaging (deliverable 11) |
-| `servidor_local/*.sh` | Linux: system packages instead of brew. Windows: the server's own `.bat` files |
+| `servidor_local/*.sh` | Linux: done (apt: `default-jre-headless`, `mariadb-server`; `comun.sh` picks binaries per OS). Windows: the server's own `.bat` files |
 
 ## License
 

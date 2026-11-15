@@ -1,7 +1,9 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include "render/gpu.h"
+#include "render/shaders_spirv.h"
 
 namespace lin {
 
@@ -129,13 +131,14 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
     alto_ = alto_min_ = alto_logico;
     grid_w_ = ancho_logico;
     grid_h_ = alto_logico;
-    // MULTIPLATAFORMA: agregar SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL cuando
-    // existan los shaders compilados para esos backends.
-    dev_ = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, false, nullptr);
+    // MSL en macOS (Metal), SPIR-V en Linux (Vulkan). MULTIPLATAFORMA (Windows): DXIL.
+    dev_ = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_SPIRV, false, nullptr);
     if (!dev_) {
         LIN_LOG("SDL_CreateGPUDevice: %s", SDL_GetError());
         return false;
     }
+    usar_spirv_ = !(SDL_GetGPUShaderFormats(dev_) & SDL_GPU_SHADERFORMAT_MSL);
+    LIN_LOG("GPU: %s (%s)", SDL_GetGPUDeviceDriver(dev_), usar_spirv_ ? "SPIR-V" : "MSL");
     if (!SDL_ClaimWindowForGPUDevice(dev_, ventana_)) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
@@ -220,6 +223,30 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
 }
 
 bool Gpu::crear_pipeline() {
+    // Con SPIR-V cada etapa es un módulo propio (punto de entrada "main"); con MSL todas comparten
+    // SHADER_MSL y se elige por nombre.
+    auto crear = [this](SDL_GPUShaderCreateInfo ci) -> SDL_GPUShader* {
+        if (usar_spirv_) {
+            struct Modulo { const char* nombre; const unsigned char* code; size_t size; };
+            static const Modulo modulos[] = {
+                {"vs_sprite", spirv::sprite_vert, sizeof spirv::sprite_vert},
+                {"fs_sprite", spirv::sprite_frag, sizeof spirv::sprite_frag},
+                {"vs_brillo", spirv::brillo_vert, sizeof spirv::brillo_vert},
+                {"fs_brillo", spirv::brillo_frag, sizeof spirv::brillo_frag},
+                {"vs_mundo", spirv::mundo_vert, sizeof spirv::mundo_vert},
+                {"fs_mundo", spirv::mundo_frag, sizeof spirv::mundo_frag},
+            };
+            const Modulo* m = nullptr;
+            for (const Modulo& x : modulos)
+                if (std::strcmp(x.nombre, ci.entrypoint) == 0) m = &x;
+            if (!m) return nullptr;
+            ci.code = m->code;
+            ci.code_size = m->size;
+            ci.entrypoint = "main";
+            ci.format = SDL_GPU_SHADERFORMAT_SPIRV;
+        }
+        return SDL_CreateGPUShader(dev_, &ci);
+    };
     SDL_GPUShaderCreateInfo vs{};
     vs.code = reinterpret_cast<const Uint8*>(SHADER_MSL);
     vs.code_size = std::strlen(SHADER_MSL);
@@ -228,14 +255,14 @@ bool Gpu::crear_pipeline() {
     vs.stage = SDL_GPU_SHADERSTAGE_VERTEX;
     vs.num_uniform_buffers = 1;
     vs.num_storage_buffers = 1;
-    SDL_GPUShader* v = SDL_CreateGPUShader(dev_, &vs);
+    SDL_GPUShader* v = crear(vs);
     SDL_GPUShaderCreateInfo fs = vs;
     fs.entrypoint = "fs_sprite";
     fs.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     fs.num_uniform_buffers = 0;
     fs.num_storage_buffers = 0;
     fs.num_samplers = 1;
-    SDL_GPUShader* f = SDL_CreateGPUShader(dev_, &fs);
+    SDL_GPUShader* f = crear(fs);
     if (!v || !f) {
         LIN_LOG("SDL_CreateGPUShader: %s", SDL_GetError());
         return false;
@@ -271,8 +298,8 @@ bool Gpu::crear_pipeline() {
     bf.entrypoint = "fs_brillo";
     bf.num_uniform_buffers = 1;
     bf.num_samplers = 2;
-    SDL_GPUShader* bvs = SDL_CreateGPUShader(dev_, &bv);
-    SDL_GPUShader* bfs = SDL_CreateGPUShader(dev_, &bf);
+    SDL_GPUShader* bvs = crear(bv);
+    SDL_GPUShader* bfs = crear(bf);
     if (!bvs || !bfs) {
         LIN_LOG("SDL_CreateGPUShader (brillo): %s", SDL_GetError());
         return false;
@@ -309,8 +336,8 @@ bool Gpu::crear_pipeline() {
     mf.num_uniform_buffers = 1;
     mf.num_samplers = 1;
     mf.num_storage_buffers = 0;
-    SDL_GPUShader* mvs = SDL_CreateGPUShader(dev_, &mv);
-    SDL_GPUShader* mfs = SDL_CreateGPUShader(dev_, &mf);
+    SDL_GPUShader* mvs = crear(mv);
+    SDL_GPUShader* mfs = crear(mf);
     if (!mvs || !mfs) {
         LIN_LOG("SDL_CreateGPUShader (mundo): %s", SDL_GetError());
         return false;
@@ -508,7 +535,10 @@ void Gpu::reemplazar_mundo(int fase_ola, int modo_vision, int fase_borracho) {
 int Gpu::escala_maxima(int franja) const {
     int pw = 0, ph = 0;
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
-    return std::max(1, std::min(pw / ancho_min_, ph / (alto_min_ + franja)));
+    // La franja (barra de la ventana) no cuenta para la escala: si no entra, tapa unas filas de arriba
+    // del mundo. Así una pantalla de 1080 (ventana de ~1010 px) llega a ×2, como 640×480 del original.
+    (void)franja;
+    return std::max(1, std::min(pw / ancho_min_, ph / alto_min_));
 }
 
 void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
@@ -517,7 +547,7 @@ void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
     escala_ = ampliable && zoom > 0 ? std::min(zoom, maxima) : maxima;
     grid_w_ = std::max(ancho_min_, pw / escala_);
-    grid_h_ = std::max(alto_min_ + franja, ph / escala_);
+    grid_h_ = std::max(alto_min_, ph / escala_);
     if (ampliable) {
         // El contenido llena la cuadrícula, bajo la franja.
         ancho_ = grid_w_;

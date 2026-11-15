@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 project(lineage_cliente LANGUAGES C CXX)
 
-# C++20 en estilo "C con plantillas": sin excepciones ni RTTI (ver analisis/PLAN_CLIENTE.md §2.2)
-set(CMAKE_CXX_STANDARD 20)
+# C++23 en estilo "C con plantillas": sin excepciones ni RTTI (ver analisis/PLAN_CLIENTE.md §2.2)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -71,6 +71,7 @@ add_library(lin_recursos STATIC
     src/recursos/fuente_ttf.cpp
     src/recursos/cp949.cpp
     src/recursos/textos.cpp
+    src/recursos/zonas.cpp
     src/recursos/precarga.cpp
     src/recursos/hechizos.cpp
     src/recursos/html.cpp
@@ -177,6 +178,7 @@ if(LIN_TESTS)
         tests/test_ajustes.cpp
         tests/test_autobuffs.cpp
         tests/test_autopocion.cpp
+        tests/test_ataque.cpp
         tests/test_socket.cpp
         src/core/asignaciones.cpp)
     target_link_libraries(lin_tests PRIVATE lin_mundo lin_render doctest)

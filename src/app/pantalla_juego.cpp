@@ -5,11 +5,31 @@
 #include <cmath>
 #include <cstring>
 #include "app/app.h"
+#include "mundo/ataque.h"
 #include "mundo/luz.h"
 
 namespace lin {
 
 namespace {
+
+// Barra de vida o maná sobre un personaje, como la del cliente original: marco dorado de 1 px,
+// fondo oscuro y relleno con una fila de brillo arriba. (x, y) es la esquina del marco.
+void barra_original(Graficos& g, int x, int y, int ancho, i32 v, i32 vmax, u32 brillo, u32 color, u32 sombra) {
+    constexpr u32 MARCO = rgba(200, 170, 110, 230);
+    constexpr u32 FONDO = rgba(25, 20, 15, 210);
+    const u64 k0 = clave_orden(CAPA_EFECTOS, 0), k1 = clave_orden(CAPA_EFECTOS, 1);
+    g.gpu().rectangulo(x, y, ancho, 5, k0, MARCO);
+    g.gpu().rectangulo(x + 1, y + 1, ancho - 2, 3, k1, FONDO);
+    const int w = vmax > 0 ? (ancho - 2) * std::clamp(v, 0, vmax) / vmax : 0;
+    if (w <= 0) return;
+    const u64 k2 = clave_orden(CAPA_EFECTOS, 2);
+    g.gpu().rectangulo(x + 1, y + 1, w, 1, k2, brillo);
+    g.gpu().rectangulo(x + 1, y + 2, w, 1, k2, color);
+    g.gpu().rectangulo(x + 1, y + 3, w, 1, k2, sombra);
+}
+constexpr u32 HP_BRILLO = rgba(255, 170, 120), HP_COLOR = rgba(215, 70, 40), HP_SOMBRA = rgba(140, 35, 25);
+constexpr u32 MP_BRILLO = rgba(150, 200, 255), MP_COLOR = rgba(60, 120, 230), MP_SOMBRA = rgba(30, 60, 150);
+
 
 // Ataque: el anti-acelerador del servidor también controla el intervalo entre C_Attack (con la
 // duración de la animación de ataque del sprite). Como al caminar, se usa un 5 % más
@@ -378,6 +398,13 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         float px = static_cast<float>(mundo_px(spr_x, spr_y) + ox), py = static_cast<float>(mundo_py(spr_x, spr_y) + oy);
         // Diferencia vertical entre el cuerpo visible y la posición continua (para el nombre).
         float desfase_y = static_cast<float>(mundo_py(vis_x, vis_y) + oy) - sy;
+        // Ancla de nombre y barras. Con la cámara a saltos (como el original) van pegados al cuerpo
+        // visible, que avanza con los frames de caminar; si no, siguen la posición continua.
+        float ex = sx;
+        if (a.cfg.camara_a_saltos) {
+            ex = static_cast<float>(mundo_px(vis_x, vis_y) + ox);
+            desfase_y = 0;
+        }
         // Los pies: el centro del rombo de la celda del cuerpo (el ancla del sprite es su esquina + (24, 12)).
         if (radio_luz > 0) {
             a.luces.push_back({radio_luz, static_cast<float>(mundo_px(vis_x, vis_y) + ox) + 24,
@@ -440,12 +467,14 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             bajo_puntero = a.entrada.mx >= x0 && a.entrada.mx < x1 && a.entrada.my >= y0 && a.entrada.my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});
         } else {
-            // Sin sprite: un bloque del tamaño de un cuerpo, que se puede elegir con el clic. Verde mientras
-            // el sprite todavía se carga (o el atlas no tiene lugar); magenta si de verdad falta.
+            // Sin sprite: un bloque del tamaño de un cuerpo, que se puede elegir con el clic. Mientras
+            // el sprite se carga (o el atlas no tiene lugar) es invisible; magenta si de verdad falta.
             const float x0 = static_cast<float>(mundo_px(vis_x, vis_y) + ox) + 12, y0 = static_cast<float>(mundo_py(vis_x, vis_y) + oy) - 22;
             const float x1 = x0 + 24, y1 = y0 + 36;
-            const u32 color_marca = rg_pendiente ? rgba(60, 220, 90, 170) : rgba(255, 0, 255, 170);
-            g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), color_marca);
+            // Mientras se carga (uno o dos frames) no se dibuja nada, como el original: el bloque verde
+            // parpadeaba al aparecer cada sprite. Sigue siendo elegible con el clic. Magenta si falta.
+            if (!rg_pendiente)
+                g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), rgba(255, 0, 255, 170));
             top = y0;
             bajo_puntero = a.entrada.mx >= x0 && a.entrada.mx < x1 && a.entrada.my >= y0 && a.entrada.my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : 2)});
@@ -455,27 +484,16 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         const bool soy_yo = o.ids()[s] == a.mundo.jugador.id;
         const u8 hp = o.col<O_HP>()[s];
         if (hp <= 100 && !soy_yo) {
-            constexpr int ANCHO_BARRA = 40;
-            g.gpu().rectangulo(static_cast<int>(sx) + 4, static_cast<int>(top) - 5, ANCHO_BARRA, 3, clave_orden(CAPA_EFECTOS, 0),
-                               rgba(30, 30, 30, 200));
-            g.gpu().rectangulo(static_cast<int>(sx) + 4, static_cast<int>(top) - 5, ANCHO_BARRA * hp / 100, 3,
-                               clave_orden(CAPA_EFECTOS, 1), rgba(220, 50, 40));
-            top -= 6;
+            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, 44, hp, 100, HP_BRILLO, HP_COLOR, HP_SOMBRA);
+            top -= 8;
         }
         // Barra de HP/MP propia (opción): dos barras finas sobre el personaje, con los valores reales.
         if (soy_yo && a.cfg.barra_personaje) {
             const EstadoJugador& j = a.mundo.jugador;
-            constexpr int W = 40;
-            auto barra = [&](int dy, i32 v, i32 vmax, u32 col) {
-                g.gpu().rectangulo(static_cast<int>(sx) + 4, static_cast<int>(top) - 5 + dy, W, 3, clave_orden(CAPA_EFECTOS, 0),
-                                   rgba(30, 30, 30, 200));
-                if (vmax > 0)
-                    g.gpu().rectangulo(static_cast<int>(sx) + 4, static_cast<int>(top) - 5 + dy, W * std::clamp(v, 0, vmax) / vmax, 3,
-                                       clave_orden(CAPA_EFECTOS, 1), col);
-            };
-            barra(0, j.hp, j.hp_max, rgba(220, 50, 40));
-            barra(-4, j.mp, j.mp_max, rgba(80, 130, 240));
-            top -= 10;
+            // Como el original: HP arriba y MP justo debajo, compartiendo el borde del marco.
+            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, 44, j.hp, j.hp_max, HP_BRILLO, HP_COLOR, HP_SOMBRA);
+            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, 44, j.mp, j.mp_max, MP_BRILLO, MP_COLOR, MP_SOMBRA);
+            top -= 12;
         }
         // Texto de combate flotante (opción): daño recibido / "Miss", sube y se desvanece (DUR_COMBATE).
         if (soy_yo && a.n_textos_combate) {
@@ -489,7 +507,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 // Arranca encima del nombre/barras y sube 26 px desvaneciéndose.
                 float ty = sy - 66 - static_cast<float>(dt) / DUR_COMBATE * 26.0f;
                 u8 alfa = static_cast<u8>(255 * (1.0 - static_cast<double>(dt) / DUR_COMBATE));
-                g.texto_sombra(tx, sx + 24 - tw / 2, ty, clave_orden(CAPA_EFECTOS, 3), rgba(f.r, f.g, f.b, alfa));
+                g.texto_sombra(tx, ex + 24 - tw / 2, ty, clave_orden(CAPA_EFECTOS, 3), rgba(f.r, f.g, f.b, alfa));
                 if (w != i) a.textos_combate[w] = f;
                 ++w;
             }
@@ -501,6 +519,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         std::string_view nombre(nombre_buf, expandir_desc(a.desc, texto(a.mundo, o.col<O_NOMBRE>()[s]), nombre_buf,
                                                           sizeof nombre_buf));
         if (a.sprites.tipo(gfx) == TIPO_ITEM && !bajo_puntero) nombre = {};
+        // Panel original: solo se rotula lo que está bajo el puntero y el objetivo del ataque.
+        if (!a.cfg.ui_simple && !bajo_puntero && o.ids()[s] != a.objetivo) nombre = {};
         // NPC con título: el nombre llega como "Merchant^Nombre"; se muestra "[Merchant]" encima del
         // nombre normal (la misma franja que el título de un personaje, más abajo).
         char titulo_npc_buf[64] = "";
@@ -523,24 +543,24 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
             }
             if (o.ids()[s] == a.objetivo) color = rgba(255, 230, 90);
-            g.texto_sombra(nombre, sx + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color);
+            g.texto_sombra(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color);
             if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {  // título de la tienda
-                dibujar_titulo(g, v->titulo, sx + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
+                dibujar_titulo(g, v->titulo, ex + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
             }
             // Marcado con True Target: la marca y su mensaje encima del nombre.
             if (o.ids()[s] == a.marca_objetivo) {
                 const int wm = ancho_texto(a.marca_texto.data(), a.marca_texto.size());
-                g.texto_sombra("V", sx + 24 - 3, top - 28, clave_orden(CAPA_EFECTOS, 0), rgba(255, 80, 60));
-                if (wm) g.texto_sombra(a.marca_texto, sx + 24 - wm / 2, top - 42, clave_orden(CAPA_EFECTOS, 0), rgba(255, 160, 140));
+                g.texto_sombra("V", ex + 24 - 3, top - 28, clave_orden(CAPA_EFECTOS, 0), rgba(255, 80, 60));
+                if (wm) g.texto_sombra(a.marca_texto, ex + 24 - wm / 2, top - 42, clave_orden(CAPA_EFECTOS, 0), rgba(255, 160, 140));
             }
             // El señor de un castillo: una corona a la izquierda (del emblema, si tiene).
             if (castillo_de(a, o.ids()[s]))
-                dibujar_corona(g, sx + 24 - w / 2 - (o.col<O_CLAN>()[s] ? 19 : 0) - 16, top - 12, clave_orden(CAPA_EFECTOS, 0));
+                dibujar_corona(g, ex + 24 - w / 2 - (o.col<O_CLAN>()[s] ? 19 : 0) - 16, top - 12, clave_orden(CAPA_EFECTOS, 0));
             // Emblema del clan a la izquierda del nombre (se pide una vez por clan).
             if (u32 clan = o.col<O_CLAN>()[s]) {
                 const RegionAtlas& em = g.emblema(clan);
                 if (em.valida()) {
-                    g.gpu().dibujar_en(em, sx + 24 - w / 2 - 19, top - 14, clave_orden(CAPA_EFECTOS, 0));
+                    g.gpu().dibujar_en(em, ex + 24 - w / 2 - 19, top - 14, clave_orden(CAPA_EFECTOS, 0));
                 } else if (std::find(a.emblemas_pedidos.begin(), a.emblemas_pedidos.end(), clan) == a.emblemas_pedidos.end()) {
                     a.emblemas_pedidos.push_back(clan);
                     enviar(a, cmd::pedir_emblema(a.op, clan));
@@ -552,11 +572,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                                       : personaje || o.col<O_MASCOTA>()[s] ? texto(a.mundo, o.col<O_TITULO>()[s])
                                                           : std::string_view{};
             if (!titulo.empty()) {
-                dibujar_titulo(g, titulo, sx + 24, top - 14, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130));
+                dibujar_titulo(g, titulo, ex + 24, top - 14, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130));
                 top -= 14;
             }
         }
-        dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), sx + 24, top);
+        dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
     }
 }
 
@@ -752,6 +772,13 @@ void mover_jugador(App& a, u64 ahora) {
         elegir_objetivo_bajo_puntero(a);
         a.objetivo_fijo = a.objetivo != 0;
     }
+    // Soltar el botón con el puntero fuera de la ventana: el ataque sigue solo (como la tecla A) hasta un
+    // clic nuevo en el mundo, caminar, o que el objetivo muera o desaparezca.
+    if (e.clic && e.solto_fuera && a.objetivo && !a.hablar_objetivo) {
+        const Slot b = o.buscar(a.objetivo);
+        const bool atacable = b != SIN_SLOT && tipo_objeto(a, b) != TIPO_ITEM && !mascota_sin_ctrl(a, b);
+        if (sostener_ataque_al_soltar(a.objetivo_fijo, atacable, true)) a.ataque_sostenido = true;
+    }
     if (!e.presionado) a.objetivo_fijo = false;
     // Tecla A (con el chat cerrado): atacar al objetivo, o al monstruo bajo el puntero, hasta que
     // muera o se camine.
@@ -894,6 +921,14 @@ void dibujar_panel(App& a) {
     dibujar_botones_panel(a, X + 485 + 26, Y + 366 + 3);
     g.gpu().dibujar(g.img(IMG_CHAT), X + 124, Y + 363, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 124 + 13, Y + 363 + 99, clave_orden(CAPA_UI, 2));
+    // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
+    const Slot yo = a.mundo.objetos.buscar(j.id);
+    if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
+                              : a.zonas.buscar(a.mundo.mapa, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo])) {
+        const u32 c = a.zonas.color(z->clase);
+        g.texto_sombra(z->nombre, static_cast<float>(X + 16), static_cast<float>(Y + 346), clave_orden(CAPA_UI_TEXTO, 0),
+                       rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c)));
+    }
     char t[48];
     float pexp = porcentaje_exp(j.nivel, j.exp);
     std::snprintf(t, sizeof t, "%d  %.2f%%", j.nivel, pexp);
@@ -1452,7 +1487,7 @@ void frame_juego(App& a) {
     a.gpu.nivel_ventana(0);
     dibujar_reinicio(a);
     dibujar_destino(a);
-    dibujar_minimapa(a, cam_x, cam_y);
+    if (a.cfg.ui_simple) dibujar_minimapa(a, cam_x, cam_y);  // el panel original no tiene minimapa
     a.gpu.nivel_ventana(0);
     dibujar_chat(a);
     dibujar_ventanas(a);

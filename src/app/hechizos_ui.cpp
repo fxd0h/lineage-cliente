@@ -555,7 +555,10 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
     };
     u32 visibles = 0;
     for (u32 i = 0; i < j.n_efectos; ++i) visibles += !repetido(j.efectos[i]);
-    const int x0 = (a.gpu.ancho() - static_cast<int>(visibles) * PASO) / 2;
+    // Panel original: pegados a la esquina superior derecha y sin el tiempo restante (como el original).
+    const bool original = !a.cfg.ui_simple;
+    const int x0 = original ? a.gpu.ancho() - static_cast<int>(visibles) * PASO - 2
+                            : (a.gpu.ancho() - static_cast<int>(visibles) * PASO) / 2;
     const u64 ki = clave_orden(CAPA_UI, 2), kt = clave_orden(CAPA_UI_TEXTO, 2);
     for (u32 i = 0, n = 0; i < j.n_efectos; ++i) {
         const EfectoActivo& ef = j.efectos[i];
@@ -575,12 +578,14 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
             g.gpu().rectangulo(x, Y, 32, 32, ki, rgba(30, 40, 60, 220));
             g.texto({t, m}, static_cast<float>(x + 3), static_cast<float>(Y + 10), kt, rgba(170, 230, 255));
         }
-        char d[16];
-        // Minutos redondeados hacia arriba: una poción de 5 minutos recién tomada dice "5m".
-        if (resta >= 60) std::snprintf(d, sizeof d, "%llum", static_cast<unsigned long long>((resta + 59) / 60));
-        else std::snprintf(d, sizeof d, "%llus", static_cast<unsigned long long>(resta));
-        g.texto_sombra(d, static_cast<float>(x + 16 - ancho_texto(d, std::strlen(d)) / 2), static_cast<float>(Y + 33), kt,
-                       rgba(255, 255, 254));
+        if (!original) {
+            char d[24];
+            // Minutos redondeados hacia arriba: una poción de 5 minutos recién tomada dice "5m".
+            if (resta >= 60) std::snprintf(d, sizeof d, "%llum", static_cast<unsigned long long>((resta + 59) / 60));
+            else std::snprintf(d, sizeof d, "%llus", static_cast<unsigned long long>(resta));
+            g.texto_sombra(d, static_cast<float>(x + 16 - ancho_texto(d, std::strlen(d)) / 2), static_cast<float>(Y + 33), kt,
+                           rgba(255, 255, 254));
+        }
         if (ui::sobre(a.entrada, x, Y, 32, 32 + ALTO_GLIFO)) {
             char t[96];
             size_t m = nombre_efecto_activo(a, ef, t, 64);

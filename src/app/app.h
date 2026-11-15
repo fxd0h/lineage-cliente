@@ -21,6 +21,7 @@
 #include "recursos/sonidos.h"
 #include "recursos/tabla_sprites.h"
 #include "recursos/textos.h"
+#include "recursos/zonas.h"
 #include "render/graficos.h"
 #include "ui/ui.h"
 
@@ -259,6 +260,7 @@ struct App {
     Recursos rec;
     FuenteBitmap fuente;
     TablaSprites sprites;
+    TablaZonas zonas;  // zone3-e.tbl: nombre de la zona en la que se está
     TablaTexto desc, intro, mensajes;  // mensajes = string-e.tbl (S_ServerMessage)
     TablaHechizos hechizos;
     Gpu gpu;

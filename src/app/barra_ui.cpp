@@ -255,6 +255,12 @@ void dibujar_barra(App& a, int y) {
     a.autopocion.x = a.cfg.usar_autobuffs ? a.autobuffs.x + ANCHO_AUTO + SEPARACION_AUTO : a.autobuffs.x;
     Atajo* pagina = visible(a);
     a.barra_y = y;
+    // Panel original: no hay barra de atajos ni casilleros Auto dibujados (los atajos de teclado siguen);
+    // se sacan de la pantalla para que tampoco reciban clics. barra_y se conserva (lo usan las ventanas).
+    if (!a.cfg.ui_simple) {
+        a.barra_x = a.autobuffs.x = -10000;
+        return;
+    }
     const u64 kf = clave_orden(CAPA_UI, 5), ki = clave_orden(CAPA_UI, 6), kt = clave_orden(CAPA_UI_TEXTO, 5);
     const int bajo = casillero_bajo_puntero(a);
     // Algo que se está arrastrando hacia la barra: se resalta el casillero de destino.
@@ -318,7 +324,7 @@ void dibujar_barra(App& a, int y) {
         auto centrado = [&](std::string_view t, int ty, u32 color) {
             g.texto(t, static_cast<float>(sx + (ANCHO_SELECTOR - ancho_texto(t.data(), t.size())) / 2), static_cast<float>(ty), kt, color);
         };
-        char n[4];
+        char n[12];
         std::snprintf(n, sizeof n, "%d", a.pagina_barra + 1);
         // Flechas: el mismo triángulo de 4 filas (7, 5, 3, 1 px), invertido para la de arriba
         // (la fuente no tiene flechas, y "^" y "v" no se parecen entre sí).

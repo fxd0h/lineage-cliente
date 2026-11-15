@@ -5,6 +5,7 @@
 #define DR_MP3_IMPLEMENTATION
 #define DR_MP3_NO_STDIO_DEFAULT_ALLOCATOR_WARNING
 #include "dr_mp3.h"
+#include "plataforma/archivo_mapeado.h"
 
 namespace lin {
 
@@ -133,8 +134,8 @@ void Audio::bucle_cargador() {
             std::snprintf(nombre, sizeof nombre, "music%d.mp3", tema);
             auto* m = new drmp3;
             // Algunos archivos empiezan con mayúscula (Music1012.mp3): en macOS el sistema de archivos no
-            // las distingue. MULTIPLATAFORMA: en Linux, buscar sin distinguir mayúsculas.
-            if (!drmp3_init_file(m, (carpeta_ + nombre).c_str(), nullptr)) {
+            // las distingue. En Linux, ruta_real las busca sin distinguir mayúsculas.
+            if (!drmp3_init_file(m, ruta_real(carpeta_ + nombre).c_str(), nullptr)) {
                 delete m;
                 m = nullptr;
             }
@@ -148,7 +149,7 @@ void Audio::bucle_cargador() {
             Wav* w = new Wav;
             char ruta[64];
             std::snprintf(ruta, sizeof ruta, "%u.wav", id);
-            if (!SDL_LoadWAV((carpeta_ + ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
+            if (!SDL_LoadWAV(ruta_real(carpeta_ + ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
             std::lock_guard<std::mutex> lk(mu_);
             wavs_listos_.emplace_back(id, w);
         }

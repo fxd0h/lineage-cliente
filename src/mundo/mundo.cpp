@@ -529,7 +529,7 @@ const SegmentoMapa* segmento(Mundo& m, const Recursos& rec, int x, int y) {
     SegmentoMapa s;
     const std::string ruta = ruta_segmento(rec, m.mapa, x, y);
     bool ok = leer_archivo(ruta, datos) && decodificar_segmento(ruta, datos, x & ~63, y & ~63, s);
-    // MULTIPLATAFORMA (Linux): la carpeta "map" puede venir como "Map"; ver carpeta_juego_valida.
+    // Linux: la carpeta "map" puede venir como "Map"; leer_archivo resuelve con ruta_real.
     if (!ok) {
         m.indice_segmentos.poner(k, SEG_NO_EXISTE);
         return nullptr;

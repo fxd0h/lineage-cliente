@@ -155,7 +155,7 @@ void eventos_autobuffs(App& a, const Evento& e) {
 }
 
 void dibujar_autobuffs(App& a) {
-    if (!a.cfg.usar_autobuffs) return;
+    if (!a.cfg.usar_autobuffs || !a.cfg.ui_simple) return;
     AutoBuffs& ab = a.autobuffs;
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
@@ -196,7 +196,7 @@ void dibujar_autobuffs(App& a) {
         else g.texto(h.nombre.substr(0, 4), static_cast<float>(x + 2), static_cast<float>(y + 11), kt, color);
         // Lo que le queda al efecto, abajo dentro del casillero ("29m", "45s").
         if (const u64 resta = (resta_efecto_de_hechizo(a.mundo.jugador, c.hechizo, ahora) + 999) / 1000; resta > 1) {
-            char d[16];
+            char d[24];
             if (resta >= 60) std::snprintf(d, sizeof d, "%llum", static_cast<unsigned long long>((resta + 59) / 60));
             else std::snprintf(d, sizeof d, "%llus", static_cast<unsigned long long>(resta));
             g.texto_sombra(d, static_cast<float>(x + CELDA - 2 - ancho_texto(d, std::strlen(d))),

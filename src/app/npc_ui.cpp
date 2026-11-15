@@ -314,7 +314,7 @@ u8 tipo_objeto(const App& a, Slot s) {
         return TIPO_MONSTRUO;
     // Asedio: los portones son puertas; la torre de guardia y la corona se atacan con un clic (la
     // corona se toma "atacándola": C_Attack y el servidor llama a su onAction).
-    if (tipo == TIPO_ESTRUCTURA) return a.sprites.accion(gfx, ACC_ABRIR) ? TIPO_PUERTA : TIPO_MONSTRUO;
+    if (tipo == TIPO_ESTRUCTURA) return a.sprites.accion(gfx, ACC_ABRIR) ? TIPO_PUERTA : u8{TIPO_MONSTRUO};
     if (gfx == GFX_CORONA) return TIPO_MONSTRUO;
     return tipo;
 }

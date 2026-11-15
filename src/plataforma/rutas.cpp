@@ -81,6 +81,7 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "logo") c.logo = valor;
     else if (clave == "chat_con_enter") c.chat_con_enter = valor != "0";
     else if (clave == "barra_personaje") c.barra_personaje = valor == "1";
+    else if (clave == "fuente_original") c.fuente_original = valor == "1";
     else if (clave == "texto_dano") c.texto_dano = valor == "1";
     else if (clave == "globos_comic") c.globos_comic = valor == "1";
     else if (clave == "compensar_ataque") c.compensar_ataque = valor != "0";
@@ -248,6 +249,7 @@ std::string escribir_config(const Config& c) {
     linea("logo", c.logo);
     linea("chat_con_enter", c.chat_con_enter ? "1" : "0");
     linea("barra_personaje", c.barra_personaje ? "1" : "0");
+    linea("fuente_original", c.fuente_original ? "1" : "0");
     linea("texto_dano", c.texto_dano ? "1" : "0");
     linea("globos_comic", c.globos_comic ? "1" : "0");
     linea("compensar_ataque", c.compensar_ataque ? "1" : "0");
@@ -266,11 +268,10 @@ bool guardar_config_en(const std::string& ruta, const Config& c) {
 }
 
 bool carpeta_juego_valida(const std::string& carpeta) {
-    // MULTIPLATAFORMA: en macOS y Windows el sistema de archivos no distingue mayúsculas; en Linux
-    // sí, y la instalación original mezcla "Sprite.pak", "Tile.pak", "map/". Habrá que buscar los
-    // nombres sin distinguir mayúsculas en Linux.
+    // En Linux el sistema de archivos distingue mayúsculas y la instalación original las mezcla
+    // ("Sprite.pak", "map/"): ruta_real busca los nombres sin distinguirlas.
     for (const char* f : {"Sprite.idx", "Sprite.pak", "Tile.idx", "Tile.pak", "Text.idx", "Text.pak"}) {
-        if (!SDL_GetPathInfo((carpeta + f).c_str(), nullptr)) return false;
+        if (!SDL_GetPathInfo(ruta_real(carpeta + f).c_str(), nullptr)) return false;
     }
     return true;
 }
