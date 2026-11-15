@@ -23,6 +23,15 @@ if [ ! -d l1j-jp ]; then
 fi
 # Teletransportes que no andan con esta instalación del cliente (ver los comentarios del parche).
 git -C l1j-jp apply --check ../teleporter.patch 2>/dev/null && git -C l1j-jp apply ../teleporter.patch
+# Test pooled DB connections before use (MariaDB closes them after 8 h idle).
+git -C l1j-jp apply --check ../db_pool.patch 2>/dev/null && git -C l1j-jp apply ../db_pool.patch
+if git -C l1j-jp diff --quiet -- src/jp/l1j/server/utils/L1DatabaseFactory.java; then :; else
+    # The jar is prebuilt: compile the patched class into it (idempotent).
+    tmp=$(mktemp -d)
+    (cd l1j-jp && javac -nowarn -encoding UTF-8 --release 8 -cp "l1jserver.jar:lib/*" -d "$tmp" \
+        src/jp/l1j/server/utils/L1DatabaseFactory.java && jar uf l1jserver.jar -C "$tmp" jp/l1j/server/utils)
+    rm -rf "$tmp"
+fi
 
 # MariaDB en un directorio de datos propio, en el puerto 3307 para no chocar con otra instalación
 if [ ! -d datos ]; then

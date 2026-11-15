@@ -1,0 +1,13 @@
+diff --git a/src/jp/l1j/server/utils/L1DatabaseFactory.java b/src/jp/l1j/server/utils/L1DatabaseFactory.java
+index 07f348f..0517ab9 100644
+--- a/src/jp/l1j/server/utils/L1DatabaseFactory.java
++++ b/src/jp/l1j/server/utils/L1DatabaseFactory.java
+@@ -81,6 +81,8 @@ public class L1DatabaseFactory {
+ 			_source.setJdbcUrl(_url);
+ 			_source.setUser(_user);
+ 			_source.setPassword(_password);
++			// MariaDB drops connections idle for wait_timeout (8 h): test them before use.
++			_source.setTestConnectionOnCheckout(true);
+ 
+ 			/* Test the connection */
+ 			_source.getConnection().close();
