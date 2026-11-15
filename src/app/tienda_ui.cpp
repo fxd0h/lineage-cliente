@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -196,10 +197,10 @@ void dibujar_tienda(App& a) {
             const int fy = y + 56 + static_cast<int>(k) * FILA;
             const bool encima = ui::sobre(e, x + 8, fy, ANCHO - 26, FILA - 2);
             g.gpu().rectangulo(x + 8, fy, ANCHO - 26, FILA - 2, clave_orden(CAPA_UI, 80), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
-            if (l.gfx) g.gpu().dibujar(g.icono(l.gfx), x + 10, fy + 1, ki);
+            if (l.gfx) draw_item_icon(g.gpu(), g.icono(l.gfx), x + 10, fy + 1, ki, l.bendicion);
             char nom[256];
             const size_t n = expandir_desc(a.desc, l.nombre, nom, sizeof nom);
-            g.texto({nom, n}, static_cast<float>(x + 48), static_cast<float>(fy + 4), kt, l.bendicion == 1 ? rgba(255, 230, 120) : ui::COLOR_TEXTO);
+            g.texto({nom, n}, static_cast<float>(x + 48), static_cast<float>(fy + 4), kt, ui::COLOR_TEXTO);
             char mil[32];
             std::snprintf(txt, sizeof txt, "%s adena  x%u", con_miles(l.precio, mil, sizeof mil), l.cantidad);
             g.texto(txt, static_cast<float>(x + 48), static_cast<float>(fy + 18), kt, rgba(255, 220, 130));

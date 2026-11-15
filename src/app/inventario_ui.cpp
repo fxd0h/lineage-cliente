@@ -5,6 +5,7 @@
 // puede borrar, con su mensaje).
 #include <cstring>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -30,7 +31,11 @@ void dibujar_basurero(Graficos& g, int x, int y, bool encima) {
     for (int i = 0; i < 3; ++i) g.gpu().rectangulo(x + 6 + i * 3, y + 8, 1, 8, clave_orden(CAPA_UI, 14), oscuro);
 }
 
-// Celda bajo el puntero (índice en la tabla, ya desplazado) o -1.
+constexpr size_t MAX_ORDEN = 256;
+// Slot shown at grid position `pos` (see orden_inventario).
+Slot slot_en(const Slot* orden, size_t n_orden, size_t pos) { return pos < n_orden ? orden[pos] : static_cast<Slot>(pos); }
+
+// Posición de la celda bajo el puntero (ya desplazada) o -1.
 int celda_bajo_puntero(const App& a, int x0, int y0) {
     const EntradaFrame& e = a.entrada;
     int cx = e.mx - (x0 + GRILLA_X), cy = e.my - (y0 + GRILLA_Y);
@@ -63,6 +68,27 @@ constexpr u8 USO_POLYMORPH = 16, USO_TELEPORT = 6, USO_TELEPORT_BENDITO = 29;  /
 // Se usan sobre otro ítem (C_UseItem lee el objetivo): identificar, encantar arma y armadura...
 bool se_usa_sobre_item(u8 uso) { return uso == 7 || uso == 14 || uso == 26 || uso == 27; }
 
+// Aimed items (ItemTable useType spell_long, spell_short, spell_point): C_UseItem reads d target, h x, h y.
+bool se_usa_apuntando(u8 uso) { return uso == 5 || uso == 17 || uso == 39; }
+
+void procesar_item_apuntado(App& a) {
+    if (!a.item_apuntando) return;
+    EntradaFrame& e = a.entrada;
+    if (a.mundo.inventario.items.buscar(a.item_apuntando) == SIN_SLOT || e.clic_derecho || e.escape) {
+        a.item_apuntando = 0;
+        e.escape = false;  // Esc cancels only this
+        return;
+    }
+    if (e.pulsado && !sobre_alguna_ventana(a) && !sobre_barra(a)) {
+        a.clic_consumido = true;
+        const ObjId obj = objeto_bajo_puntero(a, true);
+        const Slot s = obj ? a.mundo.objetos.buscar(obj) : SIN_SLOT;
+        if (s != SIN_SLOT)
+            enviar(a, cmd::usar_item_apuntado(a.op, a.item_apuntando, obj, a.mundo.objetos.col<O_X>()[s], a.mundo.objetos.col<O_Y>()[s]));
+        a.item_apuntando = 0;  // a click on the ground cancels
+    }
+}
+
 void usar_item(App& a, ObjId item) {
     Slot s = a.mundo.inventario.items.buscar(item);
     if (s != SIN_SLOT) {
@@ -72,6 +98,10 @@ void usar_item(App& a, ObjId item) {
     if (s != SIN_SLOT && se_usa_sobre_item(a.mundo.inventario.items.col<I_USO>()[s])) {
         a.usar_sobre = item;  // el próximo clic en el inventario elige el objetivo
         a.ventana_inventario = true;
+        return;
+    }
+    if (s != SIN_SLOT && se_usa_apuntando(a.mundo.inventario.items.col<I_USO>()[s])) {
+        a.item_apuntando = item;  // the next click in the world picks the target (yourself included)
         return;
     }
     if (s != SIN_SLOT && a.mundo.inventario.items.col<I_USO>()[s] == USO_POLYMORPH) {
@@ -110,18 +140,24 @@ void dibujar_inventario(App& a) {
     barra_scroll_ventana(a, a.scroll.inventario, x0 + GRILLA_X + COLUMNAS * CELDA + 2, y0 + GRILLA_Y, FILAS * CELDA, filas_total,
                          FILAS, a.inventario_desplazamiento, clave_orden(CAPA_UI, 14), sobre_inventario(a));
     const u64 kf = clave_orden(CAPA_UI, 12), ki = clave_orden(CAPA_UI, 13), kt = clave_orden(CAPA_UI_TEXTO, 12);
+    // Original UI: worn items first. Simple UI keeps the server order.
+    Slot orden[MAX_ORDEN];
+    size_t n_orden = 0;
+    if (!a.cfg.ui_simple) n_orden = orden_inventario(inv, orden, MAX_ORDEN);
     const int bajo = celda_bajo_puntero(a, x0, y0);
+    const Slot slot_bajo = bajo >= 0 ? slot_en(orden, n_orden, static_cast<size_t>(bajo)) : SIN_SLOT;
     const size_t primero = static_cast<size_t>(a.inventario_desplazamiento) * COLUMNAS;
     for (int c = 0; c < COLUMNAS * FILAS; ++c) {
         int x = x0 + GRILLA_X + (c % COLUMNAS) * CELDA, y = y0 + GRILLA_Y + (c / COLUMNAS) * CELDA;
         size_t i = primero + static_cast<size_t>(c);
         bool hay = i < t.tamano();
-        bool equipado = hay && item_equipado(nombre_item(inv, static_cast<Slot>(i)));
+        const Slot s = hay ? slot_en(orden, n_orden, i) : SIN_SLOT;
+        bool equipado = hay && item_equipado(nombre_item(inv, s));
         u32 fondo = static_cast<int>(i) == bajo ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230);
-        g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(80, 64, 20, 240) : fondo);
+        g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
         if (!hay) continue;
-        Slot s = static_cast<Slot>(i);
-        if (t.ids()[s] != a.arrastrando) g.gpu().dibujar(g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki);
+        if (t.ids()[s] != a.arrastrando)
+            draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         if (equipado) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));
         if (u32 n = t.col<I_CANTIDAD>()[s]; n > 1) {
             char cant[16];
@@ -144,16 +180,15 @@ void dibujar_inventario(App& a) {
         g.texto(AYUDA, tx, ty, clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
     }
 
-    // Nombre del ítem bajo el puntero (blanco; bendito amarillo, maldito rojo) y, si está
+    // Nombre del ítem bajo el puntero (siempre blanco: el original solo marca bendito/maldito en el ícono) y, si está
     // identificado, sus atributos debajo (daño, defensa, encantamiento, bonos...).
     if (bajo >= 0 && !a.arrastrando) {
-        Slot s = static_cast<Slot>(bajo);
+        const Slot s = slot_bajo;
         char buf[256], det[1024];
         size_t n = expandir_desc(a.desc, nombre_item(inv, s), buf, sizeof buf);
         size_t nd = describir_atributos(atributos_item(inv, s), det, sizeof det);
         if (nd == 0 && !t.col<I_IDENTIFICADO>()[s]) nd = static_cast<size_t>(std::snprintf(det, sizeof det, "Unidentified"));
-        u8 b = t.col<I_BENDICION>()[s];
-        u32 color = b == 1 ? rgba(255, 230, 120) : (b == 2 ? rgba(255, 110, 100) : rgba(255, 255, 254));
+        const u32 color = rgba(255, 255, 254);
         int w = ancho_texto(buf, n), lineas = 0;
         for (std::string_view resto(det, nd); !resto.empty(); ++lineas) {
             const size_t fin = std::min(resto.find('\n'), resto.size());
@@ -183,18 +218,20 @@ void dibujar_inventario(App& a) {
             a.usar_sobre = 0;
             e.escape = false;
         } else if (e.clic) {
-            if (bajo >= 0) enviar(a, cmd::usar_item_sobre(a.op, a.usar_sobre, t.ids()[static_cast<Slot>(bajo)]));
+            if (bajo >= 0) enviar(a, cmd::usar_item_sobre(a.op, a.usar_sobre, t.ids()[slot_bajo]));
             a.usar_sobre = 0;
             a.arrastrando = 0;
             return;
         }
         return;  // mientras tanto no se arrastra ni se usa otra cosa
     }
-    if (e.clic && bajo >= 0 && clic_item_tienda(a, t.ids()[static_cast<Slot>(bajo)])) return;  // armando la tienda
-    if (e.pulsado && bajo >= 0) a.arrastrando = t.ids()[static_cast<Slot>(bajo)];
+    if (e.clic && bajo >= 0 && clic_item_tienda(a, t.ids()[slot_bajo])) return;  // armando la tienda
+    if (e.pulsado && bajo >= 0) a.arrastrando = t.ids()[slot_bajo];
     if (a.arrastrando && e.presionado) {
         Slot s = t.buscar(a.arrastrando);
-        if (s != SIN_SLOT) g.gpu().dibujar(g.icono(t.col<I_GFX>()[s]), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
+        if (s != SIN_SLOT)
+            draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0),
+                           t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
     }
     if (e.clic) {
         if (a.arrastrando && sobre_basura) {
@@ -205,6 +242,10 @@ void dibujar_inventario(App& a) {
             // A la barra de atajos (Alt+número lo usa).
             Slot s = t.buscar(a.arrastrando);
             if (s != SIN_SLOT) poner_atajo(a, casillero_bajo_puntero(a), {TipoAtajo::ITEM, a.arrastrando, t.col<I_GFX>()[s]});
+        } else if (a.arrastrando && tecla_f_bajo_puntero(a) >= 0) {
+            // To an F5–F12 box of the original panel.
+            Slot s = t.buscar(a.arrastrando);
+            if (s != SIN_SLOT) poner_tecla_f(a, tecla_f_bajo_puntero(a), {TipoAtajo::ITEM, a.arrastrando, t.col<I_GFX>()[s]});
         } else if (a.arrastrando && !sobre_alguna_ventana(a) && !sobre_barra(a)) {  // solo sobre el mundo
             // Sobre un NPC o una mascota se le da (C_GiveItem; el servidor decide si lo acepta); si
             // no, va al suelo.
@@ -215,7 +256,7 @@ void dibujar_inventario(App& a) {
             else soltar_item(a, a.arrastrando);
         } else if (bajo >= 0) {
             // Doble clic: usar (equipar/quitar armas y armaduras, beber pociones...).
-            ObjId id = t.ids()[static_cast<Slot>(bajo)];
+            ObjId id = t.ids()[slot_bajo];
             if (id == a.ultimo_clic_item && e.ahora_ms - a.t_ultimo_clic_item < MS_DOBLE_CLIC) {
                 if (a.intercambio.abierto) ofrecer_en_intercambio(a, id);  // en un intercambio, se ofrece
                 else usar_item(a, id);

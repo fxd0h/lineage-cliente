@@ -670,7 +670,7 @@ bool correo(Lector& l, Evento& e) {
 bool hp_objeto(Lector& l, Evento& e) { e.tipo = Ev::HP_OBJETO; e.id = l.d(); e.v[0] = l.c(); return true; }
 
 // Ítem de S_InvList y S_AddItem: d id, h catalizador, c uso, c cargas, h gfx de inventario,
-// c bendición (0 normal, 1 bendito, 2 maldito...), d cantidad, c identificado, s nombre visible,
+// c bendición (0 bendito, 1 normal, 2 maldito, 3 sin identificar; +128 sellado), d cantidad, c identificado, s nombre visible,
 // c n + n bytes de atributos, c 10, d 0, d 0, h 0.
 // c n + n bytes de atributos (L1ItemInstance.getStatusBytes; 0 si no está identificado), a la arena.
 std::string_view atributos_item(Lector& l) {

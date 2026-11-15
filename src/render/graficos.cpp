@@ -1,5 +1,6 @@
 #include "render/graficos.h"
 #include <cstdio>
+#include "render/icon_aura.h"
 #include "plataforma/archivo_mapeado.h"
 
 namespace lin {
@@ -25,6 +26,7 @@ const RegionAtlas& Graficos::cargar(u64 k, F&& decodificar) {
 
 const RegionAtlas& Graficos::guardar(u64 k, bool ok) {
     RegionAtlas r;
+    if (!ok) aura_w_ = 0;
     if (ok && !gpu_.cabe_en_atlas(tmp_)) {
         // Más grande que una página: no entraría nunca. Se recuerda como fallo, si no se volvería a
         // leer y decodificar en cada frame.
@@ -33,7 +35,14 @@ const RegionAtlas& Graficos::guardar(u64 k, bool ok) {
     }
     if (ok && !gpu_.subir(tmp_, r)) {
         // Sin lugar este frame (buffer de subida lleno o atlas sin página libre): no se recuerda, se reintenta.
+        aura_w_ = 0;
         return pendiente_;
+    }
+    if (aura_w_) {  // icon + aura were uploaded as one image: the region covers the icon only
+        r.aura_dx = aura_w_;
+        r.w = aura_w_;
+        r.h = static_cast<u16>(r.h - AURA_PAD);
+        aura_w_ = 0;
     }
     if (int p = gpu_.tomar_pagina_reemplazada(); p >= 0) olvidar_pagina(static_cast<u16>(p));
     u32 i;
@@ -82,7 +91,10 @@ const RegionAtlas& Graficos::icono(u32 n) {
         char nombre[32];
         std::snprintf(nombre, sizeof nombre, "%u.tbt", n);
         Bytes b = rec_.sprite(nombre);
-        return !b.empty() && decodificar_tbt(b, tmp_) ? Carga::OK : Carga::FALLO;
+        if (b.empty() || !decodificar_tbt(b, tmp_)) return Carga::FALLO;
+        aura_w_ = tmp_.ancho;
+        agregar_aura(tmp_);
+        return Carga::OK;
     });
 }
 

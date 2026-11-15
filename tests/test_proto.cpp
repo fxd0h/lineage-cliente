@@ -632,6 +632,10 @@ TEST_CASE("Puertas, estados alterados, cantidad y mascotas: decodificar, aplicar
     igual(cmd::inventario_mascota(t, 5), {217, 5, 0, 0, 0});
     igual(cmd::borrar_item(t, 0x33, 2), {209, 0x33, 0, 0, 0, 2, 0, 0, 0});
     igual(cmd::usar_item_sobre(t, 0x33, 0x44), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0});
+    // Wand of Polymorph (useType spell_long): d item, d target, h x, h y (C_UseItem.java).
+    igual(cmd::usar_item_apuntado(t, 0x33, 0x44, 0x7f55, 0x80a6), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0, 0x55, 0x7f, 0xa6, 0x80});
+    // Poly scroll or wand with Ring of Polymorph Control: d item, s monster name.
+    igual(cmd::usar_item_texto(t, 0x33, "orc"), {44, 0x33, 0, 0, 0, 'o', 'r', 'c', 0});
     igual(Escritor(t, Cli::EXITGHOST), {210});
     igual(Escritor(t, Cli::RETURNTOLOGIN), {218});
     igual(cmd::entrar_portal(t, 32686, 33376), {249, 0xAE, 0x7F, 0x60, 0x82});

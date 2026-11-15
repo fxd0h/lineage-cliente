@@ -417,3 +417,26 @@ TEST_CASE("Mundo: la subida de nivel propia dispara el efecto 2127 solo si el ni
     CHECK(m.efectos[0].gfx == GFX_SUBIDA_NIVEL);
     CHECK(m.efectos[0].objeto == 77);
 }
+
+TEST_CASE("orden_inventario: lo equipado primero, el resto en el orden del servidor") {
+    Mundo m;
+    auto item = [](ObjId id, std::string_view nombre) {
+        Evento e{};
+        e.tipo = Ev::ITEM;
+        e.id = id;
+        e.v[IT_USO] = USO_ARMA;
+        e.s[0] = nombre;
+        return e;
+    };
+    Evento vaciar{};
+    vaciar.tipo = Ev::INVENTARIO_VACIAR;
+    Evento l[] = {vaciar, item(1, "$1"), item(2, "$2 ($9)"), item(3, "$3"), item(4, "$4 ($117)"), item(5, "$5")};
+    aplicar_eventos(m, l, 0);
+    const TablaItems& t = m.inventario.items;
+    Slot orden[8];
+    REQUIRE(orden_inventario(m.inventario, orden, 8) == 5);
+    const ObjId esperado[] = {2, 4, 1, 3, 5};
+    for (int i = 0; i < 5; ++i) CHECK(t.ids()[orden[i]] == esperado[i]);
+    CHECK(orden_inventario(m.inventario, orden, 3) == 3);  // capped
+    CHECK(t.ids()[orden[0]] == 2);
+}

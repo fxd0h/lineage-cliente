@@ -35,6 +35,17 @@ TABLES = {
     "npcs": ("npc", "npcid", [("gfx_id", "gfxid")], [("name_id", "nameid")]),
 }
 
+# Plain `name` columns (the server sends these in chat/system messages). Tables with an id column take
+# its English text (resolving `$N` through desc-e); the rest are hand translated.
+NAME_TABLES = {
+    "npcs": "name_id", "etc_items": "identified_name_id", "weapons": "identified_name_id",
+    "armors": "identified_name_id", "skills": None, "castles": None, "towns": None, "houses": None,
+    "ubs": None, "cooking_recipes": None,
+}
+# Item names "<prefix> (<skill>)" are matched by the server against skills.name (SkillTable.findByItemName,
+# L1SpellBook), so skills.name must equal the parenthesised part of the English item name.
+PAREN = re.compile(r"^.+ \((.+)\)$")
+
 
 def run(mariadb, sock, db, sql, stdin=None):
     args = [mariadb, "--socket=" + sock, "-uroot", "--default-character-set=utf8mb4", "-N", "-B"]
@@ -57,13 +68,25 @@ def load_translations():
     return whole
 
 
+_PAT_CACHE = {}
+
+
+def _patterns(whole):
+    """Compiled whole-word fragment patterns, longest first (the re module cache is too small for them)."""
+    if id(whole) not in _PAT_CACHE:
+        _PAT_CACHE[id(whole)] = [
+            (re.compile(r"(?<![가-힣])" + re.escape(ko) + r"(?![가-힣])"), whole[ko])
+            for ko in sorted(whole, key=len, reverse=True)]
+    return _PAT_CACHE[id(whole)]
+
+
 def translate(text, whole):
+    text = text.replace("\u200b", "")
     if text in whole:
         return whole[text]
     out = text
-    for ko in sorted(whole, key=len, reverse=True):
-        # Match whole words only so short entries ("알") cannot corrupt longer Korean words.
-        out = re.sub(r"(?<![가-힣])" + re.escape(ko) + r"(?![가-힣])", lambda _m, en=whole[ko]: en, out)
+    for pat, en in _patterns(whole):
+        out = pat.sub(lambda _m, en=en: en, out)
     out = re.sub(r"\$ (\d+)", r"$\1", out)
     out = re.sub(r"\s+", " ", out).strip()
     return None if KOREAN.search(out) or JAPANESE.search(out) else out
@@ -97,6 +120,33 @@ def pick_english(en_id, en_name, desc):
 
 def sql_str(s):
     return "'" + s.replace("\\", "\\\\").replace("'", "''") + "'"
+
+
+def translate_name_columns(mariadb, sock, desc, whole, merged, unresolved):
+    out, paren = [], {}
+    for table, idcol in NAME_TABLES.items():
+        sel = f"id, name, {idcol}" if idcol else "id, name, NULL"
+        for rid, old, idval in run(mariadb, sock, "l1jdb_363", f"SELECT {sel} FROM {table} WHERE name REGEXP '[가-힣]' ORDER BY id"):
+            idval = merged.get((table, rid, idcol), (0, 0, 0, 0, idval))[4] if idcol else idval
+            m = re.fullmatch(r"\$(\d+)", idval)
+            new, src = None, "translated"
+            if m and desc(int(m.group(1))) and desc(int(m.group(1))).lower() != "dummy" \
+                    and not KOREAN.search(desc(int(m.group(1)))):
+                new, src = desc(int(m.group(1))), "desc"
+            elif idcol and idval not in ("", "NULL") and not m and not KOREAN.search(idval) \
+                    and not JAPANESE.search(idval) and not idval.startswith("Unknown"):
+                new, src = idval, "id"
+            if new is None and table == "skills" and old in paren:
+                new, src = paren[old], "item"
+            if new is None:
+                new = translate(old, whole)
+            if new is None:
+                unresolved[old] = unresolved.get(old, 0) + 1
+                continue
+            out.append((table, rid, "name", old, new, src))
+            if table == "etc_items" and PAREN.match(old) and PAREN.match(new):
+                paren.setdefault(PAREN.match(old).group(1), PAREN.match(new).group(1))
+    return out
 
 
 def main():
@@ -148,6 +198,19 @@ def main():
                 merged[r[:3]] = r
     for r in rows:
         merged[r[:3]] = r
+    rows = sorted(merged.values(), key=lambda r: (r[0], int(r[1]), r[2]))
+    with open(tsv, "w", encoding="utf-8") as f:
+        f.write("table\tid\tcolumn\told\tnew\tsource\n")
+        for r in rows:
+            f.write("\t".join(r) + "\n")
+    name_rows = translate_name_columns(mariadb, sock, desc, whole, merged, unresolved)
+    if unresolved:
+        for k in sorted(unresolved):
+            print("UNRESOLVED", k, file=sys.stderr)
+        sys.exit(f"{len(unresolved)} unresolved strings")
+    for r in name_rows:
+        merged[r[:3]] = r
+        stats[(r[0] + ".name", r[5])] = stats.get((r[0] + ".name", r[5]), 0) + 1
     rows = sorted(merged.values(), key=lambda r: (r[0], int(r[1]), r[2]))
     with open(tsv, "w", encoding="utf-8") as f:
         f.write("table\tid\tcolumn\told\tnew\tsource\n")

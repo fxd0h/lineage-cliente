@@ -150,6 +150,17 @@ bool item_equipado(std::string_view n) {
     return n.find(" ($9)") != std::string_view::npos || n.find(" ($117)") != std::string_view::npos;
 }
 
+size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap) {
+    const size_t n = std::min(inv.items.tamano(), cap);
+    size_t k = 0;
+    for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
+        if (item_equipado(nombre_item(inv, s))) salida[k++] = s;
+    // Worn items beyond `cap` (absurd inventory sizes) are not reordered: they stay in natural order below.
+    for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
+        if (!item_equipado(nombre_item(inv, s))) salida[k++] = s;
+    return k;
+}
+
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
     TablaItems& t = inv.items;
     for (const Evento& e : eventos) {

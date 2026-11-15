@@ -93,7 +93,8 @@ add_library(lin_render STATIC
     src/render/atlas.cpp
     src/render/gpu.cpp
     src/render/gpu_anime4k.cpp
-    src/render/graficos.cpp)
+    src/render/graficos.cpp
+    src/render/icon_aura.cpp)
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
 
 add_library(lin_audio STATIC
@@ -112,6 +113,7 @@ add_executable(lineage
     src/app/pantalla_crear.cpp
     src/app/pantalla_juego.cpp
     src/app/inventario_ui.cpp
+    src/app/item_icon.cpp
     src/app/hechizos_ui.cpp
     src/app/barra_ui.cpp
     src/app/autobuffs_ui.cpp
@@ -171,6 +173,7 @@ tests/test_pe_resources.cpp
         tests/test_mundo.cpp
         tests/test_chat.cpp
         tests/test_atlas.cpp
+        tests/test_icon_aura.cpp
         tests/test_asignaciones.cpp
         tests/test_hechizos.cpp
         tests/test_luz.cpp

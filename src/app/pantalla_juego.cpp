@@ -1348,7 +1348,7 @@ void dibujar_fps(App& a) {
 // Cursor: círculo si un hechizo espera su objetivo; espada sobre un monstruo (o con Ctrl sobre otro
 // personaje o NPC, que es atacarlo); si no, la mano (también sobre la interfaz).
 void elegir_cursor(App& a) {
-    if (a.hechizo_apuntando || a.mascota_eligiendo) {
+    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
         a.cursor = Cursor::OBJETIVO;
         return;
     }
@@ -1436,6 +1436,7 @@ void frame_juego(App& a) {
     // la cámara y el personaje usen la misma posición. El jugador queda siempre en el centro.
     actualizar_ventanas(a);
     procesar_hechizos(a, ahora);
+    procesar_item_apuntado(a);
     procesar_mascotas(a);
     procesar_barra(a);
     procesar_autobuffs(a);

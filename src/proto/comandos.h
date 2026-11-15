@@ -118,6 +118,12 @@ inline Escritor usar_item_sobre(const TablaOpcodes& t, u32 item, u32 objetivo) {
     e.d(item).d(objetivo);
     return e;
 }
+// C_UseItem of an item aimed at an object or cell (useType 5, 17, 39: wands, spell scrolls): d item, d target, h x, h y.
+inline Escritor usar_item_apuntado(const TablaOpcodes& t, u32 item, u32 objetivo, u16 x, u16 y) {
+    Escritor e(t, Cli::USEITEM);
+    e.d(item).d(objetivo).h(x).h(y);
+    return e;
+}
 inline Escritor usar_item_texto(const TablaOpcodes& t, u32 item, std::string_view texto) {
     Escritor e(t, Cli::USEITEM);
     e.d(item).s(texto);

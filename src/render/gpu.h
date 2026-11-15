@@ -31,7 +31,9 @@ struct Instancia {
 static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader");
 
 // Normal (tapa según el alfa) o aditiva (suma su luz al fondo: efectos de hechizos).
-enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1 };
+// SILUETA: ignores the texture's color, uses the tint's color with the texture's alpha (bit 1); the additive
+// variant adds that flat color to the background.
+enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
 // Gpu::nivel_ventana lleva lo que se dibuja en CAPA_UI y CAPA_UI_TEXTO mientras se dibuja una

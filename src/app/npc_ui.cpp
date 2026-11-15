@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -237,9 +238,9 @@ void dibujar_tienda(App& a, int x0, int y0) {
         const int x = x0 + MARGEN, y = y0 + ARRIBA + k * FILA_TIENDA, w = ui::VENTANA_ANCHO - 2 * MARGEN;
         const bool encima = ui::sobre(e, x, y, w, FILA_TIENDA - 2);
         g.gpu().rectangulo(x, y, w, FILA_TIENDA - 2, kf, f.elegido ? rgba(80, 64, 20, 230) : encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
-        g.gpu().dibujar(g.icono(f.gfx), x + 1, y, ki);
+        draw_item_icon(g.gpu(), g.icono(f.gfx), x + 1, y, ki, f.bendicion);
         size_t m = nombre_fila(a, f, buf, sizeof buf);
-        u32 color = f.bendicion == 1 ? rgba(255, 230, 120) : f.bendicion == 2 ? rgba(255, 110, 100) : rgba(255, 255, 254);
+        const u32 color = rgba(255, 255, 254);
         // El nombre en una línea (cortado si no entra) y debajo precio y cantidad elegida.
         while (m > 0 && ancho_texto(buf, m) > w - 40) --m;
         g.texto({buf, m}, static_cast<float>(x + 38), static_cast<float>(y + 3), kt, color);

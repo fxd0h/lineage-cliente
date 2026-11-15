@@ -52,10 +52,12 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
 
 fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
                           sampler s [[sampler(0)]]) {
-    float4 c = atlas.sample(s, in.uv, in.pagina) * in.color;
+    float4 t = atlas.sample(s, in.uv, in.pagina);
+    // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
+    float4 c = (in.mezcla & 2) != 0 ? float4(in.color.rgb, t.a * in.color.a) : t * in.color;
     if (c.a <= 0.0) discard_fragment();
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    return float4(c.rgb * c.a, in.mezcla == 1 ? 0.0 : c.a);
+    return float4(c.rgb * c.a, (in.mezcla & 1) != 0 ? 0.0 : c.a);
 }
 
 // Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.

@@ -384,7 +384,9 @@ struct App {
         bool sobre_si = false;  // pasó el tiempo: se lanza sobre uno mismo
     } tecla_mantenida;
     bool clic_consumido = false;      // el clic que eligió el objetivo no camina hasta soltarlo
-    u16 atajos[8] = {};               // F5..F12
+    u16 atajos[8] = {};               // F5..F12: spell ids
+    int tecla_f_arrastrada = -1;      // F box being dragged
+    Atajo items_f[8];                 // F5..F12: item (when the box holds an item; its atajos[] entry is 0)
     std::string atajos_de;            // personaje cuyos atajos están cargados
     // Barra de atajos (Alt+1..Alt+0; barra_ui.cpp): hechizos o ítems arrastrados a sus casilleros.
     // Páginas (cfg.paginas_barra a la vista; las de más se conservan) y la visible.
@@ -473,6 +475,7 @@ struct App {
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
+    ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     ObjId ultimo_clic_item = 0;         // para el doble clic
     u64 t_ultimo_clic_item = 0;
@@ -586,6 +589,8 @@ void dibujar_espera_hechizo(App& a, int x, int y, int w, int h);
 // Panel original: los casilleros F5–F12 con sus hechizos (`x`, `y`: esquina del panel 1019).
 void dibujar_teclas_f(App& a, int x, int y);
 int tecla_f_bajo_puntero(const App& a);
+// Puts a spell/item (or nothing) in F5..F12 box k and saves it per character.
+void poner_tecla_f(App& a, int k, Atajo atajo);
 void dibujar_hechizos(App& a);
 // Efectos activos (haste, escudos...) arriba a la izquierda, y el aviso de elegir objetivo.
 void dibujar_efectos_activos(App& a, u64 ahora);
@@ -682,6 +687,7 @@ bool sobre_cantidad(const App& a);
 
 // Mascotas e invocaciones (mascotas_ui.cpp).
 void eventos_mascotas(App& a, const Evento& e);
+void procesar_item_apuntado(App& a);  // click on the target of an aimed item (wand of polymorph)
 void procesar_mascotas(App& a);  // antes del movimiento: elegir el objetivo de una mascota
 void dibujar_mascotas(App& a);
 bool sobre_mascotas(const App& a);

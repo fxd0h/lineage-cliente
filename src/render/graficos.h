@@ -97,6 +97,7 @@ private:
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;
     ImagenRGBA tmp_;
+    u16 aura_w_ = 0;  // icon width while tmp_ holds icon + aura (see RegionAtlas::aura_dx)
     std::vector<GlifoTexto> glifos_tmp_;
     double ms_decodificacion_ = 0;
 

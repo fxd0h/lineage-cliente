@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -65,8 +66,8 @@ void dibujar_equipo(App& a, int x0, int y0) {
     auto poner = [&](Slot s, int rx, int ry, int rw, int rh) {
         const int lado = std::min({32, rw, rh});
         const RegionAtlas& ic = g.icono(t.col<I_GFX>()[s]);
-        g.gpu().dibujar_escalado(ic, static_cast<float>(rx + (rw - lado) / 2), static_cast<float>(ry + (rh - lado) / 2),
-                                 static_cast<float>(lado), static_cast<float>(lado), ki);
+        draw_item_icon(g.gpu(), ic, rx + (rw - lado) / 2, ry + (rh - lado) / 2, static_cast<float>(lado),
+                       static_cast<float>(lado), ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         if (ui::sobre(e, rx, ry, rw, rh)) bajo = s;
     };
     char txt[160];

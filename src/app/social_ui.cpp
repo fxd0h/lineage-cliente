@@ -10,6 +10,7 @@
 //    (ver dibujar_personajes).
 #include <cstring>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -75,7 +76,7 @@ int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0) {
         const bool encima = ui::sobre(a.entrada, x, y, CELDA - 2, CELDA - 2);
         g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, clave_orden(CAPA_UI, 12), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
         if (c >= static_cast<int>(items.size())) continue;
-        g.gpu().dibujar(g.icono(items[c].gfx), x + 1, y + 1, clave_orden(CAPA_UI, 13));
+        draw_item_icon(g.gpu(), g.icono(items[c].gfx), x + 1, y + 1, clave_orden(CAPA_UI, 13), items[c].bendicion);
         if (encima) bajo = c;
     }
     return bajo;

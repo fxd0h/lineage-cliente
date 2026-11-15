@@ -20,6 +20,7 @@ namespace lin {
 struct RegionAtlas {
     u16 pagina = 0, x = 0, y = 0, w = 0, h = 0;
     i16 ox = 0, oy = 0;  // desplazamiento de dibujo de la imagen original
+    u16 aura_dx = 0;     // inventory icons: the bless-aura image (w+4 x h+4) sits aura_dx px right of x; 0 = none
     bool valida() const { return w != 0; }
 };
 

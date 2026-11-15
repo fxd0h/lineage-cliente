@@ -25,25 +25,64 @@ int hechizos_sabidos(const App& a, u16* ids, int cap) {
     return n;
 }
 
-// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0;Otro:...
+// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0;Otro:...  A spell is its id; an item is "i<gfx>:<id>".
 void cargar_atajos(App& a) {
     a.atajos_de = nombre_personaje(a);
     std::memset(a.atajos, 0, sizeof a.atajos);
+    for (Atajo& b : a.items_f) b = {};
     std::string_view v = valor_de_personaje(a.cfg.atajos, a.atajos_de);
     for (int i = 0; i < 8 && !v.empty(); ++i) {
-        u16 id = 0;
-        std::from_chars(v.data(), v.data() + v.size(), id);
-        a.atajos[i] = id;
-        size_t coma = v.find(',');
+        const size_t coma = v.find(',');
+        const std::string_view t = v.substr(0, coma);
+        const char* fin = t.data() + t.size();
+        if (!t.empty() && t[0] == 'i') {
+            Atajo& b = a.items_f[i];
+            auto r = std::from_chars(t.data() + 1, fin, b.gfx);
+            if (r.ptr < fin && *r.ptr == ':' && std::from_chars(r.ptr + 1, fin, b.id).ec == std::errc{}) b.tipo = TipoAtajo::ITEM;
+        } else {
+            u16 id = 0;
+            std::from_chars(t.data(), fin, id);
+            a.atajos[i] = id;
+        }
         v = coma == std::string_view::npos ? std::string_view{} : v.substr(coma + 1);
     }
 }
 
 void guardar_atajos(App& a) {
     std::string v;
-    for (int i = 0; i < 8; ++i) v += std::to_string(a.atajos[i]) + (i < 7 ? "," : "");
+    for (int i = 0; i < 8; ++i) {
+        const Atajo& b = a.items_f[i];
+        if (b.tipo == TipoAtajo::ITEM) v += 'i' + std::to_string(b.gfx) + ':' + std::to_string(b.id);
+        else v += std::to_string(a.atajos[i]);
+        if (i < 7) v += ',';
+    }
     poner_valor_de_personaje(a.cfg.atajos, a.atajos_de, v);
     guardar_config(a.cfg);
+}
+
+// Inventory slot of an F-box item: by id or, if it is gone, another item with the same gfx (the box
+// then follows that id).
+Slot item_de_tecla_f(App& a, Atajo& b) {
+    const TablaItems& t = a.mundo.inventario.items;
+    Slot s = t.buscar(b.id);
+    if (s != SIN_SLOT) return s;
+    for (Slot i = 0; i < t.tamano(); ++i) {
+        if (t.col<I_GFX>()[i] == b.gfx) {
+            b.id = t.ids()[i];
+            guardar_atajos(a);
+            return i;
+        }
+    }
+    return SIN_SLOT;
+}
+
+void usar_tecla_f(App& a, int k) {
+    Atajo& b = a.items_f[k];
+    if (b.tipo == TipoAtajo::ITEM) {
+        if (Slot s = item_de_tecla_f(a, b); s != SIN_SLOT) usar_item(a, a.mundo.inventario.items.ids()[s]);
+    } else if (a.atajos[k]) {
+        pedir_hechizo(a, a.atajos[k], 0);
+    }
 }
 
 }  // namespace
@@ -267,10 +306,9 @@ void procesar_hechizos(App& a, u64 ahora) {
         int i = e.tecla_f - 5;
         u32 bajo = hechizo_bajo_puntero(a);
         if (bajo) {
-            a.atajos[i] = a.atajos[i] == bajo ? 0 : static_cast<u16>(bajo);
-            guardar_atajos(a);
-        } else if (a.atajos[i]) {
-            pedir_hechizo(a, a.atajos[i], 0);
+            poner_tecla_f(a, i, a.atajos[i] == bajo ? Atajo{} : Atajo{TipoAtajo::HECHIZO, bajo, 0});
+        } else {
+            usar_tecla_f(a, i);
         }
     }
 
@@ -293,6 +331,13 @@ void dibujar_arrastre(App& a);
 
 // Casilleros F5–F12 del panel original (1019.img): 2 filas de 4, de 34 px, desde (17, 23).
 constexpr int TECLAS_X = 17, TECLAS_Y = 23, TECLA = 34;
+
+void poner_tecla_f(App& a, int k, Atajo atajo) {
+    if (k < 0 || k >= 8) return;
+    a.atajos[k] = atajo.tipo == TipoAtajo::HECHIZO ? static_cast<u16>(atajo.id) : 0;
+    a.items_f[k] = atajo.tipo == TipoAtajo::ITEM ? atajo : Atajo{};
+    guardar_atajos(a);
+}
 
 int tecla_f_bajo_puntero(const App& a) {
     if (a.teclas_f_y < 0) return -1;
@@ -324,6 +369,20 @@ void dibujar_teclas_f(App& a, int x, int y) {
     a.teclas_f_y = y;
     const int bajo = tecla_f_bajo_puntero(a);
     for (int k = 0; k < 8; ++k) {
+        if (a.items_f[k].tipo == TipoAtajo::ITEM) {
+            Atajo& b = a.items_f[k];
+            const int cx = x + TECLAS_X + (k % 4) * TECLA, cy = y + TECLAS_Y + (k / 4) * TECLA;
+            const Slot s = item_de_tecla_f(a, b);
+            const TablaItems& t = a.mundo.inventario.items;
+            g.gpu().dibujar(g.icono(b.gfx), cx, cy, clave_orden(CAPA_UI, 3), s != SIN_SLOT ? BLANCO : rgba(110, 110, 110));
+            if (s != SIN_SLOT && t.col<I_CANTIDAD>()[s] > 1) {
+                char c[16];
+                std::snprintf(c, sizeof c, "%u", t.col<I_CANTIDAD>()[s]);
+                g.texto_sombra(c, static_cast<float>(cx + TECLA - 4 - ancho_texto(c, std::strlen(c))),
+                               static_cast<float>(cy + TECLA - 3 - ALTO_GLIFO), clave_orden(CAPA_UI_TEXTO, 3), rgba(255, 255, 254));
+            }
+            continue;
+        }
         if (!a.atajos[k]) continue;
         const Hechizo& h = a.hechizos[a.atajos[k]];
         const int cx = x + TECLAS_X + (k % 4) * TECLA, cy = y + TECLAS_Y + (k / 4) * TECLA;
@@ -331,11 +390,31 @@ void dibujar_teclas_f(App& a, int x, int y) {
                         a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110));
         dibujar_espera_hechizo(a, cx, cy, 32, 32);
     }
-    if (bajo >= 0 && a.atajos[bajo]) {
-        if (e.clic && !a.arrastrando_hechizo && a.arrastrando_atajo < 0) pedir_hechizo(a, a.atajos[bajo], 0);
-        if (e.clic_derecho) {
-            a.atajos[bajo] = 0;
+    // Drag from a box: onto another box swaps, outside any window clears; a plain click uses it.
+    auto lleno = [&](int k) { return a.atajos[k] || a.items_f[k].tipo == TipoAtajo::ITEM; };
+    if (bajo >= 0 && lleno(bajo)) {
+        if (e.pulsado && !a.arrastrando && !a.arrastrando_hechizo && a.arrastrando_atajo < 0) {
+            a.tecla_f_arrastrada = bajo;
+            a.arrastre_x0 = e.mx;
+            a.arrastre_y0 = e.my;
+        }
+        if (e.clic_derecho) poner_tecla_f(a, bajo, {});
+    }
+    const int desde = a.tecla_f_arrastrada;
+    if (desde >= 0 && e.presionado && arrastre_movido(a)) {
+        const u16 icono = a.items_f[desde].tipo == TipoAtajo::ITEM ? a.items_f[desde].gfx : a.hechizos[a.atajos[desde]].icono;
+        g.gpu().dibujar(g.icono(icono), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
+    }
+    if (desde >= 0 && e.clic) {
+        a.tecla_f_arrastrada = -1;
+        if (!arrastre_movido(a)) {
+            if (bajo == desde) usar_tecla_f(a, desde);
+        } else if (bajo >= 0) {
+            std::swap(a.atajos[desde], a.atajos[bajo]);
+            std::swap(a.items_f[desde], a.items_f[bajo]);
             guardar_atajos(a);
+        } else if (!sobre_alguna_ventana(a) && !sobre_barra(a)) {
+            poner_tecla_f(a, desde, {});
         }
     }
 }
@@ -504,8 +583,7 @@ void dibujar_arrastre(App& a) {
         } else if (int ab = autobuff_bajo_puntero(a); ab >= 0) {
             poner_autobuff(a, ab, id);
         } else if (int f = tecla_f_bajo_puntero(a); f >= 0) {  // a una tecla F del panel original
-            a.atajos[f] = static_cast<u16>(id);
-            guardar_atajos(a);
+            poner_tecla_f(a, f, {TipoAtajo::HECHIZO, id, 0});
         }
     }
 }
