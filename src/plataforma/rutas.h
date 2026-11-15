@@ -25,6 +25,7 @@ struct Config {
     size_t servidor = 0;           // el elegido ("servidor_elegido=Nombre")
     int ventana_ancho = 1280, ventana_alto = 960;  // "ventana=AxB": en puntos, el de la última vez
     int zoom = 0;                  // escala en el juego (píxeles reales por píxel lógico); 0 = automática
+    std::string escalado = "entero";  // final-present filter: entero | xbr | fsr | crt | anime4k (Shift+F5)
     bool camara_a_saltos = false;  // la cámara sigue los frames de caminar, como el original (F4)
     bool ui_simple = true;         // UI de texto (estilo ASCII) en el juego; false = panel original (F2)
     bool mostrar_fps = false;      // fps y ms por frame en la esquina superior derecha (Shift+F3)

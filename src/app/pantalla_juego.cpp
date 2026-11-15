@@ -12,23 +12,19 @@ namespace lin {
 
 namespace {
 
-// Barra de vida o maná sobre un personaje, como la del cliente original: marco dorado de 1 px,
-// fondo oscuro y relleno con una fila de brillo arriba. (x, y) es la esquina del marco.
-void barra_original(Graficos& g, int x, int y, int ancho, i32 v, i32 vmax, u32 brillo, u32 color, u32 sombra) {
-    constexpr u32 MARCO = rgba(200, 170, 110, 230);
-    constexpr u32 FONDO = rgba(25, 20, 15, 210);
-    const u64 k0 = clave_orden(CAPA_EFECTOS, 0), k1 = clave_orden(CAPA_EFECTOS, 1);
-    g.gpu().rectangulo(x, y, ancho, 5, k0, MARCO);
-    g.gpu().rectangulo(x + 1, y + 1, ancho - 2, 3, k1, FONDO);
-    const int w = vmax > 0 ? (ancho - 2) * std::clamp(v, 0, vmax) / vmax : 0;
-    if (w <= 0) return;
-    const u64 k2 = clave_orden(CAPA_EFECTOS, 2);
-    g.gpu().rectangulo(x + 1, y + 1, w, 1, k2, brillo);
-    g.gpu().rectangulo(x + 1, y + 2, w, 1, k2, color);
-    g.gpu().rectangulo(x + 1, y + 3, w, 1, k2, sombra);
+// Overhead HP/MP bar, drawn with the original client's images (Sprite pak): 930.img is the empty
+// bar, 931.img / 932.img the red / blue fill, all 44x5 with a golden frame. The fill is clipped to
+// the current fraction, like the panel bars. (x, y) is the top-left corner.
+constexpr u32 IMG_OVERHEAD_EMPTY = 930, IMG_OVERHEAD_HP = 931, IMG_OVERHEAD_MP = 932;
+
+void overhead_bar(Graficos& g, int x, int y, u32 fill_img, i32 value, i32 max) {
+    const RegionAtlas& empty = g.img(IMG_OVERHEAD_EMPTY);
+    if (empty.valida()) g.gpu().dibujar(empty, x, y, clave_orden(CAPA_EFECTOS, 0));
+    RegionAtlas fill = g.img(fill_img);
+    if (!fill.valida() || max <= 0) return;
+    fill.w = static_cast<u16>(fill.w * std::clamp(value, 0, max) / max);
+    if (fill.w > 0) g.gpu().dibujar(fill, x, y, clave_orden(CAPA_EFECTOS, 1));
 }
-constexpr u32 HP_BRILLO = rgba(255, 170, 120), HP_COLOR = rgba(215, 70, 40), HP_SOMBRA = rgba(140, 35, 25);
-constexpr u32 MP_BRILLO = rgba(150, 200, 255), MP_COLOR = rgba(60, 120, 230), MP_SOMBRA = rgba(30, 60, 150);
 
 
 // Ataque: el anti-acelerador del servidor también controla el intervalo entre C_Attack (con la
@@ -424,6 +420,14 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             const RegionAtlas& r = g.frame_sprite(a.sprites.gfx_archivos(gfx), sub_pedido, frame);
             rg_pendiente = g.pendiente(r);
             rg = r;
+            if (s >= a.last_frames.size()) return;  // more objects than tracked: no fallback
+            App::LastFrame& last = a.last_frames[s];
+            if (!rg_pendiente) {
+                if (rg.valida()) last = {o.ids()[s], rg};
+            } else if (last.id == o.ids()[s] && last.region.valida()) {
+                rg = last.region;  // keep the previous frame until the new one is loaded
+                rg_pendiente = false;
+            }
         };
         if (r) {
             bool termino = false;
@@ -484,15 +488,15 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         const bool soy_yo = o.ids()[s] == a.mundo.jugador.id;
         const u8 hp = o.col<O_HP>()[s];
         if (hp <= 100 && !soy_yo) {
-            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, 44, hp, 100, HP_BRILLO, HP_COLOR, HP_SOMBRA);
+            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
             top -= 8;
         }
         // Barra de HP/MP propia (opción): dos barras finas sobre el personaje, con los valores reales.
         if (soy_yo && a.cfg.barra_personaje) {
             const EstadoJugador& j = a.mundo.jugador;
             // Como el original: HP arriba y MP justo debajo, compartiendo el borde del marco.
-            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, 44, j.hp, j.hp_max, HP_BRILLO, HP_COLOR, HP_SOMBRA);
-            barra_original(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, 44, j.mp, j.mp_max, MP_BRILLO, MP_COLOR, MP_SOMBRA);
+            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, IMG_OVERHEAD_HP, j.hp, j.hp_max);
+            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_MP, j.mp, j.mp_max);
             top -= 12;
         }
         // Texto de combate flotante (opción): daño recibido / "Miss", sube y se desvanece (DUR_COMBATE).
@@ -772,9 +776,11 @@ void mover_jugador(App& a, u64 ahora) {
         elegir_objetivo_bajo_puntero(a);
         a.objetivo_fijo = a.objetivo != 0;
     }
-    // Soltar el botón con el puntero fuera de la ventana: el ataque sigue solo (como la tecla A) hasta un
-    // clic nuevo en el mundo, caminar, o que el objetivo muera o desaparezca.
-    if (e.clic && e.solto_fuera && a.objetivo && !a.hablar_objetivo) {
+    // Like the original client: press on a monster and release the button over the bottom panel, and the
+    // attack keeps going on its own (like the A key) until a new click in the world, walking, or the target
+    // dies or disappears.
+    const bool released_on_panel = e.my >= vi.panel_y && e.mx >= vi.panel_x0 && e.mx < vi.panel_x1;
+    if (e.clic && released_on_panel && a.objetivo && !a.hablar_objetivo) {
         const Slot b = o.buscar(a.objetivo);
         const bool atacable = b != SIN_SLOT && tipo_objeto(a, b) != TIPO_ITEM && !mascota_sin_ctrl(a, b);
         if (sostener_ataque_al_soltar(a.objetivo_fijo, atacable, true)) a.ataque_sostenido = true;

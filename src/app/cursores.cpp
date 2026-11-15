@@ -1,15 +1,16 @@
-// Cursores del juego: mano (moverse, interfaz), espada (sobre un monstruo, o con Ctrl sobre un NPC
-// u otro personaje, o sobre un personaje en modo PK), labios (sobre un NPC: hablarle) y círculo de
-// objetivo (un hechizo espera su objetivo), como en el original.
-//
-// Los del original no están en esta instalación: no hay archivos de cursor, Lineage.exe solo trae
-// los cursores estándar de Windows (ayuda y flechas de desplazamiento) y en los .pak no aparecen
-// (se buscaron entre todas las imágenes y sprites chicos). Seguramente van dentro del ejecutable
-// cifrado (lin.bin). Estos son dibujos propios en el mismo estilo: 16×16 en texto, escalados a
-// 32 px (y 64 px para pantallas Retina), como cursores del sistema (SDL_CreateColorCursor): se
-// mueven sin el retraso de un frame que tendría dibujarlos con el juego.
+// Game cursors, as in the original client. The originals are 32x32 monochrome RT_CURSOR resources
+// (ids 1..17) inside the game binary (S3EP1U.bin, falling back to S3EP1.bin / Lineage.exe), read at
+// runtime with recursos/pe_resources and created with SDL_CreateCursor (data/mask bits, so inverted
+// pixels work), scaled by the integer game zoom and recreated when it changes.
+// Role -> resource id (chosen by visual match with the reference video; the default pointer in
+// the video is the white pointing hand): hand 2, sword 6, target circle 8, talk 7 ("?"), shop 13.
+// If the binary or a resource is missing, the hand-drawn cursors below (16x16 art, as system color
+// cursors) are used instead.
+#include <algorithm>
 #include <cmath>
 #include "app/app.h"
+#include "plataforma/archivo_mapeado.h"
+#include "recursos/pe_resources.h"
 
 namespace lin {
 
@@ -115,9 +116,56 @@ SDL_Cursor* crear(char (*pixel)(int, int, const char* const*), const char* const
     return c;
 }
 
-}  // namespace
+// Original cursor resource id per role (Cursor order: HAND, SWORD, TARGET, LIPS, COIN).
+constexpr u32 ORIGINAL_IDS[static_cast<int>(Cursor::CANTIDAD)] = {2, 6, 8, 7, 13};
 
-void crear_cursores(App& a) {
+std::vector<PeCursor> g_originals;  // parsed once, empty if unavailable
+bool g_originals_tried = false;
+int g_scale = 0;
+
+void load_originals(const std::string& game_dir) {
+    g_originals_tried = true;
+    for (const char* name : {"S3EP1U.bin", "S3EP1.bin", "Lineage.exe"}) {
+        ArchivoMapeado f;
+        if (!f.abrir(ruta_real(game_dir + name))) continue;
+        std::vector<PeCursor> all;
+        for (u32 id : ORIGINAL_IDS) {
+            PeCursor c;
+            if (!pe_load_cursor(f.datos(), id, c) || c.width % 8 != 0) {
+                all.clear();
+                break;
+            }
+            all.push_back(std::move(c));
+        }
+        if (!all.empty()) {
+            g_originals = std::move(all);
+            return;
+        }
+    }
+}
+
+SDL_Cursor* from_original(const PeCursor& c, int scale) {
+    const int w = c.width * scale, h = c.height * scale, stride = w / 8;
+    std::vector<u8> data(static_cast<size_t>(stride) * h, 0), mask(data.size(), 0);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const PePixel p = c.pixels[static_cast<size_t>(y / scale) * c.width + x / scale];
+            const u8 bit = static_cast<u8>(0x80 >> (x & 7));
+            const size_t i = static_cast<size_t>(y) * stride + x / 8;
+            if (p == PePixel::BLACK || p == PePixel::INVERT) data[i] |= bit;  // inverted: data=1, mask=0
+            if (p == PePixel::BLACK || p == PePixel::WHITE) mask[i] |= bit;
+        }
+    return SDL_CreateCursor(data.data(), mask.data(), w, h, c.hot_x * scale, c.hot_y * scale);
+}
+
+void build(App& a) {
+    g_scale = std::clamp(a.gpu.escala(), 1, 4);
+    for (int i = 0; i < static_cast<int>(Cursor::CANTIDAD); ++i)
+        if (i < static_cast<int>(g_originals.size())) a.cursores[i] = from_original(g_originals[i], g_scale);
+    if (!g_originals.empty() && a.cursores[0]) return;
+    destruir_cursores(a);
+    g_originals.clear();
+    g_scale = 0;
     a.cursores[static_cast<int>(Cursor::MANO)] = crear(de_arte, MANO, 2, 0);
     a.cursores[static_cast<int>(Cursor::ESPADA)] = crear(de_arte, ESPADA, 0, 0);
     a.cursores[static_cast<int>(Cursor::OBJETIVO)] = crear(de_objetivo, nullptr, 7, 7);
@@ -125,7 +173,24 @@ void crear_cursores(App& a) {
     a.cursores[static_cast<int>(Cursor::MONEDA)] = crear(de_arte, MONEDA, 7, 7);
 }
 
+}  // namespace
+
+void crear_cursores(App& a) {
+    if (!g_originals_tried) load_originals(a.cfg.carpeta_juego);
+    build(a);
+}
+
 void aplicar_cursor(App& a) {
+    if (!g_originals.empty() && std::clamp(a.gpu.escala(), 1, 4) != g_scale) {
+        SDL_Cursor* old[static_cast<int>(Cursor::CANTIDAD)];
+        std::memcpy(old, a.cursores, sizeof old);
+        std::memset(a.cursores, 0, sizeof old);
+        build(a);
+        a.cursor_aplicado = Cursor::CANTIDAD;
+        if (SDL_Cursor* c = a.cursores[static_cast<int>(a.cursor)]) SDL_SetCursor(c);
+        for (SDL_Cursor* c : old)
+            if (c) SDL_DestroyCursor(c);
+    }
     if (a.cursor == a.cursor_aplicado) return;
     if (SDL_Cursor* c = a.cursores[static_cast<int>(a.cursor)]) SDL_SetCursor(c);
     a.cursor_aplicado = a.cursor;

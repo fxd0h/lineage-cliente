@@ -62,6 +62,7 @@ target_link_libraries(lin_proto PUBLIC lin_core lin_plataforma)
 add_library(lin_recursos STATIC
     src/recursos/des.cpp
     src/recursos/pak.cpp
+    src/recursos/pe_resources.cpp
     src/recursos/imagen.cpp
     src/recursos/tiles.cpp
     src/recursos/sprites.cpp
@@ -91,6 +92,7 @@ target_link_libraries(lin_mundo PUBLIC lin_core lin_proto lin_recursos)
 add_library(lin_render STATIC
     src/render/atlas.cpp
     src/render/gpu.cpp
+    src/render/gpu_anime4k.cpp
     src/render/graficos.cpp)
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
 
@@ -165,6 +167,7 @@ if(LIN_TESTS)
         tests/test_des.cpp
         tests/test_proto.cpp
         tests/test_recursos.cpp
+tests/test_pe_resources.cpp
         tests/test_mundo.cpp
         tests/test_chat.cpp
         tests/test_atlas.cpp

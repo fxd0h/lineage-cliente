@@ -1,0 +1,1107 @@
+table	id	column	old	new	source
+armors	20349	identified_name_id	비글의 초커	Amulet of Beagle	l1j-en
+armors	20349	unidentified_name_id	비글의 초커	Amulet of Beagle	l1j-en
+armors	20350	identified_name_id	눈사람의 목걸이	Amulet of Snow Man	l1j-en
+armors	20350	unidentified_name_id	눈사람의 목걸이	Amulet of Snow Man	l1j-en
+armors	20351	identified_name_id	눈사람의 헬멧	Carrot	l1j-en
+armors	20351	unidentified_name_id	눈사람의 헬멧	Carrot	l1j-en
+armors	20352	identified_name_id	눈사람의 양말	Stocking	l1j-en
+armors	20352	unidentified_name_id	눈사람의 양말	Stocking	l1j-en
+armors	20366	identified_name_id	군주의 $162	Lord's $162	translated
+armors	20366	unidentified_name_id	군주의 $162	Lord's $162	translated
+armors	20367	identified_name_id	기사의 $152	Knight's $152	translated
+armors	20367	unidentified_name_id	기사의 $152	Knight's $152	translated
+armors	20368	identified_name_id	요정의 $116	Elf's $116	translated
+armors	20368	unidentified_name_id	요정의 $116	Elf's $116	translated
+armors	20369	identified_name_id	마법사의 $2466	Wizard's $2466	translated
+armors	20369	unidentified_name_id	마법사의 $2466	Wizard's $2466	translated
+armors	20373	identified_name_id	역전의 $128	Veteran's $128	translated
+armors	20373	unidentified_name_id	역전의 $128	Veteran's $128	translated
+armors	20374	identified_name_id	역전의 $4196	Veteran's $4196	translated
+armors	20374	unidentified_name_id	역전의 $4196	Veteran's $4196	translated
+armors	20376	identified_name_id	군주의 목걸이	Amulet of the Royalty	l1j-en
+armors	20376	unidentified_name_id	군주의 목걸이	Amulet of the Royalty	l1j-en
+armors	20377	identified_name_id	기사의 견습용 목걸이	Amulet of the Knight	l1j-en
+armors	20377	unidentified_name_id	기사의 견습용 목걸이	Amulet of the Knight	l1j-en
+armors	20378	identified_name_id	요정의 견습용 목걸이	Amulet of the Elf	l1j-en
+armors	20378	unidentified_name_id	요정의 견습용 목걸이	Amulet of the Elf	l1j-en
+armors	20379	identified_name_id	마법사의 견습용 목걸이	Amulet of the Wizard	l1j-en
+armors	20379	unidentified_name_id	마법사의 견습용 목걸이	Amulet of the Wizard	l1j-en
+armors	21000	identified_name_id	$1000 의상	$1000 Costume	translated
+armors	21000	unidentified_name_id	$1000 의상	$1000 Costume	translated
+armors	21001	identified_name_id	$1783 의상	$1783 Costume	translated
+armors	21001	unidentified_name_id	$1783 의상	$1783 Costume	translated
+armors	21002	identified_name_id	$1395 의상	$1395 Costume	translated
+armors	21002	unidentified_name_id	$1395 의상	$1395 Costume	translated
+armors	21035	identified_name_id	일루젼 투구	Helm of Illusion	l1j-en
+armors	21035	unidentified_name_id	일루젼 투구	Helm of Illusion	l1j-en
+armors	21036	identified_name_id	일루젼 셔츠	T-Shirt of Illusion	l1j-en
+armors	21036	unidentified_name_id	일루젼 셔츠	T-Shirt of Illusion	l1j-en
+armors	21037	identified_name_id	일루젼 방패	Shield of Illusion	l1j-en
+armors	21037	unidentified_name_id	일루젼 방패	Shield of Illusion	l1j-en
+armors	21038	identified_name_id	일루젼 부츠	Boots of Illusion	l1j-en
+armors	21038	unidentified_name_id	일루젼 부츠	Boots of Illusion	l1j-en
+armors	21039	identified_name_id	작열의 서클렛	Burning Circlet	l1j-en
+armors	21039	unidentified_name_id	작열의 서클렛	Burning Circlet	l1j-en
+armors	21040	identified_name_id	작열의 방패	Burning Shield	l1j-en
+armors	21040	unidentified_name_id	작열의 방패	Burning Shield	l1j-en
+armors	21041	identified_name_id	작열의 부츠	Burning Boots	l1j-en
+armors	21041	unidentified_name_id	작열의 부츠	Burning Boots	l1j-en
+armors	21042	identified_name_id	작열의 글로브	Burning Gloves	l1j-en
+armors	21042	unidentified_name_id	작열의 글로브	Burning Gloves	l1j-en
+armors	21043	identified_name_id	철벽의 부적	Talisman of Ironclad	l1j-en
+armors	21043	unidentified_name_id	철벽의 부적	Talisman of Ironclad	l1j-en
+armors	21044	identified_name_id	혜지의 부적	Talisman of Jiedi	l1j-en
+armors	21044	unidentified_name_id	혜지의 부적	Talisman of Jiedi	l1j-en
+armors	21045	identified_name_id	암약의 부적	Talisman of Secret Maneuvers	l1j-en
+armors	21045	unidentified_name_id	암약의 부적	Talisman of Secret Maneuvers	l1j-en
+armors	21046	identified_name_id	번농의 부적	Talisman of Mercy	l1j-en
+armors	21046	unidentified_name_id	번농의 부적	Talisman of Mercy	l1j-en
+armors	21047	identified_name_id	럭키 코인	$1956 $6344	l1j-en
+armors	21047	unidentified_name_id	럭키 코인	$1956 $6344	l1j-en
+armors	21061	identified_name_id	남자 유령 가장 세트	T-Shirt of Ghost Man	l1j-en
+armors	21061	unidentified_name_id	남자 유령 가장 세트	T-Shirt of Ghost Man	l1j-en
+armors	21062	identified_name_id	여자 유령 가장 세트	T-Shirt of Ghost Woman	l1j-en
+armors	21062	unidentified_name_id	여자 유령 가장 세트	T-Shirt of Ghost Woman	l1j-en
+armors	21063	identified_name_id	남성 수영복：브리프	Swimwear Men`s Briefs	l1j-en
+armors	21063	unidentified_name_id	남성 수영복：브리프	Swimwear Men`s Briefs	l1j-en
+armors	21064	identified_name_id	남성 수영복：트렁크스	Swimwear Men`s Trunks	l1j-en
+armors	21064	unidentified_name_id	남성 수영복：트렁크스	Swimwear Men`s Trunks	l1j-en
+armors	21065	identified_name_id	여성 수영복：원피스	Swimwear Female`s One Piece	l1j-en
+armors	21065	unidentified_name_id	여성 수영복：원피스	Swimwear Female`s One Piece	l1j-en
+armors	21066	identified_name_id	여성 수영복：비키니	Swimwear Female`s Bikini	l1j-en
+armors	21066	unidentified_name_id	여성 수영복：비키니	Swimwear Female`s Bikini	l1j-en
+armors	21161	identified_name_id	할로윈 탈리스만	Halloween Talisman	translated
+armors	21161	unidentified_name_id	할로윈 탈리스만	Halloween Talisman	translated
+armors	21162	identified_name_id	할로윈 탈리스만 (2010 년)	Halloween Talisman (2010)	translated
+armors	21162	unidentified_name_id	할로윈 탈리스만 (2010 년)	Halloween Talisman (2010)	translated
+armors	21163	identified_name_id	블랙 메탈 탈리스만	Black Metal Talisman	translated
+armors	21163	unidentified_name_id	블랙 메탈 탈리스만	Black Metal Talisman	translated
+armors	21196	identified_name_id	역전의 $1024	Veteran's $1024	translated
+armors	21196	unidentified_name_id	역전의 $1024	Veteran's $1024	translated
+armors	21197	identified_name_id	역전의 $120	Veteran's $120	translated
+armors	21197	unidentified_name_id	역전의 $120	Veteran's $120	translated
+armors	21198	identified_name_id	역전의 난쟁이 족 투구	Veteran's Dwarvish Helm	translated
+armors	21198	unidentified_name_id	역전의 난쟁이 족 투구	Veteran's Dwarvish Helm	translated
+armors	21200	identified_name_id	역전의 $172	Veteran's $172	translated
+armors	21200	unidentified_name_id	역전의 $172	Veteran's $172	translated
+armors	21201	identified_name_id	역전의 $174	Veteran's $174	translated
+armors	21201	unidentified_name_id	역전의 $174	Veteran's $174	translated
+armors	21203	identified_name_id	역전의 $1035	Veteran's $1035	translated
+armors	21203	unidentified_name_id	역전의 $1035	Veteran's $1035	translated
+armors	21204	identified_name_id	역전의 오크족 메일	Veteran's Orcish Mail	translated
+armors	21204	unidentified_name_id	역전의 오크족 메일	Veteran's Orcish Mail	translated
+armors	21205	identified_name_id	역전의 로브	Veteran's Robe	translated
+armors	21205	unidentified_name_id	역전의 로브	Veteran's Robe	translated
+armors	21208	identified_name_id	역전의 $1030	Veteran's $1030	translated
+armors	21208	unidentified_name_id	역전의 $1030	Veteran's $1030	translated
+armors	21209	identified_name_id	역전의 난쟁이 족 방패	Veteran's Dwarvish Shield	translated
+armors	21209	unidentified_name_id	역전의 난쟁이 족 방패	Veteran's Dwarvish Shield	translated
+armors	21211	identified_name_id	상아탑의 솔리드 투구	Ivory Tower Solid Helm	translated
+armors	21211	unidentified_name_id	상아탑의 솔리드 투구	Ivory Tower Solid Helm	translated
+armors	21212	identified_name_id	상아탑의 솔리드 판금 갑옷	Ivory Tower Solid Plate Mail	translated
+armors	21212	unidentified_name_id	상아탑의 솔리드 판금 갑옷	Ivory Tower Solid Plate Mail	translated
+armors	21213	identified_name_id	상아탑의 솔리드 망토	Ivory Tower Solid Cloak	translated
+armors	21213	unidentified_name_id	상아탑의 솔리드 망토	Ivory Tower Solid Cloak	translated
+armors	21214	identified_name_id	상아탑의 솔리드 장갑	Ivory Tower Solid Gloves	translated
+armors	21214	unidentified_name_id	상아탑의 솔리드 장갑	Ivory Tower Solid Gloves	translated
+armors	21215	identified_name_id	상아탑의 솔리드 부츠	Ivory Tower Solid Boots	translated
+armors	21215	unidentified_name_id	상아탑의 솔리드 부츠	Ivory Tower Solid Boots	translated
+armors	21216	identified_name_id	상아탑의 솔리드 실드	Ivory Tower Solid Shield	translated
+armors	21216	unidentified_name_id	상아탑의 솔리드 실드	Ivory Tower Solid Shield	translated
+armors	21217	identified_name_id	상아탑의 홀리 투구	Ivory Tower Holy Helm	translated
+armors	21217	unidentified_name_id	상아탑의 홀리 투구	Ivory Tower Holy Helm	translated
+armors	21218	identified_name_id	상아탑의 홀리 로브	Ivory Tower Holy Robe	translated
+armors	21218	unidentified_name_id	상아탑의 홀리 로브	Ivory Tower Holy Robe	translated
+armors	21219	identified_name_id	상아탑의 홀리 망토	Ivory Tower Holy Cloak	translated
+armors	21219	unidentified_name_id	상아탑의 홀리 망토	Ivory Tower Holy Cloak	translated
+armors	21220	identified_name_id	상아탑의 홀리 로브	Ivory Tower Holy Robe	translated
+armors	21220	unidentified_name_id	상아탑의 홀리 로브	Ivory Tower Holy Robe	translated
+armors	21221	identified_name_id	상아탑의 홀리 부츠	Ivory Tower Holy Boots	translated
+armors	21221	unidentified_name_id	상아탑의 홀리 부츠	Ivory Tower Holy Boots	translated
+armors	21222	identified_name_id	상아탑의 홀리 쉴드	Ivory Tower Holy Shield	translated
+armors	21222	unidentified_name_id	상아탑의 홀리 쉴드	Ivory Tower Holy Shield	translated
+armors	21223	identified_name_id	수행자의 목걸이	Ascetic's Necklace	translated
+armors	21223	unidentified_name_id	수행자의 목걸이	Ascetic's Necklace	translated
+armors	21224	identified_name_id	수행자의 반지	Ascetic's Ring	translated
+armors	21224	unidentified_name_id	수행자의 반지	Ascetic's Ring	translated
+armors	21225	identified_name_id	수행자의 벨트	Ascetic's Belt	translated
+armors	21225	unidentified_name_id	수행자의 벨트	Ascetic's Belt	translated
+armors	21250	identified_name_id	작은 블랙 메탈의 매력	Small Black Metal Charm	translated
+armors	21250	unidentified_name_id	작은 블랙 메탈의 매력	Small Black Metal Charm	translated
+armors	21251	identified_name_id	블랙 메탈의 매력	Black Metal Charm	translated
+armors	21251	unidentified_name_id	블랙 메탈의 매력	Black Metal Charm	translated
+armors	21252	identified_name_id	번영의 목걸이	Necklace of Prosperity	translated
+armors	21252	unidentified_name_id	번영의 목걸이	Necklace of Prosperity	translated
+armors	21253	identified_name_id	감사의 목걸이	Necklace of Gratitude	translated
+armors	21253	unidentified_name_id	감사의 목걸이	Necklace of Gratitude	translated
+armors	21275	identified_name_id	철벽의 문양	Emblem of the Iron Wall	translated
+armors	21275	unidentified_name_id	철벽의 문양	Emblem of the Iron Wall	translated
+armors	21276	identified_name_id	치유의 문양	Emblem of Healing	translated
+armors	21276	unidentified_name_id	치유의 문양	Emblem of Healing	translated
+armors	21277	identified_name_id	질풍의 문양	Emblem of the Gale	translated
+armors	21277	unidentified_name_id	질풍의 문양	Emblem of the Gale	translated
+armors	21284	identified_name_id	귤 변신 모자	Tangerine Transformation Cap	translated
+armors	21284	unidentified_name_id	귤 변신 모자	Tangerine Transformation Cap	translated
+etc_items	40083	identified_name_id	대공동 $203	Great Cavern $230	translated
+etc_items	40083	unidentified_name_id	대공동 $203	Great Cavern $230	translated
+etc_items	40101	identified_name_id	(구) $1424	(Old) $1424	translated
+etc_items	40101	unidentified_name_id	(구) $1424	(Old) $1424	translated
+etc_items	40121	identified_name_id	블랙 미스릴 광산 $230	Black Mithril Mine $230	translated
+etc_items	40121	unidentified_name_id	블랙 미스릴 광산 $230	Black Mithril Mine $230	translated
+etc_items	40753	identified_name_id	알	Egg	translated
+etc_items	40753	unidentified_name_id	알	Egg	translated
+etc_items	40754	identified_name_id	알	Egg	translated
+etc_items	40754	unidentified_name_id	알	Egg	translated
+etc_items	40755	identified_name_id	알	Egg	translated
+etc_items	40755	unidentified_name_id	알	Egg	translated
+etc_items	40759	identified_name_id	알	Egg	translated
+etc_items	40759	unidentified_name_id	알	Egg	translated
+etc_items	40760	identified_name_id	알	Egg	translated
+etc_items	40760	unidentified_name_id	알	Egg	translated
+etc_items	40801	identified_name_id	황혼의 산맥 $230	Twilight Mountains $230	translated
+etc_items	40801	unidentified_name_id	황혼의 산맥 $230	Twilight Mountains $230	translated
+etc_items	40802	identified_name_id	아덴성 정원 $230	Aden Castle Garden $230	translated
+etc_items	40802	unidentified_name_id	아덴성 정원 $230	Aden Castle Garden $230	translated
+etc_items	40803	identified_name_id	거울의 숲 $230	Forest of Mirrors $230	translated
+etc_items	40803	unidentified_name_id	거울의 숲 $230	Forest of Mirrors $230	translated
+etc_items	40804	identified_name_id	화룡의 둥지 $230	Fire Dragon Nest $230	translated
+etc_items	40804	unidentified_name_id	화룡의 둥지 $230	Fire Dragon Nest $230	translated
+etc_items	40805	identified_name_id	수룡의 둥지 $230	Water Dragon Nest $230	translated
+etc_items	40805	unidentified_name_id	수룡의 둥지 $230	Water Dragon Nest $230	translated
+etc_items	40806	identified_name_id	풍룡의 둥지 $230	Wind Dragon Nest $230	translated
+etc_items	40806	unidentified_name_id	풍룡의 둥지 $230	Wind Dragon Nest $230	translated
+etc_items	40807	identified_name_id	하이네 던전 3층 $230	Heine Dungeon 3F $230	translated
+etc_items	40807	unidentified_name_id	하이네 던전 3층 $230	Heine Dungeon 3F $230	translated
+etc_items	40808	identified_name_id	하이네 던전 4층 $230	Heine Dungeon 4F $230	translated
+etc_items	40808	unidentified_name_id	하이네 던전 4층 $230	Heine Dungeon 4F $230	translated
+etc_items	40809	identified_name_id	불 산록 $230	Fire Foothills $230	translated
+etc_items	40809	unidentified_name_id	불 산록 $230	Fire Foothills $230	translated
+etc_items	40810	identified_name_id	용의 계곡 $230	Dragon Valley $230	translated
+etc_items	40810	unidentified_name_id	용의 계곡 $230	Dragon Valley $230	translated
+etc_items	40811	identified_name_id	오아시스 $230	Oasis $230	translated
+etc_items	40811	unidentified_name_id	오아시스 $230	Oasis $230	translated
+etc_items	40812	identified_name_id	엘모어 $230	Elmore $230	translated
+etc_items	40812	unidentified_name_id	엘모어 $230	Elmore $230	translated
+etc_items	40813	identified_name_id	글루 디오 황무지 : 서 $230	Glu Dio Wasteland : West $230	translated
+etc_items	40813	unidentified_name_id	글루 디오 황무지 : 서 $230	Glu Dio Wasteland : West $230	translated
+etc_items	40814	identified_name_id	글루 디오 황무지 : 동 $230	Glu Dio Wasteland : East $230	translated
+etc_items	40814	unidentified_name_id	글루 디오 황무지 : 동 $230	Glu Dio Wasteland : East $230	translated
+etc_items	40815	identified_name_id	윈 다우드 성 1층 던전 $230	Windawood Castle 1F Dungeon $230	translated
+etc_items	40815	unidentified_name_id	윈 다우드 성 1층 던전 $230	Windawood Castle 1F Dungeon $230	translated
+etc_items	40816	identified_name_id	윈 다우드 성 2층 던전 $230	Windawood Castle 2F Dungeon $230	translated
+etc_items	40816	unidentified_name_id	윈 다우드 성 2층 던전 $230	Windawood Castle 2F Dungeon $230	translated
+etc_items	40817	identified_name_id	안토케이부 1층 $230	Ant Cave 1F $230	translated
+etc_items	40817	unidentified_name_id	안토케이부 1층 $230	Ant Cave 1F $230	translated
+etc_items	40818	identified_name_id	안토케이부 2층 $230	Ant Cave 2F $230	translated
+etc_items	40818	unidentified_name_id	안토케이부 2층 $230	Ant Cave 2F $230	translated
+etc_items	40819	identified_name_id	안토케이부 3층 $230	Ant Cave 3F $230	translated
+etc_items	40819	unidentified_name_id	안토케이부 3층 $230	Ant Cave 3F $230	translated
+etc_items	40820	identified_name_id	상아탑 5층 $230	Ivory Tower 5F $230	translated
+etc_items	40820	unidentified_name_id	상아탑 5층 $230	Ivory Tower 5F $230	translated
+etc_items	40821	identified_name_id	상아탑 6층 $230	Ivory Tower 6F $230	translated
+etc_items	40821	unidentified_name_id	상아탑 6층 $230	Ivory Tower 6F $230	translated
+etc_items	40822	identified_name_id	상아탑 7층 $230	Ivory Tower 7F $230	translated
+etc_items	40822	unidentified_name_id	상아탑 7층 $230	Ivory Tower 7F $230	translated
+etc_items	40823	identified_name_id	상아탑 8층 $230	Ivory Tower 8F $230	translated
+etc_items	40823	unidentified_name_id	상아탑 8층 $230	Ivory Tower 8F $230	translated
+etc_items	40824	identified_name_id	수련 던전 2층 $230	Training Dungeon 2F $230	translated
+etc_items	40824	unidentified_name_id	수련 던전 2층 $230	Training Dungeon 2F $230	translated
+etc_items	40825	identified_name_id	수련 던전 3층 $230	Training Dungeon 3F $230	translated
+etc_items	40825	unidentified_name_id	수련 던전 3층 $230	Training Dungeon 3F $230	translated
+etc_items	40826	identified_name_id	수련 던전 4층 $230	Training Dungeon 4F $230	translated
+etc_items	40826	unidentified_name_id	수련 던전 4층 $230	Training Dungeon 4F $230	translated
+etc_items	40827	identified_name_id	기란 던전 2층 $230	Giran Dungeon 2F $230	translated
+etc_items	40827	unidentified_name_id	기란 던전 2층 $230	Giran Dungeon 2F $230	translated
+etc_items	40828	identified_name_id	기란 던전 3층 $230	Giran Dungeon 3F $230	translated
+etc_items	40828	unidentified_name_id	기란 던전 3층 $230	Giran Dungeon 3F $230	translated
+etc_items	40829	identified_name_id	기란 던전 4층 $230	Giran Dungeon 4F $230	translated
+etc_items	40829	unidentified_name_id	기란 던전 4층 $230	Giran Dungeon 4F $230	translated
+etc_items	40830	identified_name_id	글루 디오 던전 3층 $230	Glu Dio Dungeon 3F $230	translated
+etc_items	40830	unidentified_name_id	글루 디오 던전 3층 $230	Glu Dio Dungeon 3F $230	translated
+etc_items	40831	identified_name_id	글루 디오 던전 4층 $230	Glu Dio Dungeon 4F $230	translated
+etc_items	40831	unidentified_name_id	글루 디오 던전 4층 $230	Glu Dio Dungeon 4F $230	translated
+etc_items	40832	identified_name_id	글루 디오 던전 5층 $230	Glu Dio Dungeon 5F $230	translated
+etc_items	40832	unidentified_name_id	글루 디오 던전 5층 $230	Glu Dio Dungeon 5F $230	translated
+etc_items	40833	identified_name_id	글루 디오 던전 6층 $230	Glu Dio Dungeon 6F $230	translated
+etc_items	40833	unidentified_name_id	글루 디오 던전 6층 $230	Glu Dio Dungeon 6F $230	translated
+etc_items	40834	identified_name_id	글루 디오 던전 7층 $230	Glu Dio Dungeon 7F $230	translated
+etc_items	40834	unidentified_name_id	글루 디오 던전 7층 $230	Glu Dio Dungeon 7F $230	translated
+etc_items	40835	identified_name_id	용의 계곡 던전 1층 $230	Dragon Valley Dungeon 1F $230	translated
+etc_items	40835	unidentified_name_id	용의 계곡 던전 1층 $230	Dragon Valley Dungeon 1F $230	translated
+etc_items	40836	identified_name_id	용의 계곡 던전 2층 $230	Dragon Valley Dungeon 2F $230	translated
+etc_items	40836	unidentified_name_id	용의 계곡 던전 2층 $230	Dragon Valley Dungeon 2F $230	translated
+etc_items	40837	identified_name_id	용의 계곡 던전 3층 $230	Dragon Valley Dungeon 3F $230	translated
+etc_items	40837	unidentified_name_id	용의 계곡 던전 3층 $230	Dragon Valley Dungeon 3F $230	translated
+etc_items	40838	identified_name_id	용의 계곡 던전 4층 $230	Dragon Valley Dungeon 4F $230	translated
+etc_items	40838	unidentified_name_id	용의 계곡 던전 4층 $230	Dragon Valley Dungeon 4F $230	translated
+etc_items	40839	identified_name_id	용의 계곡 던전 5층 $230	Dragon Valley Dungeon 5F $230	translated
+etc_items	40839	unidentified_name_id	용의 계곡 던전 5층 $230	Dragon Valley Dungeon 5F $230	translated
+etc_items	40840	identified_name_id	용의 계곡 던전 6층 $230	Dragon Valley Dungeon 6F $230	translated
+etc_items	40840	unidentified_name_id	용의 계곡 던전 6층 $230	Dragon Valley Dungeon 6F $230	translated
+etc_items	40841	identified_name_id	지룡의 둥지 $230	Earth Dragon Nest $230	translated
+etc_items	40841	unidentified_name_id	지룡의 둥지 $230	Earth Dragon Nest $230	translated
+etc_items	40843	identified_name_id	사막 $230	Desert $230	translated
+etc_items	40843	unidentified_name_id	사막 $230	Desert $230	translated
+etc_items	40844	identified_name_id	블루 디카의 방 $230	Blue Dica's Room $230	translated
+etc_items	40844	unidentified_name_id	블루 디카의 방 $230	Blue Dica's Room $230	translated
+etc_items	40845	identified_name_id	침묵의 동굴 $230	Cave of Silence $230	translated
+etc_items	40845	unidentified_name_id	침묵의 동굴 $230	Cave of Silence $230	translated
+etc_items	40846	identified_name_id	지하 침공 1층 $230	Underground Invasion 1F $230	translated
+etc_items	40846	unidentified_name_id	지하 침공 1층 $230	Underground Invasion 1F $230	translated
+etc_items	40847	identified_name_id	지하 침공 2층 $230	Underground Invasion 2F $230	translated
+etc_items	40847	unidentified_name_id	지하 침공 2층 $230	Underground Invasion 2F $230	translated
+etc_items	40848	identified_name_id	지하 침공 3층 $230	Underground Invasion 3F $230	translated
+etc_items	40848	unidentified_name_id	지하 침공 3층 $230	Underground Invasion 3F $230	translated
+etc_items	40849	identified_name_id	고대의 공간 1층 $230	Ancient Space 1F $230	translated
+etc_items	40849	unidentified_name_id	고대의 공간 1층 $230	Ancient Space 1F $230	translated
+etc_items	40850	identified_name_id	고대의 공간 2층 $230	Ancient Space 2F $230	translated
+etc_items	40850	unidentified_name_id	고대의 공간 2층 $230	Ancient Space 2F $230	translated
+etc_items	40851	identified_name_id	고대의 공간 4층 $230	Ancient Space 4F $230	translated
+etc_items	40851	unidentified_name_id	고대의 공간 4층 $230	Ancient Space 4F $230	translated
+etc_items	40852	identified_name_id	오움 던전 $230	Oum Dungeon $230	translated
+etc_items	40852	unidentified_name_id	오움 던전 $230	Oum Dungeon $230	translated
+etc_items	40853	identified_name_id	대공동 은둔자지역 $230	Great Cavern Hermit Area $230	translated
+etc_items	40853	unidentified_name_id	대공동 은둔자지역 $230	Great Cavern Hermit Area $230	translated
+etc_items	40854	identified_name_id	마족 신전 $230	Demon Temple $230	translated
+etc_items	40854	unidentified_name_id	마족 신전 $230	Demon Temple $230	translated
+etc_items	40855	identified_name_id	정령 무덤 $230	Spirit Tomb $230	translated
+etc_items	40855	unidentified_name_id	정령 무덤 $230	Spirit Tomb $230	translated
+etc_items	40856	identified_name_id	해적섬 $230	Pirate Island $230	translated
+etc_items	40856	unidentified_name_id	해적섬 $230	Pirate Island $230	translated
+etc_items	40857	identified_name_id	라바 정문 $230	Lava Main Gate $230	translated
+etc_items	40857	unidentified_name_id	라바 정문 $230	Lava Main Gate $230	translated
+etc_items	40858	identified_name_id	술	Liquor	l1j-en
+etc_items	40858	unidentified_name_id	술	Liquor	l1j-en
+etc_items	41146	identified_name_id	드로몬드의 소개장	Sealed Scroll	l1j-en
+etc_items	41146	unidentified_name_id	드로몬드의 소개장	Sealed Scroll	l1j-en
+etc_items	41209	identified_name_id	포피레아의 의뢰서	Popirea's Request	translated
+etc_items	41209	unidentified_name_id	포피레아의 의뢰서	Popirea's Request	translated
+etc_items	41210	identified_name_id	연마제	Abrasive	translated
+etc_items	41210	unidentified_name_id	연마제	Abrasive	translated
+etc_items	41212	identified_name_id	특제 캔디 $1621	Special $1621	translated
+etc_items	41212	unidentified_name_id	특제 캔디 $1621	Special $1621	translated
+etc_items	41213	identified_name_id	티미의 바스켓	Timmy's Basket	translated
+etc_items	41213	unidentified_name_id	티미의 바스켓	Timmy's Basket	translated
+etc_items	41214	identified_name_id	운의 증거	Proof of Luck	translated
+etc_items	41214	unidentified_name_id	운의 증거	Proof of Luck	translated
+etc_items	41215	identified_name_id	지의 증거	Proof of Wisdom	translated
+etc_items	41215	unidentified_name_id	지의 증거	Proof of Wisdom	translated
+etc_items	41216	identified_name_id	힘의 증거	Proof of Strength	translated
+etc_items	41216	unidentified_name_id	힘의 증거	Proof of Strength	translated
+etc_items	41222	identified_name_id	마슈르	Mashur	translated
+etc_items	41222	unidentified_name_id	마슈르	Mashur	translated
+etc_items	41223	identified_name_id	무기의 파편	Weapon Fragment	translated
+etc_items	41223	unidentified_name_id	무기의 파편	Weapon Fragment	translated
+etc_items	41224	identified_name_id	밧지	Badge	translated
+etc_items	41224	unidentified_name_id	밧지	Badge	translated
+etc_items	41225	identified_name_id	케스킨의 발주서	Keskin's Purchase Order	translated
+etc_items	41225	unidentified_name_id	케스킨의 발주서	Keskin's Purchase Order	translated
+etc_items	41226	identified_name_id	파고의 약	Pago's Medicine	translated
+etc_items	41226	unidentified_name_id	파고의 약	Pago's Medicine	translated
+etc_items	41227	identified_name_id	알렉스의 소개장	Alex's Letter of Introduction	translated
+etc_items	41227	unidentified_name_id	알렉스의 소개장	Alex's Letter of Introduction	translated
+etc_items	41228	identified_name_id	율법박사의 부적	Scribe's Amulet	translated
+etc_items	41228	unidentified_name_id	율법박사의 부적	Scribe's Amulet	translated
+etc_items	41230	identified_name_id	지난의 편지	Jinan's Letter	translated
+etc_items	41230	unidentified_name_id	지난의 편지	Jinan's Letter	translated
+etc_items	41231	identified_name_id	맛티의 편지	Matty's Letter	translated
+etc_items	41231	unidentified_name_id	맛티의 편지	Matty's Letter	translated
+etc_items	41232	identified_name_id	존의 소포	John's Parcel	translated
+etc_items	41232	unidentified_name_id	존의 소포	John's Parcel	translated
+etc_items	41233	identified_name_id	케이이에의 편지	Keiie's Letter	translated
+etc_items	41233	unidentified_name_id	케이이에의 편지	Keiie's Letter	translated
+etc_items	41234	identified_name_id	뼈가 들어온 봉투	Envelope of Bones	translated
+etc_items	41234	unidentified_name_id	뼈가 들어온 봉투	Envelope of Bones	translated
+etc_items	41235	identified_name_id	재료표	Material List	translated
+etc_items	41235	unidentified_name_id	재료표	Material List	translated
+etc_items	41236	identified_name_id	스케르톤아챠의 뼈	Skeleton Archer's Bone	translated
+etc_items	41236	unidentified_name_id	스케르톤아챠의 뼈	Skeleton Archer's Bone	translated
+etc_items	41237	identified_name_id	스켈리턴 스파이크의 뼈	Bone Piece	l1j-en
+etc_items	41237	unidentified_name_id	스켈리턴 스파이크의 뼈	Bone Piece	l1j-en
+etc_items	41238	identified_name_id	케이이의 소포	Kei's Parcel	translated
+etc_items	41238	unidentified_name_id	케이이의 소포	Kei's Parcel	translated
+etc_items	41239	identified_name_id	브트에의 편지	Buto's Letter	translated
+etc_items	41239	unidentified_name_id	브트에의 편지	Buto's Letter	translated
+etc_items	41240	identified_name_id	페다에의 편지	Pedae's Letter	translated
+etc_items	41240	unidentified_name_id	페다에의 편지	Pedae's Letter	translated
+etc_items	41241	identified_name_id	뼈세공의 봉투	Bag of Bones	l1j-en
+etc_items	41241	unidentified_name_id	뼈세공의 봉투	Bag of Bones	l1j-en
+etc_items	41417	identified_name_id	감 얼음 딸기	unknown	l1j-en
+etc_items	41417	unidentified_name_id	감 얼음 딸기	unknown	l1j-en
+etc_items	41418	identified_name_id	감 얼음 레몬	unknown	l1j-en
+etc_items	41418	unidentified_name_id	감 얼음 레몬	unknown	l1j-en
+etc_items	41419	identified_name_id	감 얼음 망고	unknown	l1j-en
+etc_items	41419	unidentified_name_id	감 얼음 망고	unknown	l1j-en
+etc_items	41420	identified_name_id	감 얼음 멜론	unknown	l1j-en
+etc_items	41420	unidentified_name_id	감 얼음 멜론	unknown	l1j-en
+etc_items	41421	identified_name_id	감 얼음 빨간콩	unknown	l1j-en
+etc_items	41421	unidentified_name_id	감 얼음 빨간콩	unknown	l1j-en
+etc_items	42001	identified_name_id	$2172 여관홀 $230	$2172 Inn Hall $230	translated
+etc_items	42001	unidentified_name_id	$2172 여관홀 $230	$2172 Inn Hall $230	translated
+etc_items	42002	identified_name_id	얼음 수정 동굴 1층 $230	Ice Crystal Cave 1F $230	translated
+etc_items	42002	unidentified_name_id	얼음 수정 동굴 1층 $230	Ice Crystal Cave 1F $230	translated
+etc_items	42003	identified_name_id	얼음 수정 동굴 2층 $230	Ice Crystal Cave 2F $230	translated
+etc_items	42003	unidentified_name_id	얼음 수정 동굴 2층 $230	Ice Crystal Cave 2F $230	translated
+etc_items	42004	identified_name_id	얼음 수정 동굴 3층 $230	Ice Crystal Cave 3F $230	translated
+etc_items	42004	unidentified_name_id	얼음 수정 동굴 3층 $230	Ice Crystal Cave 3F $230	translated
+etc_items	42005	identified_name_id	상아탑 1층 $230	Ivory Tower 1F $230	translated
+etc_items	42005	unidentified_name_id	상아탑 1층 $230	Ivory Tower 1F $230	translated
+etc_items	42006	identified_name_id	켄트 성 던전 1층 $230	Kent Castle Dungeon 1F $230	translated
+etc_items	42006	unidentified_name_id	켄트 성 던전 1층 $230	Kent Castle Dungeon 1F $230	translated
+etc_items	42007	identified_name_id	잊혀진 섬 $230	Forgotten Island $230	translated
+etc_items	42007	unidentified_name_id	잊혀진 섬 $230	Forgotten Island $230	translated
+etc_items	42008	identified_name_id	켄트 성 던전 2층 $230	Kent Castle Dungeon 2F $230	translated
+etc_items	42008	unidentified_name_id	켄트 성 던전 2층 $230	Kent Castle Dungeon 2F $230	translated
+etc_items	42009	identified_name_id	켄트 성 던전 3층 $230	Kent Castle Dungeon 3F $230	translated
+etc_items	42009	unidentified_name_id	켄트 성 던전 3층 $230	Kent Castle Dungeon 3F $230	translated
+etc_items	42010	identified_name_id	켄트 성 던전 4층 $230	Kent Castle Dungeon 4F $230	translated
+etc_items	42010	unidentified_name_id	켄트 성 던전 4층 $230	Kent Castle Dungeon 4F $230	translated
+etc_items	42011	identified_name_id	라스타바드 성1층 집회장 $230	Lastabad Castle 1F Assembly Hall $230	translated
+etc_items	42011	unidentified_name_id	라스타바드 성1층 집회장 $230	Lastabad Castle 1F Assembly Hall $230	translated
+etc_items	42012	identified_name_id	라스타바드 성1층 돌격대 훈련장 $230	Lastabad Castle 1F Assault Troop Training Ground $230	translated
+etc_items	42012	unidentified_name_id	라스타바드 성1층 돌격대 훈련장 $230	Lastabad Castle 1F Assault Troop Training Ground $230	translated
+etc_items	42013	identified_name_id	라스타바드 성1층 마수 군왕의 집무실 $230	Lastabad Castle 1F Beast King's Office $230	translated
+etc_items	42013	unidentified_name_id	라스타바드 성1층 마수 군왕의 집무실 $230	Lastabad Castle 1F Beast King's Office $230	translated
+etc_items	42014	identified_name_id	라스타바드 성1층 야수 조교실 $230	Lastabad Castle 1F Beast Taming Room $230	translated
+etc_items	42014	unidentified_name_id	라스타바드 성1층 야수 조교실 $230	Lastabad Castle 1F Beast Taming Room $230	translated
+etc_items	42016	identified_name_id	라스타바드 성1층 야수 훈련실 $230	Lastabad Castle 1F Beast Training Room $230	translated
+etc_items	42016	unidentified_name_id	라스타바드 성1층 야수 훈련실 $230	Lastabad Castle 1F Beast Training Room $230	translated
+etc_items	42017	identified_name_id	몽환의 섬 순간 $230	Island of Dreams Instant $230	translated
+etc_items	42017	unidentified_name_id	몽환의 섬 순간 $230	Island of Dreams Instant $230	translated
+etc_items	42018	identified_name_id	라스타바드 성1층 마수 소환실 $230	Lastabad Castle 1F Beast Summoning Room $230	translated
+etc_items	42018	unidentified_name_id	라스타바드 성1층 마수 소환실 $230	Lastabad Castle 1F Beast Summoning Room $230	translated
+etc_items	42019	identified_name_id	라스타바드 성1층 어둠의 결계 $230	Lastabad Castle 1F Darkness Barrier $230	translated
+etc_items	42019	unidentified_name_id	라스타바드 성1층 어둠의 결계 $230	Lastabad Castle 1F Darkness Barrier $230	translated
+etc_items	42020	identified_name_id	라스타바드 성2층 흑 마법 훈련장 $230	Lastabad Castle 2F Black Magic Training Ground $230	translated
+etc_items	42020	unidentified_name_id	라스타바드 성2층 흑 마법 훈련장 $230	Lastabad Castle 2F Black Magic Training Ground $230	translated
+etc_items	42021	identified_name_id	거인의 무덤 $230	Giant's Tomb $230	translated
+etc_items	42021	unidentified_name_id	거인의 무덤 $230	Giant's Tomb $230	translated
+etc_items	42022	identified_name_id	아덴성 $230	Aden Castle $230	translated
+etc_items	42022	unidentified_name_id	아덴성 $230	Aden Castle $230	translated
+etc_items	42023	identified_name_id	게임 마스터 룸 $230	Game Master Room $230	translated
+etc_items	42023	unidentified_name_id	게임 마스터 룸 $230	Game Master Room $230	translated
+etc_items	42024	identified_name_id	$967 로우 풀 $230	$967 Temple $230	translated
+etc_items	42024	unidentified_name_id	$967 로우 풀 $230	$967 Temple $230	translated
+etc_items	42025	identified_name_id	$968 카오 틱 신전 $230	$968 Temple $230	translated
+etc_items	42025	unidentified_name_id	$968 카오 틱 신전 $230	$968 Temple $230	translated
+etc_items	42027	identified_name_id	GM 샵 $505	GM Shop $505	translated
+etc_items	42027	unidentified_name_id	GM 샵 $505	GM Shop $505	translated
+etc_items	42028	identified_name_id	글루 디오 던전 7층 $230	Glu Dio Dungeon 7F $230	translated
+etc_items	42028	unidentified_name_id	글루 디오 던전 7층 $230	Glu Dio Dungeon 7F $230	translated
+etc_items	42029	identified_name_id	오만의 탑 100층 $230	Tower of Insolence 100F $230	translated
+etc_items	42029	unidentified_name_id	오만의 탑 100층 $230	Tower of Insolence 100F $230	translated
+etc_items	42030	identified_name_id	오만의 탑 90층 $230	Tower of Insolence 90F $230	translated
+etc_items	42030	unidentified_name_id	오만의 탑 90층 $230	Tower of Insolence 90F $230	translated
+etc_items	42031	identified_name_id	오만의 탑 80층 $230	Tower of Insolence 80F $230	translated
+etc_items	42031	unidentified_name_id	오만의 탑 80층 $230	Tower of Insolence 80F $230	translated
+etc_items	42032	identified_name_id	오만의 탑 70층 $230	Tower of Insolence 70F $230	translated
+etc_items	42032	unidentified_name_id	오만의 탑 70층 $230	Tower of Insolence 70F $230	translated
+etc_items	42033	identified_name_id	오만의 탑 60층 $230	Tower of Insolence 60F $230	translated
+etc_items	42033	unidentified_name_id	오만의 탑 60층 $230	Tower of Insolence 60F $230	translated
+etc_items	42035	identified_name_id	오만의 탑 50층 $230	Tower of Insolence 50F $230	translated
+etc_items	42035	unidentified_name_id	오만의 탑 50층 $230	Tower of Insolence 50F $230	translated
+etc_items	42036	identified_name_id	오만의 탑 40층 $230	Tower of Insolence 40F $230	translated
+etc_items	42036	unidentified_name_id	오만의 탑 40층 $230	Tower of Insolence 40F $230	translated
+etc_items	42037	identified_name_id	오만의 탑 30층 $230	Tower of Insolence 30F $230	translated
+etc_items	42037	unidentified_name_id	오만의 탑 30층 $230	Tower of Insolence 30F $230	translated
+etc_items	42038	identified_name_id	오만의 탑 20층 $230	Tower of Insolence 20F $230	translated
+etc_items	42038	unidentified_name_id	오만의 탑 20층 $230	Tower of Insolence 20F $230	translated
+etc_items	42039	identified_name_id	오만의 탑 10층 $230	Tower of Insolence 10F $230	translated
+etc_items	42039	unidentified_name_id	오만의 탑 10층 $230	Tower of Insolence 10F $230	translated
+etc_items	42040	identified_name_id	해적섬 던전 1층 $230	Pirate Island Dungeon 1F $230	translated
+etc_items	42040	unidentified_name_id	해적섬 던전 1층 $230	Pirate Island Dungeon 1F $230	translated
+etc_items	42041	identified_name_id	해적섬 던전 2층 $230	Pirate Island Dungeon 2F $230	translated
+etc_items	42041	unidentified_name_id	해적섬 던전 2층 $230	Pirate Island Dungeon 2F $230	translated
+etc_items	42042	identified_name_id	해적섬 던전 3층 $230	Pirate Island Dungeon 3F $230	translated
+etc_items	42042	unidentified_name_id	해적섬 던전 3층 $230	Pirate Island Dungeon 3F $230	translated
+etc_items	42043	identified_name_id	지저 호수 $230	Underground Lake $230	translated
+etc_items	42043	unidentified_name_id	지저 호수 $230	Underground Lake $230	translated
+etc_items	42045	identified_name_id	기란아지트 $230	Giran Hideout $230	translated
+etc_items	42045	unidentified_name_id	기란아지트 $230	Giran Hideout $230	translated
+etc_items	42046	identified_name_id	기란아지트 $230	Giran Hideout $230	translated
+etc_items	42046	unidentified_name_id	기란아지트 $230	Giran Hideout $230	translated
+etc_items	42047	identified_name_id	고대의 공간 3층 $230	Ancient Space 3F $230	translated
+etc_items	42047	unidentified_name_id	고대의 공간 3층 $230	Ancient Space 3F $230	translated
+etc_items	42048	identified_name_id	오움마을 $230	Oum Village $230	translated
+etc_items	42048	unidentified_name_id	오움마을 $230	Oum Village $230	translated
+etc_items	42049	identified_name_id	잊혀진 섬 $230	Forgotten Island $230	translated
+etc_items	42049	unidentified_name_id	잊혀진 섬 $230	Forgotten Island $230	translated
+etc_items	42050	identified_name_id	지옥행 티켓	????????	l1j-en
+etc_items	42050	unidentified_name_id	지옥행 티켓	????????	l1j-en
+etc_items	42051	identified_name_id	그림자 신전 외부 $230	Shadow Temple Exterior $230	translated
+etc_items	42051	unidentified_name_id	그림자 신전 외부 $230	Shadow Temple Exterior $230	translated
+etc_items	42052	identified_name_id	그림자 신전 1층 $230	Shadow Temple 1F $230	translated
+etc_items	42052	unidentified_name_id	그림자 신전 1층 $230	Shadow Temple 1F $230	translated
+etc_items	42053	identified_name_id	그림자 신전 2층 $230	Shadow Temple 2F $230	translated
+etc_items	42053	unidentified_name_id	그림자 신전 2층 $230	Shadow Temple 2F $230	translated
+etc_items	42054	identified_name_id	그림자 신전 3층 $230	Shadow Temple 3F $230	translated
+etc_items	42054	unidentified_name_id	그림자 신전 3층 $230	Shadow Temple 3F $230	translated
+etc_items	42055	identified_name_id	오염 된 축복의 땅 $230	Polluted Blessed Land $230	translated
+etc_items	42055	unidentified_name_id	오염 된 축복의 땅 $230	Polluted Blessed Land $230	translated
+etc_items	42056	identified_name_id	기란 성 던전 1층 $230	Giran Castle Dungeon 1F $230	translated
+etc_items	42056	unidentified_name_id	기란 성 던전 1층 $230	Giran Castle Dungeon 1F $230	translated
+etc_items	42057	identified_name_id	기란 성 던전 2층 $230	Giran Castle Dungeon 2F $230	translated
+etc_items	42057	unidentified_name_id	기란 성 던전 2층 $230	Giran Castle Dungeon 2F $230	translated
+etc_items	42058	identified_name_id	기란 성 던전 3층 $230	Giran Castle Dungeon 3F $230	translated
+etc_items	42058	unidentified_name_id	기란 성 던전 3층 $230	Giran Castle Dungeon 3F $230	translated
+etc_items	42059	identified_name_id	기란 성 던전 4층 $230	Giran Castle Dungeon 4F $230	translated
+etc_items	42059	unidentified_name_id	기란 성 던전 4층 $230	Giran Castle Dungeon 4F $230	translated
+etc_items	42060	identified_name_id	하이네 성 던전 1층 $230	Heine Castle Dungeon 1F $230	translated
+etc_items	42060	unidentified_name_id	하이네 성 던전 1층 $230	Heine Castle Dungeon 1F $230	translated
+etc_items	42061	identified_name_id	하이네 성 던전 2층 $230	Heine Castle Dungeon 2F $230	translated
+etc_items	42061	unidentified_name_id	하이네 성 던전 2층 $230	Heine Castle Dungeon 2F $230	translated
+etc_items	42062	identified_name_id	하이네 성 던전 3층 $230	Heine Castle Dungeon 3F $230	translated
+etc_items	42062	unidentified_name_id	하이네 성 던전 3층 $230	Heine Castle Dungeon 3F $230	translated
+etc_items	42063	identified_name_id	지저 성 던전 1층 $230	Underground Castle Dungeon 1F $230	translated
+etc_items	42063	unidentified_name_id	지저 성 던전 1층 $230	Underground Castle Dungeon 1F $230	translated
+etc_items	42064	identified_name_id	지저 성 던전 2층 $230	Underground Castle Dungeon 2F $230	translated
+etc_items	42064	unidentified_name_id	지저 성 던전 2층 $230	Underground Castle Dungeon 2F $230	translated
+etc_items	42065	identified_name_id	아덴성 던전 1층 $230	Aden Castle Dungeon 1F $230	translated
+etc_items	42065	unidentified_name_id	아덴성 던전 1층 $230	Aden Castle Dungeon 1F $230	translated
+etc_items	42066	identified_name_id	아덴성 던전 2층 $230	Aden Castle Dungeon 2F $230	translated
+etc_items	42066	unidentified_name_id	아덴성 던전 2층 $230	Aden Castle Dungeon 2F $230	translated
+etc_items	42067	identified_name_id	아덴성 던전 3층 $230	Aden Castle Dungeon 3F $230	translated
+etc_items	42067	unidentified_name_id	아덴성 던전 3층 $230	Aden Castle Dungeon 3F $230	translated
+etc_items	42068	identified_name_id	아덴성 던전 4층 $230	Aden Castle Dungeon 4F $230	translated
+etc_items	42068	unidentified_name_id	아덴성 던전 4층 $230	Aden Castle Dungeon 4F $230	translated
+etc_items	42069	identified_name_id	말하는 섬의 동굴 1층 $230	Talking Island Cave 1F $230	translated
+etc_items	42069	unidentified_name_id	말하는 섬의 동굴 1층 $230	Talking Island Cave 1F $230	translated
+etc_items	42070	identified_name_id	말하는 섬의 동굴 2층 $230	Talking Island Cave 2F $230	translated
+etc_items	42070	unidentified_name_id	말하는 섬의 동굴 2층 $230	Talking Island Cave 2F $230	translated
+etc_items	42071	identified_name_id	데빌로드 $230	Devil Lord $230	translated
+etc_items	42071	unidentified_name_id	데빌로드 $230	Devil Lord $230	translated
+etc_items	42072	identified_name_id	엘븐 던전 1층 $230	Elven Dungeon 1F $230	translated
+etc_items	42072	unidentified_name_id	엘븐 던전 1층 $230	Elven Dungeon 1F $230	translated
+etc_items	42073	identified_name_id	엘븐 던전 2층 $230	Elven Dungeon 2F $230	translated
+etc_items	42073	unidentified_name_id	엘븐 던전 2층 $230	Elven Dungeon 2F $230	translated
+etc_items	42074	identified_name_id	엘븐 던전 3층 $230	Elven Dungeon 3F $230	translated
+etc_items	42074	unidentified_name_id	엘븐 던전 3층 $230	Elven Dungeon 3F $230	translated
+etc_items	42075	identified_name_id	라스타바드 성 어둠의 결계 2층 (왼쪽) $230	Lastabad Castle Darkness Barrier 2F (Left) $230	translated
+etc_items	42075	unidentified_name_id	라스타바드 성 어둠의 결계 2층 (왼쪽) $230	Lastabad Castle Darkness Barrier 2F (Left) $230	translated
+etc_items	42076	identified_name_id	라스타바드 성 어둠의 결계 2층 (오른쪽) $230	Lastabad Castle Darkness Barrier 2F (Right) $230	translated
+etc_items	42076	unidentified_name_id	라스타바드 성 어둠의 결계 2층 (오른쪽) $230	Lastabad Castle Darkness Barrier 2F (Right) $230	translated
+etc_items	42077	identified_name_id	라스타바드 성 4층 $230	Lastabad Castle 4F $230	translated
+etc_items	42077	unidentified_name_id	라스타바드 성 4층 $230	Lastabad Castle 4F $230	translated
+etc_items	42078	identified_name_id	라스타바드 성 4층 정원 $230	Lastabad Castle 4F Garden $230	translated
+etc_items	42078	unidentified_name_id	라스타바드 성 4층 정원 $230	Lastabad Castle 4F Garden $230	translated
+etc_items	42079	identified_name_id	라스타바드 성 4층 단테스의 방 $230	Lastabad Castle 4F Dantes's Room $230	translated
+etc_items	42079	unidentified_name_id	라스타바드 성 4층 단테스의 방 $230	Lastabad Castle 4F Dantes's Room $230	translated
+etc_items	42080	identified_name_id	해적 섬 후반부 $230	Pirate Island (Late) $230	translated
+etc_items	42080	unidentified_name_id	해적 섬 후반부 $230	Pirate Island (Late) $230	translated
+etc_items	42081	identified_name_id	선박의 무덤 지상층 $230	Ship's Graveyard Surface $230	translated
+etc_items	42081	unidentified_name_id	선박의 무덤 지상층 $230	Ship's Graveyard Surface $230	translated
+etc_items	42082	identified_name_id	선박의 무덤 심해층 $230	Ship's Graveyard Deep Sea $230	translated
+etc_items	42082	unidentified_name_id	선박의 무덤 심해층 $230	Ship's Graveyard Deep Sea $230	translated
+etc_items	42083	identified_name_id	악어 섬 $230	Crocodile Island $230	translated
+etc_items	42083	unidentified_name_id	악어 섬 $230	Crocodile Island $230	translated
+etc_items	42084	identified_name_id	욕망의 동굴 물 방 $230	Cave of Desire Water Room $230	translated
+etc_items	42084	unidentified_name_id	욕망의 동굴 물 방 $230	Cave of Desire Water Room $230	translated
+etc_items	42085	identified_name_id	욕망의 동굴 불 방 $230	Cave of Desire Fire Room $230	translated
+etc_items	42085	unidentified_name_id	욕망의 동굴 불 방 $230	Cave of Desire Fire Room $230	translated
+etc_items	42086	identified_name_id	욕망의 동굴 바람의 방 $230	Cave of Desire Wind Room $230	translated
+etc_items	42086	unidentified_name_id	욕망의 동굴 바람의 방 $230	Cave of Desire Wind Room $230	translated
+etc_items	42087	identified_name_id	욕망의 동굴 지역 방 $230	Cave of Desire Earth Room $230	translated
+etc_items	42087	unidentified_name_id	욕망의 동굴 지역 방 $230	Cave of Desire Earth Room $230	translated
+etc_items	42088	identified_name_id	테베 사막 $230	Thebes Desert $230	translated
+etc_items	42088	unidentified_name_id	테베 사막 $230	Thebes Desert $230	translated
+etc_items	42089	identified_name_id	테베 피라미드 내부 $230	Thebes Pyramid Interior $230	translated
+etc_items	42089	unidentified_name_id	테베 피라미드 내부 $230	Thebes Pyramid Interior $230	translated
+etc_items	42090	identified_name_id	테베 오시리스 제단 $230	Thebes Osiris Altar $230	translated
+etc_items	42090	unidentified_name_id	테베 오시리스 제단 $230	Thebes Osiris Altar $230	translated
+etc_items	42091	identified_name_id	베히모스 $ 505	???? $505	l1j-en
+etc_items	42091	unidentified_name_id	베히모스 $ 505	???? $505	l1j-en
+etc_items	42092	identified_name_id	실베리아 $ 505	????? $505	l1j-en
+etc_items	42092	unidentified_name_id	실베리아 $ 505	????? $505	l1j-en
+etc_items	42093	identified_name_id	욕망의 동굴 $230	Cave of Desire $230	translated
+etc_items	42093	unidentified_name_id	욕망의 동굴 $230	Cave of Desire $230	translated
+etc_items	42094	identified_name_id	발록의 방 $230	Balrog's Room $230	translated
+etc_items	42094	unidentified_name_id	발록의 방 $230	Balrog's Room $230	translated
+etc_items	42095	identified_name_id	다크 엘프 성지 $230	Dark Elf Sanctuary $230	translated
+etc_items	42095	unidentified_name_id	다크 엘프 성지 $230	Dark Elf Sanctuary $230	translated
+etc_items	42096	identified_name_id	버림받은 자들의 땅 지상층 $230	Land of the Abandoned Surface $230	translated
+etc_items	42096	unidentified_name_id	버림받은 자들의 땅 지상층 $230	Land of the Abandoned Surface $230	translated
+etc_items	42097	identified_name_id	버림받은 자들의 땅 해저층 $230	Land of the Abandoned Seabed $230	translated
+etc_items	42097	unidentified_name_id	버림받은 자들의 땅 해저층 $230	Land of the Abandoned Seabed $230	translated
+etc_items	42098	identified_name_id	버림받은 자들의 땅 공간의 일그러짐 $230	Land of the Abandoned Spatial Distortion $230	translated
+etc_items	42098	unidentified_name_id	버림받은 자들의 땅 공간의 일그러짐 $230	Land of the Abandoned Spatial Distortion $230	translated
+etc_items	42501	identified_name_id	스톰 워크 (10/0)	Custom Wand (10/0)	l1j-en
+etc_items	42501	unidentified_name_id	스톰 워크 (10/0)	Custom Wand (10/0)	l1j-en
+etc_items	43001	identified_name_id	남녀 변경 스크롤	Gender Change Scroll	translated
+etc_items	43001	unidentified_name_id	남녀 변경 스크롤	Gender Change Scroll	translated
+etc_items	43002	identified_name_id	독특한 마법 주문서 (ランダム)	Unique Magic Scroll (Random)	translated
+etc_items	43002	unidentified_name_id	독특한 마법 주문서 (ランダム)	Unique Magic Scroll (Random)	translated
+etc_items	43003	identified_name_id	독특한 마법 주문서 (AC)	Unique Magic Scroll (AC)	translated
+etc_items	43003	unidentified_name_id	독특한 마법 주문서 (AC)	Unique Magic Scroll (AC)	translated
+etc_items	43004	identified_name_id	독특한 마법 주문서 (STR)	Unique Magic Scroll (STR)	translated
+etc_items	43004	unidentified_name_id	독특한 마법 주문서 (STR)	Unique Magic Scroll (STR)	translated
+etc_items	43005	identified_name_id	독특한 마법 주문서 (CON)	Unique Magic Scroll (CON)	translated
+etc_items	43005	unidentified_name_id	독특한 마법 주문서 (CON)	Unique Magic Scroll (CON)	translated
+etc_items	43006	identified_name_id	독특한 마법 주문서 (DEX)	Unique Magic Scroll (DEX)	translated
+etc_items	43006	unidentified_name_id	독특한 마법 주문서 (DEX)	Unique Magic Scroll (DEX)	translated
+etc_items	43007	identified_name_id	독특한 마법 주문서 (WIS)	Unique Magic Scroll (WIS)	translated
+etc_items	43007	unidentified_name_id	독특한 마법 주문서 (WIS)	Unique Magic Scroll (WIS)	translated
+etc_items	43008	identified_name_id	독특한 마법 주문서 (INT)	Unique Magic Scroll (INT)	translated
+etc_items	43008	unidentified_name_id	독특한 마법 주문서 (INT)	Unique Magic Scroll (INT)	translated
+etc_items	43009	identified_name_id	독특한 마법 주문서 (CHA)	Unique Magic Scroll (CHA)	translated
+etc_items	43009	unidentified_name_id	독특한 마법 주문서 (CHA)	Unique Magic Scroll (CHA)	translated
+etc_items	43010	identified_name_id	독특한 마법 주문서 (HP)	Unique Magic Scroll (HP)	translated
+etc_items	43010	unidentified_name_id	독특한 마법 주문서 (HP)	Unique Magic Scroll (HP)	translated
+etc_items	43011	identified_name_id	독특한 마법 주문서 (HPR)	Unique Magic Scroll (HPR)	translated
+etc_items	43011	unidentified_name_id	독특한 마법 주문서 (HPR)	Unique Magic Scroll (HPR)	translated
+etc_items	43012	identified_name_id	독특한 마법 주문서 (MP)	Unique Magic Scroll (MP)	translated
+etc_items	43012	unidentified_name_id	독특한 마법 주문서 (MP)	Unique Magic Scroll (MP)	translated
+etc_items	43013	identified_name_id	독특한 마법 주문서 (MPR)	Unique Magic Scroll (MPR)	translated
+etc_items	43013	unidentified_name_id	독특한 마법 주문서 (MPR)	Unique Magic Scroll (MPR)	translated
+etc_items	43014	identified_name_id	독특한 마법 주문서 (MR)	Unique Magic Scroll (MR)	translated
+etc_items	43014	unidentified_name_id	독특한 마법 주문서 (MR)	Unique Magic Scroll (MR)	translated
+etc_items	43015	identified_name_id	독특한 마법 주문서 (SP)	Unique Magic Scroll (SP)	translated
+etc_items	43015	unidentified_name_id	독특한 마법 주문서 (SP)	Unique Magic Scroll (SP)	translated
+etc_items	43016	identified_name_id	독특한 마법 주문서 (武器命中)	Unique Magic Scroll (Weapon Hit)	translated
+etc_items	43016	unidentified_name_id	독특한 마법 주문서 (武器命中)	Unique Magic Scroll (Weapon Hit)	translated
+etc_items	43017	identified_name_id	독특한 마법 주문서 (追加ダメージ)	Unique Magic Scroll (Extra Damage)	translated
+etc_items	43017	unidentified_name_id	독특한 마법 주문서 (追加ダメージ)	Unique Magic Scroll (Extra Damage)	translated
+etc_items	43018	identified_name_id	독특한 마법 주문서 (遠距離命中)	Unique Magic Scroll (Ranged Hit)	translated
+etc_items	43018	unidentified_name_id	독특한 마법 주문서 (遠距離命中)	Unique Magic Scroll (Ranged Hit)	translated
+etc_items	43019	identified_name_id	독특한 마법 주문서 (遠距離ダメージ)	Unique Magic Scroll (Ranged Damage)	translated
+etc_items	43019	unidentified_name_id	독특한 마법 주문서 (遠距離ダメージ)	Unique Magic Scroll (Ranged Damage)	translated
+etc_items	43020	identified_name_id	독특한 마법 주문서 (地の属性抵抗)	Unique Magic Scroll (Earth Resist)	translated
+etc_items	43020	unidentified_name_id	독특한 마법 주문서 (地の属性抵抗)	Unique Magic Scroll (Earth Resist)	translated
+etc_items	43021	identified_name_id	독특한 마법 주문서 (水の属性抵抗)	Unique Magic Scroll (Water Resist)	translated
+etc_items	43021	unidentified_name_id	독특한 마법 주문서 (水の属性抵抗)	Unique Magic Scroll (Water Resist)	translated
+etc_items	43022	identified_name_id	독특한 마법 주문서 (火の属性抵抗)	Unique Magic Scroll (Fire Resist)	translated
+etc_items	43022	unidentified_name_id	독특한 마법 주문서 (火の属性抵抗)	Unique Magic Scroll (Fire Resist)	translated
+etc_items	43023	identified_name_id	독특한 마법 주문서 (風の属性抵抗)	Unique Magic Scroll (Wind Resist)	translated
+etc_items	43023	unidentified_name_id	독특한 마법 주문서 (風の属性抵抗)	Unique Magic Scroll (Wind Resist)	translated
+etc_items	43024	identified_name_id	독특한 마법 주문서 (スタン耐性)	Unique Magic Scroll (Stun Resist)	translated
+etc_items	43024	unidentified_name_id	독특한 마법 주문서 (スタン耐性)	Unique Magic Scroll (Stun Resist)	translated
+etc_items	43025	identified_name_id	독특한 마법 주문서 (石化耐性)	Unique Magic Scroll (Petrification Resist)	translated
+etc_items	43025	unidentified_name_id	독특한 마법 주문서 (石化耐性)	Unique Magic Scroll (Petrification Resist)	translated
+etc_items	43026	identified_name_id	독특한 마법 주문서 (睡眠耐性)	Unique Magic Scroll (Sleep Resist)	translated
+etc_items	43026	unidentified_name_id	독특한 마법 주문서 (睡眠耐性)	Unique Magic Scroll (Sleep Resist)	translated
+etc_items	43027	identified_name_id	독특한 마법 주문서 (凍結耐性)	Unique Magic Scroll (Freeze Resist)	translated
+etc_items	43027	unidentified_name_id	독특한 마법 주문서 (凍結耐性)	Unique Magic Scroll (Freeze Resist)	translated
+etc_items	43028	identified_name_id	독특한 마법 주문서 (ホールド耐性)	Unique Magic Scroll (Hold Resist)	translated
+etc_items	43028	unidentified_name_id	독특한 마법 주문서 (ホールド耐性)	Unique Magic Scroll (Hold Resist)	translated
+etc_items	43029	identified_name_id	독특한 마법 주문서 (暗闇耐性)	Unique Magic Scroll (Darkness Resist)	translated
+etc_items	43029	unidentified_name_id	독특한 마법 주문서 (暗闇耐性)	Unique Magic Scroll (Darkness Resist)	translated
+etc_items	43030	identified_name_id	독특한 마법 주문서 (経験値増加)	Unique Magic Scroll (EXP Bonus)	translated
+etc_items	43030	unidentified_name_id	독특한 마법 주문서 (経験値増加)	Unique Magic Scroll (EXP Bonus)	translated
+etc_items	43031	identified_name_id	독특한 마법 주문서 (ヘイスト)	Unique Magic Scroll (Haste)	translated
+etc_items	43031	unidentified_name_id	독특한 마법 주문서 (ヘイスト)	Unique Magic Scroll (Haste)	translated
+etc_items	43032	identified_name_id	독특한 마법 주문서 (武器非損傷)	Unique Magic Scroll (Weapon Undamaged)	translated
+etc_items	43032	unidentified_name_id	독특한 마법 주문서 (武器非損傷)	Unique Magic Scroll (Weapon Undamaged)	translated
+etc_items	45023	identified_name_id	마법서 (디바인 희생)	Spellbook (Divine Sacrifice)	translated
+etc_items	45023	unidentified_name_id	마법서 (디바인 희생)	Spellbook (Divine Sacrifice)	translated
+etc_items	45024	identified_name_id	마법서 (아바타)	Spellbook (Avatar)	translated
+etc_items	45024	unidentified_name_id	마법서 (아바타)	Spellbook (Avatar)	translated
+etc_items	47001	identified_name_id	힐	Heal	translated
+etc_items	47001	unidentified_name_id	힐	Heal	translated
+etc_items	47002	identified_name_id	라이트	Light	translated
+etc_items	47002	unidentified_name_id	라이트	Light	translated
+etc_items	47003	identified_name_id	실드	Shield	translated
+etc_items	47003	unidentified_name_id	실드	Shield	translated
+etc_items	47004	identified_name_id	에너지 볼트	Energy Bolt	translated
+etc_items	47004	unidentified_name_id	에너지 볼트	Energy Bolt	translated
+etc_items	47005	identified_name_id	텔레포트	Teleport	translated
+etc_items	47005	unidentified_name_id	텔레포트	Teleport	translated
+etc_items	47006	identified_name_id	아이스 대거	Ice Dagger	translated
+etc_items	47006	unidentified_name_id	아이스 대거	Ice Dagger	translated
+etc_items	47007	identified_name_id	윈드 커터	Wind Shuriken	translated
+etc_items	47007	unidentified_name_id	윈드 커터	Wind Shuriken	translated
+etc_items	47008	identified_name_id	홀리 웨폰	Holy Weapon	translated
+etc_items	47008	unidentified_name_id	홀리 웨폰	Holy Weapon	translated
+etc_items	47009	identified_name_id	큐어 포이즌	Cure Poison	translated
+etc_items	47009	unidentified_name_id	큐어 포이즌	Cure Poison	translated
+etc_items	47010	identified_name_id	칠 터치	Chill Touch	translated
+etc_items	47010	unidentified_name_id	칠 터치	Chill Touch	translated
+etc_items	47011	identified_name_id	커스 포이즌	Curse Poison	translated
+etc_items	47011	unidentified_name_id	커스 포이즌	Curse Poison	translated
+etc_items	47012	identified_name_id	인챈트 웨폰	Enchant Weapon	translated
+etc_items	47012	unidentified_name_id	인챈트 웨폰	Enchant Weapon	translated
+etc_items	47013	identified_name_id	디텍션	Detection	translated
+etc_items	47013	unidentified_name_id	디텍션	Detection	translated
+etc_items	47014	identified_name_id	디 크리즈 웨이트	Decrease Weight	translated
+etc_items	47014	unidentified_name_id	디 크리즈 웨이트	Decrease Weight	translated
+etc_items	47015	identified_name_id	파이어 애로우	Fire Arrow	translated
+etc_items	47015	unidentified_name_id	파이어 애로우	Fire Arrow	translated
+etc_items	47016	identified_name_id	스 탈락	Stalac	translated
+etc_items	47016	unidentified_name_id	스 탈락	Stalac	translated
+etc_items	47017	identified_name_id	라이트닝	Lightning	translated
+etc_items	47017	unidentified_name_id	라이트닝	Lightning	translated
+etc_items	47018	identified_name_id	턴 언데드	Turn Undead	translated
+etc_items	47018	unidentified_name_id	턴 언데드	Turn Undead	translated
+etc_items	47019	identified_name_id	엑스트라 힐	Extra Heal	translated
+etc_items	47019	unidentified_name_id	엑스트라 힐	Extra Heal	translated
+etc_items	47020	identified_name_id	커스 블라인드	Curse Blind	translated
+etc_items	47020	unidentified_name_id	커스 블라인드	Curse Blind	translated
+etc_items	47021	identified_name_id	블레스드 아머	Blessed Armor	translated
+etc_items	47021	unidentified_name_id	블레스드 아머	Blessed Armor	translated
+etc_items	47022	identified_name_id	프로즌 클라우드	Frozen Cloud	translated
+etc_items	47022	unidentified_name_id	프로즌 클라우드	Frozen Cloud	translated
+etc_items	47023	identified_name_id	위크 엘리멘탈	Weak Elemental	translated
+etc_items	47023	unidentified_name_id	위크 엘리멘탈	Weak Elemental	translated
+etc_items	47025	identified_name_id	파이어 볼	Fireball	translated
+etc_items	47025	unidentified_name_id	파이어 볼	Fireball	translated
+etc_items	47026	identified_name_id	인챈트 덱스터리티	Enchant Dexterity	translated
+etc_items	47026	unidentified_name_id	인챈트 덱스터리티	Enchant Dexterity	translated
+etc_items	47027	identified_name_id	웨폰 브레이크	Weapon Break	translated
+etc_items	47027	unidentified_name_id	웨폰 브레이크	Weapon Break	translated
+etc_items	47028	identified_name_id	뱀파이어 릭 터치	Vampiric Touch	translated
+etc_items	47028	unidentified_name_id	뱀파이어 릭 터치	Vampiric Touch	translated
+etc_items	47029	identified_name_id	슬로우	Slow	translated
+etc_items	47029	unidentified_name_id	슬로우	Slow	translated
+etc_items	47030	identified_name_id	어스 재일	Earth Jail	translated
+etc_items	47030	unidentified_name_id	어스 재일	Earth Jail	translated
+etc_items	47031	identified_name_id	카운터 매직	Counter Magic	translated
+etc_items	47031	unidentified_name_id	카운터 매직	Counter Magic	translated
+etc_items	47032	identified_name_id	메디테이션	Meditation	translated
+etc_items	47032	unidentified_name_id	메디테이션	Meditation	translated
+etc_items	47033	identified_name_id	커스 패럴 라이즈	Curse Paralyze	translated
+etc_items	47033	unidentified_name_id	커스 패럴 라이즈	Curse Paralyze	translated
+etc_items	47034	identified_name_id	콜 라이트닝	Call Lightning	translated
+etc_items	47034	unidentified_name_id	콜 라이트닝	Call Lightning	translated
+etc_items	47035	identified_name_id	그레이터 힐	Greater Heal	translated
+etc_items	47035	unidentified_name_id	그레이터 힐	Greater Heal	translated
+etc_items	47036	identified_name_id	테이밍 몬스터	Taming Monster	translated
+etc_items	47036	unidentified_name_id	테이밍 몬스터	Taming Monster	translated
+etc_items	47037	identified_name_id	리 무브 커스	Remove Curse	translated
+etc_items	47037	unidentified_name_id	리 무브 커스	Remove Curse	translated
+etc_items	47038	identified_name_id	콘 오브 콜드	Cone of Cold	translated
+etc_items	47038	unidentified_name_id	콘 오브 콜드	Cone of Cold	translated
+etc_items	47039	identified_name_id	마나 드레인	Mana Drain	translated
+etc_items	47039	unidentified_name_id	마나 드레인	Mana Drain	translated
+etc_items	47040	identified_name_id	다크니스	Darkness	translated
+etc_items	47040	unidentified_name_id	다크니스	Darkness	translated
+etc_items	47041	identified_name_id	크리에이트 좀비	Create Zombie	translated
+etc_items	47041	unidentified_name_id	크리에이트 좀비	Create Zombie	translated
+etc_items	47042	identified_name_id	인챈트 마이티	Enchant Mighty	translated
+etc_items	47042	unidentified_name_id	인챈트 마이티	Enchant Mighty	translated
+etc_items	47043	identified_name_id	헤이스트	Haste	translated
+etc_items	47043	unidentified_name_id	헤이스트	Haste	translated
+etc_items	47044	identified_name_id	캔슬 레이션	Cancellation	translated
+etc_items	47044	unidentified_name_id	캔슬 레이션	Cancellation	translated
+etc_items	47045	identified_name_id	이 럽션	Eruption	translated
+etc_items	47045	unidentified_name_id	이 럽션	Eruption	translated
+etc_items	47046	identified_name_id	선 버스트	Sunburst	translated
+etc_items	47046	unidentified_name_id	선 버스트	Sunburst	translated
+etc_items	47047	identified_name_id	위크 니스	Weakness	translated
+etc_items	47047	unidentified_name_id	위크 니스	Weakness	translated
+etc_items	47048	identified_name_id	블레스 웨폰	Bless Weapon	translated
+etc_items	47048	unidentified_name_id	블레스 웨폰	Bless Weapon	translated
+etc_items	47049	identified_name_id	힐 올	Heal All	translated
+etc_items	47049	unidentified_name_id	힐 올	Heal All	translated
+etc_items	47050	identified_name_id	아이스 랜스	Ice Lance	translated
+etc_items	47050	unidentified_name_id	아이스 랜스	Ice Lance	translated
+etc_items	47051	identified_name_id	서먼 몬스터	Summon Monster	translated
+etc_items	47051	unidentified_name_id	서먼 몬스터	Summon Monster	translated
+etc_items	47052	identified_name_id	홀리 워크	Holy Walk	translated
+etc_items	47052	unidentified_name_id	홀리 워크	Holy Walk	translated
+etc_items	47053	identified_name_id	토네이도	Tornado	translated
+etc_items	47053	unidentified_name_id	토네이도	Tornado	translated
+etc_items	47054	identified_name_id	그레이터 헤이스트	Greater Haste	translated
+etc_items	47054	unidentified_name_id	그레이터 헤이스트	Greater Haste	translated
+etc_items	47055	identified_name_id	버서커	Berserkers	translated
+etc_items	47055	unidentified_name_id	버서커	Berserkers	translated
+etc_items	47056	identified_name_id	디지 즈	Disease	translated
+etc_items	47056	unidentified_name_id	디지 즈	Disease	translated
+etc_items	47057	identified_name_id	풀 힐	Full Heal	translated
+etc_items	47057	unidentified_name_id	풀 힐	Full Heal	translated
+etc_items	47058	identified_name_id	파이어 월	Fire Wall	translated
+etc_items	47058	unidentified_name_id	파이어 월	Fire Wall	translated
+etc_items	47059	identified_name_id	블리자드	Blizzard	translated
+etc_items	47059	unidentified_name_id	블리자드	Blizzard	translated
+etc_items	47060	identified_name_id	인비지블리티	Invisibility	translated
+etc_items	47060	unidentified_name_id	인비지블리티	Invisibility	translated
+etc_items	47061	identified_name_id	리절렉션	Resurrection	translated
+etc_items	47061	unidentified_name_id	리절렉션	Resurrection	translated
+etc_items	47062	identified_name_id	어스 퀘이크	Earthquake	translated
+etc_items	47062	unidentified_name_id	어스 퀘이크	Earthquake	translated
+etc_items	47063	identified_name_id	라이프 스트림	Life Stream	translated
+etc_items	47063	unidentified_name_id	라이프 스트림	Life Stream	translated
+etc_items	47064	identified_name_id	사일런스	Silence	translated
+etc_items	47064	unidentified_name_id	사일런스	Silence	translated
+etc_items	47065	identified_name_id	라이트닝 스톰	Lightning Storm	translated
+etc_items	47065	unidentified_name_id	라이트닝 스톰	Lightning Storm	translated
+etc_items	47066	identified_name_id	포그 오브 슬리핑	Fog of Sleeping	translated
+etc_items	47066	unidentified_name_id	포그 오브 슬리핑	Fog of Sleeping	translated
+etc_items	47067	identified_name_id	셰이프체인지	Shape Change	translated
+etc_items	47067	unidentified_name_id	셰이프체인지	Shape Change	translated
+etc_items	47068	identified_name_id	이뮨 투 함	Immune to Harm	translated
+etc_items	47068	unidentified_name_id	이뮨 투 함	Immune to Harm	translated
+etc_items	47069	identified_name_id	매스 텔레포트	Mass Teleport	translated
+etc_items	47069	unidentified_name_id	매스 텔레포트	Mass Teleport	translated
+etc_items	47070	identified_name_id	파이어 스톰	Fire Storm	translated
+etc_items	47070	unidentified_name_id	파이어 스톰	Fire Storm	translated
+etc_items	47071	identified_name_id	디케이 포션	Decay Potion	translated
+etc_items	47071	unidentified_name_id	디케이 포션	Decay Potion	translated
+etc_items	47072	identified_name_id	카운터 디텍션	Counter Detection	translated
+etc_items	47072	unidentified_name_id	카운터 디텍션	Counter Detection	translated
+etc_items	47073	identified_name_id	크리에이트 매지컬 웨폰	Create Magical Weapon	translated
+etc_items	47073	unidentified_name_id	크리에이트 매지컬 웨폰	Create Magical Weapon	translated
+etc_items	47074	identified_name_id	미티어 스트라이크	Meteor Strike	translated
+etc_items	47074	unidentified_name_id	미티어 스트라이크	Meteor Strike	translated
+etc_items	47075	identified_name_id	그레이트 리절 렉션	Great Resurrection	translated
+etc_items	47075	unidentified_name_id	그레이트 리절 렉션	Great Resurrection	translated
+etc_items	47076	identified_name_id	매스 슬로우	Mass Slow	translated
+etc_items	47076	unidentified_name_id	매스 슬로우	Mass Slow	translated
+etc_items	47077	identified_name_id	디스인티그레이트	Disintegrate	translated
+etc_items	47077	unidentified_name_id	디스인티그레이트	Disintegrate	translated
+etc_items	47078	identified_name_id	앱솔루트 배리어	Absolute Barrier	translated
+etc_items	47078	unidentified_name_id	앱솔루트 배리어	Absolute Barrier	translated
+etc_items	47079	identified_name_id	어드밴스 스피릿	Advance Spirit	translated
+etc_items	47079	unidentified_name_id	어드밴스 스피릿	Advance Spirit	translated
+etc_items	47080	identified_name_id	프리 징 블리자드	Freezing Blizzard	translated
+etc_items	47080	unidentified_name_id	프리 징 블리자드	Freezing Blizzard	translated
+etc_items	49294	identified_name_id	마법 인형 : 리치	Magic Doll: Lich	translated
+etc_items	49294	unidentified_name_id	마법 인형 : 리치	Magic Doll: Lich	translated
+etc_items	49295	identified_name_id	마법 인형 : 도플 갱어	Magic Doll: Doppelganger	translated
+etc_items	49295	unidentified_name_id	마법 인형 : 도플 갱어	Magic Doll: Doppelganger	translated
+etc_items	49304	identified_name_id	불안한 마리스엘리먼트 키 링크	Unstable Maris Element Kiringku	translated
+etc_items	49304	unidentified_name_id	불안한 마리스엘리먼트 키 링크	Unstable Maris Element Kiringku	translated
+etc_items	49305	identified_name_id	불안한 마리스엘리먼트 체인 소드	Unstable Maris Element Chain Sword	translated
+etc_items	49305	unidentified_name_id	불안한 마리스엘리먼트 체인 소드	Unstable Maris Element Chain Sword	translated
+etc_items	49306	identified_name_id	불안한 마리스엘리먼트 크로우	Unstable Maris Element Claw	translated
+etc_items	49306	unidentified_name_id	불안한 마리스엘리먼트 크로우	Unstable Maris Element Claw	translated
+etc_items	49307	identified_name_id	불안한 마리스엘리먼트 스태프	Unstable Maris Element Staff	translated
+etc_items	49307	unidentified_name_id	불안한 마리스엘리먼트 스태프	Unstable Maris Element Staff	translated
+etc_items	49308	identified_name_id	불안한 마리스엘리먼트 보우	Unstable Maris Element Bow	translated
+etc_items	49308	unidentified_name_id	불안한 마리스엘리먼트 보우	Unstable Maris Element Bow	translated
+etc_items	49309	identified_name_id	불안한 마리스엘리먼트 소드	Unstable Maris Element Sword	translated
+etc_items	49309	unidentified_name_id	불안한 마리스엘리먼트 소드	Unstable Maris Element Sword	translated
+etc_items	49310	identified_name_id	열린 하급 쿠 쿨칸의 보물 상자	Opened Lesser Kukulcan Treasure	l1j-en
+etc_items	49310	unidentified_name_id	열린 하급 쿠 쿨칸의 보물 상자	Opened Lesser Kukulcan Treasure	l1j-en
+etc_items	49311	identified_name_id	열린 상급 쿠 쿨칸의 보물 상자	Opened Advanced Ku Kulkan Treasure Chest	translated
+etc_items	49311	unidentified_name_id	열린 상급 쿠 쿨칸의 보물 상자	Opened Advanced Ku Kulkan Treasure Chest	translated
+etc_items	49312	identified_name_id	닫힌 상급 쿠 쿨칸의 보물 상자	Closed Advanced Ku Kulkan Treasure Chest	translated
+etc_items	49312	unidentified_name_id	닫힌 상급 쿠 쿨칸의 보물 상자	Closed Advanced Ku Kulkan Treasure Chest	translated
+etc_items	49313	identified_name_id	닫힌 하급 쿠 쿨칸의 보물 상자	Locked Lesser Kukulcan Treasure	l1j-en
+etc_items	49313	unidentified_name_id	닫힌 하급 쿠 쿨칸의 보물 상자	Locked Lesser Kukulcan Treasure	l1j-en
+etc_items	49314	identified_name_id	상급 쿠 쿨칸의 보물 상자 조각 : 상	$6424: (Upper)	l1j-en
+etc_items	49314	unidentified_name_id	상급 쿠 쿨칸의 보물 상자 조각 : 상	$6424: (Upper)	l1j-en
+etc_items	49315	identified_name_id	상급 쿠 쿨칸의 보물 상자 조각 : 하	$6424: (Lower)	l1j-en
+etc_items	49315	unidentified_name_id	상급 쿠 쿨칸의 보물 상자 조각 : 하	$6424: (Lower)	l1j-en
+etc_items	49316	identified_name_id	하급 쿠 쿨칸의 보물 상자 조각 : 상	$6420: (Upper)	l1j-en
+etc_items	49316	unidentified_name_id	하급 쿠 쿨칸의 보물 상자 조각 : 상	$6420: (Upper)	l1j-en
+etc_items	49317	identified_name_id	하급 쿠 쿨칸의 보물 상자 조각 : 하	$6420: (Lower)	l1j-en
+etc_items	49317	unidentified_name_id	하급 쿠 쿨칸의 보물 상자 조각 : 하	$6420: (Lower)	l1j-en
+etc_items	49359	identified_name_id	마법 인형 : 바다 사자 (대)	Magic Doll: Sea Lion (Large)	translated
+etc_items	49359	unidentified_name_id	마법 인형 : 바다 사자 (대)	Magic Doll: Sea Lion (Large)	translated
+etc_items	49360	identified_name_id	마법 인형 : 바다 사자 (소)	Magic Doll: Sea Lion (Small)	translated
+etc_items	49360	unidentified_name_id	마법 인형 : 바다 사자 (소)	Magic Doll: Sea Lion (Small)	translated
+etc_items	49361	identified_name_id	마법 인형 : 고슴도치 (대)	Magic Doll: Hedgehog (Large)	translated
+etc_items	49361	unidentified_name_id	마법 인형 : 고슴도치 (대)	Magic Doll: Hedgehog (Large)	translated
+etc_items	49362	identified_name_id	마법 인형 : 고슴도치 (소)	Magic Doll: Hedgehog (Small)	translated
+etc_items	49362	unidentified_name_id	마법 인형 : 고슴도치 (소)	Magic Doll: Hedgehog (Small)	translated
+etc_items	49363	identified_name_id	마법 인형 : 펭귄 (대)	Magic Doll: Penguin (Large)	translated
+etc_items	49363	unidentified_name_id	마법 인형 : 펭귄 (대)	Magic Doll: Penguin (Large)	translated
+etc_items	49364	identified_name_id	마법 인형 : 펭귄 (소)	Magic Doll: Penguin (Small)	translated
+etc_items	49364	unidentified_name_id	마법 인형 : 펭귄 (소)	Magic Doll: Penguin (Small)	translated
+etc_items	49365	identified_name_id	펭귄 (남) 마법 인형	Penguin (Male) Magic Doll	translated
+etc_items	49365	unidentified_name_id	펭귄 (남) 마법 인형	Penguin (Male) Magic Doll	translated
+etc_items	49366	identified_name_id	노력하는 펭귄 (남) 마법 인형	Diligent Penguin (Male) Magic Doll	translated
+etc_items	49366	unidentified_name_id	노력하는 펭귄 (남) 마법 인형	Diligent Penguin (Male) Magic Doll	translated
+etc_items	49367	identified_name_id	영리한 펭귄 (남) 마법 인형	Smart Penguin (Male) Magic Doll	translated
+etc_items	49367	unidentified_name_id	영리한 펭귄 (남) 마법 인형	Smart Penguin (Male) Magic Doll	translated
+etc_items	49368	identified_name_id	똑똑한 펭귄 (남) 마법 인형	Clever Penguin (Male) Magic Doll	translated
+etc_items	49368	unidentified_name_id	똑똑한 펭귄 (남) 마법 인형	Clever Penguin (Male) Magic Doll	translated
+etc_items	49369	identified_name_id	빛나는 펭귄 (남) 마법 인형	Shining Penguin (Male) Magic Doll	translated
+etc_items	49369	unidentified_name_id	빛나는 펭귄 (남) 마법 인형	Shining Penguin (Male) Magic Doll	translated
+etc_items	49370	identified_name_id	눈부신 펭귄 (남) 마법 인형	Dazzling Penguin (Male) Magic Doll	translated
+etc_items	49370	unidentified_name_id	눈부신 펭귄 (남) 마법 인형	Dazzling Penguin (Male) Magic Doll	translated
+etc_items	49371	identified_name_id	펭귄 (여) 마법 인형	Penguin (Female) Magic Doll	translated
+etc_items	49371	unidentified_name_id	펭귄 (여) 마법 인형	Penguin (Female) Magic Doll	translated
+etc_items	49372	identified_name_id	노력하는 펭귄 (여) 마법 인형	Diligent Penguin (Female) Magic Doll	translated
+etc_items	49372	unidentified_name_id	노력하는 펭귄 (여) 마법 인형	Diligent Penguin (Female) Magic Doll	translated
+etc_items	49373	identified_name_id	영리한 펭귄 (여) 마법 인형	Smart Penguin (Female) Magic Doll	translated
+etc_items	49373	unidentified_name_id	영리한 펭귄 (여) 마법 인형	Smart Penguin (Female) Magic Doll	translated
+etc_items	49374	identified_name_id	똑똑한 펭귄 (여) 마법 인형	Clever Penguin (Female) Magic Doll	translated
+etc_items	49374	unidentified_name_id	똑똑한 펭귄 (여) 마법 인형	Clever Penguin (Female) Magic Doll	translated
+etc_items	49375	identified_name_id	빛나는 펭귄 (여) 마법 인형	Shining Penguin (Female) Magic Doll	translated
+etc_items	49375	unidentified_name_id	빛나는 펭귄 (여) 마법 인형	Shining Penguin (Female) Magic Doll	translated
+etc_items	49376	identified_name_id	눈부신 펭귄 (여) 마법 인형	Dazzling Penguin (Female) Magic Doll	translated
+etc_items	49376	unidentified_name_id	눈부신 펭귄 (여) 마법 인형	Dazzling Penguin (Female) Magic Doll	translated
+etc_items	50001	identified_name_id	드래곤 블러드	Dragon Blood	translated
+etc_items	50001	unidentified_name_id	드래곤 블러드	Dragon Blood	translated
+etc_items	50002	identified_name_id	안타라스 레어 주문서	Antharas Lair Scroll	translated
+etc_items	50002	unidentified_name_id	안타라스 레어 주문서	Antharas Lair Scroll	translated
+etc_items	50003	identified_name_id	티칼 사원 순간 이동 주문서	Teleport Scroll: Tikal Temple	translated
+etc_items	50003	unidentified_name_id	티칼 사원 순간 이동 주문서	Teleport Scroll: Tikal Temple	translated
+etc_items	50004	identified_name_id	쿠 쿨칸 제단 이동 주문서	$230: Tikal Temple	l1j-en
+etc_items	50004	unidentified_name_id	쿠 쿨칸 제단 이동 주문서	$230: Tikal Temple	l1j-en
+etc_items	50005	identified_name_id	쿠 쿨칸 제단 열쇠	Altar Key of Ku Kulkan	translated
+etc_items	50005	unidentified_name_id	쿠 쿨칸 제단 열쇠	Altar Key of Ku Kulkan	translated
+etc_items	50019	identified_name_id	$ 6081의 비밀 실험실 - $ 7597 이동 스크롤	$6081 Secret Laboratory - $7597 Teleport Scroll	translated
+etc_items	50019	unidentified_name_id	$ 6081의 비밀 실험실 - $ 7597 이동 스크롤	$6081 Secret Laboratory - $7597 Teleport Scroll	translated
+etc_items	50025	identified_name_id	오림의 결정	Crystal of Orim	translated
+etc_items	50025	unidentified_name_id	오림의 결정	Crystal of Orim	translated
+etc_items	50635	identified_name_id	질풍의 깃털	Feather of the Gale	translated
+etc_items	50635	unidentified_name_id	질풍의 깃털	Feather of the Gale	translated
+etc_items	50636	identified_name_id	질풍의 깃털	Feather of the Gale	translated
+etc_items	50636	unidentified_name_id	질풍의 깃털	Feather of the Gale	translated
+etc_items	50637	identified_name_id	질풍의 깃털	Feather of the Gale	translated
+etc_items	50637	unidentified_name_id	질풍의 깃털	Feather of the Gale	translated
+npcs	45294	name_id	시련의 $1786	$1786 of Ordeal	translated
+npcs	45316	name_id	트라이 서울	$1242 $2109	l1j-en
+npcs	45662	name_id	$2933 군인	$2933 Soldier	translated
+npcs	50082	name_id	노래하는 섬의 텔레 포터	Singing Island Teleporter	translated
+npcs	50083	name_id	노래하는 섬의 텔레 포터	Singing Island Teleporter	translated
+npcs	60037	name_id	디온	Dion	translated
+npcs	70885	name_id	칸	$2430	l1j-en
+npcs	70993	name_id	도로 몬도	$474	l1j-en
+npcs	70994	name_id	노래하는 섬의 가이드	$474	l1j-en
+npcs	70997	name_id	도로몬도	Doromondo	translated
+npcs	70998	name_id	노래하는 섬의 가이드	Singing Island Guide	translated
+npcs	71001	name_id	의약 사 쿠스시	Pharmacist Ikushi	l1j-en
+npcs	71002	name_id	캔슬 레이션 사	Cancellation Master	translated
+npcs	71003	name_id	대장장이 론	Blacksmith Ron	l1j-en
+npcs	71004	name_id	아델레	Adele	translated
+npcs	71005	name_id	뽀삐레아	Poppelea	translated
+npcs	71006	name_id	티미	Timmie	l1j-en
+npcs	71007	name_id	딜런	Dylan	translated
+npcs	71008	name_id	혈맹 모집 $1385	Clan Recruitment $1385	translated
+npcs	71009	name_id	치커리	Chicory	l1j-en
+npcs	71010	name_id	치커리	Chicory	translated
+npcs	71011	name_id	브리	Burriana	l1j-en
+npcs	71012	name_id	브리	Bri	translated
+npcs	71014	name_id	마을 자경단	Village Vigilante	translated
+npcs	71015	name_id	마을 자경단	Village Vigilante	translated
+npcs	71016	name_id	마을 자경단	Village Vigilante	translated
+npcs	71017	name_id	마을 자경단	Village Vigilante	translated
+npcs	71018	name_id	페이더	Fader	l1j-en
+npcs	71019	name_id	제자 부토	Vito Disciples	l1j-en
+npcs	71020	name_id	존	Region	l1j-en
+npcs	71021	name_id	뼈 세공 마티	BoneSmith Matti	l1j-en
+npcs	71022	name_id	뼈 세공 지난	BoneSmith Jinan	l1j-en
+npcs	71023	name_id	뼈 세공 케이	BoneSmith Kei	l1j-en
+npcs	71025	name_id	케스킨	Kesukin	l1j-en
+npcs	71031	name_id	용병 라이언	Mercenary Ryan	translated
+npcs	71032	name_id	모험가 기	ETA Adventurers	l1j-en
+npcs	71033	name_id	은둔	Hermit	l1j-en
+npcs	71034	name_id	랍비	Rabbi	l1j-en
+npcs	71035	name_id	노래하는 섬의 텔레 포터	Singing Island Teleporter	translated
+npcs	71187	name_id	베키	$2928	l1j-en
+npcs	71191	name_id	베키	Becky	l1j-en
+npcs	80091	name_id	요리사^라 폰스	$2902	l1j-en
+npcs	80158	name_id	리치 마법 인형	Lich Magic Doll	translated
+npcs	80159	name_id	도플 갱어 마법 인형	Doppelganger Magic Doll	translated
+npcs	80162	name_id	$7901 아줄	$7901 Azul	translated
+npcs	80163	name_id	$7901 크림슨	$7901 Crimson	translated
+npcs	80164	name_id	$7902 아줄	$7902 Azul	translated
+npcs	80165	name_id	$7902 크림슨	$7902 Crimson	translated
+npcs	80241	name_id	특별 점원	Special Clerk	translated
+npcs	80268	name_id	마법 인형 : 바다 사자 (대)	Magic Doll: Sea Lion (Large)	translated
+npcs	80269	name_id	마법 인형 : 바다 사자 (소)	Magic Doll: Sea Lion (Small)	translated
+npcs	80270	name_id	마법 인형 : 고슴도치 (대)	Magic Doll: Hedgehog (Large)	translated
+npcs	80271	name_id	마법 인형 : 고슴도치 (소)	Magic Doll: Hedgehog (Small)	translated
+npcs	80272	name_id	마법 인형 : 펭귄 (대)	Magic Doll: Penguin (Large)	translated
+npcs	80273	name_id	마법 인형 : 펭귄 (소)	Magic Doll: Penguin (Small)	translated
+npcs	80274	name_id	펭귄 (오빠) 마법 인형	Penguin (Older Brother) Magic Doll	translated
+npcs	80275	name_id	노력하는 펭귄 (오빠) 마법 인형	Diligent Penguin (Older Brother) Magic Doll	translated
+npcs	80276	name_id	영리한 펭귄 (오빠) 마법 인형	Smart Penguin (Older Brother) Magic Doll	translated
+npcs	80277	name_id	똑똑한 펭귄 (오빠) 마법 인형	Clever Penguin (Older Brother) Magic Doll	translated
+npcs	80278	name_id	빛나는 펭귄 (오빠) 마법 인형	Shining Penguin (Older Brother) Magic Doll	translated
+npcs	80279	name_id	눈부신 펭귄 (오빠) 마법 인형	Dazzling Penguin (Older Brother) Magic Doll	translated
+npcs	80280	name_id	펭귄 (여동생) 마법 인형	Penguin (Younger Sister) Magic Doll	translated
+npcs	80281	name_id	노력하는 펭귄 (여동생) 마법 인형	Diligent Penguin (Younger Sister) Magic Doll	translated
+npcs	80282	name_id	영리한 펭귄 (여동생) 마법 인형	Smart Penguin (Younger Sister) Magic Doll	translated
+npcs	80283	name_id	똑똑한 펭귄 (여동생) 마법 인형	Clever Penguin (Younger Sister) Magic Doll	translated
+npcs	80284	name_id	빛나는 펭귄 (여동생) 마법 인형	Shining Penguin (Younger Sister) Magic Doll	translated
+npcs	80285	name_id	눈부신 펭귄 (여동생) 마법 인형	Dazzling Penguin (Younger Sister) Magic Doll	translated
+npcs	81002	name_id	GM-SHOP^고대 귀 장식 상인	Shop (Earrings)	l1j-en
+npcs	81003	name_id	GM-SHOP^고대의 단검 상인	Shop (Daggers)	l1j-en
+npcs	81004	name_id	GM-SHOP^고대의 검 상인	Shop (Swords)	l1j-en
+npcs	81005	name_id	GM-SHOP^고대의 양손 검 상인	Shop (New classes)	l1j-en
+npcs	81006	name_id	GM-SHOP^고대의 창 상인	Shop (Polearm)	l1j-en
+npcs	81007	name_id	GM-SHOP^고대 둔기 상인	Shop (Blunts)	l1j-en
+npcs	81008	name_id	GM-SHOP^고대 쌍검 상인	Shop (Edoryu)	l1j-en
+npcs	81009	name_id	GM-SHOP^고대 손톱 상인	Shop (Claws)	l1j-en
+npcs	81010	name_id	GM-SHOP^고대의 지팡이 상인	Shop (Staves)	l1j-en
+npcs	81011	name_id	GM-SHOP^고대 활 상인	Shop (Bows)	l1j-en
+npcs	81012	name_id	GM-SHOP^고대 투구 상인	Shop (Helmets)	l1j-en
+npcs	81013	name_id	GM-SHOP^고대 방패 상인	Shop (Shields)	l1j-en
+npcs	81014	name_id	GM-SHOP^고대 흙손 상인	Shop (Gloves)	l1j-en
+npcs	81015	name_id	GM-SHOP^고대 신발 상인	Shop (Boots)	l1j-en
+npcs	81016	name_id	GM-SHOP^고대 내복 상인	Shop (Shirts)	l1j-en
+npcs	81017	name_id	GM-SHOP^고대 갑옷 상인	Shop (Armor)	l1j-en
+npcs	81018	name_id	GM-SHOP^고대 외투 상인	Shop (Cloaks)	l1j-en
+npcs	81019	name_id	GM-SHOP^고대 목 장식 상인	Shop (Amulets)	l1j-en
+npcs	81020	name_id	GM-SHOP^고대 반지 상인	Shop (Rings)	l1j-en
+npcs	81021	name_id	GM-SHOP^고대 帯革 상인	Shop (Belt)	l1j-en
+npcs	81022	name_id	GM-SHOP^고대의 마법 상인	Magic Shop (Spellbooks)	l1j-en
+npcs	81023	name_id	GM-SHOP^고대 정령 마법 상인	Magic Shop (Elf)	l1j-en
+npcs	81024	name_id	GM-SHOP^고대 어둠 마법 상인	Magic Shop (Dark Elf)	l1j-en
+npcs	81025	name_id	GM-SHOP^고대 기술 상인	Magic Shop (Knights)	l1j-en
+npcs	81026	name_id	GM-SHOP^고대 군주 마법 상인	Magic Shop (Royals)	l1j-en
+npcs	81027	name_id	GM-SHOP^고대 도구 상인	Shop (Pots)	l1j-en
+npcs	81028	name_id	GM-SHOP^고대 도구 상인	Shop (Scrolls)	l1j-en
+npcs	81029	name_id	GM-SHOP^고대 도구 상인	Shop (Tel Scrolls)	l1j-en
+npcs	81043	name_id	시련의 $2447	$2447 of Ordeal	translated
+npcs	81048	name_id	얀구무리안	Yangumurian	translated
+npcs	81077	name_id	시 헌터	$966	l1j-en
+npcs	81078	name_id	거대 개미 위치	Giant Ant Witch	translated
+npcs	81079	name_id	그랜드 센티 피드	Grand Centipede	translated
+npcs	81081	name_id	파 푸리 온의 추종자	$2049	l1j-en
+npcs	81106	name_id	대리 마법 상인	Ant Cave Entrance	l1j-en
+npcs	81110	name_id	대리 마법 상인	Proxy Magic Merchant	translated
+npcs	81241	name_id	GM-SHOP^고대의 체인 소드 상인	GM-SHOP^Ancient Chain Sword Merchant	translated
+npcs	81242	name_id	GM-SHOP^고대의 키 링크 상인	GM-SHOP^Ancient Kiringku Merchant	translated
+npcs	81243	name_id	GM-SHOP^고대 서판 상인	GM-SHOP^Ancient Tablet Merchant	translated
+npcs	81244	name_id	GM-SHOP^고대의 기억 크리스탈 상인	GM-SHOP^Ancient Memory Crystal Merchant	translated
+npcs	81253	name_id	GM-SHOP^고대 문양 상인	GM-SHOP^Ancient Emblem Merchant	translated
+npcs	81254	name_id	GM-SHOP^고대 탈리스만 상인	GM-SHOP^Ancient Talisman Merchant	translated
+npcs	91100	name_id	시련의 $5650	$5650 of Ordeal	translated
+npcs	91419	name_id	트라이 서울	Tri Soul	l1j-en
+npcs	91440	name_id	포탄 떨어지는 효과	Falling Cannonball Effect	translated
+npcs	91441	name_id	상어	Shark	translated
+npcs	91442	name_id	습격 배 A	Raid Ship A	translated
+npcs	91443	name_id	나무 파괴 효과	Tree Destruction Effect	translated
+npcs	91444	name_id	포탄 떨어지는 효과	Falling Cannonball Effect	translated
+npcs	91445	name_id	상어	Shark	translated
+npcs	91446	name_id	습격 배 A	Raid Ship A	translated
+npcs	91447	name_id	습격 배 B	Raid Ship B	translated
+npcs	91448	name_id	습격 배 C	Raid Ship C	translated
+npcs	91449	name_id	갑판 끝	Deck Edge	translated
+npcs	91450	name_id	대포 A	Cannon A	translated
+npcs	91451	name_id	대포 B	Cannon B	translated
+npcs	91452	name_id	전송 마법진	Transport Magic Circle	translated
+npcs	91453	name_id	방어 마법진	Defense Magic Circle	translated
+npcs	91454	name_id	공격 마법진	Attack Magic Circle	translated
+npcs	91490	name_id	$972 선장	$972 Captain	translated
+npcs	98000	name_id	Lv52 다이묘	Lv52 Daimyo	translated
+npcs	98001	name_id	Lv52 사무라이	Lv52 Samurai	translated
+npcs	98002	name_id	Lv52 공주 무사	Lv52 Princess Warrior	translated
+npcs	98003	name_id	Lv52 닌자	Lv52 Ninja	translated
+npcs	98004	name_id	Lv52 음양사	Lv52 Onmyoji	translated
+npcs	98005	name_id	Lv57 다이묘	Lv57 Daimyo	translated
+npcs	98006	name_id	Lv57 사무라이	Lv57 Samurai	translated
+npcs	98007	name_id	Lv57 공주 무사	Lv57 Princess Warrior	translated
+npcs	98008	name_id	Lv57 닌자	Lv57 Ninja	translated
+npcs	98009	name_id	Lv57 음양사	Lv57 Onmyoji	translated
+npcs	98010	name_id	Lv62 다이묘	Lv62 Daimyo	translated
+npcs	98011	name_id	Lv62 사무라이	Lv62 Samurai	translated
+npcs	98012	name_id	Lv62 공주 무사	Lv62 Princess Warrior	translated
+npcs	98013	name_id	Lv62 닌자	Lv62 Ninja	translated
+npcs	98014	name_id	Lv62 음양사	Lv62 Onmyoji	translated
+npcs	98015	name_id	창천의 기사	Azure Sky Knight	translated
+npcs	98016	name_id	창천의 기사	Azure Sky Knight	translated
+npcs	98017	name_id	영 켄라우헬	Young Kenrauhel	translated
+npcs	98018	name_id	영 케레니스	Young Kerenis	translated
+npcs	98019	name_id	영 헬 바인	Young Hell Bine	translated
+npcs	98020	name_id	영 단테스	Young Dantes	translated
+npcs	98021	name_id	얀구군타	Yangugunta	translated
+npcs	98022	name_id	얀구조우	Yangujou	translated
+npcs	98023	name_id	영 질리언	Young Zilian	translated
+npcs	98024	name_id	영 블루 디카	Young Blue Dica	translated
+npcs	99020	name_id	항목 제작사^코끼리 라바 골렘	Item Maker^Elephant Lava Golem	translated
+npcs	99033	name_id	바모스	Vamos	translated
+npcs	99035	name_id	다크 디저트 플라워	Dark Desert Flower	translated
+npcs	99036	name_id	다크 샌드 전갈	Dark Sand Scorpion	translated
+npcs	99082	name_id	용의 전령	Dragon's Herald	translated
+npcs	99083	name_id	빅 풋 마요	Bigfoot Mayo	translated
+npcs	99085	name_id	강풍 샤스키	Gale Shaski	translated
+npcs	99086	name_id	광풍의 샤스키	Raging Wind Shaski	translated
+npcs	99087	name_id	빅 풋 마요	Bigfoot Mayo	translated
+npcs	99089	name_id	에루쟈베	Eruzabe	translated
+npcs	99093	name_id	할로윈 마을의 사자^발	Halloween Village Messenger^Bal	translated
+npcs	99094	name_id	자이언트 스트롱 개미	Giant Strong Ant	translated
+npcs	99095	name_id	자이언트 러쉬 개미	Giant Rush Ant	translated
+npcs	99096	name_id	자이언트 파이어 개미	Giant Fire Ant	translated
+npcs	99097	name_id	산성 개미 무리	Acid Ant Swarm	translated
+npcs	99098	name_id	자이언트 산성 개미	Giant Acid Ant	translated
+npcs	99099	name_id	다크 $966	Dark $966	translated
+npcs	99100	name_id	다크 샌드 $966	Dark Sand $966	translated
+npcs	99101	name_id	다크 $962	Dark $962	translated
+npcs	99102	name_id	레이 징 자이언트 가디언 개미	Raging Giant Guardian Ant	translated
+npcs	99103	name_id	다크 디저트 플라워	Dark Desert Flower	translated
+npcs	99104	name_id	다크 빠른 샌드	Dark Quick Sand	translated
+npcs	99105	name_id	디저트 $1176	Desert $1176	translated
+npcs	99106	name_id	디저트 $1174	Desert $1174	translated
+npcs	99107	name_id	디저트 $56	Desert $56	translated
+npcs	99108	name_id	디저트 $6	Desert $6	translated
+npcs	99118	name_id	시련의 $961	$961 of Ordeal	translated
+npcs	99119	name_id	연금술사 로슈	Alchemist Roche	translated
+npcs	99120	name_id	터널 개미	Tunnel Ant	translated
+npcs	99122	name_id	이상한 텔레 포터^피아트	Strange Teleporter^Piat	translated
+npcs	99123	name_id	이상한 상인^광대	Strange Merchant^Clown	translated
+npcs	99124	name_id	이상한 장난감 상인^돈키	Strange Toy Merchant^Donky	translated
+npcs	99125	name_id	이상한 강화 마법사^삐도루	Strange Enhancement Mage^Pidoru	translated
+npcs	99126	name_id	이상한 창고지기^비우스	Strange Warehouse Keeper^Bius	translated
+npcs	99127	name_id	이상한 텔레 포터^베루리나	Strange Teleporter^Berulina	translated
+npcs	99128	name_id	마법 인형 : 부루레구	Magic Doll: Bururegu	translated
+npcs	99129	name_id	마법 인형 : 레데구	Magic Doll: Redegu	translated
+npcs	99130	name_id	마법 인형 : 에루레구	Magic Doll: Eruregu	translated
+npcs	99131	name_id	마법 인형 : 그렉	Magic Doll: Grek	translated
+npcs	99172	name_id	마리스	Maris	translated
+npcs	99173	name_id	눈 벽 $1791	Snow Wall $1791	translated
+npcs	99176	name_id	눈 벽 $1786	Snow Wall $1786	translated
+npcs	99177	name_id	눈 벽 $1784	Snow Wall $1784	translated
+npcs	99178	name_id	눈 벽 $1791	Snow Wall $1791	translated
+npcs	99179	name_id	눈 벽 $1791	Snow Wall $1791	translated
+npcs	99180	name_id	눈 벽 $1786	Snow Wall $1786	translated
+npcs	99181	name_id	눈 벽 $1784	Snow Wall $1784	translated
+npcs	99182	name_id	눈 벽 $1395	Snow Wall $1395	translated
+npcs	99183	name_id	눈 벽 $1789	Snow Wall $1789	translated
+npcs	99184	name_id	많은 $57	Many $57	translated
+npcs	99187	name_id	다크 $1790	Dark $1790	translated
+npcs	99188	name_id	다크 $1785	Dark $1785	translated
+npcs	99190	name_id	보노스 $267	Bonos $267	translated
+npcs	99191	name_id	다크 $1787	Dark $1787	translated
+npcs	99192	name_id	보노스 $10816	Bonos $10816	translated
+npcs	99193	name_id	보노스 $266	Bonos $266	translated
+npcs	99194	name_id	보노스 $59 파이크	Bonos $59 Pike	translated
+npcs	99195	name_id	보노스 $59 셔먼	Bonos $59 Shaman	translated
+npcs	99196	name_id	드워프 $1	Dwarf $1	translated
+npcs	99197	name_id	드워프 아처	Dwarf Archer	translated
+npcs	99198	name_id	드워프 병사	Dwarf Soldier	translated
+npcs	99199	name_id	드워프 파이크	Dwarf Pike	translated
+npcs	99200	name_id	드워프 파이터	Dwarf Fighter	translated
+npcs	99201	name_id	드워프 마법사	Dwarf Mage	translated
+npcs	99256	name_id	지그프리드	Siegfried	translated
+npcs	99264	name_id	반지 세공^레스야	Ring Craftsman^Lesya	translated
+npcs	99265	name_id	강화 마법사^찌나스	Enhancement Mage^Jinnas	translated
+npcs	99266	name_id	창고지기^큐쿠	Warehouse Keeper^Kuku	translated
+weapons	241	identified_name_id	역전의 검	Veteran's Sword	translated
+weapons	241	unidentified_name_id	역전의 검	Veteran's Sword	translated
+weapons	243	identified_name_id	역전의 $88	Veteran's $88	translated
+weapons	243	unidentified_name_id	역전의 $88	Veteran's $88	translated
+weapons	244	identified_name_id	역전의 $372	Veteran's $372	translated
+weapons	244	unidentified_name_id	역전의 $372	Veteran's $372	translated
+weapons	250	identified_name_id	환영의 $70	Illusion $70	translated
+weapons	250	unidentified_name_id	환영의 $70	Illusion $70	translated
+weapons	251	identified_name_id	환영의 쯔바이 핸더	Two-Handed Sword of Illusion	l1j-en
+weapons	251	unidentified_name_id	환영의 쯔바이 핸더	Two-Handed Sword of Illusion	l1j-en
+weapons	252	identified_name_id	환영의 스피어	unknown	l1j-en
+weapons	252	unidentified_name_id	환영의 스피어	unknown	l1j-en
+weapons	253	identified_name_id	환영의 도끼 $1	Illusion $1	translated
+weapons	253	unidentified_name_id	환영의 도끼 $1	Illusion $1	translated
+weapons	254	identified_name_id	환상의 이도류	unknown	l1j-en
+weapons	254	unidentified_name_id	환상의 이도류	unknown	l1j-en
+weapons	255	identified_name_id	환상의 스태프 $88	Illusion $88	translated
+weapons	255	unidentified_name_id	환상의 스태프 $88	Illusion $88	translated
+weapons	708	identified_name_id	할로윈 호박 지팡이	Halloween Pumpkin Staff	translated
+weapons	708	unidentified_name_id	할로윈 호박 지팡이	Halloween Pumpkin Staff	translated
+weapons	709	identified_name_id	할로윈 호박 양손 검	Halloween Pumpkin Two-Handed Sword	translated
+weapons	709	unidentified_name_id	할로윈 호박 양손 검	Halloween Pumpkin Two-Handed Sword	translated
+weapons	710	identified_name_id	할로윈 호박 장궁	Halloween Pumpkin Long Bow	translated
+weapons	710	unidentified_name_id	할로윈 호박 장궁	Halloween Pumpkin Long Bow	translated
+weapons	721	identified_name_id	호박 장검 2012	Pumpkin Long Sword 2012	translated
+weapons	721	unidentified_name_id	호박 장검 2012	Pumpkin Long Sword 2012	translated
+weapons	722	identified_name_id	호박 대검 2012	Pumpkin Great Sword 2012	translated
+weapons	722	unidentified_name_id	호박 대검 2012	Pumpkin Great Sword 2012	translated
+weapons	723	identified_name_id	호박 장궁 2012	Pumpkin Long Bow 2012	translated
+weapons	723	unidentified_name_id	호박 장궁 2012	Pumpkin Long Bow 2012	translated
+weapons	724	identified_name_id	호박 지팡이 2012	Pumpkin Staff 2012	translated
+weapons	724	unidentified_name_id	호박 지팡이 2012	Pumpkin Staff 2012	translated
+weapons	725	identified_name_id	호박 체인 소드 2012	Pumpkin Chain Sword 2012	translated
+weapons	725	unidentified_name_id	호박 체인 소드 2012	Pumpkin Chain Sword 2012	translated
+weapons	726	identified_name_id	호박 키 링크 2012	Pumpkin Kiringku 2012	translated
+weapons	726	unidentified_name_id	호박 키 링크 2012	Pumpkin Kiringku 2012	translated
+weapons	727	identified_name_id	호박 크로우 2012	Pumpkin Claw 2012	translated
+weapons	727	unidentified_name_id	호박 크로우 2012	Pumpkin Claw 2012	translated
+weapons	728	identified_name_id	메디테이션 스태프	Meditation Staff	translated
+weapons	728	unidentified_name_id	메디테이션 스태프	Meditation Staff	translated
+weapons	729	identified_name_id	브래드 사커	Blood Sucker	translated
+weapons	729	unidentified_name_id	브래드 사커	Blood Sucker	translated
+weapons	100180	identified_name_id	석궁 $24	Crossbow	translated
+weapons	100180	unidentified_name_id	석궁 $24	Crossbow	translated

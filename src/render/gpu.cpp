@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "render/gpu.h"
+#include "render/shaders_msl_anime4k.h"
 #include "render/shaders_spirv.h"
 
 namespace lin {
@@ -121,6 +122,135 @@ fragment float4 fs_mundo(MundoSalida in [[stage_in]], texture2d<float> escena [[
     else if (p.w == 2.0) c = c * ((2.0 * c.r + 7.0 * c.g + c.b) / 10.0);
     return float4(c, 1.0);
 }
+
+// Final-present scalers (twins of src/render/shaders/escalado_*.frag; vertex stage is vs_mundo).
+// u.xy = source size, u.zw = output size. UNTESTED on Metal (no Mac available): compile-plausible only.
+float3 esc_P(texture2d<float> t, sampler s, float4 u, float2 p) {
+    return t.sample(s, (clamp(p, float2(0.0), u.xy - 1.0) + 0.5) / u.xy).rgb;
+}
+float esc_d(float3 a, float3 b) { return dot(abs(a - b), float3(0.299, 0.587, 0.114)); }
+
+fragment float4 fs_escalado_xbr(MundoSalida in [[stage_in]], texture2d<float> escena [[texture(0)]],
+                                sampler sm [[sampler(0)]], constant float4& u [[buffer(0)]]) {
+    float2 sp = in.uv * u.xy;
+    float2 c = floor(sp);
+    float2 f = sp - c - 0.5;
+    float2 s = float2(f.x < 0.0 ? -1.0 : 1.0, f.y < 0.0 ? -1.0 : 1.0);
+    float3 E = esc_P(escena, sm, u, c);
+    float3 H = esc_P(escena, sm, u, c + float2(s.x, 0.0));
+    float3 V = esc_P(escena, sm, u, c + float2(0.0, s.y));
+    float3 I = esc_P(escena, sm, u, c + s);
+    float3 Hb = esc_P(escena, sm, u, c + float2(-s.x, 0.0));
+    float3 Vb = esc_P(escena, sm, u, c + float2(0.0, -s.y));
+    float3 C = esc_P(escena, sm, u, c + float2(s.x, -s.y));
+    float3 G = esc_P(escena, sm, u, c + float2(-s.x, s.y));
+    float3 H2 = esc_P(escena, sm, u, c + float2(2.0 * s.x, s.y));
+    float3 V2 = esc_P(escena, sm, u, c + float2(s.x, 2.0 * s.y));
+    float e = esc_d(E, C) + esc_d(E, G) + esc_d(I, H2) + esc_d(I, V2) + 4.0 * esc_d(V, H);
+    float i = esc_d(V, Hb) + esc_d(V, V2) + esc_d(H, H2) + esc_d(H, Vb) + 4.0 * esc_d(E, I);
+    float3 col = E;
+    if (e < i && esc_d(E, I) > 0.02) {
+        float3 n = esc_d(E, H) <= esc_d(E, V) ? H : V;
+        float t = abs(f.x) + abs(f.y);
+        float w = 0.5 * length(u.xy / u.zw) * 1.5;
+        float a = smoothstep(0.5 - w, 0.5 + w, t);
+        col = mix(E, n, a);
+    }
+    return float4(col, 1.0);
+}
+
+// FSR 1.0 EASU, Copyright (c) 2021 Advanced Micro Devices, Inc., MIT License (see escalado_fsr.frag).
+float esc_L(float3 c) { return c.b * 0.5 + (c.r * 0.5 + c.g); }
+void esc_tap(thread float3& aC, thread float& aW, float2 off, float2 dir, float2 len, float lob, float clp, float3 c) {
+    float2 v = float2(off.x * dir.x + off.y * dir.y, off.x * (-dir.y) + off.y * dir.x);
+    v *= len;
+    float d2 = min(v.x * v.x + v.y * v.y, clp);
+    float wB = 2.0 / 5.0 * d2 - 1.0;
+    float wA = lob * d2 - 1.0;
+    wB *= wB;
+    wA *= wA;
+    wB = 25.0 / 16.0 * wB - (25.0 / 16.0 - 1.0);
+    float w = wB * wA;
+    aC += c * w;
+    aW += w;
+}
+void esc_set(thread float2& dir, thread float& len, float w, float lA, float lB, float lC, float lD, float lE) {
+    float lenX = max(abs(lD - lC), abs(lC - lB));
+    float dirX = lD - lB;
+    dir.x += dirX * w;
+    lenX = clamp(abs(dirX) / lenX, 0.0, 1.0);
+    len += lenX * lenX * w;
+    float lenY = max(abs(lE - lC), abs(lC - lA));
+    float dirY = lE - lA;
+    dir.y += dirY * w;
+    lenY = clamp(abs(dirY) / lenY, 0.0, 1.0);
+    len += lenY * lenY * w;
+}
+fragment float4 fs_escalado_fsr(MundoSalida in [[stage_in]], texture2d<float> escena [[texture(0)]],
+                                sampler sm [[sampler(0)]], constant float4& u [[buffer(0)]]) {
+    float2 pp = in.uv * u.xy - 0.5;
+    float2 fp = floor(pp);
+    pp -= fp;
+    float3 b = esc_P(escena, sm, u, fp + float2(0, -1)), c = esc_P(escena, sm, u, fp + float2(1, -1));
+    float3 e = esc_P(escena, sm, u, fp + float2(-1, 0)), f = esc_P(escena, sm, u, fp);
+    float3 g = esc_P(escena, sm, u, fp + float2(1, 0)), h = esc_P(escena, sm, u, fp + float2(2, 0));
+    float3 i = esc_P(escena, sm, u, fp + float2(-1, 1)), j = esc_P(escena, sm, u, fp + float2(0, 1));
+    float3 k = esc_P(escena, sm, u, fp + float2(1, 1)), l = esc_P(escena, sm, u, fp + float2(2, 1));
+    float3 n = esc_P(escena, sm, u, fp + float2(0, 2)), o = esc_P(escena, sm, u, fp + float2(1, 2));
+    float bL = esc_L(b), cL = esc_L(c), eL = esc_L(e), fL = esc_L(f), gL = esc_L(g), hL = esc_L(h);
+    float iL = esc_L(i), jL = esc_L(j), kL = esc_L(k), lL = esc_L(l), nL = esc_L(n), oL = esc_L(o);
+    float2 dir = float2(0.0);
+    float len = 0.0;
+    esc_set(dir, len, (1.0 - pp.x) * (1.0 - pp.y), bL, eL, fL, gL, jL);
+    esc_set(dir, len, pp.x * (1.0 - pp.y), cL, fL, gL, hL, kL);
+    esc_set(dir, len, (1.0 - pp.x) * pp.y, fL, iL, jL, kL, nL);
+    esc_set(dir, len, pp.x * pp.y, gL, jL, kL, lL, oL);
+    float2 dir2 = dir * dir;
+    float dirR = dir2.x + dir2.y;
+    bool zro = dirR < (1.0 / 32768.0);
+    dirR = rsqrt(dirR);
+    dirR = zro ? 1.0 : dirR;
+    dir.x = zro ? 1.0 : dir.x;
+    dir *= float2(dirR);
+    len = len * 0.5;
+    len *= len;
+    float stretch = (dir.x * dir.x + dir.y * dir.y) / max(abs(dir.x), abs(dir.y));
+    float2 len2 = float2(1.0 + (stretch - 1.0) * len, 1.0 - 0.5 * len);
+    float lob = 0.5 + ((1.0 / 4.0 - 0.04) - 0.5) * len;
+    float clp = 1.0 / lob;
+    float3 min4 = min(min(f, g), min(j, k));
+    float3 max4 = max(max(f, g), max(j, k));
+    float3 aC = float3(0.0);
+    float aW = 0.0;
+    esc_tap(aC, aW, float2(0, -1) - pp, dir, len2, lob, clp, b);
+    esc_tap(aC, aW, float2(1, -1) - pp, dir, len2, lob, clp, c);
+    esc_tap(aC, aW, float2(-1, 1) - pp, dir, len2, lob, clp, i);
+    esc_tap(aC, aW, float2(0, 1) - pp, dir, len2, lob, clp, j);
+    esc_tap(aC, aW, float2(0, 0) - pp, dir, len2, lob, clp, f);
+    esc_tap(aC, aW, float2(-1, 0) - pp, dir, len2, lob, clp, e);
+    esc_tap(aC, aW, float2(1, 1) - pp, dir, len2, lob, clp, k);
+    esc_tap(aC, aW, float2(2, 1) - pp, dir, len2, lob, clp, l);
+    esc_tap(aC, aW, float2(2, 0) - pp, dir, len2, lob, clp, h);
+    esc_tap(aC, aW, float2(1, 0) - pp, dir, len2, lob, clp, g);
+    esc_tap(aC, aW, float2(1, 2) - pp, dir, len2, lob, clp, o);
+    esc_tap(aC, aW, float2(0, 2) - pp, dir, len2, lob, clp, n);
+    return float4(min(max4, max(min4, aC / aW)), 1.0);
+}
+
+fragment float4 fs_escalado_crt(MundoSalida in [[stage_in]], texture2d<float> escena [[texture(0)]],
+                                sampler sm [[sampler(0)]], constant float4& u [[buffer(0)]]) {
+    float2 sp = in.uv * u.xy;
+    float2 c = floor(sp);
+    float2 f = sp - c;
+    float nx = f.x < 0.5 ? -1.0 : 1.0;
+    float k = abs(f.x - 0.5);
+    float3 col = mix(esc_P(escena, sm, u, c), esc_P(escena, sm, u, c + float2(nx, 0.0)), smoothstep(0.0, 1.0, k * 0.8));
+    float scan = 0.82 + 0.18 * cos(6.2831853 * (f.y - 0.25));
+    int ox = int(in.uv.x * u.z);
+    float3 mask = float3(0.8);
+    mask[ox % 3] = 1.0;
+    return float4(clamp(col * scan * mask * 1.12, 0.0, 1.0), 1.0);
+}
 )";
 
 }  // namespace
@@ -143,7 +273,13 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
     }
-    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_VSYNC);
+    // Prefer MAILBOX (no tearing, but never blocks): with VSYNC (FIFO) on Wayland the frame loop stalls
+    // while the window is hidden or occluded, which also stalls the live-control socket.
+    const SDL_GPUPresentMode modo = SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_MAILBOX)
+                                         ? SDL_GPU_PRESENTMODE_MAILBOX
+                                         : SDL_GPU_PRESENTMODE_VSYNC;
+    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, modo);
+    mailbox_ = modo == SDL_GPU_PRESENTMODE_MAILBOX;
     if (!crear_pipeline()) return false;
 
     SDL_GPUTextureCreateInfo ti{};
@@ -235,6 +371,15 @@ bool Gpu::crear_pipeline() {
                 {"fs_brillo", spirv::brillo_frag, sizeof spirv::brillo_frag},
                 {"vs_mundo", spirv::mundo_vert, sizeof spirv::mundo_vert},
                 {"fs_mundo", spirv::mundo_frag, sizeof spirv::mundo_frag},
+                {"fs_escalado_xbr", spirv::escalado_xbr_frag, sizeof spirv::escalado_xbr_frag},
+                {"fs_escalado_fsr", spirv::escalado_fsr_frag, sizeof spirv::escalado_fsr_frag},
+                {"fs_escalado_crt", spirv::escalado_crt_frag, sizeof spirv::escalado_crt_frag},
+                {"fs_anime4k_c1", spirv::anime4k_c1_frag, sizeof spirv::anime4k_c1_frag},
+                {"fs_anime4k_c2", spirv::anime4k_c2_frag, sizeof spirv::anime4k_c2_frag},
+                {"fs_anime4k_c3", spirv::anime4k_c3_frag, sizeof spirv::anime4k_c3_frag},
+                {"fs_anime4k_c4", spirv::anime4k_c4_frag, sizeof spirv::anime4k_c4_frag},
+                {"fs_anime4k_d2s", spirv::anime4k_d2s_frag, sizeof spirv::anime4k_d2s_frag},
+                {"fs_anime4k_resample", spirv::anime4k_resample_frag, sizeof spirv::anime4k_resample_frag},
             };
             const Modulo* m = nullptr;
             for (const Modulo& x : modulos)
@@ -356,6 +501,53 @@ bool Gpu::crear_pipeline() {
     SDL_ReleaseGPUShader(dev_, mvs);
     SDL_ReleaseGPUShader(dev_, mfs);
     if (!pipeline_mundo_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (mundo): %s", SDL_GetError());
+    // Final-present filters: vs_mundo (fullscreen quad) + one fragment shader each, no blending.
+    for (int k = 1; k < static_cast<int>(Escalado::ANIME4K); ++k) {
+        const char* nombres[N_ESCALADOS] = {"", "fs_escalado_xbr", "fs_escalado_fsr", "fs_escalado_crt", ""};
+        SDL_GPUShaderCreateInfo ev = mv;
+        SDL_GPUShaderCreateInfo ef = mf;
+        ef.entrypoint = nombres[k];
+        SDL_GPUShader* evs = crear(ev);
+        SDL_GPUShader* efs = crear(ef);
+        if (evs && efs) {
+            SDL_GPUGraphicsPipelineCreateInfo epi = mpi;
+            epi.vertex_shader = evs;
+            epi.fragment_shader = efs;
+            pipeline_esc_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &epi);
+        }
+        if (!pipeline_esc_[k]) LIN_LOG("Escalado %s: %s", nombres[k], SDL_GetError());
+        SDL_ReleaseGPUShader(dev_, evs);
+        SDL_ReleaseGPUShader(dev_, efs);
+    }
+    // Anime4K passes: conv1..4 write RGBA16F intermediates, depth-to-space and resample write RGBA8.
+    {
+        static const char* nombres[A4K_PASES] = {"fs_anime4k_c1", "fs_anime4k_c2", "fs_anime4k_c3",
+                                                 "fs_anime4k_c4", "fs_anime4k_d2s", "fs_anime4k_resample"};
+        static const int muestras[A4K_PASES] = {1, 1, 1, 1, 2, 1};
+        for (int k = 0; k < A4K_PASES; ++k) {
+            SDL_GPUShaderCreateInfo ev = mv;
+            SDL_GPUShaderCreateInfo ef = mf;
+            ef.entrypoint = nombres[k];
+            ef.code = reinterpret_cast<const Uint8*>(SHADER_MSL_ANIME4K);
+            ef.code_size = std::strlen(SHADER_MSL_ANIME4K);
+            ef.num_samplers = static_cast<Uint32>(muestras[k]);
+            ef.num_uniform_buffers = k == 5 ? 0 : 1;
+            SDL_GPUShader* evs = crear(ev);
+            SDL_GPUShader* efs = crear(ef);
+            if (evs && efs) {
+                SDL_GPUColorTargetDescription cta = ctm;
+                if (k < 4) cta.format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
+                SDL_GPUGraphicsPipelineCreateInfo epi = mpi;
+                epi.target_info.color_target_descriptions = &cta;
+                epi.vertex_shader = evs;
+                epi.fragment_shader = efs;
+                a4k_pipe_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &epi);
+            }
+            if (!a4k_pipe_[k]) LIN_LOG("Anime4K %s: %s", nombres[k], SDL_GetError());
+            SDL_ReleaseGPUShader(dev_, evs);
+            SDL_ReleaseGPUShader(dev_, efs);
+        }
+    }
     return pipeline_ != nullptr && pipeline_brillo_ != nullptr && pipeline_mundo_ != nullptr;
 }
 
@@ -373,6 +565,11 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUTexture(dev_, luz_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_luz_);
     SDL_ReleaseGPUTexture(dev_, copia_);
+    for (SDL_GPUGraphicsPipeline* p : a4k_pipe_) SDL_ReleaseGPUGraphicsPipeline(dev_, p);
+    SDL_ReleaseGPUTexture(dev_, a4k_a_);
+    SDL_ReleaseGPUTexture(dev_, a4k_b_);
+    SDL_ReleaseGPUTexture(dev_, a4k_x2_);
+    SDL_ReleaseGPUSampler(dev_, a4k_lineal_);
     SDL_ReleaseGPUTexture(dev_, filas_tex_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_filas_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_mundo_);
@@ -762,8 +959,33 @@ void Gpu::presentar() {
         dibujar(pase, corte, n - corte);
         SDL_EndGPURenderPass(pase);
     }
-    if (!ruta_captura_.empty()) cmd = guardar_captura(cmd);
+    if (!ruta_captura_.empty()) cmd = guardar_captura(cmd, destino_, ruta_captura_, true);
     if (!cmd) return terminar_frame(n);  // el comando que sigue a la captura no se pudo obtener
+
+    // 2b. Scaling filter: destino_ (logical grid, nearest-sampled at texel centres) -> copia_ (same
+    // size; free at this point). The final capture reads it back.
+    SDL_GPUTexture* final_tex = destino_;
+    if (escalado_ == Escalado::ANIME4K) {
+        if (SDL_GPUTexture* t = pase_anime4k(cmd)) final_tex = t;
+    } else if (escalado_ != Escalado::ENTERO && pipeline_esc_[static_cast<int>(escalado_)] && copia_) {
+        SDL_GPUColorTargetInfo ot{};
+        ot.texture = copia_;
+        ot.load_op = SDL_GPU_LOADOP_DONT_CARE;
+        ot.store_op = SDL_GPU_STOREOP_STORE;
+        if (SDL_GPURenderPass* fp = SDL_BeginGPURenderPass(cmd, &ot, 1, nullptr)) {
+            SDL_BindGPUGraphicsPipeline(fp, pipeline_esc_[static_cast<int>(escalado_)]);
+            SDL_GPUTextureSamplerBinding sb{destino_, muestreo_};
+            SDL_BindGPUFragmentSamplers(fp, 0, &sb, 1);
+            const float u[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_),
+                                static_cast<float>(destino_w_), static_cast<float>(destino_h_)};
+            SDL_PushGPUFragmentUniformData(cmd, 0, u, sizeof u);
+            SDL_DrawGPUPrimitives(fp, 6, 1, 0, 0);
+            SDL_EndGPURenderPass(fp);
+            final_tex = copia_;
+        }
+    }
+    if (!ruta_final_.empty()) cmd = guardar_captura(cmd, final_tex, ruta_final_, false);
+    if (!cmd) return terminar_frame(n);
 
     // 3. Copia 1:1 a la ventana, centrada (la textura ya tiene el tamaño escalado).
     SDL_GPUTexture* swap = nullptr;
@@ -771,7 +993,7 @@ void Gpu::presentar() {
     if (SDL_WaitAndAcquireGPUSwapchainTexture(cmd, ventana_, &swap, &sw, &sh) && swap) {
         Uint32 dw = static_cast<Uint32>(grid_w_ * escala_), dh = static_cast<Uint32>(grid_h_ * escala_);
         SDL_GPUBlitInfo b{};
-        b.source.texture = destino_;
+        b.source.texture = final_tex;
         b.source.w = dw;
         b.source.h = dh;
         b.destination.texture = swap;
@@ -788,9 +1010,19 @@ void Gpu::presentar() {
     }
     SDL_SubmitGPUCommandBuffer(cmd);
     terminar_frame(n);
+    pace_frame();
 }
 
-SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd) {
+// MAILBOX does not wait for the display, so cap the loop at ~60 fps (VSYNC already paces it).
+void Gpu::pace_frame() {
+    if (!mailbox_) return;
+    constexpr Uint64 FRAME_NS = 1'000'000'000ull / 60;
+    const Uint64 now = SDL_GetTicksNS();
+    if (next_frame_ns_ > now) SDL_DelayPrecise(next_frame_ns_ - now);
+    next_frame_ns_ = std::max(next_frame_ns_ + FRAME_NS, SDL_GetTicksNS());
+}
+
+SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, std::string& ruta, bool logica) {
     SDL_GPUTransferBufferCreateInfo tb{};
     tb.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
     const int w = grid_w_ * escala_, h = grid_h_ * escala_;
@@ -798,12 +1030,12 @@ SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd) {
     SDL_GPUTransferBuffer* bajada = SDL_CreateGPUTransferBuffer(dev_, &tb);
     if (!bajada) {
         LIN_LOG("Captura: sin buffer de %dx%d (%s)", w, h, SDL_GetError());
-        ruta_captura_.clear();
+        ruta.clear();
         return cmd;  // el frame sigue en el mismo comando
     }
     SDL_GPUCopyPass* copia = SDL_BeginGPUCopyPass(cmd);
     SDL_GPUTextureRegion src{};
-    src.texture = destino_;
+    src.texture = tex;
     src.w = static_cast<Uint32>(w);
     src.h = static_cast<Uint32>(h);
     src.d = 1;
@@ -816,23 +1048,32 @@ SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd) {
     if (!f) {  // el envío falló: no hay píxeles que leer
         LIN_LOG("Captura: no se pudo enviar el comando (%s)", SDL_GetError());
         SDL_ReleaseGPUTransferBuffer(dev_, bajada);
-        ruta_captura_.clear();
+        ruta.clear();
         return SDL_AcquireGPUCommandBuffer(dev_);
     }
     SDL_WaitForGPUFences(dev_, true, &f, 1);
     SDL_ReleaseGPUFence(dev_, f);
     // La captura se guarda a la resolución lógica (un píxel de cada bloque de escala × escala).
     if (const u32* px = static_cast<const u32*>(SDL_MapGPUTransferBuffer(dev_, bajada, false))) {
-        std::vector<u32> logica(static_cast<size_t>(grid_w_) * grid_h_);
-        for (int y = 0; y < grid_h_; ++y)
-            for (int x = 0; x < grid_w_; ++x) logica[static_cast<size_t>(y) * grid_w_ + x] = px[static_cast<size_t>(y * escala_) * w + x * escala_];
-        SDL_Surface* s = SDL_CreateSurfaceFrom(grid_w_, grid_h_, SDL_PIXELFORMAT_ABGR8888, logica.data(), grid_w_ * 4);
-        if (s && SDL_SaveBMP(s, ruta_captura_.c_str())) LIN_LOG("Captura guardada en %s", ruta_captura_.c_str());
+        // `logica`: one pixel per escala × escala block; otherwise the full image as is.
+        std::vector<u32> img;
+        const u32* datos = px;
+        int iw = w, ih = h;
+        if (logica) {
+            iw = grid_w_;
+            ih = grid_h_;
+            img.resize(static_cast<size_t>(iw) * ih);
+            for (int y = 0; y < ih; ++y)
+                for (int x = 0; x < iw; ++x) img[static_cast<size_t>(y) * iw + x] = px[static_cast<size_t>(y * escala_) * w + x * escala_];
+            datos = img.data();
+        }
+        SDL_Surface* s = SDL_CreateSurfaceFrom(iw, ih, SDL_PIXELFORMAT_ABGR8888, const_cast<u32*>(datos), iw * 4);
+        if (s && SDL_SaveBMP(s, ruta.c_str())) LIN_LOG("Captura guardada en %s", ruta.c_str());
         SDL_DestroySurface(s);
         SDL_UnmapGPUTransferBuffer(dev_, bajada);
     }
     SDL_ReleaseGPUTransferBuffer(dev_, bajada);
-    ruta_captura_.clear();
+    ruta.clear();
     return SDL_AcquireGPUCommandBuffer(dev_);  // el resto del frame va en un comando nuevo
 }
 

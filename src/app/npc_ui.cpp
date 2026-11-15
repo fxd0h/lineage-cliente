@@ -196,9 +196,12 @@ void dibujar_pagina(App& a, int x0, int y0) {
         const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2);
         if (encima) bajo = &el;
         if (el.tipo == ElementoHtml::Tipo::IMAGEN) {
-            // Botones: N.img y, con el puntero encima, N+1 si existe.
-            const RegionAtlas& alt = encima ? g.img(el.imagen + 1) : g.img(el.imagen);
-            g.gpu().dibujar(alt.valida() ? alt : g.img(el.imagen), x, y, ki);
+            // Buttons: N.img, and with the pointer over it N+1 only when it is the same size. N+1 is
+            // not always the highlighted variant (for "back" it is an unrelated elf sprite).
+            const RegionAtlas base = g.img(el.imagen);  // copy: loading N+1 may move the cache
+            const RegionAtlas hover = encima ? g.img(el.imagen + 1) : base;
+            const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
+            g.gpu().dibujar(use_hover ? hover : base, x, y, ki);
         } else {
             g.texto(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, encima ? rgba(255, 255, 254) : el.color);
             if (el.vinculo_len) g.gpu().rectangulo(x, y + ALTO_GLIFO, el.w, 1, ki, el.color);

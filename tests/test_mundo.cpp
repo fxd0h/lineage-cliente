@@ -4,6 +4,7 @@
 #include "comun.h"
 #include "plataforma/archivo_mapeado.h"
 #include "mundo/mundo.h"
+#include "mundo/subida_nivel.h"
 
 using namespace lin;
 
@@ -391,4 +392,28 @@ TEST_CASE("Puertas y estructuras de castillo: acciones que se quedan en su últi
     CHECK_FALSE(accion_fija(TIPO_ESTRUCTURA, 0));
     CHECK_FALSE(accion_fija(TIPO_ESTRUCTURA, 38));
     CHECK_FALSE(accion_fija(0, ACC_ABRIR));  // un personaje no se queda quieto al "abrir"
+}
+
+TEST_CASE("Mundo: la subida de nivel propia dispara el efecto 2127 solo si el nivel ya se conocía") {
+    CHECK_FALSE(subida_de_nivel(0, 5));  // first status packet / login
+    CHECK_FALSE(subida_de_nivel(5, 5));
+    CHECK_FALSE(subida_de_nivel(6, 5));  // level lost
+    CHECK(subida_de_nivel(5, 6));
+
+    Mundo m;
+    Evento st{};
+    st.tipo = Ev::ESTADO_PROPIO;
+    st.id = 77;
+    st.v[EP_NIVEL] = 5;
+    Evento exp{};
+    exp.tipo = Ev::EXPERIENCIA;
+    exp.v[0] = 6;
+    exp.v[1] = 100;
+    Evento ev1[] = {st};
+    aplicar_eventos(m, ev1, 1000);
+    CHECK(m.efectos[0].gfx == 0);  // first status: no effect
+    Evento ev2[] = {exp};
+    aplicar_eventos(m, ev2, 2000);
+    CHECK(m.efectos[0].gfx == GFX_SUBIDA_NIVEL);
+    CHECK(m.efectos[0].objeto == 77);
 }

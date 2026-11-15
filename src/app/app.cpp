@@ -180,7 +180,22 @@ void leer_entrada(App& a) {
                 }
                 e.tecla_f = 12;
                 break;
-            case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
+            case SDLK_F5:
+                if (ev.key.mod & SDL_KMOD_SHIFT) {  // Shift+F5: cycle the final-present scaling filter
+                    if (ev.key.repeat) break;
+                    const int sig = (static_cast<int>(escalado_desde(a.cfg.escalado)) + 1) % N_ESCALADOS;
+                    a.cfg.escalado = nombre_escalado(static_cast<Escalado>(sig));
+                    guardar_config(a.cfg);
+                    {  // tell the player which filter is now active
+                        char t[48];
+                        std::snprintf(t, sizeof t, "Upscaling: %s (Shift+F5)", a.cfg.escalado.c_str());
+                        a.chat.agregar(t, rgba(255, 200, 120), CHAT_SISTEMA);
+                    }
+                    break;
+                }
+                e.tecla_f = 5;
+                break;
+            case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
                 e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_F5);  // los códigos F5..F11 son consecutivos
                 break;
             default: break;
@@ -326,6 +341,8 @@ bool iniciar_app(App& a) {
     }
     // Tamaño en puntos (en Retina, el doble de píxeles): el de la última vez (settings.ini).
     // Sin borde del sistema: la barra la dibuja el juego (ventana_ui.cpp).
+    // Automated relaunches (tests) must not steal the user's focus.
+    if (SDL_getenv("LIN_NO_FOCUS")) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
     a.ventana = SDL_CreateWindow("Lineage", a.cfg.ventana_ancho, a.cfg.ventana_alto,
                                  SDL_WINDOW_RESIZABLE | SDL_WINDOW_BORDERLESS | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!a.ventana || !a.gpu.iniciar(a.ventana, 640, 480)) return false;
@@ -386,6 +403,7 @@ void bucle_app(App& a) {
         a.cursor = Cursor::MANO;
         if (a.g) a.g->nuevo_frame();
         // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480.
+        a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
         a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a));
 #if LIN_CONTROL
         control_frame(a);  // comandos del socket: antes de leer la entrada (las teclas van como eventos de SDL)

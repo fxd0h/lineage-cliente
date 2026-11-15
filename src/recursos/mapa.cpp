@@ -37,8 +37,18 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
     s.base_y = static_cast<u16>(base_y);
     s.suelo.resize(CELDAS * 2);
     for (u32& v : s.suelo) v = l.u32_();
-    u16 n = l.u16_();
-    l.saltar(static_cast<size_t>(n) * 6);
+    // Second ground layer: transparent tiles laid over the ground (see mapa.h).
+    std::vector<TileObjetoMapa> encima;
+    const u16 n = l.u16_();
+    for (u16 i = 0; i < n && !l.error; ++i) {
+        TileObjetoMapa t;
+        t.x = l.u8_();
+        t.y = l.u8_();
+        t.capa = 0;
+        t.base = 0;
+        t.tile = l.u32_() & 0xFFFFFF;
+        if (t.x < 2 * CELDAS_SEGMENTO && t.y < CELDAS_SEGMENTO) encima.push_back(t);
+    }
     s.atributos.resize(CELDAS * 2);
     for (u16& v : s.atributos) v = l.u16_();
     if (l.error) return false;
@@ -75,6 +85,17 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
             o.y0 = std::min(o.y0, t.y);
             o.y1 = std::max(o.y1, t.y);
         }
+        s.objetos.push_back(o);
+    }
+    if (!encima.empty()) {
+        ObjetoMapa o{static_cast<u32>(s.tiles_objetos.size()), static_cast<u32>(encima.size()), 255, 255, 0, 0};
+        for (const TileObjetoMapa& t : encima) {
+            o.x0 = std::min<u8>(o.x0, t.x / 2);
+            o.x1 = std::max<u8>(o.x1, t.x / 2);
+            o.y0 = std::min(o.y0, t.y);
+            o.y1 = std::max(o.y1, t.y);
+        }
+        s.tiles_objetos.insert(s.tiles_objetos.end(), encima.begin(), encima.end());
         s.objetos.push_back(o);
     }
     // Lo que sigue también es opcional: un segmento sin portales o cortado no invalida el resto.

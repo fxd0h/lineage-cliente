@@ -541,10 +541,76 @@ size_t nombre_efecto_activo(const App& a, const EfectoActivo& ef, char* buf, siz
 
 // Efectos activos: una fila de íconos arriba al centro (sobre las ventanas), con lo que les queda
 // debajo ("29m", "45s"); con el puntero encima, el nombre y el tiempo exacto.
+// Buff-bar icons of the original client: N.tbt 5240..5325 and 5392..5400 (32x32, thin light frame
+// with corner dots; teal-framed variants are 5241, 5393, 5395, 5397, 5399). Found by matching the
+// original's screenshot; they are NOT the spellbook icons from spellicon.idx. 0 = no known icon.
+static u32 icono_de_buff_original(u32 hechizo) {
+    switch (hechizo) {
+    case 43: return 5240;  // Haste: outlined ">>"
+    case 54: return 5240;  // Greater Haste: same buff slot as Haste in the original (S_SkillHaste type 1)
+    // Inferred: same glyph as the skill's spellbook icon, matched against the original buff row.
+    case 8: return 5248;   // Holy Weapon: double cross
+    case 14: return 5291;  // Decrease Weight: bell
+    case 26: return 5247;  // Enchant Dexterity: teal pinwheel
+    case 42: return 5246;  // Enchant Strength: wand burst
+    case 52: return 5243;  // Holy Walk: ">>>" (original: S_SkillBrave type 4 -> slot with classic icon 1110)
+    default: return 0;
+    }
+}
+
+// Buff-bar icon for an effect the server reports with its own packet, recovered from the original
+// client (S3EP1U.bin): each packet handler calls sub_4647a0(duration, slot) and the row draws
+// classic icon table[slot] (table at 0x6e1020, 20-byte entries, field 0 = classic icon id). The
+// thin-frame N.tbt used here are the re-skins of those classic icons (pixel match >= 0.95).
+// Several handlers share a slot, so potion and spell look the same. 0 = no thin-frame twin known.
+static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
+    switch (ef.clase) {
+    case EA_HASTE: return ef.tipo == 1 ? 5240 : 0;                      // slot 0 (481); type 2 slow = slot 1 (480): no twin
+    case EA_BRAVE:
+        switch (ef.tipo) {
+        case 1: case 3: case 5: return 5396;                            // slot 2 (486): brave potion, elven wafer
+        case 4: return 5243;                                            // Holy Walk: slot 24/37 (1110)
+        case 6: return 5245;                                            // Bloodlust: slot 110 (3075)
+        default: return 0;
+        }
+    case EA_TERCERA: return 5396;                                       // S_Liquor 8: slot 73 (486, same glyph as brave)
+    case EA_ESCUDO:
+        switch (ef.tipo) {
+        case 5: case 3: return 5271;                                    // Shield, Shadow Armor: slots 4/5 (485)
+        case 6: return 5273;                                            // Earth Skin: slot 6 (763)
+        case 7: return 5274;                                            // Earth Bless: slot 7 (725)
+        case 10: return 5275;                                           // Iron Skin: slot 8 (783)
+        default: return 0;
+        }
+    case EA_FUERZA: return ef.tipo == 2 ? 5258 : 5246;                  // Dress Mighty: slot 34 (1558); else slot 9 (482), also potions
+    case EA_DESTREZA: return ef.tipo == 2 ? 5259 : 5247;                // Dress Dexterity: slot 35 (1559); else slot 10 (483), also potions
+    case EA_ICONO:
+        if (ef.tipo == 34) return 5400;                                 // blue potion: slot 38 (1478)
+        if (ef.tipo == 40) return 5286;                                 // Immune to Harm: slot 41 (1562)
+        return 0;
+    case EA_AURA:                                                       // PACKETBOX 0x16: tipo = the server's aura id
+        switch (ef.tipo) {
+        case 113: return 5280;                                          // Glowing Aura: slot 25 (880)
+        case 114: return 5281;                                          // Shining Aura: slot 26 (1567)
+        case 116: return 5282;                                          // Brave Aura: slot 27 (1557)
+        case 147: return 5249;                                          // Fire Weapon: slot 18 (774)
+        case 148: return 5252;                                          // Wind Shot: slot 21 (855)
+        case 154: return 5250;                                          // Fire Bless: slot 19 (735)
+        case 155: return 5253;                                          // Storm Eye: slot 22 (771)
+        case 162: return 5251;                                          // Burning Weapon: slot 20 (738)
+        case 165: return 5254;                                          // Storm Shot: slot 23 (827)
+        default: return 0;
+        }
+    default: return 0;
+    }
+}
+
 void dibujar_efectos_activos(App& a, u64 ahora) {
     Graficos& g = *a.g;
     const EstadoJugador& j = a.mundo.jugador;
-    constexpr int PASO = 36, Y = 2;
+    // Original panel: 32 px icons every 35 px, the row ends 4 px from the right edge, y = 4.
+    const bool original = !a.cfg.ui_simple;
+    const int PASO = original ? 35 : 36, Y = original ? 4 : 2;
     // Un efecto registrado por el cliente (EA_HECHIZO) no se dibuja si el servidor ya informó el
     // mismo hechizo con su propio paquete (Holy Walk, Shield...).
     auto repetido = [&](const EfectoActivo& ef) {
@@ -556,8 +622,7 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
     u32 visibles = 0;
     for (u32 i = 0; i < j.n_efectos; ++i) visibles += !repetido(j.efectos[i]);
     // Panel original: pegados a la esquina superior derecha y sin el tiempo restante (como el original).
-    const bool original = !a.cfg.ui_simple;
-    const int x0 = original ? a.gpu.ancho() - static_cast<int>(visibles) * PASO - 2
+    const int x0 = original ? a.gpu.ancho() - 4 - 32 - (static_cast<int>(visibles) - 1) * PASO
                             : (a.gpu.ancho() - static_cast<int>(visibles) * PASO) / 2;
     const u64 ki = clave_orden(CAPA_UI, 2), kt = clave_orden(CAPA_UI_TEXTO, 2);
     for (u32 i = 0, n = 0; i < j.n_efectos; ++i) {
@@ -567,11 +632,21 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         const u64 resta = ef.fin > ahora ? (ef.fin - ahora + 999) / 1000 : 0;
         u32 icono = item_de_efecto(a, ef).icono;
         if (!icono) icono = a.hechizos[hechizo_de_efecto(ef)].icono;
+        // Original UI: the buff-bar icon (light frame with corner dots, line-art glyph) when known.
+        if (original) {
+            if (const u32 hi = icono_de_buff_efecto(ef)) icono = hi;
+            else if (const u32 hs = icono_de_buff_original(hechizo_de_efecto(ef))) icono = hs;
+        }
         const RegionAtlas& r = icono ? g.icono(icono) : RegionAtlas{};
         // A punto de terminar (menos de 10 s), parpadea.
         const bool visible = resta >= 10 || (ahora / 250) % 2 == 0;
         if (r.valida() && visible) {
-            g.gpu().dibujar(r, x, Y, ki);
+            // The original client draws buff icons additively: the dark square background disappears,
+            // the light frame glows and the floor shows through.
+            if (original)
+                g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::ADITIVA);
+            else
+                g.gpu().dibujar(r, x, Y, ki);
         } else if (visible) {
             char t[8];
             size_t m = nombre_efecto_activo(a, ef, t, 4);

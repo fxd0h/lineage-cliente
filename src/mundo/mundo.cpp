@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include "mundo/mundo.h"
+#include "mundo/subida_nivel.h"
 
 namespace lin {
 
@@ -102,6 +103,16 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
 }
 
+// Plays the level-up effect on the player when the reported level rose from `previo`.
+static void efecto_subida_nivel(Mundo& m, i32 previo, u64 ahora) {
+    if (!subida_de_nivel(previo, m.jugador.nivel) || m.jugador.id == 0) return;
+    EfectoVisual ef;
+    ef.gfx = static_cast<GfxId>(GFX_SUBIDA_NIVEL);
+    ef.objeto = m.jugador.id;
+    ef.inicio = ahora;
+    agregar_efecto(m, ef);
+}
+
 void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
     TablaObjetos& o = m.objetos;
     for (const Evento& e : eventos) {
@@ -109,6 +120,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         case Ev::ENTRAR_JUEGO: m.en_juego = true; break;
         case Ev::ESTADO_PROPIO: {
             EstadoJugador& j = m.jugador;
+            const i32 nivel_previo = j.nivel;
             j.id = e.id;
             j.nivel = e.v[EP_NIVEL];
             j.exp = e.v[EP_EXP];
@@ -126,6 +138,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             j.comida = e.v[EP_COMIDA];
             j.peso = e.v[EP_PESO];
             j.legal = e.v[EP_LEGAL];
+            efecto_subida_nivel(m, nivel_previo, ahora);
             break;
         }
         case Ev::MAPA:
@@ -371,7 +384,13 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         }
         case Ev::HP: m.jugador.hp = e.v[0]; m.jugador.hp_max = e.v[1]; break;
         case Ev::MP: m.jugador.mp = e.v[0]; m.jugador.mp_max = e.v[1]; break;
-        case Ev::EXPERIENCIA: m.jugador.nivel = e.v[0]; m.jugador.exp = e.v[1]; break;
+        case Ev::EXPERIENCIA: {
+            const i32 nivel_previo = m.jugador.nivel;
+            m.jugador.nivel = e.v[0];
+            m.jugador.exp = e.v[1];
+            efecto_subida_nivel(m, nivel_previo, ahora);
+            break;
+        }
         case Ev::LEGAL: {
             if (e.id == m.jugador.id) m.jugador.legal = e.v[0];
             Slot s = o.buscar(e.id);

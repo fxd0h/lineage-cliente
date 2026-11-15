@@ -322,6 +322,13 @@ struct App {
         u8 sprite;  // 0 dibujado, 1 pendiente (bloque verde), 2 faltante (bloque magenta)
     };
     std::vector<ObjetoEnPantalla> en_pantalla;
+    // Last sprite frame drawn per object slot. While a new frame is still loading (new action such
+    // as being hit), the previous one is kept on screen instead of the sprite vanishing.
+    struct LastFrame {
+        ObjId id = 0;
+        RegionAtlas region;
+    };
+    std::vector<LastFrame> last_frames = std::vector<LastFrame>(4096);
     // Fuentes de luz del frame, en los pies. Aparte de en_pantalla, que deja afuera a los muertos.
     struct LuzEnPantalla {
         int radio;

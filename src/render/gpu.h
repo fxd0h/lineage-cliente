@@ -13,6 +13,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "recursos/imagen.h"
 #include "render/atlas.h"
@@ -55,6 +56,19 @@ constexpr u32 MAX_INSTANCIAS = 1u << 17;
 // ni la interfaz.
 constexpr u32 RESERVA_CAPAS = 1u << 14;
 constexpr u32 TAM_SUBIDA_ATLAS = 32u << 20; // máximo de píxeles nuevos por frame
+
+// Final-present filter (settings.ini "escalado"): entero = nearest blit, the others are one fullscreen pass.
+enum class Escalado : int { ENTERO = 0, XBR = 1, FSR = 2, CRT = 3, ANIME4K = 4 };
+inline constexpr int N_ESCALADOS = 5;
+inline const char* nombre_escalado(Escalado e) {
+    constexpr const char* n[N_ESCALADOS] = {"entero", "xbr", "fsr", "crt", "anime4k"};
+    return n[static_cast<int>(e)];
+}
+inline Escalado escalado_desde(std::string_view s) {
+    for (int i = 0; i < N_ESCALADOS; ++i)
+        if (s == nombre_escalado(static_cast<Escalado>(i))) return static_cast<Escalado>(i);
+    return Escalado::ENTERO;
+}
 
 class Gpu {
 public:
@@ -107,6 +121,9 @@ public:
     // Ordena si hace falta, sube y presenta el frame. Si hay una captura pedida, guarda la imagen lógica.
     void presentar();
     void pedir_captura(const std::string& ruta_bmp) { ruta_captura_ = ruta_bmp; }
+    // Saves the final image (after the scaling filter, at window-grid resolution) as BMP.
+    void pedir_captura_final(const std::string& ruta_bmp) { ruta_final_ = ruta_bmp; }
+    void fijar_escalado(Escalado e) { escalado_ = e; }
 
     // Ventana (píxeles) -> coordenadas lógicas.
     void a_logico(float wx, float wy, int& lx, int& ly) const;
@@ -135,17 +152,36 @@ private:
     };
     bool crear_pipeline();
     bool crear_destino();
+    // Anime4K CNN x2 (S): 6 passes, intermediates created lazily on first use and on grid change.
+    bool crear_anime4k();
+    SDL_GPUTexture* pase_anime4k(SDL_GPUCommandBuffer* cmd);  // destino_ -> copia_; nullptr if unavailable
     // Vacía la lista de dibujo y los efectos del frame (con o sin presentarlo).
     void terminar_frame(u32 instancias_dibujadas);
     bool asegurar_luz(int bw, int bh);
     void ordenar();
-    SDL_GPUCommandBuffer* guardar_captura(SDL_GPUCommandBuffer* cmd);
+    // Downloads `tex` (destino_ size) and saves it as BMP; `logica` keeps one pixel per logical pixel.
+    SDL_GPUCommandBuffer* guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, std::string& ruta, bool logica);
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
+    bool mailbox_ = false;          // present mode MAILBOX: the loop is paced by pace_frame()
+    Uint64 next_frame_ns_ = 0;
+    void pace_frame();
     bool usar_spirv_ = false;  // Vulkan (Linux): shaders SPIR-V de render/shaders
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
+    SDL_GPUGraphicsPipeline* pipeline_esc_[N_ESCALADOS] = {};  // [0] unused (nearest blit)
+    Escalado escalado_ = Escalado::ENTERO;
+    // Anime4K: conv1..conv4, depth-to-space, resample. a4k_a_/a4k_b_ ping-pong at the logical grid size
+    // (RGBA16F); a4k_x2_ is the 2x image (only when the integer scale is not 2).
+    static constexpr int A4K_PASES = 6;
+    SDL_GPUGraphicsPipeline* a4k_pipe_[A4K_PASES] = {};
+    SDL_GPUTexture* a4k_a_ = nullptr;
+    SDL_GPUTexture* a4k_b_ = nullptr;
+    SDL_GPUTexture* a4k_x2_ = nullptr;
+    SDL_GPUSampler* a4k_lineal_ = nullptr;
+    int a4k_w_ = 0, a4k_h_ = 0;
+    std::string ruta_final_;
     SDL_GPUGraphicsPipeline* pipeline_mundo_ = nullptr;   // reemplazar el mundo (ola, visión)
     SDL_GPUTexture* copia_ = nullptr;                      // copia de destino_ para leerla al reemplazar
     SDL_GPUTexture* filas_tex_ = nullptr;                  // color por fila (1 × LUZ_TAM RGBA)

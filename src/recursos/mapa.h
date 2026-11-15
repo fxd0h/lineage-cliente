@@ -2,7 +2,7 @@
 //
 // Formato (handle_s32 de l1j-client):
 //   64×64 × {u32 suelo izquierdo, u32 suelo derecho}   (valor: juego de tiles << 8 | tile)
-//   u16 n, n × 6 bytes (desconocido)
+//   u16 n, n × {u8 x en medias celdas, u8 y, u32 tile}   (segunda capa de suelo: ver abajo)
 //   64×64 × {u16 atributo izquierdo, u16 atributo derecho}
 //   u32 nobjetos, nobjetos × {u16 índice, u16 ntiles, ntiles × {u8 x, u8 y, u8 capa, u32 tile}}
 //     (un par x=0xCD,y=0xCD es relleno de 7 bytes que no cuenta)
@@ -21,6 +21,13 @@
 namespace lin {
 
 constexpr int CELDAS_SEGMENTO = 64;
+
+// Second ground layer (the n x 6 byte table after the ground): transparent tiles (the 89.til
+// grass-edge tiles 134, 156, 178, 182, 187, 190...) laid over the ground at a half cell. The ground
+// layer alone leaves a regular lattice of brown dirt half-tiles in forests (map 4, around
+// 32639,32985) because these tiles are what covers them. decodificar_s32 appends them as one
+// pseudo-object of layer 0 pieces (the lowest ground-hugging layer), so they draw above the ground
+// and below shadows.
 
 struct TileObjetoMapa {
     u8 x, y;     // x en medias celdas, y en celdas (relativas al segmento)

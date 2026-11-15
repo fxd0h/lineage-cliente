@@ -402,6 +402,7 @@ void dibujar_ayuda_teclas(App& a) {
         {"F3 / Shift+F3", "Debug overlay / FPS counter"},
         {"F4 / Shift+F4", "Camera / shade in shadows"},
         {"F5-F12", "Cast the assigned spell"},
+        {"Shift+F5", "Cycle scaling filter (integer/xBR/FSR/CRT)"},
         {"Shift+F12", "Screenshot (captura.bmp)"},
         {"Shift+click", "Turn that way (to face someone)"},
         {"1..0 / Alt+1..0", "Shortcut bar (spells, items)"},

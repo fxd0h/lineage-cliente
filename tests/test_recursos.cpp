@@ -267,6 +267,34 @@ TEST_CASE("PNG: el fondo negro se va y el resplandor unido a él queda translúc
     CHECK(img.px[3] == oscuro);  // no toca el fondo: parte de la figura
 }
 
+TEST_CASE("Mapa 4: la segunda capa de suelo cubre los rombos de tierra del bosque de Gludio" * doctest::skip(carpeta_juego().empty())) {
+    // Segment 7ffd8003 (32639,32985): the first ground layer has a regular lattice of dirt half-tiles
+    // (sets 25/26) inside the grass; the n x 6 byte table after it holds the transparent grass tiles
+    // that cover them, e.g. 89.til #190 at half cell (90, 11) over the dirt half 0x19fd.
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(4, 32639, 32985), d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32639 & ~63, 32985 & ~63, s));
+    REQUIRE(s.suelo_en(90 / 2, 11, 90 & 1) == 0x19fdu);
+    int cubiertas = 0, tierra = 0;
+    for (int y = 0; y < CELDAS_SEGMENTO; ++y)
+        for (int x = 0; x < 2 * CELDAS_SEGMENTO; ++x) {
+            const u32 set = s.suelo_en(x / 2, y, x & 1) >> 8;
+            if (set != 25 && set != 26) continue;
+            ++tierra;
+            for (const TileObjetoMapa& t : s.tiles_objetos)
+                if (t.capa == 0 && t.x == x && t.y == y && (t.tile >> 8) == 89) {
+                    ++cubiertas;
+                    break;
+                }
+        }
+    bool hay = false;
+    for (const TileObjetoMapa& t : s.tiles_objetos) hay |= t.capa == 0 && t.x == 90 && t.y == 11 && t.tile == 0x59BEu;
+    CHECK(hay);
+    CHECK(tierra > 300);
+    CHECK(cubiertas * 10 > tierra * 3);  // the lattice dirt is covered (the rest is a real path)
+}
+
 TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)" * doctest::skip(carpeta_juego().empty())) {
     // Segmento 7ffe8009: "WWin" en (32686, 33376) y "entWWinB" en (32678, 33392), al castillo de
     // Windawood (mapa 29), como en la tabla dungeons del servidor; "crossWWa" es un cruce del mismo mapa.
