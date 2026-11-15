@@ -451,7 +451,10 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             }
         } else {
             // Sin acciones en la tabla (los ítems del suelo, por ejemplo): el primer frame de N-0.spr.
-            pedir_frame(0, 0);
+            // A gfx with no table row (newer monsters) still has 8 headings per sub group: group 0 by heading.
+            const u16 sub_dir = TablaSprites::sub_sin_fila(o.col<O_DIR>()[s]);
+            pedir_frame(sub_dir, 0);
+            if (sub_dir != 0 && !rg.valida() && !rg_pendiente) pedir_frame(0, 0);  // ground items: only "-0"
         }
         bool bajo_puntero = false;
         if (rg.valida()) {

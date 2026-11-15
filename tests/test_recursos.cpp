@@ -370,3 +370,26 @@ TEST_CASE("Map 200: void cells (47.til #199/#202, type bit 3) are not drawn" * d
         }
     CHECK(vacias > 1000);
 }
+
+TEST_CASE("Tabla de sprites: gfx sin fila se dibujan por dirección") {
+    CHECK(TablaSprites::sub_sin_fila(0) == 0);
+    for (u8 d = 0; d < 8; ++d) CHECK(TablaSprites::sub_sin_fila(d) == d);
+    CHECK(TablaSprites::sub_sin_fila(8) == 0);
+    CHECK(TablaSprites::sub_sin_fila(255) == 0);
+}
+
+// Drake of Hell (npcs 45529, gfx 10573) is newer than the table (ends at 8682): no row, but the
+// files keep 8 headings per group, so the draw code must pick "10573-<dir>.spr".
+TEST_CASE("Gfx 10573 (Drake) no tiene fila pero sí un archivo por dirección" * doctest::skip(carpeta_juego().empty())) {
+    TablaSprites t;
+    if (!t.cargar_archivo("datos/sprite_table.txt") && !t.cargar_archivo("../../datos/sprite_table.txt")) return;
+    CHECK(t.accion(10573, ACC_QUIETO) == nullptr);
+    CHECK(t.accion(10573, ACC_CAMINAR) == nullptr);
+    Recursos r;
+    REQUIRE(r.abrir(carpeta_juego()));
+    for (u8 d = 0; d < 8; ++d) {
+        char n[32];
+        std::snprintf(n, sizeof n, "10573-%u.spr", static_cast<unsigned>(TablaSprites::sub_sin_fila(d)));
+        CHECK_FALSE(r.sprite(n).empty());
+    }
+}

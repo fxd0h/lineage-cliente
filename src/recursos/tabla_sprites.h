@@ -50,6 +50,9 @@ public:
 
     const RangoAccion* accion(GfxId gfx, u8 accion) const;
     const FrameAccion& frame(u32 i) const { return frames_[i]; }
+    // Sub-sprite for a gfx without table rows: the files are laid out 8 headings per group, group 0
+    // first; a heading outside 0-7 falls back to sub 0.
+    static u16 sub_sin_fila(u8 dir) { return dir < 8 ? dir : 0; }
     GfxId gfx_archivos(GfxId gfx) const { return gfx < alias_.size() ? alias_[gfx] : gfx; }
     i16 sombra(GfxId gfx) const { return gfx < sombra_.size() ? sombra_[gfx] : -1; }
     // Tipo de gfx (atributo 102): TIPO_ITEM para los ítems del suelo, TIPO_MONSTRUO... 0 si no tiene.
