@@ -234,13 +234,16 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda) {
 }
 
 void dibujar_botones_panel(App& a, int x, int y) {
-    // Panel original: arriba del panel derecho (1019.img), en la franja sobre las teclas F.
-    if (boton_panel(a, 1005, x, y, "Magic (Alt+S)")) a.ventana_hechizos = !a.ventana_hechizos;
-    if (boton_panel(a, 1007, x + 22, y, "Status (Alt+C)")) a.ventana_estado = !a.ventana_estado;
-    if (boton_panel(a, 1011, x + 40, y, "Inventory (Alt+I)")) a.ventana_inventario = !a.ventana_inventario;
-    if (boton_panel(a, 1009, x + 58, y, "Options")) a.ventana_opciones = !a.ventana_opciones;
-    if (boton_panel(a, 1013, x + 74, y, "Restart / Quit")) a.ventana_salida = !a.ventana_salida;
-    if (boton_panel(a, 1015, x + 94, y, "Party, trade, clan")) a.ventana_social = !a.ventana_social;
+    // Original bottom strip (S3EP1U 0x459595..0x45980a): eight buttons at y=460 of the 640x480 screen; x is
+    // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
+    constexpr int BY = 460;
+    if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) a.ayuda_teclas = !a.ayuda_teclas;
+    if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
+    if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
+    if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
+    if (boton_panel(a, 1015, x + 580, y + BY, "Party, trade, clan (Ctrl+C)")) a.ventana_social = !a.ventana_social;
+    if (boton_panel(a, 1009, x + 601, y + BY, "Options (Ctrl+V)")) a.ventana_opciones = !a.ventana_opciones;
+    if (boton_panel(a, 1013, x + 618, y + BY, "Restart / Quit (Ctrl+Q)")) a.ventana_salida = !a.ventana_salida;
 }
 
 // UI simple: 6 botones en 2 columnas × 3 filas, a la izquierda del minimapa.
@@ -423,7 +426,8 @@ void dibujar_ayuda_teclas(App& a) {
         {"/exclude Name", "Block / unblock a player (no name: list)"},
         {"/buddy, /addbuddy, /delbuddy", "Buddy list"},
         {"Middle click", "Select bar slot / use it on target"},
-        {"Alt+I / Alt+C / Alt+S", "Inventory / status / magic"},
+        {"Ctrl+I / A / S", "Inventory / status / magic (Alt+I / C / S too)"},
+        {"Ctrl+C / V / Q / H", "Social / options / restart-quit / this help"},
         {"Ctrl +/- / Ctrl 0", "Zoom in / out / auto"},
         {"Arrows, mouse", "Walk; click a monster to attack"},
         {"Ctrl+click", "Attack a player or NPC"},

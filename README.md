@@ -221,7 +221,8 @@ title is shown as text.
 
 ## Controls
 
-**F1** shows all the keys in the game.
+**F1** shows all the keys in the game. Window hotkeys follow the original client: Ctrl+I inventory, Ctrl+A status,
+Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (Alt+I/C/S also work).
 
 ### Interface and view
 
@@ -284,7 +285,7 @@ title is shown as text.
 
 ### Items
 
-- **Alt+I:** opens and closes the inventory.
+- **Ctrl+I (or Alt+I):** opens and closes the inventory (the original client's hotkeys are Ctrl+letter).
   - Shows the original icons (`N.tbt`), the name on hover, equipped items with an "E", and the weight.
   - Double-click uses an item: equips or removes weapons and armor, drinks potions.
   - Drag an item out of the window to drop it on the ground.
@@ -321,7 +322,7 @@ title is shown as text.
 
 ### Magic
 
-- **Alt+S:** spell window (click casts; with the pointer over a spell, F5–F12 assigns it to that key).
+- **Ctrl+S (or Alt+S):** spell window (click casts; with the pointer over a spell, F5–F12 assigns it to that key).
 - **F5–F12:** cast the assigned spell (saved per character). A spell with a target waits for a click on the target;
   right-click cancels.
 - **Learning magic:** at the magic teacher (Gereng on Talking Island...), "Learn magic" opens the list: click
@@ -349,7 +350,7 @@ title is shown as text.
     to always typing, with the bar on Alt+number;
   - mouse wheel over the panel, or Page Up / Page Down, for older messages;
   - prefixes: `!` shout, `&` global, `$` trade, `@` clan, `#` party, `%` alliance, `*` chat group, `"name text` whisper.
-- **Alt+C:** opens and closes the status window (left of the inventory if both are open).
+- **Ctrl+A (or Alt+C):** opens and closes the status window (left of the inventory if both are open).
 - **Social** (button, or the one on the original panel): party, trade and clan, with buttons and help. Server
   questions (invitations, trade or clan requests) appear with **Yes/No** (Enter/Esc).
 - **Trade:** stand next to the other player, facing them. Drag an item from the inventory to the window (or double-click

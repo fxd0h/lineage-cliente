@@ -939,7 +939,7 @@ void dibujar_panel(App& a) {
     g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 0));
     g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 0));
     dibujar_teclas_f(a, X + 485, Y + 366);
-    dibujar_botones_panel(a, X + 485 + 26, Y + 366 + 3);
+    dibujar_botones_panel(a, X, Y);
     g.gpu().dibujar(g.img(IMG_CHAT), X + 124, Y + 363, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 124 + 13, Y + 363 + 99, clave_orden(CAPA_UI, 2));
     {
@@ -1457,6 +1457,16 @@ void frame_juego(App& a) {
     }
     if (a.entrada.alt_c) a.ventana_estado = !a.ventana_estado;
     if (a.entrada.alt_i) a.ventana_inventario = !a.ventana_inventario;
+    switch (a.entrada.atajo_ctrl) {  // original client: Ctrl+letter opens its windows
+    case 'I': a.ventana_inventario = !a.ventana_inventario; break;
+    case 'A': a.ventana_estado = !a.ventana_estado; break;
+    case 'S': a.ventana_hechizos = !a.ventana_hechizos; break;
+    case 'Q': a.ventana_salida = !a.ventana_salida; break;
+    case 'C': a.ventana_social = !a.ventana_social; break;
+    case 'V': a.ventana_opciones = !a.ventana_opciones; break;
+    case 'H': a.ayuda_teclas = !a.ayuda_teclas; break;
+    default: break;
+    }
 
     cambiar_zoom(a);
     const Vista vi = vista(a);

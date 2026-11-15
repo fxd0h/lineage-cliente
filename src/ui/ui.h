@@ -27,6 +27,7 @@ struct EntradaFrame {
     bool alt_c = false;           // Alt+C este frame (ventana de estado)
     bool alt_i = false;           // Alt+I este frame (inventario)
     bool alt_s = false;           // Alt+S este frame (hechizos)
+    char atajo_ctrl = 0;          // Ctrl+letter this frame (original client hotkeys: I S A Q H C V), else 0
     int tecla_f = 0;              // F5..F12 apretada este frame (5..12; 0 = ninguna): atajos de hechizos
     int alt_numero = 0;           // Alt+1..Alt+9, Alt+0 este frame (1..10; 0 = ninguna): barra de atajos
     bool tecla_a = false;         // A sin modificadores este frame (ataque sostenido, si no se escribe en el chat)
