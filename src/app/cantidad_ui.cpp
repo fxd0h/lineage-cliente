@@ -28,7 +28,14 @@ void aceptar(App& a) {
     DialogoCantidad& d = a.cantidad;
     d.abierto = false;
     d.valor = std::clamp(d.valor, d.min, d.max);
-    if (d.tienda) {
+    if (d.tienda == CANTIDAD_FILA_NPC) {  // solo marca la fila; el OK de la tienda manda todo junto
+        // Si la lista cambió o se cerró mientras tanto, no es la misma fila: no se toca.
+        if (d.objeto == a.tienda_npc && a.tienda != TipoTienda::NINGUNA && d.item < a.tienda_filas.size()) {
+            FilaTienda& f = a.tienda_filas[d.item];
+            f.elegido = std::min(static_cast<u32>(d.valor), f.maximo);
+        }
+        d.tienda = 0;
+    } else if (d.tienda) {
         aceptar_cantidad_tienda(a);
     } else if (d.castillo == CF_TASA + 1) {
         enviar(a, cmd::tasa_castillo(a.op, d.objeto, static_cast<u8>(d.valor)));
