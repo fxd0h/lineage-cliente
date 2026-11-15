@@ -1,4 +1,6 @@
 #include "mundo/autobuffs.h"
+#include <iterator>
+#include "mundo/autopocion.h"
 
 namespace lin {
 
@@ -18,10 +20,33 @@ u32 hechizo_de_efecto(const EfectoActivo& ef) {
     }
 }
 
+const PocionAuto* pocion_auto(u32 id) {
+    return id >= POCION_AUTO && id - POCION_AUTO < std::size(POCIONES_AUTO) ? &POCIONES_AUTO[id - POCION_AUTO] : nullptr;
+}
+
+u32 pocion_auto_de_item(const Inventario& inv, Slot s) {
+    const u32 n = numero_de_nombre(nombre_item(inv, s));
+    const u16 gfx = inv.items.col<I_GFX>()[s];
+    for (u32 i = 0; i < std::size(POCIONES_AUTO); ++i)
+        if (n ? POCIONES_AUTO[i].n == n : POCIONES_AUTO[i].gfx == gfx) return POCION_AUTO + i;
+    return 0;
+}
+
+ObjId buscar_pocion_auto(const Inventario& inv, u32 id) {
+    const TablaItems& t = inv.items;
+    for (Slot s = 0; s < t.tamano(); ++s)
+        if (t.col<I_CANTIDAD>()[s] && pocion_auto_de_item(inv, s) == id) return t.ids()[s];
+    return 0;
+}
+
 u64 resta_efecto_de_hechizo(const EstadoJugador& j, u32 hechizo, u64 ahora) {
     u64 resta = 0;
-    for (u32 i = 0; i < j.n_efectos; ++i)
-        if (hechizo_de_efecto(j.efectos[i]) == hechizo && j.efectos[i].fin > ahora) resta = std::max(resta, j.efectos[i].fin - ahora);
+    const PocionAuto* p = pocion_auto(hechizo);
+    for (u32 i = 0; i < j.n_efectos; ++i) {
+        const EfectoActivo& ef = j.efectos[i];
+        const bool es = p ? ef.clase == p->clase && ef.tipo == p->tipo : hechizo_de_efecto(ef) == hechizo;
+        if (es && ef.fin > ahora) resta = std::max(resta, ef.fin - ahora);
+    }
     return resta;
 }
 

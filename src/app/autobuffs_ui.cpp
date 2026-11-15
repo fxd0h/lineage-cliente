@@ -5,6 +5,10 @@
 // C_UseSkill que el jugador a mano, con la misma espera entre hechizos, y no corta lo que el
 // personaje está haciendo (espera a que se detenga). No se pausa en pueblos. Se guarda por personaje
 // en settings.ini: "autobuffs=Nombre:1|43,42,0,0,0,0" (encendido y los hechizos).
+// También las pociones azul (maná), de sabiduría, de haste (común y mayor) y de brave, y la waffle
+// de elfo, arrastradas desde el inventario o la barra
+// (POCIONES_AUTO, con id desde POCION_AUTO): se toman con el C_UseItem de un doble clic, y como beber
+// no corta nada, también caminando o peleando.
 #include <charconv>
 #include <cstring>
 #include "app/app.h"
@@ -26,6 +30,10 @@ void poner(App& a, int i, u32 id) {
     c = {};
     if (!id) return;
     c.hechizo = id;
+    if (const PocionAuto* p = pocion_auto(id)) {
+        c.duracion_ms = p->duracion_s * 1000ull;
+        return;
+    }
     c.mp = a.hechizos[id].mp;
     c.duracion_ms = a.hechizos[id].duracion_s * 1000ull;
 }
@@ -50,7 +58,7 @@ void cargar(App& a) {
         v = t.size() < v.size() ? v.substr(t.size() + 1) : std::string_view{};
         u32 id = 0;
         std::from_chars(t.data(), t.data() + t.size(), id);
-        if (id && acepta_autobuff(a.hechizos[id])) poner(a, i, id);
+        if (id && (pocion_auto(id) || acepta_autobuff(a.hechizos[id]))) poner(a, i, id);
     }
 }
 
@@ -76,6 +84,12 @@ bool ocupado(const App& a, u64 ahora) {
            (o.col<O_FLAGS>()[s] & FLAG_FANTASMA);
 }
 
+// Ícono de lo que hay en un casillero: el de inventario de la poción o el del hechizo (0 si no tiene).
+u16 icono_casillero(const App& a, u32 id) {
+    const PocionAuto* p = pocion_auto(id);
+    return p ? p->gfx : static_cast<u16>(a.hechizos[id].icono);
+}
+
 int y_interruptor(const App& a) { return a.autobuffs.y - ALTO_GLIFO - 5; }
 
 }  // namespace
@@ -97,7 +111,7 @@ bool sobre_autobuffs(const App& a) {
 
 void poner_autobuff(App& a, int casillero, u32 id) {
     if (casillero < 0 || casillero >= CASILLEROS_AUTO) return;
-    if (!acepta_autobuff(a.hechizos[id])) {
+    if (!pocion_auto(id) && !acepta_autobuff(a.hechizos[id])) {
         a.chat.agregar("Auto-buff: only buffs you can cast on yourself.", rgba(255, 200, 120), CHAT_SISTEMA);
         return;
     }
@@ -105,6 +119,13 @@ void poner_autobuff(App& a, int casillero, u32 id) {
         if (i != casillero && a.autobuffs.c[i].hechizo == id) poner(a, i, 0);
     poner(a, casillero, id);
     guardar(a);
+}
+
+void poner_autobuff_item(App& a, int casillero, ObjId item) {
+    const Slot s = a.mundo.inventario.items.buscar(item);
+    const u32 id = s != SIN_SLOT ? pocion_auto_de_item(a.mundo.inventario, s) : 0;
+    if (id) poner_autobuff(a, casillero, id);
+    else a.chat.agregar("Auto-buff: of the items, only blue, wisdom, haste and brave potions and elven wafers.", rgba(255, 200, 120), CHAT_SISTEMA);
 }
 
 void procesar_autobuffs(App& a) {
@@ -127,10 +148,27 @@ void procesar_autobuffs(App& a) {
     if (ab.ultimo >= 0 && a.hechizo_lanzado_ms > ab.c[ab.ultimo].lanzado_ms) ab.ultimo = -1;
     for (CasilleroAuto& c : ab.c)
         if (c.hechizo && !c.efecto_visto && resta_efecto_de_hechizo(a.mundo.jugador, c.hechizo, ahora)) c.efecto_visto = true;
-    if (!ab.encendido || ab.pidiendo >= 0 || ahora < ab.desde_ms || ocupado(a, ahora)) return;
-    const int i = elegir_autobuff(a.mundo.jugador, ab.c, CASILLEROS_AUTO, ahora);
+    if (!ab.encendido || ab.pidiendo >= 0 || ahora < ab.desde_ms) return;
+    // Ocupado no se lanzan hechizos, pero las pociones sí: se elige solo entre ellas.
+    CasilleroAuto libres[CASILLEROS_AUTO];
+    const bool sin_hechizos = ocupado(a, ahora);
+    for (int k = 0; k < CASILLEROS_AUTO; ++k)
+        if (!sin_hechizos || pocion_auto(ab.c[k].hechizo)) libres[k] = ab.c[k];
+    const int i = elegir_autobuff(a.mundo.jugador, libres, CASILLEROS_AUTO, ahora);
     if (i < 0) return;
     const u32 id = ab.c[i].hechizo;
+    if (const PocionAuto* p = pocion_auto(id)) {
+        // Rápido sin efecto con tiempo (un ítem de haste puesto: S_SkillHaste con -1): no hace falta.
+        if (p->clase == EA_HASTE && a.mundo.jugador.haste == 1 && !resta_efecto_de_hechizo(a.mundo.jugador, id, ahora)) {
+            ab.c[i].reintentar_ms = ahora + 1000;
+        } else if (const ObjId item = buscar_pocion_auto(a.mundo.inventario, id)) {
+            usar_item(a, item);
+            ab.c[i].lanzado_ms = ahora;
+        } else {
+            ab.c[i].reintentar_ms = ahora + ESPERA_FALLO_MS;  // no queda: no buscar en cada frame
+        }
+        return;
+    }
     pedir_hechizo(a, id, a.hechizos[id].con_objetivo ? a.mundo.jugador.id : 0);
     if (a.hechizo_pendiente == id) {
         ab.pidiendo = i;
@@ -179,7 +217,7 @@ void dibujar_autobuffs(App& a) {
     if (e.clic) ab.apretado_interruptor = false;
 
     const int bajo = autobuff_bajo_puntero(a);
-    const bool trayendo = (a.arrastrando_hechizo || a.arrastrando_atajo >= 0 || ab.arrastrando >= 0) && bajo >= 0;
+    const bool trayendo = ((a.arrastrando && e.presionado) || a.arrastrando_hechizo || a.arrastrando_atajo >= 0 || ab.arrastrando >= 0) && bajo >= 0;
     for (int i = 0; i < CASILLEROS_AUTO; ++i) {
         const int x = x0 + i * PASO;
         const CasilleroAuto& c = ab.c[i];
@@ -190,9 +228,10 @@ void dibujar_autobuffs(App& a) {
         g.gpu().rectangulo(x + CELDA - 1, y, 1, CELDA, kf + 1, VERDE);
         if (!c.hechizo || (i == ab.arrastrando && e.presionado && arrastre_movido(a))) continue;
         const Hechizo& h = a.hechizos[c.hechizo];
-        const bool disponible = a.mundo.jugador.sabe(c.hechizo) && a.mundo.jugador.mp >= c.mp;
+        const bool disponible = pocion_auto(c.hechizo) ? buscar_pocion_auto(a.mundo.inventario, c.hechizo) != 0
+                                                       : a.mundo.jugador.sabe(c.hechizo) && a.mundo.jugador.mp >= c.mp;
         const u32 color = disponible ? BLANCO : rgba(110, 110, 110);
-        if (h.icono) g.gpu().dibujar(g.icono(h.icono), x + 1, y + 1, ki, color);
+        if (const u16 icono = icono_casillero(a, c.hechizo)) g.gpu().dibujar(g.icono(icono), x + 1, y + 1, ki, color);
         else g.texto(h.nombre.substr(0, 4), static_cast<float>(x + 2), static_cast<float>(y + 11), kt, color);
         // Lo que le queda al efecto, abajo dentro del casillero ("29m", "45s").
         if (const u64 resta = (resta_efecto_de_hechizo(a.mundo.jugador, c.hechizo, ahora) + 999) / 1000; resta > 1) {
@@ -206,7 +245,8 @@ void dibujar_autobuffs(App& a) {
 
     // Nombre bajo el puntero.
     if (bajo >= 0 && !trayendo && ab.c[bajo].hechizo) {
-        const std::string_view n = a.hechizos[ab.c[bajo].hechizo].nombre;
+        const PocionAuto* p = pocion_auto(ab.c[bajo].hechizo);
+        const std::string_view n = p ? p->nombre : std::string_view(a.hechizos[ab.c[bajo].hechizo].nombre);
         const int w = ancho_texto(n.data(), n.size());
         const int tx = std::max(4, std::min(e.mx - w / 2, a.gpu.ancho() - w - 4)), tyy = ty - ALTO_GLIFO - 6;
         g.gpu().rectangulo(tx - 4, tyy - 3, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
@@ -220,8 +260,8 @@ void dibujar_autobuffs(App& a) {
         a.arrastre_y0 = e.my;
     }
     if (ab.arrastrando >= 0 && e.presionado && arrastre_movido(a)) {
-        const Hechizo& h = a.hechizos[ab.c[ab.arrastrando].hechizo];
-        if (h.icono) g.gpu().dibujar(g.icono(h.icono), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
+        if (const u16 icono = icono_casillero(a, ab.c[ab.arrastrando].hechizo))
+            g.gpu().dibujar(g.icono(icono), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
     }
     if (e.clic && ab.arrastrando >= 0) {
         const int desde = ab.arrastrando;

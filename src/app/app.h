@@ -207,11 +207,13 @@ struct ReinicioAtributos {
 };
 
 // Diálogo de cantidad (cantidad_ui.cpp): S_InputAmount del servidor, o cuántos dar de una pila.
+constexpr u8 CANTIDAD_FILA_NPC = 4;
 struct DialogoCantidad {
     bool abierto = false;
     bool dar = false;         // true: C_GiveItem del `item` a `objeto`; false: C_Amount a `objeto`
     bool borrar = false;      // true: C_DeleteInventoryItem del `item` (el basurero)
-    u8 tienda = 0;            // tienda de jugadores (tienda_ui.cpp): 1 comprar, 2 venderle, 3 precio al armar
+    u8 tienda = 0;            // tienda de jugadores (tienda_ui.cpp): 1 comprar, 2 venderle, 3 precio al armar;
+                              // CANTIDAD_FILA_NPC: cuántos de la fila `item` de la tienda o almacén de `objeto` (npc_ui.cpp)
     u8 castillo = 0;          // castillos_ui.cpp: CF_TASA + 1 impuesto, CF_DEPOSITAR + 1 poner, CF_RETIRAR + 1 sacar
     bool escribiendo = false; // ya se escribió un número (el siguiente se agrega en vez de reemplazar)
     ObjId objeto = 0, item = 0;
@@ -634,6 +636,7 @@ void dibujar_barra(App& a, int y);
 int autobuff_bajo_puntero(const App& a);  // -1 si no hay
 bool sobre_autobuffs(const App& a);       // casilleros e interruptor
 void poner_autobuff(App& a, int casillero, u32 hechizo);  // con aviso en el chat si no es un buff propio
+void poner_autobuff_item(App& a, int casillero, ObjId item);  // un ítem: solo las pociones de POCIONES_AUTO
 void procesar_autobuffs(App& a);          // después de procesar_barra: lanza el que toque
 void eventos_autobuffs(App& a, const Evento& e);
 void dibujar_autobuffs(App& a);           // después de dibujar_barra

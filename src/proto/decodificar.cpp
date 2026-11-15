@@ -224,9 +224,9 @@ bool atributos(Lector& l, Evento& e) {
 //  - peso (10, escala de 240) y comida (11, 0–225);
 //  - íconos de efectos: S_SkillIconAura (0x16: c índice del hechizo, h segundos) y los de
 //    S_SkillIconGFX que manda L1J para efectos con duración (34 poción azul, 40 Immune to Harm:
-//    h segundos).
+//    h segundos) y S_SkillIconWisdomPotion (0x39: c 0x2c, h segundos / 4).
 //  - asedio (0–4): ver abajo.
-constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40;
+constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
 bool caja(Lector& l, Evento& e) {
     int sub = l.c();
     if (sub == 10 || sub == 11) {
@@ -242,6 +242,12 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_CLASE] = IE_ICONO;
         e.v[IE_TIPO] = sub;
         e.v[IE_SEG] = l.h();
+    } else if (sub == CAJA_SABIDURIA) {
+        e.tipo = Ev::ICONO_EFECTO;
+        e.v[IE_CLASE] = IE_ICONO;
+        e.v[IE_TIPO] = sub;
+        l.c();
+        e.v[IE_SEG] = l.h() * 4;
     } else if (sub <= 4) {
         // Asedio: 0 empieza, 1 termina, 2 sigue (c castillo, h 0); 3 iniciativa y 4 ocupado (nada más).
         e.tipo = Ev::ASEDIO;

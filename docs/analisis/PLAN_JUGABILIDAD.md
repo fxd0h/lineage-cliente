@@ -133,6 +133,12 @@ Casi todo existe (sección 0). Cambia:
 - **Macro del lado del cliente**: no manda nada que el jugador no pudiera mandar a mano (el mismo
   C_UseSkill, con la misma espera entre hechizos), así que el servidor lo ve como uso normal. Apagado por
   defecto.
+- **Pociones**: también la azul (maná, `$232`), la de sabiduría (`$944`), las de haste (`$234` y la mayor,
+  `$1652`), la de brave (`$943`) y la waffle de elfo (`$110`), arrastradas desde el inventario o la
+  barra. Van con un id propio (`POCION_AUTO` + su lugar en `POCIONES_AUTO`; se guarda desde 1000), se
+  toman con C_UseItem cuando su efecto (S_SkillIconGFX 34, S_SkillIconWisdomPotion 0x39, S_SkillHaste 1,
+  S_SkillBrave 1 o 3) no está o le queda menos del margen, y como beber no corta nada, también
+  caminando o peleando.
 - **Pruebas**: función pura `elegir_autobuff(estado, casilleros, ahora) → id o 0`, con tests de cada
   condición. En vivo con agente7 y un buff corto.
 
