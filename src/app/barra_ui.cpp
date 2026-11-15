@@ -375,8 +375,9 @@ void dibujar_barra(App& a, int y) {
             if (a.casillero_elegido == base + desde) a.casillero_elegido = base + bajo;
             else if (a.casillero_elegido == base + bajo) a.casillero_elegido = base + desde;
             guardar_barra(a);
-        } else if (int ab = autobuff_bajo_puntero(a); ab >= 0) {  // copia el hechizo a un auto-buff
+        } else if (int ab = autobuff_bajo_puntero(a); ab >= 0) {  // copia el hechizo o la poción a un auto-buff
             if (pagina[desde].tipo == TipoAtajo::HECHIZO) poner_autobuff(a, ab, pagina[desde].id);
+            else if (pagina[desde].tipo == TipoAtajo::ITEM) poner_autobuff_item(a, ab, pagina[desde].id);
         } else if (!sobre_barra(a)) {
             poner_atajo(a, desde, {});
         }

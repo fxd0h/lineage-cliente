@@ -1,4 +1,6 @@
 #include "mundo/autobuffs.h"
+#include <iterator>
+#include "mundo/autopocion.h"
 
 namespace lin {
 
@@ -10,12 +12,34 @@ u32 hechizo_de_efecto(const EfectoActivo& ef) {
     case EA_ESCUDO:
         return ef.tipo == 5 ? 3 : ef.tipo == 3 ? 99 : ef.tipo == 7 ? 159 : ef.tipo == 10 ? 168 : ef.tipo == 6 ? 151 : 0;
     case EA_AURA: return ef.tipo + 1u;  // el índice del hechizo
-    case EA_ICONO: return ef.tipo == 40 ? 68 : 0;  // Immune to Harm
+    case EA_ICONO:
+        for (u32 i = 0; i < std::size(POCIONES_AUTO); ++i)
+            if (POCIONES_AUTO[i].icono == ef.tipo) return POCION_AUTO + i;
+        return ef.tipo == 40 ? 68 : 0;  // Immune to Harm
     case EA_FUERZA: return ef.tipo == 5 ? 42 : ef.tipo == 2 ? 109 : 0;  // Enchant Mighty; Dress Mighty
     case EA_DESTREZA: return ef.tipo == 5 ? 26 : ef.tipo == 2 ? 110 : 0;  // Enchant Dexterity; Dress Dexterity
     case EA_HECHIZO: return ef.tipo;
     default: return 0;
     }
+}
+
+const PocionAuto* pocion_auto(u32 id) {
+    return id >= POCION_AUTO && id - POCION_AUTO < std::size(POCIONES_AUTO) ? &POCIONES_AUTO[id - POCION_AUTO] : nullptr;
+}
+
+u32 pocion_auto_de_item(const Inventario& inv, Slot s) {
+    const u32 n = numero_de_nombre(nombre_item(inv, s));
+    const u16 gfx = inv.items.col<I_GFX>()[s];
+    for (u32 i = 0; i < std::size(POCIONES_AUTO); ++i)
+        if (n ? POCIONES_AUTO[i].n == n : POCIONES_AUTO[i].gfx == gfx) return POCION_AUTO + i;
+    return 0;
+}
+
+ObjId buscar_pocion_auto(const Inventario& inv, u32 id) {
+    const TablaItems& t = inv.items;
+    for (Slot s = 0; s < t.tamano(); ++s)
+        if (t.col<I_CANTIDAD>()[s] && pocion_auto_de_item(inv, s) == id) return t.ids()[s];
+    return 0;
 }
 
 u64 resta_efecto_de_hechizo(const EstadoJugador& j, u32 hechizo, u64 ahora) {

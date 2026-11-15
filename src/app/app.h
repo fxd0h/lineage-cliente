@@ -620,6 +620,7 @@ void dibujar_barra(App& a, int y);
 int autobuff_bajo_puntero(const App& a);  // -1 si no hay
 bool sobre_autobuffs(const App& a);       // casilleros e interruptor
 void poner_autobuff(App& a, int casillero, u32 hechizo);  // con aviso en el chat si no es un buff propio
+void poner_autobuff_item(App& a, int casillero, ObjId item);  // un ítem: solo las pociones de POCIONES_AUTO
 void procesar_autobuffs(App& a);          // después de procesar_barra: lanza el que toque
 void eventos_autobuffs(App& a, const Evento& e);
 void dibujar_autobuffs(App& a);           // después de dibujar_barra

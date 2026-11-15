@@ -1,6 +1,8 @@
 // Auto-buffs: elegir qué buff relanzar (mundo/autobuffs.h).
 #include <doctest/doctest.h>
+#include <vector>
 #include "mundo/autobuffs.h"
+#include "proto/decodificar.h"
 
 using namespace lin;
 
@@ -93,4 +95,49 @@ TEST_CASE("acepta_autobuff: solo buffs propios") {
     h.duracion_s = 300;
     h.sobre_item = Hechizo::SOBRE_ARMA;  // Enchant Weapon: pide elegir el arma
     CHECK_FALSE(acepta_autobuff(h));
+}
+
+TEST_CASE("pociones en un casillero: se reconocen por $N o ícono y su efecto por el ícono del servidor") {
+    Inventario inv;
+    auto agregar = [&](ObjId id, std::string_view nombre, u32 cantidad, u16 gfx) {
+        const Slot s = inv.items.insertar(id);
+        inv.items.col<I_CANTIDAD>()[s] = cantidad;
+        inv.items.col<I_GFX>()[s] = gfx;
+        inv.items.col<I_NOMBRE>()[s] = {static_cast<u32>(inv.textos.size()), static_cast<u16>(nombre.size())};
+        inv.textos.insert(inv.textos.end(), nombre.begin(), nombre.end());
+        return s;
+    };
+    const Slot roja = agregar(1, "$26 (10)", 10, 80), azul = agregar(2, "$232 (5)", 5, 75);
+    const Slot sab = agregar(3, "Wisdom", 1, 1529);  // sin $N (3.80C): por el ícono
+    CHECK(pocion_auto_de_item(inv, roja) == 0);
+    CHECK(pocion_auto_de_item(inv, azul) == POCION_AUTO);
+    CHECK(pocion_auto_de_item(inv, sab) == POCION_AUTO + 1);
+    CHECK(buscar_pocion_auto(inv, POCION_AUTO) == 2);
+    inv.items.col<I_CANTIDAD>()[azul] = 0;
+    CHECK(buscar_pocion_auto(inv, POCION_AUTO) == 0);
+    CHECK(pocion_auto(43) == nullptr);
+    CHECK(pocion_auto(POCION_AUTO + 1)->icono == ICONO_SABIDURIA);
+
+    // Sin MP y sin efecto se toma; con el ícono activo, no.
+    EstadoJugador j = jugador(0);
+    CasilleroAuto c[1] = {casillero(POCION_AUTO, 0, 600000)};
+    CHECK(elegir_autobuff(j, c, 1, 100000) == 0);
+    poner(j, EA_ICONO, ICONO_POCION_AZUL, 400000);
+    CHECK(elegir_autobuff(j, c, 1, 100000) == -1);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO, 100000) == 300000);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 1, 100000) == 0);
+}
+
+TEST_CASE("S_SkillIconWisdomPotion: el tiempo viene dividido por 4") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    std::vector<u8> p = {40, 0x39, 0x2c, 75, 0};  // 300 s
+    REQUIRE(decodificar(p, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::ICONO_EFECTO);
+    CHECK(ev[0].v[IE_CLASE] == IE_ICONO);
+    CHECK(ev[0].v[IE_TIPO] == ICONO_SABIDURIA);
+    CHECK(ev[0].v[IE_SEG] == 300);
 }
