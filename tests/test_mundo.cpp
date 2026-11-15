@@ -440,3 +440,16 @@ TEST_CASE("orden_inventario: lo equipado primero, el resto en el orden del servi
     CHECK(orden_inventario(m.inventario, orden, 3) == 3);  // capped
     CHECK(t.ids()[orden[0]] == 2);
 }
+
+TEST_CASE("Zone type from the left-half cell attribute") {
+    CHECK(tipo_zona_de_atributo(0) == TipoZona::NORMAL);
+    CHECK(tipo_zona_de_atributo(1) == TipoZona::NORMAL);   // blocked only
+    CHECK(tipo_zona_de_atributo(65) == TipoZona::NORMAL);
+    CHECK(tipo_zona_de_atributo(4) == TipoZona::SEGURA);
+    CHECK(tipo_zona_de_atributo(5) == TipoZona::SEGURA);
+    CHECK(tipo_zona_de_atributo(8) == TipoZona::COMBATE);
+    CHECK(tipo_zona_de_atributo(12) == TipoZona::SEGURA);  // both bits: the server says safety
+    CHECK(std::string_view(rotulo_zona(TipoZona::SEGURA)) == "Safety zone");
+    CHECK(std::string_view(rotulo_zona(TipoZona::COMBATE)) == "Combat zone");
+    CHECK(std::string_view(rotulo_zona(TipoZona::NORMAL)) == "Normal zone");
+}

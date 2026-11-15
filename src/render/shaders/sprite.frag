@@ -20,5 +20,5 @@ void main() {
     vec4 c = (i_mezcla & 2u) != 0u ? vec4(i_color.rgb, t.a * i_color.a) : t * i_color;
     if (c.a <= 0.0) discard;
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    salida = vec4(c.rgb * c.a, (i_mezcla & 1u) != 0u ? 0.0 : c.a);
+    salida = vec4(c.rgb * c.a, (i_mezcla & 9u) != 0u ? 0.0 : c.a);
 }

@@ -34,7 +34,9 @@ static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader"
 // Normal (tapa según el alfa) o aditiva (suma su luz al fondo: efectos de hechizos).
 // SILUETA: ignores the texture's color, uses the tint's color with the texture's alpha (bit 1); the additive
 // variant adds that flat color to the background.
-enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3 };
+// PANTALLA: screen blend, dst' = src + dst * (1 - src) per channel (the original client's buff icons);
+// drawn in a second draw call after the normal ones of the same pass.
+enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
 // Gpu::nivel_ventana lleva lo que se dibuja en CAPA_UI y CAPA_UI_TEXTO mientras se dibuja una
@@ -178,6 +180,8 @@ private:
     void pace_frame();
     bool usar_spirv_ = false;  // Vulkan (Linux): shaders SPIR-V de render/shaders
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
+    SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors
+    u32 n_pantalla_ = 0;                                    // screen-blend instances queued this frame
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_esc_[N_ESCALADOS] = {};  // [0] unused (nearest blit)
     Escalado escalado_ = Escalado::ENTERO;

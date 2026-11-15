@@ -735,10 +735,11 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         // A punto de terminar (menos de 10 s), parpadea.
         const bool visible = resta >= 10 || (ahora / 250) % 2 == 0;
         if (r.valida() && visible) {
-            // The original client draws buff icons additively: the dark square background disappears,
-            // the light frame glows and the floor shows through.
+            // The original client draws buff icons with a screen blend (client 0x47e6f0 -> blit 0x49d420 with
+            // the 5-bit tables built at 0x4a03b0: out = max + min * (31 - max) / 31 per channel): the dark
+            // square background disappears, the light frame glows and the floor shows through.
             if (original)
-                g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::ADITIVA);
+                g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::PANTALLA);
             else
                 g.gpu().dibujar(r, x, Y, ki);
         } else if (visible) {

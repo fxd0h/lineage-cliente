@@ -81,6 +81,20 @@ struct SegmentoMapa {
     u16 atributo_en(int x, int y, int mitad) const { return atributos[(y * CELDAS_SEGMENTO + x) * 2 + mitad]; }
 };
 
+// Zone type of a cell, from the attribute of its LEFT half (verified against the server's maps on
+// map 4: server tile & 0x30 == 0x10 <-> attribute bit 2, == 0x20 <-> bit 3; with both bits set the
+// server always says safety).
+enum class TipoZona : u8 { NORMAL, SEGURA, COMBATE };
+constexpr TipoZona tipo_zona_de_atributo(u16 atributo_izq) {
+    if (atributo_izq & 4) return TipoZona::SEGURA;
+    if (atributo_izq & 8) return TipoZona::COMBATE;
+    return TipoZona::NORMAL;
+}
+// Label the original shows bottom-right of the screen ("Normal zone" / "Safety zone" / "Combat zone").
+constexpr const char* rotulo_zona(TipoZona t) {
+    return t == TipoZona::SEGURA ? "Safety zone" : t == TipoZona::COMBATE ? "Combat zone" : "Normal zone";
+}
+
 // Nombre del archivo del segmento que contiene la celda (x, y).
 std::string nombre_segmento(MapId mapa, int x, int y);
 bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& salida);

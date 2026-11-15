@@ -41,6 +41,11 @@ constexpr u64 MS_ENCADENAR_PASO = 10;
 // al bloque de 640×480 del original (Vista::hx, hy).
 constexpr int HUD_Y = 366;  // desde esta fila hacia abajo está el panel: el clic no camina
 constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_ENTRADA_CHAT = 1039;
+// Day/night orb on top of the chat frame: 34 frames of 30x31 (1213 = noon, going through dusk, night with
+// the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
+constexpr u32 IMG_ORBE_PRIMERA = 1213;
+constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
+constexpr int ZONA_ROTULO_Y = 346, ZONA_ROTULO_DER = 626;  // zone labels: name on the left, type right-aligned
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 constexpr int ROTULO_BARRA = 28;  // ancho del rótulo "Lev"/"Hp"/"Mp" pintado al principio de cada barra
 constexpr int CHAT_X = 124 + 20, CHAT_Y = 363 + 32, CHAT_ANCHO = 342, CHAT_FILAS = 5;
@@ -937,13 +942,25 @@ void dibujar_panel(App& a) {
     dibujar_botones_panel(a, X + 485 + 26, Y + 366 + 3);
     g.gpu().dibujar(g.img(IMG_CHAT), X + 124, Y + 363, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 124 + 13, Y + 363 + 99, clave_orden(CAPA_UI, 2));
+    {
+        // Frame 0 is noon; the orb advances through the afternoon, night (frame 17) and morning.
+        const int seg = static_cast<int>(((hora_de_juego(a) % 86400) + 86400) % 86400);
+        const int fr = ((seg + 43200) % 86400) * ORBE_FRAMES / 86400;
+        g.gpu().dibujar(g.img(IMG_ORBE_PRIMERA + static_cast<u32>(fr)), X + ORBE_X, Y + ORBE_Y, clave_orden(CAPA_UI, 2));
+    }
     // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
     const Slot yo = a.mundo.objetos.buscar(j.id);
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
                               : a.zonas.buscar(a.mundo.mapa, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo])) {
         const u32 c = a.zonas.color(z->clase);
-        g.texto_sombra(z->nombre, static_cast<float>(X + 16), static_cast<float>(Y + 346), clave_orden(CAPA_UI_TEXTO, 0),
+        g.texto_sombra(z->nombre, static_cast<float>(X + 16), static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0),
                        rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c)));
+    }
+    if (yo != SIN_SLOT) {
+        // Zone type, bottom-right: from the left-half attribute of the character's cell.
+        const char* tipo = rotulo_zona(tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]));
+        g.texto_sombra(tipo, static_cast<float>(X + ZONA_ROTULO_DER - ancho_texto(tipo, std::strlen(tipo))),
+                       static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0), rgba(235, 235, 235));
     }
     char t[48];
     float pexp = porcentaje_exp(j.nivel, j.exp);

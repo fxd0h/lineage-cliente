@@ -43,6 +43,8 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
     o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
+    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla).
+    if (((i.mezcla & 8) != 0) != (u.relleno.y > 0.5)) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = mix(i.uv.xy, i.uv.zw, e);
     o.color = unpack_unorm4x8_to_float(i.color);
     o.pagina = i.pagina;
@@ -65,7 +67,7 @@ fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [
     float4 c = (in.mezcla & 2) != 0 ? float4(in.color.rgb, t.a * in.color.a) : t * in.color;
     if (c.a <= 0.0) discard_fragment();
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    return float4(c.rgb * c.a, (in.mezcla & 1) != 0 ? 0.0 : c.a);
+    return float4(c.rgb * c.a, (in.mezcla & 9) != 0 ? 0.0 : c.a);
 }
 
 // Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.
@@ -447,6 +449,10 @@ bool Gpu::crear_pipeline() {
     SDL_ReleaseGPUShader(dev_, v);
     SDL_ReleaseGPUShader(dev_, f);
     if (!pipeline_) LIN_LOG("SDL_CreateGPUGraphicsPipeline: %s", SDL_GetError());
+    // Screen blend: src + dst * (1 - src), per channel (src = the shader's premultiplied color).
+    ct.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+    pipeline_pantalla_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
+    if (!pipeline_pantalla_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (pantalla): %s", SDL_GetError());
 
     SDL_GPUShaderCreateInfo bv = vs;
     bv.entrypoint = "vs_brillo";
@@ -574,6 +580,7 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUTexture(dev_, destino_);
     SDL_ReleaseGPUTexture(dev_, atlas_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_);
+    SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_pantalla_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_brillo_);
     SDL_ReleaseGPUTexture(dev_, luz_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_luz_);
@@ -644,6 +651,7 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
     // HD images are filtered linearly: stay half a texel inside the region so the margin never bleeds in.
     const float inset = r.hd ? 0.5f : 0.0f;
     if (r.hd) modo |= 4;
+    if (mezcla == Mezcla::PANTALLA) ++n_pantalla_;
     inst_.push_back({x, y, w, h, (r.x + inset) * inv, (r.y + inset) * inv, (r.x + r.w * s - inset) * inv,
                      (r.y + r.h * s - inset) * inv, r.pagina, color, modo, 0});
     const u64 capa = clave >> 56;
@@ -825,6 +833,7 @@ void Gpu::terminar_frame(u32 n) {
     instancias_previas_ = n;
     inst_.clear();
     claves_.clear();
+    n_pantalla_ = 0;
     brillo_activo_ = false;
     reemplazo_activo_ = false;
     reemplazo_fase_ = -1;
@@ -944,6 +953,14 @@ void Gpu::presentar() {
         SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
         SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
         ++llamadas_;
+        if (n_pantalla_ && pipeline_pantalla_) {
+            // Second call with the screen-blend pipeline: the vertex shader keeps only the PANTALLA instances.
+            SDL_BindGPUGraphicsPipeline(p, pipeline_pantalla_);
+            uni[3] = 1;
+            SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
+            SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
+            ++llamadas_;
+        }
     };
     SDL_GPURenderPass* pase = SDL_BeginGPURenderPass(cmd, &objetivo, 1, nullptr);
     dibujar(pase, 0, corte);

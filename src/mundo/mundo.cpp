@@ -566,6 +566,12 @@ bool celda_pasable(Mundo& m, const Recursos& rec, int x, int y) {
     return !((s->atributo_en(lx, ly, 0) & 1) && (s->atributo_en(lx, ly, 1) & 1));
 }
 
+TipoZona tipo_zona_celda(Mundo& m, const Recursos& rec, int x, int y) {
+    const SegmentoMapa* s = segmento(m, rec, x, y);
+    if (!s) return TipoZona::NORMAL;
+    return tipo_zona_de_atributo(s->atributo_en(x - s->base_x, y - s->base_y, 0));
+}
+
 bool es_portal(Mundo& m, const Recursos& rec, int x, int y) {
     const SegmentoMapa* s = segmento(m, rec, x, y);
     if (!s) return false;

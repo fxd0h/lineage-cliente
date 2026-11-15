@@ -224,6 +224,8 @@ const SegmentoMapa* segmento_cargado(Mundo& m, const Recursos& rec, int x, int y
 // llamada.
 void actualizar_segmentos(Mundo& m, int x, int y, int radio);
 bool celda_pasable(Mundo& m, const Recursos& rec, int x, int y);
+// Zone type (normal / safety / combat) of a cell; NORMAL if its segment does not exist.
+TipoZona tipo_zona_celda(Mundo& m, const Recursos& rec, int x, int y);
 // ¿Hay un portal del mapa del cliente en la celda? (ver PortalMapa)
 bool es_portal(Mundo& m, const Recursos& rec, int x, int y);
 
