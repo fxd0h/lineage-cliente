@@ -18,10 +18,15 @@
 namespace lin {
 
 struct RegionAtlas {
+    // x, y and aura_dx are in atlas texels; w, h, ox, oy are LOGICAL units (original pixels).
     u16 pagina = 0, x = 0, y = 0, w = 0, h = 0;
     i16 ox = 0, oy = 0;  // desplazamiento de dibujo de la imagen original
-    u16 aura_dx = 0;     // inventory icons: the bless-aura image (w+4 x h+4) sits aura_dx px right of x; 0 = none
+    u16 aura_dx = 0;     // inventory icons: the bless-aura image ((w+4) x (h+4) logical) sits aura_dx texels right of x; 0 = none
+    u8 hd = 0;           // HD pack image: texels per logical pixel (4); 0 = normal image (1 texel = 1 pixel)
     bool valida() const { return w != 0; }
+    u32 escala_texel() const { return hd ? hd : 1u; }
+    // Texel rectangle covered by the first `lw` x `lh` logical pixels of the region (clipped bars etc.).
+    u32 texel_w(u32 lw) const { return lw * escala_texel(); }
 };
 
 class EmpaquetadoAtlas {

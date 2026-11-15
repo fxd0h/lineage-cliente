@@ -64,6 +64,7 @@ add_library(lin_recursos STATIC
     src/recursos/pak.cpp
     src/recursos/pe_resources.cpp
     src/recursos/imagen.cpp
+    src/recursos/hd_pack.cpp
     src/recursos/tiles.cpp
     src/recursos/sprites.cpp
     src/recursos/tabla_sprites.cpp
@@ -174,6 +175,7 @@ tests/test_pe_resources.cpp
         tests/test_chat.cpp
         tests/test_atlas.cpp
         tests/test_icon_aura.cpp
+        tests/test_hd_pack.cpp
         tests/test_asignaciones.cpp
         tests/test_hechizos.cpp
         tests/test_luz.cpp

@@ -20,6 +20,7 @@ constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
 constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
 
 struct Config {
+    std::string carpeta_hd;        // "hd=": HD UI pack directory (img_<id>.png, tbt_<id>.png); empty = off
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)
     size_t servidor = 0;           // el elegido ("servidor_elegido=Nombre")

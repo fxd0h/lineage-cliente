@@ -12,6 +12,7 @@
 #include <vector>
 #include "core/mapa_hash.h"
 #include "recursos/fuente.h"
+#include "recursos/hd_pack.h"
 #include "recursos/pak.h"
 #include "recursos/precarga.h"
 #include "recursos/sprites.h"
@@ -52,6 +53,10 @@ public:
     int texto(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
     // Texto con sombra negra de 1 px (como los nombres sobre los personajes).
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
+
+    // Enables the HD UI pack at `dir` (img()/icono() prefer its images). false (and HD stays off) if unreadable.
+    bool abrir_hd(const std::string& dir) { return hd_abierto_ = hd_.abrir(dir); }
+    bool hd_activo() const { return hd_abierto_; }
 
     Gpu& gpu() { return gpu_; }
     // Al comienzo de cada frame: lo que terminó de traer la precarga, y olvidar la página del atlas que
@@ -97,6 +102,9 @@ private:
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;
     ImagenRGBA tmp_;
+    HdPack hd_;
+    bool hd_abierto_ = false;
+    u32 escala_tmp_ = 1;  // texels per logical pixel of what tmp_ holds (HD_SCALE for HD pack images)
     u16 aura_w_ = 0;  // icon width while tmp_ holds icon + aura (see RegionAtlas::aura_dx)
     std::vector<GlifoTexto> glifos_tmp_;
     double ms_decodificacion_ = 0;

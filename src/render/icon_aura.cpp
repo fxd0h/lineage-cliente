@@ -16,26 +16,26 @@ bool in_dilation(const ImagenRGBA& icon, int x, int y, int d) {
 }
 }  // namespace
 
-void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura) {
-    const int w = icon.ancho, h = icon.alto;
-    aura.preparar(static_cast<u16>(w + AURA_PAD), static_cast<u16>(h + AURA_PAD));
-    for (int y = 0; y < h + AURA_PAD; ++y)
-        for (int x = 0; x < w + AURA_PAD; ++x) {
-            const int ix = x - AURA_PAD / 2, iy = y - AURA_PAD / 2;
+void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura, int scale) {
+    const int w = icon.ancho, h = icon.alto, pad = AURA_PAD * scale;
+    aura.preparar(static_cast<u16>(w + pad), static_cast<u16>(h + pad));
+    for (int y = 0; y < h + pad; ++y)
+        for (int x = 0; x < w + pad; ++x) {
+            const int ix = x - pad / 2, iy = y - pad / 2;
             u32 a = 0;
-            if (in_dilation(icon, ix, iy, 1)) a = ALPHA_INNER;
-            else if (in_dilation(icon, ix, iy, 2)) a = ALPHA_OUTER;
+            if (in_dilation(icon, ix, iy, scale)) a = ALPHA_INNER;
+            else if (in_dilation(icon, ix, iy, 2 * scale)) a = ALPHA_OUTER;
             aura.px[static_cast<size_t>(y) * aura.ancho + x] = 0x00FFFFFFu | (a << 24);
         }
 }
 
-void agregar_aura(ImagenRGBA& img) {
+void agregar_aura(ImagenRGBA& img, int scale) {
     if (img.vacia()) return;
-    const int w = img.ancho, h = img.alto;
+    const int w = img.ancho, h = img.alto, pad = AURA_PAD * scale;
     ImagenRGBA aura;
-    build_bless_aura(img, aura);
+    build_bless_aura(img, aura, scale);
     ImagenRGBA out;
-    out.preparar(static_cast<u16>(2 * w + AURA_PAD), static_cast<u16>(h + AURA_PAD));
+    out.preparar(static_cast<u16>(2 * w + pad), static_cast<u16>(h + pad));
     out.ox = img.ox;
     out.oy = img.oy;
     for (int y = 0; y < h; ++y)

@@ -47,6 +47,8 @@ bool cargar_recursos(App& a) {
     if (!cargar_formas(a)) LIN_LOG("Aviso: no se encontró datos/formas.txt ni polymorph.tbl (sugerencias de polymorph)");
     if (!a.hechizos.cargar(a.rec)) LIN_LOG("Aviso: no se encontró spelldesc-e.tbl (nombres de los hechizos)");
     a.g = std::make_unique<Graficos>(a.gpu, a.rec, a.fuente);
+    if (!a.cfg.carpeta_hd.empty() && !a.g->abrir_hd(a.cfg.carpeta_hd))
+        LIN_LOG("HD: no manifest.tsv in %s: using the original images", a.cfg.carpeta_hd.c_str());
     cargar_sonidos(a);
     preparar_luz(a);
     return true;

@@ -48,6 +48,7 @@ Servidor leer_servidor(std::string_view v) {
 
 void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view valor) {
     if (clave == "juego") c.carpeta_juego = valor;
+    else if (clave == "hd") c.carpeta_hd = valor;
     else if (clave == "servidor") c.servidores.push_back(leer_servidor(valor));
     else if (clave == "servidor_elegido") ant.elegido = valor;
     else if (clave == "host") ant.host = valor;
@@ -221,6 +222,7 @@ std::string escribir_config(const Config& c) {
         t += '\n';
     };
     linea("juego", c.carpeta_juego);
+    if (!c.carpeta_hd.empty()) linea("hd", c.carpeta_hd);
     // Servidores: nombre|host|puerto|protocolo|cuenta (la última usada en ese servidor).
     for (const Servidor& sv : c.servidores)
         linea("servidor", sv.nombre + '|' + sv.host + '|' + std::to_string(sv.puerto) + '|' + sv.protocolo + '|' + sv.usuario);

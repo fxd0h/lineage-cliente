@@ -51,8 +51,16 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
 }
 
 fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
-                          sampler s [[sampler(0)]]) {
-    float4 t = atlas.sample(s, in.uv, in.pagina);
+                          texture2d_array<float> atlas_lin [[texture(1)]],
+                          sampler s [[sampler(0)]], sampler s_lin [[sampler(1)]]) {
+    float4 t;
+    if ((in.mezcla & 4) != 0) {
+        // HD pack image: premultiplied texels, bilinear; back to straight alpha for the common path.
+        t = atlas_lin.sample(s_lin, in.uv, in.pagina);
+        t.rgb = t.a > 0.0 ? t.rgb / t.a : float3(0.0);
+    } else {
+        t = atlas.sample(s, in.uv, in.pagina);
+    }
     // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
     float4 c = (in.mezcla & 2) != 0 ? float4(in.color.rgb, t.a * in.color.a) : t * in.color;
     if (c.a <= 0.0) discard_fragment();
@@ -303,6 +311,8 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
     si.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
     si.address_mode_u = si.address_mode_v = si.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     muestreo_ = SDL_CreateGPUSampler(dev_, &si);
+    si.min_filter = si.mag_filter = SDL_GPU_FILTER_LINEAR;
+    muestreo_lineal_ = SDL_CreateGPUSampler(dev_, &si);
 
     SDL_GPUBufferCreateInfo bi{};
     bi.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
@@ -334,7 +344,7 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
     filas_tex_ = SDL_CreateGPUTexture(dev_, &tl);
     tb.size = FILAS_TAM * 4;
     subida_filas_ = SDL_CreateGPUTransferBuffer(dev_, &tb);
-    if (!atlas_ || !destino_ || !muestreo_ || !instancias_gpu_ || !subida_inst_ || !subida_atlas_ || !luz_ ||
+    if (!atlas_ || !destino_ || !muestreo_ || !muestreo_lineal_ || !instancias_gpu_ || !subida_inst_ || !subida_atlas_ || !luz_ ||
         !subida_luz_ || !filas_tex_ || !subida_filas_) {
         LIN_LOG("Recursos GPU: %s", SDL_GetError());
         return false;
@@ -408,7 +418,7 @@ bool Gpu::crear_pipeline() {
     fs.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     fs.num_uniform_buffers = 0;
     fs.num_storage_buffers = 0;
-    fs.num_samplers = 1;
+    fs.num_samplers = 2;  // atlas nearest + atlas linear (HD images)
     SDL_GPUShader* f = crear(fs);
     if (!v || !f) {
         LIN_LOG("SDL_CreateGPUShader: %s", SDL_GetError());
@@ -560,6 +570,7 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUTransferBuffer(dev_, subida_inst_);
     SDL_ReleaseGPUBuffer(dev_, instancias_gpu_);
     SDL_ReleaseGPUSampler(dev_, muestreo_);
+    SDL_ReleaseGPUSampler(dev_, muestreo_lineal_);
     SDL_ReleaseGPUTexture(dev_, destino_);
     SDL_ReleaseGPUTexture(dev_, atlas_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_);
@@ -580,7 +591,7 @@ void Gpu::cerrar() {
     dev_ = nullptr;
 }
 
-bool Gpu::subir(const ImagenRGBA& img, RegionAtlas& r) {
+bool Gpu::subir(const ImagenRGBA& img, RegionAtlas& r, u32 escala_hd) {
     if (img.vacia()) return false;
     size_t bytes = img.px.size() * 4;
     if (staging_atlas_.size() + bytes > TAM_SUBIDA_ATLAS) return false;  // reintentar el próximo frame
@@ -589,8 +600,10 @@ bool Gpu::subir(const ImagenRGBA& img, RegionAtlas& r) {
         atlas_lleno_avisado_ = true;
         return false;
     }
-    r.w = img.ancho;
-    r.h = img.alto;
+    if (escala_hd < 1) escala_hd = 1;
+    r.w = static_cast<u16>(img.ancho / escala_hd);  // logical size
+    r.h = static_cast<u16>(img.alto / escala_hd);
+    r.hd = escala_hd > 1 ? static_cast<u8>(escala_hd) : 0;
     r.ox = img.ox;
     r.oy = img.oy;
     SubidaPendiente p{r, static_cast<u32>(staging_atlas_.size())};
@@ -626,8 +639,13 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
     x = std::round(x * e) / e;
     y = std::round(y * e) / e;
     constexpr float inv = 1.0f / TAM_PAGINA;
-    inst_.push_back({x, y, w, h, r.x * inv, r.y * inv, (r.x + r.w) * inv, (r.y + r.h) * inv, r.pagina, color,
-                     static_cast<u32>(mezcla), 0});
+    const float s = static_cast<float>(r.escala_texel());
+    u32 modo = static_cast<u32>(mezcla);
+    // HD images are filtered linearly: stay half a texel inside the region so the margin never bleeds in.
+    const float inset = r.hd ? 0.5f : 0.0f;
+    if (r.hd) modo |= 4;
+    inst_.push_back({x, y, w, h, (r.x + inset) * inv, (r.y + inset) * inv, (r.x + r.w * s - inset) * inv,
+                     (r.y + r.h * s - inset) * inv, r.pagina, color, modo, 0});
     const u64 capa = clave >> 56;
     if (nivel_ventana_ && (capa == CAPA_UI || capa == CAPA_UI_TEXTO)) {
         // Profundidad: nivel de la ventana (5 bits), texto sobre lo demás (1 bit) y la profundidad
@@ -841,15 +859,16 @@ void Gpu::presentar() {
             SDL_GPUTextureTransferInfo src{};
             src.transfer_buffer = subida_atlas_;
             src.offset = s.offset;
-            src.pixels_per_row = s.r.w;
-            src.rows_per_layer = s.r.h;
+            const u32 tw = s.r.w * s.r.escala_texel(), th = s.r.h * s.r.escala_texel();  // texels (r.w/h are logical)
+            src.pixels_per_row = tw;
+            src.rows_per_layer = th;
             SDL_GPUTextureRegion dst{};
             dst.texture = atlas_;
             dst.layer = s.r.pagina;
             dst.x = s.r.x;
             dst.y = s.r.y;
-            dst.w = s.r.w;
-            dst.h = s.r.h;
+            dst.w = tw;
+            dst.h = th;
             dst.d = 1;
             SDL_UploadToGPUTexture(copia, &src, &dst, false);
         }
@@ -919,8 +938,8 @@ void Gpu::presentar() {
         if (!cuantas) return;
         SDL_BindGPUGraphicsPipeline(p, pipeline_);
         SDL_BindGPUVertexStorageBuffers(p, 0, &instancias_gpu_, 1);
-        SDL_GPUTextureSamplerBinding tsb{atlas_, muestreo_};
-        SDL_BindGPUFragmentSamplers(p, 0, &tsb, 1);
+        const SDL_GPUTextureSamplerBinding tsb[2] = {{atlas_, muestreo_}, {atlas_, muestreo_lineal_}};
+        SDL_BindGPUFragmentSamplers(p, 0, tsb, 2);
         float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(desde), 0};
         SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
         SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);

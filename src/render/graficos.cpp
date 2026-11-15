@@ -27,21 +27,23 @@ const RegionAtlas& Graficos::cargar(u64 k, F&& decodificar) {
 const RegionAtlas& Graficos::guardar(u64 k, bool ok) {
     RegionAtlas r;
     if (!ok) aura_w_ = 0;
+    const u32 escala = escala_tmp_;
+    escala_tmp_ = 1;
     if (ok && !gpu_.cabe_en_atlas(tmp_)) {
         // Más grande que una página: no entraría nunca. Se recuerda como fallo, si no se volvería a
         // leer y decodificar en cada frame.
         LIN_LOG("Imagen de %ux%u: no entra en el atlas", tmp_.ancho, tmp_.alto);
         ok = false;
     }
-    if (ok && !gpu_.subir(tmp_, r)) {
+    if (ok && !gpu_.subir(tmp_, r, escala)) {
         // Sin lugar este frame (buffer de subida lleno o atlas sin página libre): no se recuerda, se reintenta.
         aura_w_ = 0;
         return pendiente_;
     }
     if (aura_w_) {  // icon + aura were uploaded as one image: the region covers the icon only
-        r.aura_dx = aura_w_;
-        r.w = aura_w_;
-        r.h = static_cast<u16>(r.h - AURA_PAD);
+        r.aura_dx = aura_w_;  // texels
+        r.w = static_cast<u16>(aura_w_ / escala);
+        r.h = static_cast<u16>(r.h - AURA_PAD);  // logical: subir divided the (h + pad * scale) texels by scale
         aura_w_ = 0;
     }
     if (int p = gpu_.tomar_pagina_reemplazada(); p >= 0) olvidar_pagina(static_cast<u16>(p));
@@ -75,6 +77,10 @@ void Graficos::olvidar_pagina(u16 pagina) {
 
 const RegionAtlas& Graficos::img(u32 n) {
     return cargar(clave(T_IMG, n), [&] {
+        if (hd_abierto_ && hd_.cargar(HdPack::Tipo::IMG, n, tmp_, TAM_PAGINA - 1, TAM_PAGINA - 1)) {
+            escala_tmp_ = HD_SCALE;
+            return Carga::OK;
+        }
         char nombre[32];
         std::snprintf(nombre, sizeof nombre, "%ue.img", n);
         Bytes b = rec_.sprite(nombre);
@@ -88,6 +94,13 @@ const RegionAtlas& Graficos::img(u32 n) {
 
 const RegionAtlas& Graficos::icono(u32 n) {
     return cargar(clave(T_ICONO, n), [&] {
+        // The aura sits next to the icon in the same upload: leave room for it (2 icon widths + padding).
+        if (hd_abierto_ && hd_.cargar(HdPack::Tipo::TBT, n, tmp_, (TAM_PAGINA - 1 - AURA_PAD * HD_SCALE) / 2, TAM_PAGINA - 1 - AURA_PAD * HD_SCALE)) {
+            escala_tmp_ = HD_SCALE;
+            aura_w_ = tmp_.ancho;
+            agregar_aura(tmp_, HD_SCALE);
+            return Carga::OK;
+        }
         char nombre[32];
         std::snprintf(nombre, sizeof nombre, "%u.tbt", n);
         Bytes b = rec_.sprite(nombre);

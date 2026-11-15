@@ -91,7 +91,8 @@ public:
     void cerrar();
 
     // Reserva lugar en el atlas y encola la subida. false si no hay lugar este frame.
-    bool subir(const ImagenRGBA& img, RegionAtlas& salida);
+    // `escala_hd` > 1: img holds escala_hd texels per logical pixel (HD pack); the region keeps the logical size.
+    bool subir(const ImagenRGBA& img, RegionAtlas& salida, u32 escala_hd = 1);
     // false si la imagen es más grande que una página del atlas: no entraría nunca.
     bool cabe_en_atlas(const ImagenRGBA& img) const { return empaquetado_.cabe(img.ancho, img.alto); }
     // Página del atlas vaciada por el último subir, o -1: sus regiones ya no valen.
@@ -207,6 +208,7 @@ private:
     u32 n_mundo_ = 0;                           // instancias de CAPA_FONDO..CAPA_MUNDO (prefijo de la lista)
     SDL_GPUTexture* atlas_ = nullptr;
     SDL_GPUTexture* destino_ = nullptr;  // resolución lógica
+    SDL_GPUSampler* muestreo_lineal_ = nullptr;
     SDL_GPUSampler* muestreo_ = nullptr;
     SDL_GPUBuffer* instancias_gpu_ = nullptr;
     SDL_GPUTransferBuffer* subida_inst_ = nullptr;

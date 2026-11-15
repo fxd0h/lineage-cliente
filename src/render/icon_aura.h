@@ -13,8 +13,9 @@ namespace lin {
 constexpr int AURA_PAD = 4;  // the aura image is 2 px larger on every side than the icon
 
 // Builds the (w + 4) x (h + 4) aura of `icon` (the icon sits at (2, 2)).
-void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura);
+// `scale` > 1: HD icon (scale texels per logical pixel); padding and dilation radii scale with it.
+void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura, int scale = 1);
 // Replaces `img` (w x h) by an image of (2w + 4) x (h + 4): the icon at (0, 0) and its aura at (w, 0).
-void agregar_aura(ImagenRGBA& img);
+void agregar_aura(ImagenRGBA& img, int scale = 1);
 
 }  // namespace lin
