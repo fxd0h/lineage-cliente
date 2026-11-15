@@ -18,8 +18,8 @@ and status, combat, inventory and items, spells and polymorph, NPCs and trading,
 (party, trade, clan), and the complete world (zone music, sounds, weather and portals). Houses, castles
 and sieges, the bulletin board and mail, and player shops are also in.
 
-So far it has been tested **only on macOS** (Apple Silicon). What is missing for Windows and Linux is
-marked in the code with `MULTIPLATAFORMA` and listed [below](#missing-for-windows-and-linux).
+Tested on **macOS** (Apple Silicon, upstream) and **Linux** (Ubuntu 24.04 / Vulkan, this fork). What is missing
+for Windows is marked in the code with `MULTIPLATAFORMA` and listed [below](#missing-for-windows).
 
 ![The game, with the simple interface](docs/capturas/readme_game.png)
 
@@ -39,11 +39,21 @@ More documentation, mostly in Spanish, the working language of the project:
   drawing and the servers, and the design decisions that followed.
 - **[AGENTS.md](AGENTS.md):** how to work on the project, for people and agents, also in parallel.
 
-## Requirements (macOS)
+## Requirements
+
+### Requirements (macOS)
 
 - Xcode Command Line Tools (Apple Clang with C++23)
 - CMake 3.25 or newer, and Ninja: `brew install cmake ninja`
 - The game installation (the folder with `Sprite*.pak`, `Tile.pak`, `Text.pak`, `map/`, `font/`)
+
+### Requirements (Linux)
+
+Ubuntu 24.04 tested (Vulkan GPU path). Needs `cmake`, `ninja-build`, a C++23 compiler (GCC 13 tested), a
+Vulkan driver, and the SDL3 build dependencies (SDL3 is fetched by CMake): `libx11-dev libxext-dev libxrandr-dev
+libxcursor-dev libxi-dev libxfixes-dev libxss-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev
+libdecor-0-dev libdrm-dev libgbm-dev libudev-dev`. `glslangValidator` is only needed to regenerate the shaders.
+The local server scripts install a JRE and MariaDB with apt.
 
 SDL3 3.4.18, stb (`stb_image`, `stb_truetype`), dr_mp3 and doctest are downloaded on the first configure
 (FetchContent, pinned versions). Nothing else needs installing.
@@ -51,7 +61,6 @@ SDL3 3.4.18, stb (`stb_image`, `stb_truetype`), dr_mp3 and doctest are downloade
 ## Build and test
 
 ```sh
-cd cliente
 cmake --preset debug          # or release / debug-asan
 cmake --build --preset debug
 LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, tests that need resources are skipped
@@ -178,6 +187,10 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `ventana` | Window size (`WIDTHxHEIGHT`), saved on close |
 | `zoom` | Game scale; 0 = automatic |
 | `ui_simple` | `1` simple interface, `0` original panel (F2) |
+| `vista` | `fija` (default): fixed 640×480 view, as in the original, scaled to the window; `amplia`: the view grows with the window and the zoom |
+| `escalado` | Filter used to scale the fixed view: `entero` (nearest), `xbr`, `fsr` (default), `crt`, `anime4k` (Shift+F5) |
+| `fuente_original` | `1` (default) ASCII text with the game's `font/eng.fnt`; `0` Departure Mono |
+| `hd` | Folder with an upscaled UI pack (`img_<id>.png`, `tbt_<id>.png`, 4× the original size); empty = off |
 | `camara_a_saltos` | `1` camera follows the walking frames, like the original (F4) |
 | `sombra_personajes` | Darken characters standing in a tree's shadow (Shift+F4) |
 | `pantalla_completa` | Game in full screen (1) or windowed without border (0, default). Alt+Enter toggles it |
@@ -223,12 +236,16 @@ title is shown as text.
 - **Shift+F3:** frames per second and milliseconds per frame in the top right corner, on or off.
 - **Alt+Enter:** full screen or windowed. Windowed has no system border: the bar on top drags the window, and its
   buttons minimize and close it (on macOS they are on the left, like the system's). Full screen has no bar.
+- **Shift+F5:** cycles the scaling filter of the fixed view (integer, xBR, FSR, CRT, Anime4K); a chat line
+  names the new one.
 - **Shift+F4:** darken characters standing in a tree's shadow (default) or not.
 - **Shift+F12:** saves `captura.bmp`.
 - **Shift+click on the world:** turns the character that way without walking (to face someone, e.g. to trade).
+- **Window size:** with `vista=fija` the 640×480 view is scaled to any window size (drag the window border to
+  resize it) and the zoom keys don't apply.
 - **Ctrl/⌘ + and Ctrl/⌘ −:** zoom in and out (integer scale; zooming out shows more map).
 - **Ctrl/⌘ 0:** automatic zoom, the largest that fits 640×480.
-- **Game view:** adapts to the window. Enlarging it shows more map, with the panel centered at the
+- **Game view (`vista=amplia`):** adapts to the window. Enlarging it shows more map, with the panel centered at the
   bottom. The login and character screens stay at 640×480.
 - **Windows:** drag the title bar to move them (the position is saved). They look for a free spot when
   opened; if they overlap, a click brings one forward and only that one gets the mouse. They also open with
@@ -458,11 +475,7 @@ Identifiers and comments in the code are in Spanish.
 |---|---|
 | ![F1 help window, fitted](docs/capturas/readme_fixed_help.png) | ![French settings editor, fitted](docs/capturas/readme_fixed_editor_fr.png) |
 
-## Missing for Windows and Linux
-
-### Requirements (Linux)
-
-Ubuntu 24.04 tested (Vulkan GPU path). Needs `cmake`, `ninja-build`, a C++23 compiler, a Vulkan driver, and the SDL3 build dependencies (SDL3 is fetched by CMake): `libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdecor-0-dev libdrm-dev libgbm-dev libudev-dev`. `glslangValidator` is only needed to regenerate the shaders.
+## Missing for Windows
 
 `grep -rn MULTIPLATAFORMA` lists them in the code.
 

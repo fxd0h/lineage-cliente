@@ -44,11 +44,54 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - **Loading placeholder:** sprites still loading are not drawn (upstream drew a green block).
 - **Sticky attack:** holding the button on a monster keeps attacking; dragging the pointer out of the
   window while holding latches the attack until a new click, a move, target death or map change.
+  Releasing over the panel keeps the attack going.
+- **Recovered from the 2009 US client binary** (`S3EP1U.bin`, read with Ghidra/objdump): original
+  cursors (PE resources), buff icons 5240+ with their table and screen blend, overhead bars 930–932,
+  level-up effect 2127, game-time orb 1213–1246, knight skill icons (table at 0x503c00), blessed items
+  lightened toward white (LUT 0x8f173c) and cursed ones tinted red.
+- **Zone type label** ("Normal zone" / "Safety zone" / "Combat zone") from the `.s32` attribute bits.
+- **Panel:** F5–F12 boxes take items as well as spells; equipped items are listed first in the inventory.
+
+### View and scaling
+
+- **Fixed view** (`vista=fija`, default): the original 640×480 view rendered off-screen and scaled to
+  the window; `vista=amplia` keeps upstream's growing view.
+- **Filters** (`escalado=`, Shift+F5 cycles them): `entero` (nearest), `xbr`, `fsr`, `crt`, `anime4k`.
+- **Resizable borderless window** (SDL hit test on the edges).
+- **Frame pacing:** MAILBOX present mode with a 60 fps limiter.
+- **HD UI pack** (`hd=<dir>`): optional 4× upscaled UI images (`img_<id>.png`, `tbt_<id>.png`) drawn in
+  place of the originals at the same logical size. The pack is not distributed (it is derived from game
+  data); it was made with Real-ESRGAN x4plus-anime.
+
+### Maps and sprites
+
+- Second ground layer of `.s32` maps, translucent tiles (bit 0x20), void tiles (bit 0x08).
+- Frames without tiles, `]N` frame effects, and sprites without a `sprite_table` row drawn by heading.
+- Wand of polymorph asks for a target.
+
+### Local server
+
+- Korean item, NPC and skill names in the L1J-JP database translated to English
+  (`servidor_local/translate_names.py`, `name_fixes.tsv`, `name_translations.tsv`, applied from
+  `corregir_db.sql`).
+
+### Testing
+
+- `herramientas/lanzar_prueba.sh <settings.ini> [log]` starts a test client on an invisible Xvfb display
+  (lavapipe Vulkan) and prints its pid, so automated tests never cover or steal focus from a client the
+  user is playing. `LIN_NO_FOCUS=1` keeps a window from taking focus when shown.
+- The live-control socket no longer stops answering after a client closes its end.
+
+### Upstream merges
+
+- Upstream `main` is merged from time to time (last: auto-buff potions and NPC shop stack quantity,
+  2026-11-15). Upstream's experimental branches (`agente/modelos-3d`, `agente/plan-portado`) are not merged.
 
 ### Known gaps
 
-- Zone type label ("Normal zone" / "Safety zone" / "Combat zone"): the flag has not been found in the
-  map data yet.
+- In-game windows (inventory, status, spellbook, shop, options) are still upstream's; the original
+  framed windows (images 933–935, 978–984) are next.
+- New-monster animations from `list.spz` (encrypted) are not decoded.
 - Windows port (DXIL shaders, Winsock, file mapping) not started.
 - No CI yet.
 
