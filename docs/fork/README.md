@@ -50,6 +50,10 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
   level-up effect 2127, game-time orb 1213–1246, knight skill icons (table at 0x503c00), blessed items
   lightened toward white (LUT 0x8f173c) and cursed ones tinted red.
 - **Zone type label** ("Normal zone" / "Safety zone" / "Combat zone") from the `.s32` attribute bits.
+- **Original framed windows** (`src/app/original_window.cpp`), layers and offsets read from the 2009
+  binary: inventory (996 background, 997 frame, 998 ornaments, category tabs 999–1002, trash can
+  1003, image scroll bar 971/1206–1211) with a 4 × 6 grid and worn items first; status window with
+  the equipment (1440/1441) and attributes (982/983) tabs (985/986), values in the image's boxes.
 - **Panel:** F5–F12 boxes take items as well as spells; equipped items are listed first in the inventory.
 
 ### View and scaling
@@ -89,8 +93,7 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 
 ### Known gaps
 
-- In-game windows (inventory, status, spellbook, shop, options) are still upstream's; the original
-  framed windows (images 933–935, 978–984) are next.
+- Spellbook (images 933–939), shop and options windows are still upstream's.
 - New-monster animations from `list.spz` (encrypted) are not decoded.
 - Windows port (DXIL shaders, Winsock, file mapping) not started.
 - No CI yet.

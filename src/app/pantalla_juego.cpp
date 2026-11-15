@@ -1193,6 +1193,7 @@ void dibujar_estado(App& a) {
     arrastrar_ventana(a, IdVentana::ESTADO);
     const Rect rv = rect_ventana(a, IdVentana::ESTADO);
     const int ESTADO_X = rv.x, ESTADO_Y = rv.y;
+    if (uses_original_frame(a, IdVentana::ESTADO)) return draw_original_status(a, ESTADO_X, ESTADO_Y);
     if (ui::ventana(g, e, a.cfg.ui_simple, ESTADO_X, ESTADO_Y, "Status", opacidad_ventanas(a))) a.ventana_estado = false;
     // Dos pestañas, como el original: los atributos y el equipo.
     if (ui::boton_texto(g, e, "Status", ESTADO_X + 20, ESTADO_Y + ui::VENTANA_ALTO - 24, 96, 18)) a.pestana_estado = 0;

@@ -476,6 +476,7 @@ struct App {
     // Inventario (Alt+I).
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
+    u8 inventory_tab = 0;               // original UI: 0 consumables, 1 equipment, 2 scrolls and magic, 3 other
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
     ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
@@ -527,6 +528,15 @@ void arrastrar_ventana(App& a, IdVentana v);
 void actualizar_ventanas(App& a);
 bool tapa_a_otra(const App& a, IdVentana v);  // se solapa con otra abierta que está detrás
 u8 opacidad_ventanas(const App& a);
+// Original client's framed windows (original_window.cpp): size, frame with close button (returns true
+// when it is clicked), ornaments drawn over the contents, and the image scroll bar.
+constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;
+bool uses_original_frame(const App& a, IdVentana v);
+void draw_original_status(App& a, int x, int y);  // status window: equipment and attributes tabs
+bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame);
+void draw_original_ornament(App& a, int x, int y, u32 ornament);
+void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
+                        bool over_list);
 // Botones para abrir las ventanas: los del panel original (esquina del panel derecho) o de texto
 // (UI simple; devuelve dónde terminan a la izquierda).
 void dibujar_botones_panel(App& a, int x, int y);

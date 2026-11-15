@@ -121,6 +121,7 @@ add_executable(lineage
     src/app/autopocion_ui.cpp
     src/app/forma_ui.cpp
     src/app/npc_ui.cpp
+    src/app/original_window.cpp
     src/app/ventanas.cpp
     src/app/cursores.cpp
     src/app/social_ui.cpp

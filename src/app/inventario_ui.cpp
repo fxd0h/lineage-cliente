@@ -11,11 +11,33 @@ namespace lin {
 
 namespace {
 
-constexpr int COLUMNAS = 6, FILAS = 7, CELDA = 36;  // 6 × 7 celdas de 36 px (íconos de 32)
-constexpr int GRILLA_X = 14, GRILLA_Y = 30;          // dentro de la ventana
+// Item grid inside the window: the simple UI's 6 × 7 cells of 36 px, or the original frame's 4 × 6 of 34
+// (the lines of image 997), with the trash can, tabs and scroll bar where the 2009 client puts them.
+struct Grid {
+    int cols, rows, cell, x, y;    // cells and the grid's corner
+    int trash_x, trash_y;          // trash can
+    int scroll_x;                  // scroll bar
+};
+constexpr Grid SIMPLE_GRID = {6, 7, 36, 14, 30, 14 + 6 * 36 - 22, 30 + 7 * 36 + 2, 14 + 6 * 36 + 2};
+constexpr Grid ORIGINAL_GRID = {4, 6, 34, 20, 41, 163, 252, 162};
+constexpr int BASURA_W = 20, BASURA_H = 18;
 constexpr u64 MS_DOBLE_CLIC = 400;
-constexpr int BASURA_X = GRILLA_X + COLUMNAS * CELDA - 22, BASURA_Y = GRILLA_Y + FILAS * CELDA + 2, BASURA_W = 20,
-              BASURA_H = 18;  // el basurero, dentro de la ventana
+constexpr u32 IMG_INV_BACKGROUND = 996, IMG_INV_FRAME = 997, IMG_INV_ORNAMENT = 998, IMG_INV_TABS = 999;
+constexpr int TABS_X = 17, TABS_Y = 249, TAB_W = 35, TAB_H = 17, N_TABS = 4;
+constexpr const char* TAB_NAMES[N_TABS] = {"Potions and food", "Equipment", "Scrolls and magic", "Other"};
+
+// Original UI tab of an item, from its use type (S_AddItem; ItemTable on the server).
+int tab_of(u8 use) {
+    switch (use) {
+    case 1: case 2: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 37: case 40:
+    case 43: case 44: case 45: case 47: case 48: return 1;  // weapons, armor, accessories
+    case 58: case 59: case 60: case 61: case 62: case 63: case 64: case 65: case 66: case 67: case 68: case 69:
+        return 0;  // potions
+    case 5: case 6: case 7: case 8: case 14: case 16: case 17: case 26: case 27: case 28: case 29: case 30: case 39:
+    case 70: case 73: return 2;  // scrolls, wands, polymorph
+    default: return 3;
+    }
+}
 
 // El basurero del original (1003; 1004 resaltado, con un ítem encima); si no está, con rectángulos.
 void dibujar_basurero(Graficos& g, int x, int y, bool encima) {
@@ -32,16 +54,14 @@ void dibujar_basurero(Graficos& g, int x, int y, bool encima) {
 }
 
 constexpr size_t MAX_ORDEN = 256;
-// Slot shown at grid position `pos` (see orden_inventario).
-Slot slot_en(const Slot* orden, size_t n_orden, size_t pos) { return pos < n_orden ? orden[pos] : static_cast<Slot>(pos); }
 
-// Posición de la celda bajo el puntero (ya desplazada) o -1.
-int celda_bajo_puntero(const App& a, int x0, int y0) {
+// Position (already scrolled) of the cell under the pointer among the `shown` items, or -1.
+int celda_bajo_puntero(const App& a, const Grid& gr, int x0, int y0, size_t shown) {
     const EntradaFrame& e = a.entrada;
-    int cx = e.mx - (x0 + GRILLA_X), cy = e.my - (y0 + GRILLA_Y);
-    if (cx < 0 || cy < 0 || cx >= COLUMNAS * CELDA || cy >= FILAS * CELDA) return -1;
-    int i = static_cast<int>(a.inventario_desplazamiento) * COLUMNAS + (cy / CELDA) * COLUMNAS + cx / CELDA;
-    return i < static_cast<int>(a.mundo.inventario.items.tamano()) ? i : -1;
+    int cx = e.mx - (x0 + gr.x), cy = e.my - (y0 + gr.y);
+    if (cx < 0 || cy < 0 || cx >= gr.cols * gr.cell || cy >= gr.rows * gr.cell) return -1;
+    int i = static_cast<int>(a.inventario_desplazamiento) * gr.cols + (cy / gr.cell) * gr.cols + cx / gr.cell;
+    return i < static_cast<int>(shown) ? i : -1;
 }
 
 }  // namespace
@@ -133,28 +153,71 @@ void dibujar_inventario(App& a) {
     arrastrar_ventana(a, IdVentana::INVENTARIO);
     const Rect rv = rect_ventana(a, IdVentana::INVENTARIO);
     const int x0 = rv.x, y0 = rv.y;
-    if (ui::ventana(g, e, a.cfg.ui_simple, x0, y0, "Inventory", opacidad_ventanas(a))) a.ventana_inventario = false;
+    const bool original = uses_original_frame(a, IdVentana::INVENTARIO);
+    const Grid& gr = original ? ORIGINAL_GRID : SIMPLE_GRID;
+    if (original) {
+        if (draw_original_frame(a, x0, y0, IMG_INV_BACKGROUND, 6, 8, IMG_INV_FRAME)) a.ventana_inventario = false;
+        draw_original_ornament(a, x0, y0, IMG_INV_ORNAMENT);
+        // Category tabs: one image per selected tab.
+        g.gpu().dibujar(g.img(IMG_INV_TABS + a.inventory_tab), x0 + TABS_X, y0 + TABS_Y, clave_orden(CAPA_UI, 12));
+        for (int i = 0; i < N_TABS; ++i) {
+            const int tx = x0 + TABS_X + i * TAB_W + 1, ty = y0 + TABS_Y;
+            if (!ui::sobre(e, tx, ty, TAB_W, TAB_H)) continue;
+            if (e.clic && !a.arrastrando && a.inventory_tab != i) {
+                a.inventory_tab = static_cast<u8>(i);
+                a.inventario_desplazamiento = 0;
+            }
+            if (!a.arrastrando) {
+                const int w = ancho_texto(TAB_NAMES[i], std::strlen(TAB_NAMES[i]));
+                g.gpu().rectangulo(e.mx + 8, e.my + 14, w + 8, ALTO_GLIFO + 4, clave_orden(CAPA_UI_TEXTO, 29), rgba(0, 0, 0, 220));
+                g.texto(TAB_NAMES[i], e.mx + 12, e.my + 16, clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+            }
+        }
+    } else if (ui::ventana(g, e, a.cfg.ui_simple, x0, y0, "Inventory", opacidad_ventanas(a))) {
+        a.ventana_inventario = false;
+    }
 
-    // Barra y rueda si hay más ítems que celdas.
-    const u32 filas_total = static_cast<u32>((t.tamano() + COLUMNAS - 1) / COLUMNAS);
-    barra_scroll_ventana(a, a.scroll.inventario, x0 + GRILLA_X + COLUMNAS * CELDA + 2, y0 + GRILLA_Y, FILAS * CELDA, filas_total,
-                         FILAS, a.inventario_desplazamiento, clave_orden(CAPA_UI, 14), sobre_inventario(a));
-    const u64 kf = clave_orden(CAPA_UI, 12), ki = clave_orden(CAPA_UI, 13), kt = clave_orden(CAPA_UI_TEXTO, 12);
-    // Original UI: worn items first. Simple UI keeps the server order.
+    // What the grid shows: in the original UI, the selected tab with worn items first; in the simple
+    // UI, everything in the server's order.
     Slot orden[MAX_ORDEN];
     size_t n_orden = 0;
-    if (!a.cfg.ui_simple) n_orden = orden_inventario(inv, orden, MAX_ORDEN);
-    const int bajo = celda_bajo_puntero(a, x0, y0);
-    const Slot slot_bajo = bajo >= 0 ? slot_en(orden, n_orden, static_cast<size_t>(bajo)) : SIN_SLOT;
-    const size_t primero = static_cast<size_t>(a.inventario_desplazamiento) * COLUMNAS;
-    for (int c = 0; c < COLUMNAS * FILAS; ++c) {
-        int x = x0 + GRILLA_X + (c % COLUMNAS) * CELDA, y = y0 + GRILLA_Y + (c / COLUMNAS) * CELDA;
+    if (original) {
+        Slot todos[MAX_ORDEN];
+        const size_t n = orden_inventario(inv, todos, MAX_ORDEN);
+        for (size_t i = 0; i < n; ++i)
+            if (tab_of(t.col<I_USO>()[todos[i]]) == a.inventory_tab) orden[n_orden++] = todos[i];
+    } else {
+        for (Slot i = 0; i < t.tamano() && n_orden < MAX_ORDEN; ++i) orden[n_orden++] = i;
+    }
+
+    // Barra y rueda si hay más ítems que celdas.
+    const u32 filas_total = static_cast<u32>((n_orden + gr.cols - 1) / gr.cols);
+    if (original)
+        original_scrollbar(a, a.scroll.inventario, x0 + gr.scroll_x, y0 + gr.y, gr.rows * gr.cell, filas_total, gr.rows,
+                           a.inventario_desplazamiento, sobre_inventario(a));
+    else
+        barra_scroll_ventana(a, a.scroll.inventario, x0 + gr.scroll_x, y0 + gr.y, gr.rows * gr.cell, filas_total, gr.rows,
+                             a.inventario_desplazamiento, clave_orden(CAPA_UI, 14), sobre_inventario(a));
+    const u64 kf = clave_orden(CAPA_UI, 12), ki = clave_orden(CAPA_UI, 13), kt = clave_orden(CAPA_UI_TEXTO, 12);
+    const int bajo = celda_bajo_puntero(a, gr, x0, y0, n_orden);
+    const Slot slot_bajo = bajo >= 0 ? orden[bajo] : SIN_SLOT;
+    const size_t primero = static_cast<size_t>(a.inventario_desplazamiento) * gr.cols;
+    const int CELDA = gr.cell;
+    for (int c = 0; c < gr.cols * gr.rows; ++c) {
+        int x = x0 + gr.x + (c % gr.cols) * CELDA, y = y0 + gr.y + (c / gr.cols) * CELDA;
         size_t i = primero + static_cast<size_t>(c);
-        bool hay = i < t.tamano();
-        const Slot s = hay ? slot_en(orden, n_orden, i) : SIN_SLOT;
+        bool hay = i < n_orden;
+        const Slot s = hay ? orden[i] : SIN_SLOT;
         bool equipado = hay && item_equipado(nombre_item(inv, s));
-        u32 fondo = static_cast<int>(i) == bajo ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230);
-        g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
+        if (original) {
+            ++x;  // inside the image's grid lines
+            ++y;
+            if (static_cast<int>(i) == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(90, 80, 50, 120));
+            else if (equipado) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(74, 70, 26, 150));
+        } else {
+            u32 fondo = static_cast<int>(i) == bajo ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230);
+            g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
+        }
         if (!hay) continue;
         if (t.ids()[s] != a.arrastrando)
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
@@ -166,12 +229,18 @@ void dibujar_inventario(App& a) {
                            rgba(255, 255, 254));
         }
     }
-    char pie[48];
-    std::snprintf(pie, sizeof pie, "Weight %d%%   %zu items", a.mundo.jugador.peso * 100 / 240, t.tamano());
-    if (a.usar_sobre) g.texto("Click the target item (Esc cancels)", x0 + GRILLA_X, y0 + GRILLA_Y + FILAS * CELDA + 6, kt, rgba(255, 230, 120));
-    else g.texto(pie, x0 + GRILLA_X, y0 + GRILLA_Y + FILAS * CELDA + 6, kt, rgba(214, 190, 140));
-    const bool sobre_basura = ui::sobre(e, x0 + BASURA_X, y0 + BASURA_Y, BASURA_W, BASURA_H);
-    dibujar_basurero(g, x0 + BASURA_X, y0 + BASURA_Y, sobre_basura && a.arrastrando);
+    if (original) {
+        // No footer in the original frame: the target prompt goes above the window.
+        if (a.usar_sobre) g.texto_sombra("Click the target item (Esc cancels)", x0 + 8, y0 - ALTO_GLIFO - 2, kt, rgba(255, 230, 120));
+    } else {
+        char pie[48];
+        std::snprintf(pie, sizeof pie, "Weight %d%%   %zu items", a.mundo.jugador.peso * 100 / 240, t.tamano());
+        const int pie_y = y0 + gr.y + gr.rows * CELDA + 6;
+        if (a.usar_sobre) g.texto("Click the target item (Esc cancels)", x0 + gr.x, pie_y, kt, rgba(255, 230, 120));
+        else g.texto(pie, x0 + gr.x, pie_y, kt, rgba(214, 190, 140));
+    }
+    const bool sobre_basura = ui::sobre(e, x0 + gr.trash_x, y0 + gr.trash_y, BASURA_W, BASURA_H);
+    dibujar_basurero(g, x0 + gr.trash_x - (original ? 3 : 0), y0 + gr.trash_y, sobre_basura && a.arrastrando);
     if (sobre_basura && !a.arrastrando) {
         constexpr std::string_view AYUDA = "Drag an item here to delete it";
         const int w = ancho_texto(AYUDA.data(), AYUDA.size());

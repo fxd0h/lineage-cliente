@@ -51,17 +51,22 @@ void guardar_posiciones(App& a) {
 // cada una a la izquierda de las anteriores que estén abiertas y en su lugar (una movida deja libre
 // el suyo).
 Rect por_defecto(const App& a, IdVentana v) {
-    const int w = ui::VENTANA_ANCHO, h = ui::VENTANA_ALTO, y = ui::VENTANA_Y;
+    const int y = ui::VENTANA_Y;
+    // The original client's framed windows have the size of their frame image.
+    auto ancho = [&](IdVentana o) { return uses_original_frame(a, o) ? ORIGINAL_WINDOW_W : ui::VENTANA_ANCHO; };
+    const int w = ancho(v), h = uses_original_frame(a, v) ? ORIGINAL_WINDOW_H : ui::VENTANA_ALTO;
     auto ocupa = [&](bool abierta_, IdVentana o) {
         const PosVentana& p = a.pos_ventanas[indice(o)];
-        return abierta_ && !p.movida && !p.colocada ? w + SEPARACION : 0;
+        return abierta_ && !p.movida && !p.colocada ? ancho(o) + SEPARACION : 0;
     };
-    const int x_inv = a.gpu.ancho() - w - MARGEN;
-    const int x_estado = x_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
+    // Right edges of the stack against the screen's right border.
+    const int der_inv = a.gpu.ancho() - MARGEN;
+    const int der_estado = der_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
+    const int der_hechizos = der_estado - ocupa(a.ventana_estado, IdVentana::ESTADO);
     switch (v) {
-    case IdVentana::INVENTARIO: return {x_inv, y, w, h};
-    case IdVentana::ESTADO: return {x_estado, y, w, h};
-    case IdVentana::HECHIZOS: return {x_estado - ocupa(a.ventana_estado, IdVentana::ESTADO), y, w, h};
+    case IdVentana::INVENTARIO: return {der_inv - w, y, w, h};
+    case IdVentana::ESTADO: return {der_estado - w, y, w, h};
+    case IdVentana::HECHIZOS: return {der_hechizos - w, y, w, h};
     case IdVentana::NPC: return {MARGEN, y, w, h};
     case IdVentana::OPCIONES: return {(a.gpu.ancho() - ANCHO_OPCIONES) / 2, y + 28, ANCHO_OPCIONES, ALTO_OPCIONES};
     case IdVentana::SALIDA: return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};

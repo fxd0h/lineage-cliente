@@ -104,8 +104,11 @@ void dibujar_equipo(App& a, int x0, int y0) {
         g.texto("Armor Class", static_cast<float>(x + 4), static_cast<float>(y + 6), kt, rotulo);
         g.texto(txt, static_cast<float>(x + ROTULO + 30), static_cast<float>(y + 6), kt, ui::COLOR_TEXTO);
     } else {
-        const int x = x0 + 34, y = y0 + 24;  // la imagen, centrada en la ventana
-        g.gpu().dibujar(fondo, x, y, kf);
+        // In the original frame the image is its background (drawn by the frame, 1440 at (6,9));
+        // in upstream's frame, 981 centered in the window.
+        const bool framed = uses_original_frame(a, IdVentana::ESTADO);
+        const int x = x0 + (framed ? 6 : 34), y = y0 + (framed ? 9 : 24);
+        if (!framed) g.gpu().dibujar(fondo, x, y, kf);
         for (size_t i = 0; i < N; ++i)
             if (en[i] != SIN_SLOT) poner(en[i], x + RECUADROS[i].x, y + RECUADROS[i].y, RECUADROS[i].w, RECUADROS[i].h);
         for (int i = 0; i < nanillos; ++i)
