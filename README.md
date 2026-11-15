@@ -222,7 +222,8 @@ title is shown as text.
 ## Controls
 
 **F1** shows all the keys in the game. Window hotkeys follow the original client: Ctrl+I inventory, Ctrl+A status,
-Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (simple UI: also Alt+I/C/S).
+Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (simple UI: also Alt+I/C/S), Ctrl+P screenshot,
+Ctrl+1..8 = F5..F12 (shortcut boxes), Alt+F10 = F10.
 
 ### Interface and view
 

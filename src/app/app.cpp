@@ -123,7 +123,7 @@ void leer_entrada(App& a) {
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
             // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26). Upstream's Alt+I/C/S and A only
             // apply to the simple UI; the original UI keeps only the original keys.
-            case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: {
+            case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: case SDLK_P: {
                 const SDL_Keymod m = ev.key.mod;
                 if ((m & SDL_KMOD_ALT) && !(m & SDL_KMOD_CTRL)) {
                     if (!a.cfg.ui_simple) break;
@@ -152,7 +152,10 @@ void leer_entrada(App& a) {
                 break;
             case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8:
             case SDLK_9:
-                if ((ev.key.mod & SDL_KMOD_ALT) && !(ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)))
+                if ((ev.key.mod & SDL_KMOD_CTRL) && !(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_SHIFT)) && ev.key.key <= SDLK_8) {
+                    // Original client: Ctrl+1..8 use the same eight boxes as F5..F12.
+                    if (!ev.key.repeat) e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_1);
+                } else if ((ev.key.mod & SDL_KMOD_ALT) && !(ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)))
                     e.alt_numero = 1 + static_cast<int>(ev.key.key - SDLK_1);  // SDLK_1..SDLK_9 son consecutivos
                 else if (!(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_SHIFT | SDL_KMOD_CTRL | SDL_KMOD_GUI)))
                     e.numero = 1 + static_cast<int>(ev.key.key - SDLK_1);
@@ -204,6 +207,7 @@ void leer_entrada(App& a) {
                 e.tecla_f = 5;
                 break;
             case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
+                // Alt+F10 is WM_SYSKEYDOWN in the original and does what F10 does (box 6).
                 e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_F5);  // los códigos F5..F11 son consecutivos
                 break;
             default: break;

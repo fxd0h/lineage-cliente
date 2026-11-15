@@ -1465,6 +1465,10 @@ void frame_juego(App& a) {
     case 'C': a.ventana_social = !a.ventana_social; break;
     case 'V': a.ventana_opciones = !a.ventana_opciones; break;
     case 'H': a.ayuda_teclas = !a.ayuda_teclas; break;
+    case 'P':  // original: screenshot (BMP) to the Capture folder
+        a.gpu.pedir_captura("captura.bmp");
+        a.chat.agregar("Screenshot saved: captura.bmp", rgba(255, 200, 120), CHAT_SISTEMA);
+        break;
     default: break;
     }
 
