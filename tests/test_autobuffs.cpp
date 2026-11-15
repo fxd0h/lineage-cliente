@@ -116,7 +116,10 @@ TEST_CASE("pociones en un casillero: se reconocen por $N o ícono y su efecto po
     inv.items.col<I_CANTIDAD>()[azul] = 0;
     CHECK(buscar_pocion_auto(inv, POCION_AUTO) == 0);
     CHECK(pocion_auto(43) == nullptr);
-    CHECK(pocion_auto(POCION_AUTO + 1)->icono == ICONO_SABIDURIA);
+    CHECK(pocion_auto(POCION_AUTO + 1)->tipo == ICONO_SABIDURIA);
+    // La mayor de haste es "$1652 $234": no se confunde con la común.
+    CHECK(pocion_auto_de_item(inv, agregar(4, "$234 (3)", 3, 77)) == POCION_AUTO + 2);
+    CHECK(pocion_auto_de_item(inv, agregar(5, "$1652 $234 (3)", 3, 621)) == POCION_AUTO + 3);
 
     // Sin MP y sin efecto se toma; con el ícono activo, no.
     EstadoJugador j = jugador(0);
@@ -126,6 +129,13 @@ TEST_CASE("pociones en un casillero: se reconocen por $N o ícono y su efecto po
     CHECK(elegir_autobuff(j, c, 1, 100000) == -1);
     CHECK(resta_efecto_de_hechizo(j, POCION_AUTO, 100000) == 300000);
     CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 1, 100000) == 0);
+    // Haste: el del hechizo o la poción vale para las dos pociones; la waffle no es la de brave.
+    poner(j, EA_HASTE, 1, 200000);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 2, 100000) == 100000);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 3, 100000) == 100000);
+    poner(j, EA_BRAVE, 3, 200000);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 4, 100000) == 0);
+    CHECK(resta_efecto_de_hechizo(j, POCION_AUTO + 5, 100000) == 100000);
 }
 
 TEST_CASE("S_SkillIconWisdomPotion: el tiempo viene dividido por 4") {

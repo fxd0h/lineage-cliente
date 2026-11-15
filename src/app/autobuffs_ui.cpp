@@ -5,7 +5,8 @@
 // C_UseSkill que el jugador a mano, con la misma espera entre hechizos, y no corta lo que el
 // personaje está haciendo (espera a que se detenga). No se pausa en pueblos. Se guarda por personaje
 // en settings.ini: "autobuffs=Nombre:1|43,42,0,0,0,0" (encendido y los hechizos).
-// También la poción azul (maná) y la de sabiduría, arrastradas desde el inventario o la barra
+// También las pociones azul (maná), de sabiduría, de haste (común y mayor) y de brave, y la waffle
+// de elfo, arrastradas desde el inventario o la barra
 // (POCIONES_AUTO, con id desde POCION_AUTO): se toman con el C_UseItem de un doble clic, y como beber
 // no corta nada, también caminando o peleando.
 #include <charconv>
@@ -124,7 +125,7 @@ void poner_autobuff_item(App& a, int casillero, ObjId item) {
     const Slot s = a.mundo.inventario.items.buscar(item);
     const u32 id = s != SIN_SLOT ? pocion_auto_de_item(a.mundo.inventario, s) : 0;
     if (id) poner_autobuff(a, casillero, id);
-    else a.chat.agregar("Auto-buff: of the items, only Blue Potion and Wisdom Potion.", rgba(255, 200, 120), CHAT_SISTEMA);
+    else a.chat.agregar("Auto-buff: of the items, only blue, wisdom, haste and brave potions and elven wafers.", rgba(255, 200, 120), CHAT_SISTEMA);
 }
 
 void procesar_autobuffs(App& a) {
@@ -156,8 +157,11 @@ void procesar_autobuffs(App& a) {
     const int i = elegir_autobuff(a.mundo.jugador, libres, CASILLEROS_AUTO, ahora);
     if (i < 0) return;
     const u32 id = ab.c[i].hechizo;
-    if (pocion_auto(id)) {
-        if (const ObjId item = buscar_pocion_auto(a.mundo.inventario, id)) {
+    if (const PocionAuto* p = pocion_auto(id)) {
+        // Rápido sin efecto con tiempo (un ítem de haste puesto: S_SkillHaste con -1): no hace falta.
+        if (p->clase == EA_HASTE && a.mundo.jugador.haste == 1 && !resta_efecto_de_hechizo(a.mundo.jugador, id, ahora)) {
+            ab.c[i].reintentar_ms = ahora + 1000;
+        } else if (const ObjId item = buscar_pocion_auto(a.mundo.inventario, id)) {
             usar_item(a, item);
             ab.c[i].lanzado_ms = ahora;
         } else {

@@ -12,10 +12,7 @@ u32 hechizo_de_efecto(const EfectoActivo& ef) {
     case EA_ESCUDO:
         return ef.tipo == 5 ? 3 : ef.tipo == 3 ? 99 : ef.tipo == 7 ? 159 : ef.tipo == 10 ? 168 : ef.tipo == 6 ? 151 : 0;
     case EA_AURA: return ef.tipo + 1u;  // el índice del hechizo
-    case EA_ICONO:
-        for (u32 i = 0; i < std::size(POCIONES_AUTO); ++i)
-            if (POCIONES_AUTO[i].icono == ef.tipo) return POCION_AUTO + i;
-        return ef.tipo == 40 ? 68 : 0;  // Immune to Harm
+    case EA_ICONO: return ef.tipo == 40 ? 68 : 0;  // Immune to Harm
     case EA_FUERZA: return ef.tipo == 5 ? 42 : ef.tipo == 2 ? 109 : 0;  // Enchant Mighty; Dress Mighty
     case EA_DESTREZA: return ef.tipo == 5 ? 26 : ef.tipo == 2 ? 110 : 0;  // Enchant Dexterity; Dress Dexterity
     case EA_HECHIZO: return ef.tipo;
@@ -44,8 +41,12 @@ ObjId buscar_pocion_auto(const Inventario& inv, u32 id) {
 
 u64 resta_efecto_de_hechizo(const EstadoJugador& j, u32 hechizo, u64 ahora) {
     u64 resta = 0;
-    for (u32 i = 0; i < j.n_efectos; ++i)
-        if (hechizo_de_efecto(j.efectos[i]) == hechizo && j.efectos[i].fin > ahora) resta = std::max(resta, j.efectos[i].fin - ahora);
+    const PocionAuto* p = pocion_auto(hechizo);
+    for (u32 i = 0; i < j.n_efectos; ++i) {
+        const EfectoActivo& ef = j.efectos[i];
+        const bool es = p ? ef.clase == p->clase && ef.tipo == p->tipo : hechizo_de_efecto(ef) == hechizo;
+        if (es && ef.fin > ahora) resta = std::max(resta, ef.fin - ahora);
+    }
     return resta;
 }
 

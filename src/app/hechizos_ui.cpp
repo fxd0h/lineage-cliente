@@ -521,8 +521,8 @@ struct EfectoDeItem {
 static EfectoDeItem item_de_efecto(const App& a, const EfectoActivo& ef) {
     if (ef.clase == EA_BRAVE && ef.tipo == 1) return {79, "Brave Potion"};
     if (ef.clase == EA_BRAVE && ef.tipo == 3) return {130, "Elven Waffle"};
-    if (ef.clase == EA_ICONO)
-        if (const PocionAuto* p = pocion_auto(hechizo_de_efecto(ef))) return {p->gfx, p->nombre};
+    if (ef.clase == EA_ICONO && ef.tipo == ICONO_POCION_AZUL) return {75, "Blue Potion"};
+    if (ef.clase == EA_ICONO && ef.tipo == ICONO_SABIDURIA) return {1529, "Wisdom Potion"};
     if (ef.clase == EA_FUERZA && ef.tipo != 5 && ef.tipo != 2) return {a.icono_fuerza, "STR potion"};  // pociones
     if (ef.clase == EA_DESTREZA && ef.tipo != 5 && ef.tipo != 2) return {a.icono_destreza, "DEX potion"};
     if (ef.clase == EA_TERCERA) return {0, "Third Speed"};
