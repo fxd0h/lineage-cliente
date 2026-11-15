@@ -120,7 +120,8 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                         char s = *c.p++;
                         if (s == '!') f.impacto = true;
                         else if (s == '[' || s == '<') f.sonido = static_cast<i16>(c.numero_pegado());
-                        else if (s == ']' || s == '^' || s == '>' || s == '{') c.numero_pegado();
+                        else if (s == ']') f.efecto = static_cast<u16>(c.numero_pegado());
+                        else if (s == '^' || s == '>' || s == '{') c.numero_pegado();
                     }
                     frames_.push_back(f);
                     ++r.cantidad;

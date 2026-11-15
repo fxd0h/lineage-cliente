@@ -25,6 +25,7 @@ struct FrameAccion {
     u8 duracion;   // en ticks
     bool impacto;  // sufijo "!": el golpe alcanza al objetivo en este frame
     i16 sonido;    // -1 si no hay
+    u16 efecto;    // sufijo "]N": al mostrarse este frame nace el gráfico N (polvo, chispas...); 0 = ninguno
 };
 
 struct RangoAccion {

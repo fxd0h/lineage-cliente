@@ -11,6 +11,7 @@
 //   con muestreo "nearest" los píxeles del arte siguen nítidos, y las posiciones fraccionarias
 //   (cámara) se mueven en pasos de 1/escala de píxel lógico, suaves también en Retina.
 #pragma once
+#include "render/vista.h"
 #include <SDL3/SDL.h>
 #include <string>
 #include <string_view>
@@ -83,6 +84,10 @@ public:
     void ajustar_vista(bool ampliable, int zoom, int franja = 0);
     // Mayor escala con la que entra el tamaño mínimo en la ventana actual.
     int escala_maxima(int franja = 0) const;
+    // Fixed view (default): the logical grid is constant (640 x (480 + franja)) and is scaled into the
+    // window with its aspect ratio kept. Otherwise (wide view) the grid grows with the window.
+    void fijar_vista_fija(bool fija) { vista_fija_ = fija; }
+    bool vista_fija() const { return vista_fija_; }
     void cerrar();
 
     // Reserva lugar en el atlas y encola la subida. false si no hay lugar este frame.
@@ -154,6 +159,7 @@ private:
     };
     bool crear_pipeline();
     bool crear_destino();
+    void blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUTexture* dst);
     // Anime4K CNN x2 (S): 6 passes, intermediates created lazily on first use and on grid change.
     bool crear_anime4k();
     SDL_GPUTexture* pase_anime4k(SDL_GPUCommandBuffer* cmd);  // destino_ -> copia_; nullptr if unavailable
@@ -162,7 +168,7 @@ private:
     bool asegurar_luz(int bw, int bh);
     void ordenar();
     // Downloads `tex` (destino_ size) and saves it as BMP; `logica` keeps one pixel per logical pixel.
-    SDL_GPUCommandBuffer* guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, std::string& ruta, bool logica);
+    SDL_GPUCommandBuffer* guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, int w, int h, std::string& ruta, bool logica);
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
@@ -210,6 +216,9 @@ private:
     int origen_x_ = 0, origen_y_ = 0;     // dónde empieza el contenido dentro de la cuadrícula
     int ancho_min_ = 0, alto_min_ = 0;
     int escala_ = 1;
+    bool vista_fija_ = true;
+    RectVista rect_{0, 0, 1, 1};          // fixed view: where the grid lands in the window (pixels)
+    int ventana_pw_ = 1, ventana_ph_ = 1;
     int destino_w_ = 0, destino_h_ = 0;   // tamaño real de destino_
 
     EmpaquetadoAtlas empaquetado_{TAM_PAGINA, PAGINAS_ATLAS};

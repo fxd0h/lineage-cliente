@@ -260,6 +260,11 @@ bool barra_evento(Gpu& gpu, SDL_Window* v, Barra& b, const SDL_Event& ev, bool a
             b.boton = boton;
             return true;
         }
+#if !defined(__APPLE__)
+        // Linux/Windows: moving and resizing are done by the window manager through the hit test
+        // (activar_hit_test); a borderless window can't move itself on Wayland.
+        if (boton == 0) return false;
+#endif
         const int bordes = b.redimensionable ? bordes_bajo(v, ev.button.x, ev.button.y) : 0;
         if (bordes) {
             b.pulsada = true;
@@ -338,6 +343,52 @@ void poner_icono(SDL_Window* ventana, const char* archivo) {
         SDL_SetWindowIcon(ventana, s);
         SDL_DestroySurface(s);
     }
+}
+
+
+#if !defined(__APPLE__)
+namespace {
+struct HitTestData {
+    Gpu* gpu;
+    Barra* barra;
+};
+HitTestData hit_test_data;
+
+// Window-manager hit test: edges resize, the title bar (except its buttons) moves the window, like a
+// normal decorated window. Not used on macOS (see the note on barra_evento in ui.h).
+SDL_HitTestResult hit_test(SDL_Window* v, const SDL_Point* p, void* data) {
+    const auto* d = static_cast<const HitTestData*>(data);
+    if (SDL_GetWindowFlags(v) & SDL_WINDOW_FULLSCREEN) return SDL_HITTEST_NORMAL;
+    const float x = static_cast<float>(p->x), y = static_cast<float>(p->y);
+    int gx = 0, gy = 0;
+    d->gpu->a_grilla(x, y, gx, gy);
+    const int boton = boton_bajo(*d->gpu, gx, gy);
+    if (boton > 0) return SDL_HITTEST_NORMAL;  // minimize / close are handled by barra_evento
+    switch (d->barra->redimensionable ? bordes_bajo(v, x, y) : 0) {
+    case BORDE_IZQ | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPLEFT;
+    case BORDE_DER | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPRIGHT;
+    case BORDE_IZQ | BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+    case BORDE_DER | BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+    case BORDE_ARR: return SDL_HITTEST_RESIZE_TOP;
+    case BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOM;
+    case BORDE_IZQ: return SDL_HITTEST_RESIZE_LEFT;
+    case BORDE_DER: return SDL_HITTEST_RESIZE_RIGHT;
+    default: break;
+    }
+    return boton == 0 ? SDL_HITTEST_DRAGGABLE : SDL_HITTEST_NORMAL;
+}
+}  // namespace
+#endif
+
+void activar_hit_test(SDL_Window* v, Gpu& gpu, Barra& b) {
+    SDL_SetWindowMinimumSize(v, TAM_MIN_W, TAM_MIN_H);
+#if !defined(__APPLE__)
+    hit_test_data = {&gpu, &b};
+    SDL_SetWindowHitTest(v, hit_test, &hit_test_data);
+#else
+    (void)gpu;
+    (void)b;
+#endif
 }
 
 }  // namespace lin::ui

@@ -553,7 +553,7 @@ i32 hora_de_juego(const App& a);
 // volumen según la distancia al personaje). `ultimo`: O_SONIDO o EfectoVisual::sonido.
 // `sonar_primero`: el primer frame también suena (los efectos de hechizos; un personaje recién
 // aparecido no, porque puede estar a mitad de una acción).
-void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero);
+void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero, u8 dir = 0);
 // Cursores (cursores.cpp).
 void crear_cursores(App& a);
 void aplicar_cursor(App& a);  // al final del frame, si cambió

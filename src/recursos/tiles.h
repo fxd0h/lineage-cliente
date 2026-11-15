@@ -24,6 +24,8 @@ struct JuegoTiles {
     // Decodifica la mitad de un tile; si es un tile con transparencia la mitad no importa.
     bool decodificar(u32 i, bool derecha, ImagenRGBA& salida) const;
     bool translucido(u32 i) const;
+    // Placeholder tile for "no ground" (type bit 0x08; only 47.til #199/#202): never drawn, the void is black.
+    bool vacio(u32 i) const;
 };
 
 // Íconos de inventario N.tbt (en los SpriteNN.pak; N = gfx de inventario del ítem): el mismo
@@ -33,5 +35,9 @@ bool decodificar_tbt(Bytes tbt, ImagenRGBA& salida);
 constexpr int ANCHO_MEDIO_TILE = 24;
 constexpr int ALTO_TILE = 24;
 constexpr u8 ALFA_TRANSLUCIDO = 128;
+// Type byte bits that make a transparent-format tile translucent: 0x04 (shadows) and 0x20 (blood,
+// bones and dust stains on dungeon floors: pale dithered pixels meant to be blended, not opaque).
+constexpr u8 TILE_TRANSLUCIDO = 0x04 | 0x20;
+constexpr u8 TILE_VACIO = 0x08;
 
 }  // namespace lin

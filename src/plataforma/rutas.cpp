@@ -56,6 +56,7 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "usuario") ant.usuario = valor;
     else if (clave == "zoom") c.zoom = std::atoi(std::string(valor).c_str());
     else if (clave == "escalado") c.escalado = valor;
+    else if (clave == "vista") c.vista = valor == "amplia" ? "amplia" : "fija";
     else if (clave == "camara_a_saltos") c.camara_a_saltos = valor == "1";
     else if (clave == "ui_simple") c.ui_simple = valor != "0";
     else if (clave == "sombra_personajes") c.sombra_personajes = valor != "0";
@@ -226,6 +227,7 @@ std::string escribir_config(const Config& c) {
     linea("servidor_elegido", servidor_elegido(c).nombre);
     linea("zoom", std::to_string(c.zoom));
     linea("escalado", c.escalado);
+    linea("vista", c.vista);
     linea("camara_a_saltos", c.camara_a_saltos ? "1" : "0");
     linea("ui_simple", c.ui_simple ? "1" : "0");
     linea("sombra_personajes", c.sombra_personajes ? "1" : "0");

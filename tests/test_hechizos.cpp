@@ -327,3 +327,17 @@ TEST_CASE("Flechas: alcance por arma y la flecha vuela hasta el objetivo") {
     CHECK(m.efectos[0].vuelo_ms == 4 * MS_VUELO_CELDA);
     CHECK(m.efectos[0].dir == 1);
 }
+
+TEST_CASE("sprite table: the ']N' frame suffix is parsed as a spawned effect, not swallowed") {
+    TablaSprites sprites;
+    // Action 0: three frames, the second one raises effect 3586 (the mole digging), the third a sound.
+    std::string tabla = std::string("x") + "1 0 1 3 56 12 2 56 12 2]3586 56 12 2[1209" + '\0';
+    REQUIRE(sprites.cargar(std::vector<u8>(tabla.begin(), tabla.end())));
+    const RangoAccion* r = sprites.accion(0, 0);
+    REQUIRE(r != nullptr);
+    REQUIRE(r->cantidad == 3);
+    CHECK(sprites.frame(r->primer).efecto == 0);
+    CHECK(sprites.frame(r->primer + 1).efecto == 3586);
+    CHECK(sprites.frame(r->primer + 2).efecto == 0);
+    CHECK(sprites.frame(r->primer + 2).sonido == 1209);
+}

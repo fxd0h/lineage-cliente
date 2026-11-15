@@ -741,9 +741,24 @@ int Gpu::escala_maxima(int franja) const {
 }
 
 void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
-    const int maxima = escala_maxima(franja);
     int pw = 0, ph = 0;
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
+    if (vista_fija_) {
+        // Constant logical view, like the original client; the window only changes the final scale.
+        const bool entero = escalado_ == Escalado::ENTERO;
+        ancho_ = grid_w_ = ancho_min_;
+        alto_ = alto_min_;
+        grid_h_ = alto_min_ + franja;
+        origen_x_ = 0;
+        origen_y_ = franja;
+        ventana_pw_ = std::max(1, pw);
+        ventana_ph_ = std::max(1, ph);
+        const float fit = factor_ajuste(ventana_pw_, ventana_ph_, grid_w_, grid_h_);
+        escala_ = escala_interna(fit, entero);
+        rect_ = rect_vista(ventana_pw_, ventana_ph_, grid_w_, grid_h_, entero);
+        return;
+    }
+    const int maxima = escala_maxima(franja);
     escala_ = ampliable && zoom > 0 ? std::min(zoom, maxima) : maxima;
     grid_w_ = std::max(ancho_min_, pw / escala_);
     grid_h_ = std::max(alto_min_, ph / escala_);
@@ -961,7 +976,7 @@ void Gpu::presentar() {
         dibujar(pase, corte, n - corte);
         SDL_EndGPURenderPass(pase);
     }
-    if (!ruta_captura_.empty()) cmd = guardar_captura(cmd, destino_, ruta_captura_, true);
+    if (!ruta_captura_.empty()) cmd = guardar_captura(cmd, destino_, destino_w_, destino_h_, ruta_captura_, true);
     if (!cmd) return terminar_frame(n);  // el comando que sigue a la captura no se pudo obtener
 
     // 2b. Scaling filter: destino_ (logical grid, nearest-sampled at texel centres) -> copia_ (same
@@ -986,33 +1001,79 @@ void Gpu::presentar() {
             final_tex = copia_;
         }
     }
-    if (!ruta_final_.empty()) cmd = guardar_captura(cmd, final_tex, ruta_final_, false);
+    if (!ruta_final_.empty()) {
+        SDL_GPUTexture* ventana_tex = nullptr;
+        if (vista_fija_) {
+            // Window-sized offscreen image with the same letterboxed blit as the swapchain gets.
+            SDL_GPUTextureCreateInfo td{};
+            td.type = SDL_GPU_TEXTURETYPE_2D;
+            td.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+            td.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+            td.width = static_cast<Uint32>(ventana_pw_);
+            td.height = static_cast<Uint32>(ventana_ph_);
+            td.layer_count_or_depth = 1;
+            td.num_levels = 1;
+            ventana_tex = SDL_CreateGPUTexture(dev_, &td);
+            if (ventana_tex) blit_vista(cmd, final_tex, ventana_tex);
+        }
+        if (ventana_tex) {
+            cmd = guardar_captura(cmd, ventana_tex, ventana_pw_, ventana_ph_, ruta_final_, false);
+            SDL_ReleaseGPUTexture(dev_, ventana_tex);
+        } else {
+            cmd = guardar_captura(cmd, final_tex, destino_w_, destino_h_, ruta_final_, false);
+        }
+    }
     if (!cmd) return terminar_frame(n);
 
     // 3. Copia 1:1 a la ventana, centrada (la textura ya tiene el tamaño escalado).
     SDL_GPUTexture* swap = nullptr;
     Uint32 sw = 0, sh = 0;
     if (SDL_WaitAndAcquireGPUSwapchainTexture(cmd, ventana_, &swap, &sw, &sh) && swap) {
-        Uint32 dw = static_cast<Uint32>(grid_w_ * escala_), dh = static_cast<Uint32>(grid_h_ * escala_);
-        SDL_GPUBlitInfo b{};
-        b.source.texture = final_tex;
-        b.source.w = dw;
-        b.source.h = dh;
-        b.destination.texture = swap;
-        b.destination.x = sw > dw ? (sw - dw) / 2 : 0;
-        b.destination.y = sh > dh ? (sh - dh) / 2 : 0;
-        b.destination.w = std::min(dw, sw);
-        b.destination.h = std::min(dh, sh);
-        b.source.w = b.destination.w;
-        b.source.h = b.destination.h;
-        b.load_op = SDL_GPU_LOADOP_CLEAR;
-        b.clear_color = {0, 0, 0, 1};
-        b.filter = SDL_GPU_FILTER_NEAREST;
-        SDL_BlitGPUTexture(cmd, &b);
+        if (vista_fija_) {
+            // Use the real swapchain size so the mouse mapping always matches what is shown.
+            ventana_pw_ = static_cast<int>(sw);
+            ventana_ph_ = static_cast<int>(sh);
+            rect_ = rect_vista(ventana_pw_, ventana_ph_, grid_w_, grid_h_, escalado_ == Escalado::ENTERO);
+            blit_vista(cmd, final_tex, swap);
+        } else {
+            Uint32 dw = static_cast<Uint32>(destino_w_), dh = static_cast<Uint32>(destino_h_);
+            SDL_GPUBlitInfo b{};
+            b.source.texture = final_tex;
+            b.destination.texture = swap;
+            b.destination.x = sw > dw ? (sw - dw) / 2 : 0;
+            b.destination.y = sh > dh ? (sh - dh) / 2 : 0;
+            b.destination.w = std::min(dw, sw);
+            b.destination.h = std::min(dh, sh);
+            b.source.w = b.destination.w;
+            b.source.h = b.destination.h;
+            b.load_op = SDL_GPU_LOADOP_CLEAR;
+            b.clear_color = {0, 0, 0, 1};
+            b.filter = SDL_GPU_FILTER_NEAREST;
+            SDL_BlitGPUTexture(cmd, &b);
+        }
     }
     SDL_SubmitGPUCommandBuffer(cmd);
     terminar_frame(n);
     pace_frame();
+}
+
+// Fixed view: final image -> `dst` (swapchain or offscreen), letterboxed. Integer fits are 1:1 nearest;
+// anything else is resampled with a linear filter from the (at most 2x larger) internal image.
+void Gpu::blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUTexture* dst) {
+    SDL_GPUBlitInfo b{};
+    b.source.texture = src;
+    b.source.w = static_cast<Uint32>(destino_w_);
+    b.source.h = static_cast<Uint32>(destino_h_);
+    b.destination.texture = dst;
+    b.destination.x = static_cast<Uint32>(rect_.x);
+    b.destination.y = static_cast<Uint32>(rect_.y);
+    b.destination.w = static_cast<Uint32>(rect_.w);
+    b.destination.h = static_cast<Uint32>(rect_.h);
+    b.load_op = SDL_GPU_LOADOP_CLEAR;
+    b.clear_color = {0, 0, 0, 1};
+    const bool uno_a_uno = rect_.w == destino_w_ && rect_.h == destino_h_;
+    b.filter = uno_a_uno ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
+    SDL_BlitGPUTexture(cmd, &b);
 }
 
 // MAILBOX does not wait for the display, so cap the loop at ~60 fps (VSYNC already paces it).
@@ -1024,10 +1085,9 @@ void Gpu::pace_frame() {
     next_frame_ns_ = std::max(next_frame_ns_ + FRAME_NS, SDL_GetTicksNS());
 }
 
-SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, std::string& ruta, bool logica) {
+SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, int w, int h, std::string& ruta, bool logica) {
     SDL_GPUTransferBufferCreateInfo tb{};
     tb.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
-    const int w = grid_w_ * escala_, h = grid_h_ * escala_;
     tb.size = static_cast<Uint32>(w * h * 4);
     SDL_GPUTransferBuffer* bajada = SDL_CreateGPUTransferBuffer(dev_, &tb);
     if (!bajada) {
@@ -1083,7 +1143,11 @@ void Gpu::a_grilla(float wx, float wy, int& gx, int& gy) const {
     int pw = 0, ph = 0, ww = 0, wh = 0;
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
     SDL_GetWindowSize(ventana_, &ww, &wh);
-    float densidad = ww > 0 ? static_cast<float>(pw) / ww : 1.0f;
+    const float densidad = ww > 0 ? static_cast<float>(pw) / ww : 1.0f;
+    if (vista_fija_) {
+        pixel_a_grilla(wx * densidad, wy * densidad, rect_, grid_w_, grid_h_, gx, gy);
+        return;
+    }
     float x = wx * densidad - (pw - grid_w_ * escala_) / 2.0f;
     float y = wy * densidad - (ph - grid_h_ * escala_) / 2.0f;
     gx = static_cast<int>(x / escala_);

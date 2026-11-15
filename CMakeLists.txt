@@ -182,6 +182,7 @@ tests/test_pe_resources.cpp
         tests/test_fuente.cpp
         tests/test_textos.cpp
         tests/test_ajustes.cpp
+        tests/test_vista.cpp
         tests/test_autobuffs.cpp
         tests/test_autopocion.cpp
         tests/test_ataque.cpp

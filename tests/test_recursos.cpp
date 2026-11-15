@@ -312,3 +312,61 @@ TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)
     CHECK(hay(32678, 33392, 29));
     CHECK(hay(32682, 33387, 4));
 }
+
+TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) son translucidos" * doctest::skip(carpeta_juego().empty())) {
+    // Tower of Insolence 100F, segment (32640, 32896): sets 989/990 hold pale blood/bone stains with the
+    // 0x20 type bit; drawn opaque they showed as large white grainy splotches on the floor.
+    Recursos r;
+    REQUIRE(r.abrir(carpeta_juego()));
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(200, 32694, 32908), d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32694 & ~63, 32908 & ~63, s));
+    JuegoTiles til;
+    REQUIRE(til.abrir(r.tile("990.til")));
+    int manchas = 0;
+    for (const TileObjetoMapa& t : s.tiles_objetos) {
+        if ((t.tile >> 8) != 990) continue;
+        ++manchas;
+        CHECK(til.translucido(t.tile & 0xFF));
+        ImagenRGBA img;
+        REQUIRE(til.decodificar(t.tile & 0xFF, false, img));
+        for (u32 p : img.px)
+            if (p >> 24) CHECK((p >> 24) == ALFA_TRANSLUCIDO);
+    }
+    CHECK(manchas > 100);
+}
+
+TEST_CASE("Map 200: void cells (47.til #199/#202, type bit 3) are not drawn" * doctest::skip(carpeta_juego().empty())) {
+    // Tower of Insolence 100F: outside the playable room the ground is filled with 47.til tiles 199
+    // (left half) and 202 (right half), the only two tiles in all of Tile.pak whose type byte has
+    // bit 0x08. They hold the "00" placeholder art; the original leaves them black.
+    Recursos r;
+    REQUIRE(r.abrir(carpeta_juego()));
+    JuegoTiles til;
+    REQUIRE(til.abrir(r.tile("47.til")));
+    CHECK(til.vacio(199));
+    CHECK(til.vacio(202));
+    CHECK_FALSE(til.vacio(198));
+    ImagenRGBA img;
+    CHECK_FALSE(til.decodificar(199, false, img));
+    CHECK_FALSE(til.decodificar(202, true, img));
+    JuegoTiles tierra;
+    REQUIRE(tierra.abrir(r.tile("0.til")));
+    CHECK_FALSE(tierra.vacio(0));
+    CHECK_FALSE(tierra.vacio(199));
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(200, 32600, 32995), d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32600 & ~63, 32995 & ~63, s));
+    int vacias = 0;
+    for (int y = 0; y < CELDAS_SEGMENTO; ++y)
+        for (int x = 0; x < CELDAS_SEGMENTO; ++x) {
+            const u32 izq = s.suelo_en(x, y, 0), der = s.suelo_en(x, y, 1);
+            if (izq == 0x2fc7u) {
+                CHECK(der == 0x2fcau);
+                ++vacias;
+            }
+        }
+    CHECK(vacias > 1000);
+}

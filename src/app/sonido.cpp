@@ -87,12 +87,24 @@ void actualizar_sonido(App& a, u64 ahora) {
     a.audio.actualizar(ahora);
 }
 
-void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero) {
+void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero, u8 dir) {
     const u32 indice = static_cast<u32>(&f - &a.sprites.frame(0)) + 1;
     if (indice == ultimo) return;
     const bool primero = ultimo == 0 && !sonar_primero;
     ultimo = indice;
-    if (primero || f.sonido < 0) return;
+    if (primero) return;
+    // Sufijo "]N" (el topo levanta tierra al avanzar): el gráfico N nace en la celda del objeto. Los
+    // efectos mismos (sonar_primero) no encadenan otros.
+    if (f.efecto && !sonar_primero) {
+        EfectoVisual ef;
+        ef.gfx = f.efecto;
+        ef.dir = dir;
+        ef.x0 = ef.x1 = x;
+        ef.y0 = ef.y1 = y;
+        ef.inicio = ahora;
+        agregar_efecto(a.mundo, ef);
+    }
+    if (f.sonido < 0) return;
     double d = 0;
     const TablaObjetos& o = a.mundo.objetos;
     if (Slot yo = o.buscar(a.mundo.jugador.id); yo != SIN_SLOT)

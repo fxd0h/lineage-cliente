@@ -369,10 +369,12 @@ void dibujar_opciones(App& a) {
     if (fila("Underwater wave", a.cfg.efecto_agua_ola ? "On" : "Off")) a.cfg.efecto_agua_ola = !a.cfg.efecto_agua_ola, cambio = true;
     if (fila("Elf vision", a.cfg.efecto_infravision ? "On" : "Off")) a.cfg.efecto_infravision = !a.cfg.efecto_infravision, cambio = true;
     if (fila("Full screen (Alt+Enter)", a.cfg.pantalla_completa ? "On" : "Off")) alternar_pantalla_completa(a), cambio = true;
-    std::snprintf(t, sizeof t, a.cfg.zoom ? "x%d" : "Auto", a.cfg.zoom);
-    if (fila("Zoom (Ctrl +/-)", t)) {  // Auto -> x1 -> x2 ... -> máxima -> Auto
-        a.cfg.zoom = a.cfg.zoom >= a.gpu.escala_maxima() ? 0 : a.cfg.zoom + 1;
-        cambio = true;
+    if (!a.gpu.vista_fija()) {
+        std::snprintf(t, sizeof t, a.cfg.zoom ? "x%d" : "Auto", a.cfg.zoom);
+        if (fila("Zoom (Ctrl +/-)", t)) {  // Auto -> x1 -> x2 ... -> máxima -> Auto
+            a.cfg.zoom = a.cfg.zoom >= a.gpu.escala_maxima() ? 0 : a.cfg.zoom + 1;
+            cambio = true;
+        }
     }
     // Volúmenes: 0 -> 20 -> ... -> 100 -> 0 (Off).
     auto volumen = [&](std::string_view nombre, int& v) {

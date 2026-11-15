@@ -415,6 +415,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         float top = sy - 40;
         RegionAtlas rg;
         bool rg_pendiente = false;
+        bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
         // pendiente() compara la dirección: se consulta sobre la referencia, antes de copiarla a rg.
         auto pedir_frame = [&](u16 sub_pedido, u16 frame) {
             const RegionAtlas& r = g.frame_sprite(a.sprites.gfx_archivos(gfx), sub_pedido, frame);
@@ -435,13 +436,19 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             const FrameAccion* f =
                 &a.sprites.frame_en(*r, ahora - acc.inicio, termino, camina ? o.col<O_DURMOV>()[s] : 0, acc.bucle);
             if (termino && acc.puntual) o.col<O_ACCION>()[s] = 0xFF;  // fin de la acción puntual
-            sonido_de_frame(a, o.col<O_SONIDO>()[s], *f, vis_x, vis_y, ahora, false);
+            sonido_de_frame(a, o.col<O_SONIDO>()[s], *f, vis_x, vis_y, ahora, false, o.col<O_DIR>()[s]);
             u16 sub = static_cast<u16>(f->sub + (r->direccional ? o.col<O_DIR>()[s] : 0));
             i16 sombra = a.sprites.sombra(gfx);
             if (sombra >= 0)
                 g.gpu().dibujar_en(g.frame_sprite(static_cast<GfxId>(sombra), sub, f->frame), px, py,
                                    clave_orden(CAPA_MUNDO, prof - 1), rgba(255, 255, 255, 160));
             pedir_frame(sub, f->frame);
+            // Un frame sin tiles (el topo bajo tierra, acción de caminar) no es un sprite que falta.
+            if (!rg.valida() && !rg_pendiente) {
+                char nombre[32];
+                std::snprintf(nombre, sizeof nombre, "%u-%u.spr", static_cast<unsigned>(a.sprites.gfx_archivos(gfx)), static_cast<unsigned>(sub));
+                frame_vacio = !a.rec.sprite(nombre).empty();
+            }
         } else {
             // Sin acciones en la tabla (los ítems del suelo, por ejemplo): el primer frame de N-0.spr.
             pedir_frame(0, 0);
@@ -477,11 +484,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             const float x1 = x0 + 24, y1 = y0 + 36;
             // Mientras se carga (uno o dos frames) no se dibuja nada, como el original: el bloque verde
             // parpadeaba al aparecer cada sprite. Sigue siendo elegible con el clic. Magenta si falta.
-            if (!rg_pendiente)
+            if (!rg_pendiente && !frame_vacio)
                 g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), rgba(255, 0, 255, 170));
             top = y0;
             bajo_puntero = a.entrada.mx >= x0 && a.entrada.mx < x1 && a.entrada.my >= y0 && a.entrada.my < y1;
-            if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : 2)});
+            if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
         }
         // Barra de vida si el servidor la da (S_HpMeter: grupo y mascotas; el % de S_CharPack es
         // 0xFF para los monstruos en L1J-JP) y nombre; el objetivo del ataque, en amarillo.
@@ -1228,7 +1235,7 @@ void dibujar_estado(App& a) {
 // desde el frame siguiente (Gpu::ajustar_vista al comienzo del frame).
 void cambiar_zoom(App& a) {
     int z = a.entrada.zoom;
-    if (z == 0) return;
+    if (z == 0 || a.gpu.vista_fija()) return;  // zoom only applies to the wide view
     int maxima = a.gpu.escala_maxima();
     int actual = a.cfg.zoom > 0 ? std::min(a.cfg.zoom, maxima) : maxima;
     int nuevo = z == 2 ? 0 : std::clamp(actual + z, 1, maxima);

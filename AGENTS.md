@@ -112,6 +112,9 @@ A new file `src/app/<feature>_ui.cpp` (add it to `CMakeLists.txt`, alphabetical)
 
 - **Tests:** `cmake --build --preset debug && LINEAGE_DIR=... build/debug/lin_tests`. Before large
   changes, also the `debug-asan` preset.
+- **Test instances must be invisible:** launch them ONLY with `herramientas/lanzar_prueba.sh <own.ini> [log]`
+  (Xvfb + lavapipe; prints the pid). Never launch a visible window, never steal the user's focus, never
+  `pkill` (the user may be playing): stop your instance with `kill <pid>`.
 - **Live control (debug builds):** the client opens a Unix socket (`LIN_CONTROL=/path` or
   `$TMPDIR/lineage-control-<pid>.sock`) that takes one-line commands (`ayuda` lists them).
   - From Python: `herramientas/lin_ctl.py` — `c = Control.arrancar(config=...)`, then `c("login ...")`,

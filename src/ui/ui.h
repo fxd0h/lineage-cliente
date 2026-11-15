@@ -118,6 +118,9 @@ struct Barra {
 bool barra_evento(Gpu& gpu, SDL_Window* ventana, Barra& b, const SDL_Event& ev, bool activa);
 // Cada frame: sigue el arrastre (lo suelta si el botón ya no está) y devuelve la acción pedida.
 AccionBarra barra_frame(SDL_Window* ventana, Barra& b);
+// Lets the window manager move/resize the borderless window (title bar and edges) like a normal
+// window; on macOS only sets the minimum size.
+void activar_hit_test(SDL_Window* ventana, Gpu& gpu, Barra& b);
 
 // Ícono de la ventana (y del Dock en macOS): datos/iconos/<archivo> junto al ejecutable o en el directorio
 // actual (tools/generar_iconos.py). Sin el archivo, queda el del sistema.

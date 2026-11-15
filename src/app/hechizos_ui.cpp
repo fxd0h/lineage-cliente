@@ -25,6 +25,18 @@ int hechizos_sabidos(const App& a, u16* ids, int cap) {
     return n;
 }
 
+// Skills without an entry in the client's spellicon.idx (the knight skills of this resource set):
+// a tile with the first letters of the first two words of the name, one word per line.
+void dibujar_etiqueta_hechizo(App& a, const Hechizo& h, int x, int y, u64 clave, u32 color) {
+    std::string_view n = h.nombre;
+    for (int linea = 0; linea < 2 && !n.empty(); ++linea) {
+        const size_t fin = n.find(' ');
+        const std::string_view palabra = n.substr(0, fin);
+        a.g->texto(palabra.substr(0, 4), static_cast<float>(x + 3), static_cast<float>(y + 4 + linea * (ALTO_GLIFO + 2)), clave, color);
+        n = fin == std::string_view::npos ? std::string_view{} : n.substr(fin + 1);
+    }
+}
+
 // settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0;Otro:...  A spell is its id; an item is "i<gfx>:<id>".
 void cargar_atajos(App& a) {
     a.atajos_de = nombre_personaje(a);
@@ -386,8 +398,9 @@ void dibujar_teclas_f(App& a, int x, int y) {
         if (!a.atajos[k]) continue;
         const Hechizo& h = a.hechizos[a.atajos[k]];
         const int cx = x + TECLAS_X + (k % 4) * TECLA, cy = y + TECLAS_Y + (k / 4) * TECLA;
-        g.gpu().dibujar(g.icono(h.icono), cx, cy, clave_orden(CAPA_UI, 3),
-                        a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110));
+        const u32 tinte = a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110);
+        if (h.icono) g.gpu().dibujar(g.icono(h.icono), cx, cy, clave_orden(CAPA_UI, 3), tinte);
+        else dibujar_etiqueta_hechizo(a, h, cx, cy, clave_orden(CAPA_UI_TEXTO, 3), tinte);
         dibujar_espera_hechizo(a, cx, cy, 32, 32);
     }
     // Drag from a box: onto another box swaps, outside any window clears; a plain click uses it.
@@ -403,7 +416,8 @@ void dibujar_teclas_f(App& a, int x, int y) {
     const int desde = a.tecla_f_arrastrada;
     if (desde >= 0 && e.presionado && arrastre_movido(a)) {
         const u16 icono = a.items_f[desde].tipo == TipoAtajo::ITEM ? a.items_f[desde].gfx : a.hechizos[a.atajos[desde]].icono;
-        g.gpu().dibujar(g.icono(icono), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
+        if (icono || a.items_f[desde].tipo == TipoAtajo::ITEM) g.gpu().dibujar(g.icono(icono), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0));
+        else dibujar_etiqueta_hechizo(a, a.hechizos[a.atajos[desde]], e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 1), rgba(255, 230, 120));
     }
     if (desde >= 0 && e.clic) {
         a.tecla_f_arrastrada = -1;
@@ -482,7 +496,9 @@ static void dibujar_original(App& a, int x0, int y0) {
         const Hechizo& h = a.hechizos[ids[i]];
         if (ids[i] == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, ki - (1ull << 24), rgba(90, 75, 30, 200));
         // Sin MP suficiente, oscurecido.
-        g.gpu().dibujar(g.icono(h.icono), x, y, ki, a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110));
+        const u32 tinte = a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110);
+        if (h.icono) g.gpu().dibujar(g.icono(h.icono), x, y, ki, tinte);
+        else dibujar_etiqueta_hechizo(a, h, x, y, kt, a.mundo.jugador.mp >= h.mp ? rgba(255, 230, 120) : tinte);
         for (int k = 0; k < 8; ++k)
             if (a.atajos[k] == ids[i]) {
                 char t[4];

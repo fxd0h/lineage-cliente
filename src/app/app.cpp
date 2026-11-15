@@ -349,6 +349,7 @@ bool iniciar_app(App& a) {
     ui::poner_icono(a.ventana, "lineage.png");
     if (a.cfg.pantalla_completa) SDL_SetWindowFullscreen(a.ventana, true);
     a.ventana_sin_borde.redimensionable = true;
+    activar_hit_test(a.ventana, a.gpu, a.ventana_sin_borde);
     SDL_StartTextInput(a.ventana);
     crear_cursores(a);
     if (carpeta_juego_valida(a.cfg.carpeta_juego) && cargar_recursos(a)) {
@@ -404,6 +405,7 @@ void bucle_app(App& a) {
         if (a.g) a.g->nuevo_frame();
         // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480.
         a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
+        a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");
         a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a));
 #if LIN_CONTROL
         control_frame(a);  // comandos del socket: antes de leer la entrada (las teclas van como eventos de SDL)

@@ -951,3 +951,33 @@ TEST_CASE("S_BookmarkLoad (opcode 33, subtipo 42): todos los marcadores al entra
     REQUIRE(decodificar(vacio, t, arena, ev));
     CHECK(ev.empty());
 }
+
+TEST_CASE("S_AddSkill de .addskill de un caballero: los 8 hechizos generales y las 5 habilidades de clase") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    // L1AddSkill (knight, max spell level 1): header 32, level 1 = 255, knight rows 10/11 = 192, 7,
+    // the other 16 rows 0, then 2 x writeD(0).
+    std::vector<u8> p = {48, 32, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 7};
+    p.insert(p.end(), 16 + 8, 0);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    REQUIRE(decodificar(p, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::HECHIZOS);
+    Mundo m;
+    aplicar_eventos(m, ev, 0);
+    for (u32 id = 1; id <= 8; ++id) CHECK(m.jugador.sabe(id));
+    CHECK_FALSE(m.jugador.sabe(9));
+    CHECK_FALSE(m.jugador.sabe(86));
+    // 87 Shock Stun, 88 Reduction Armor (row 10 bits 6, 7); 89 Bounce Attack, 90 Solid Carriage,
+    // 91 Counter Barrier (row 11 bits 0..2).
+    for (u32 id = 87; id <= 91; ++id) CHECK(m.jugador.sabe(id));
+    CHECK_FALSE(m.jugador.sabe(92));
+    CHECK_FALSE(m.jugador.sabe(113));
+    // C_UseSkill of Counter Barrier: row 11, column 2.
+    Escritor e = cmd::usar_hechizo(t, 91, 0, 0, 0);  // Bytes points into the writer
+    Bytes b = e.cuerpo();
+    REQUIRE(b.size() == 4);
+    CHECK(b[1] == 11);
+    CHECK(b[2] == 2);
+}
