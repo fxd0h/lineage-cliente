@@ -28,21 +28,24 @@ constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
 // Original NPC dialog (client class at 0x43f130, draw 0x43f7f0): background 1355 at (8,11), frame 1356, ornaments
 // 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 47 and 293 over the track 1354.
 constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
-constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 24, NPC_TEXT_Y = 48, NPC_TEXT_W = 194, NPC_TEXT_H = 251;
+constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_Y = 48, NPC_TEXT_H = 251;
 constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 13;  // scroll step = text line height (0x43c080 / 0x43c0b0 use 0x435370 = 13)
 
 // Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
 bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_original; }
-// The page window sets its text rectangle to the window rectangle inset by (3, 3, 7, 3) (SetRect at 0x43b4ea, from
-// left+3, top+3, right-7, bottom-3), when the client class at 0x43f130 builds it. The window rectangle itself is
-// the widget rect (10,48)-(207,299) built at 0x458994..0x4589b0 (ctor 0x43e170), shifted +11 in x to the frame's
-// origin (it then spans the panel border to border: bright lines at x 22/218, y 47/299 in the capture). The x shift is
-// not decoded: with +11 the text touched the left border line (2 px), so the left edge is calibrated to +14 (5 px
-// from the line, like the right margin); the right edge stays where it was.
+// The page widget (ctor 0x43e170) gets the rect (10,48)-(207,299) at 0x4589b0; its layout (0x43b3e0, SetRect at 0x43b4ea)
+// uses the text rect (left+3, top+3, right-7, bottom-3) = (13,51)-(200,296) as coordinates that already include the widget
+// origin, and the draw (0x436680 -> 0x43cf90) then adds the widget's left edge (pane x + 10) again to every run x
+// (RECT(left + run.x, ...), 0x43d0a4). So the first glyph column sits at window x 10 + 13 = 23 and a line wraps at 10 + 200 = 210
+// (the clip region is widened by 9 on the right, 0x4366c8..0x4366db, so that overhang is visible). The vertical origin
+// is not re-derived here (HTML_INSET_T kept).
 constexpr int HTML_INSET_L = 3, HTML_INSET_T = 3, HTML_INSET_R = 7, HTML_INSET_B = 3;
+constexpr int NPC_WIDGET_L = 10, NPC_WIDGET_R = 207;
+constexpr int NPC_TEXT_X = NPC_WIDGET_L + NPC_WIDGET_L + HTML_INSET_L;                   // 23: first glyph column
+constexpr int NPC_TEXT_W = (NPC_WIDGET_R - HTML_INSET_R) - (NPC_WIDGET_L + HTML_INSET_L);  // 187: wrap width
 int page_width(const App& a) {
     if (a.cfg.ui_simple) return ANCHO_PAGINA;
-    return original_text(a) ? NPC_TEXT_W - HTML_INSET_L - HTML_INSET_R : NPC_TEXT_W;
+    return NPC_TEXT_W;
 }
 constexpr ObjId LOCAL_NPC = 0xFFFFFFFFu;  // owner of the client-side pages
 constexpr int FILA_TIENDA = 34, FILAS_TIENDA = 6;
@@ -283,7 +286,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
     const PaginaHtml& p = a.npc_html;
     const bool simple = a.cfg.ui_simple;
     const bool orig_text = original_text(a);
-    const int left = simple ? MARGEN : NPC_TEXT_X + (orig_text ? HTML_INSET_L : 0);
+    const int left = simple ? MARGEN : NPC_TEXT_X;
     const int top = simple ? ARRIBA : NPC_TEXT_Y + (orig_text ? HTML_INSET_T : 0);
     const int view_h = simple ? ALTO_PAGINA : NPC_TEXT_H - (orig_text ? HTML_INSET_T + HTML_INSET_B : 0);
     // Original page object (0x43c080 / 0x43c0b0): line up/down move the pixel offset [+0x74] by one text line, and the
@@ -361,7 +364,8 @@ void dibujar_pagina(App& a, int x0, int y0) {
         g.gpu().rectangulo(x0 + ui::VENTANA_ANCHO - 8, yb, 3, h, ki, rgba(160, 130, 80, 200));
     }
     if (bajo) {
-        std::string_view ayuda = p.ayuda(*bajo);
+        // S3EP1U's page tags have no `tooltip` attribute (tag table 0x503604: action, link, src, bg, fg, ...); the original shows none.
+        std::string_view ayuda = simple ? p.ayuda(*bajo) : std::string_view{};
         if (!ayuda.empty()) {
             int w = ancho_texto(ayuda.data(), ayuda.size());
             g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
