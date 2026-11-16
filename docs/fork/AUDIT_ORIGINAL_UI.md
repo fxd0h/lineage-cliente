@@ -222,6 +222,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Equipment AC text | centre x 120.5, y 231 (0x4b3740) | centre 118, y 232 | DIFFERENT | equipo_ui.cpp |
 | Frame/bg per tab and class | attributes frame 0x5a1+0x4d = 1518; equipment bg 1516 when class!=0 (0x4b4a24, 0x4b4c20) | 983 / 1440 always | DIFFERENT | needs 1516/1518 (U-C2) |
 | Tab strip 985/986 (22,248); STR..CHA boxes; magic level/bonus; elements; AC; equipment slots table 0x8f0818 | 0x4b4bdd, 0x4b4291, 0x4b42e9, 0x483d44, 0x4b2f50 | same (<=1 px) | MATCH | - |
+| Status equipment tab: bg 1440 at (6,9) + frame 1441 at (0,0); icons (32x32, 0x445fd0, no 536 marker) at window + table 0x8f0818 (13 slots filled by 0x4b2f50); type to slot by 0x4b30d0: helm 0, necklace 1, T-shirt 2, armor 3, cloak 4 (types 10/19), gloves 5, ring 6 then 7, weapon 8, shield 9, boots 10, belt 11, earring 12; empty slots draw nothing; AC value white, centred in window x 92..149 at 6 px/char, y 231 (0x4b3740, called at 0x4b4d24); tabs 985/986 at (22,248) | same slots and positions; AC now at the same place and white | MATCH (open: the name label under a selected slot, second loop 0x4b3220 via 0x4334f0, is not drawn; AC is the signed byte [0x8f07df], fork shows the server AC) | equipo_ui.cpp |
 | Alignment box | img 987/988/989 at (121,167), value in box x 123..158 y 184 (0x4b4d9f..0x4b4e6b) | same after commit 8af9ca5 (the user's known guess) | MATCH | class 3/5 variant: U-C3 |
 
 ## 11. Spellbook (ctor 0x4aebe0, draw 0x4af3a0)

@@ -118,10 +118,10 @@ void dibujar_equipo(App& a, int x0, int y0) {
             if (en[i] != SIN_SLOT) poner(en[i], ox + RECUADROS[i].px, oy + RECUADROS[i].py, 32, 32);
         for (int i = 0; i < std::min(nanillos, 2); ++i)
             poner(anillos[i], ox + ANILLO_POS[i][0], oy + ANILLO_POS[i][1], LADO_ANILLO, LADO_ANILLO);
-        // La AC en su campo.
+        // AC as 0x4b3740: white, centred between window x 92 and 149 on 6 px per character, text top at window y 231.
         std::snprintf(txt, sizeof txt, "%d", a.mundo.jugador.ca);
-        g.texto(txt, static_cast<float>(x + 112 - ancho_texto(txt, std::strlen(txt)) / 2), static_cast<float>(y + 223), kt,
-                ui::COLOR_TEXTO);
+        const int ac_x = ox + 92 + (149 - 92 - 6 * static_cast<int>(std::strlen(txt)) + 1) / 2;
+        g.texto(txt, static_cast<float>(ac_x), static_cast<float>(oy + 231), kt, rgba(255, 255, 255));
     }
 
     // Con el puntero encima: el nombre y los atributos del ítem.
