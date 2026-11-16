@@ -4,6 +4,8 @@
 #include "comun.h"
 #include "proto/comandos.h"
 #include "proto/decodificar.h"
+#include "recursos/fuente.h"
+#include "recursos/fuente_ttf.h"
 #include "recursos/html.h"
 #include "recursos/pak.h"
 
@@ -127,6 +129,22 @@ TEST_CASE("NPC: maquetación del HTML") {
     }
     CHECK(imagenes == 2);
     CHECK(p.alto > 3 * ALTO_LINEA_HTML);
+}
+
+TEST_CASE("NPC: maquetación del HTML con el estilo del cliente original") {
+    // Colores COLORREF sin reordenar (0x43ad50 -> 0x43d2b3), vínculo 0xB0FFFF encima del <font>, alto de línea 13.
+    PaginaHtml p;
+    maquetar_html("<font fg=0000ff>Red</font> plain <a link=\"x\"><font fg=00ff00>Link</font></a><br>Next", {}, '\x01', "U", 200, medir,
+                  nullptr, p, true);
+    REQUIRE(p.elementos.size() >= 4);
+    CHECK(p.elementos[0].color == 0xFF0000FFu);  // fg=0000ff is COLORREF red (R = low byte)
+    CHECK(p.elementos[1].color == COLOR_TEXTO_HTML_ORIGINAL);
+    CHECK(p.elementos[2].color == 0xFF00FF00u);  // a <font> inside the <a> replaces the link color
+    CHECK(p.elementos[0].h == ALTO_LINEA_HTML_ORIGINAL);
+    CHECK(p.elementos.back().y == ALTO_LINEA_HTML_ORIGINAL);
+    maquetar_html("<a link=\"x\">Go</a>", {}, '\x01', "U", 200, medir, nullptr, p, true);
+    CHECK(p.elementos[0].color == COLOR_VINCULO_HTML_ORIGINAL);
+    CHECK(p.elementos[0].w == ancho_texto_html("Go", 2));
 }
 
 TEST_CASE("NPC: todas las páginas en inglés se maquetan" * doctest::skip(carpeta_juego().empty())) {

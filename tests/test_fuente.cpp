@@ -93,3 +93,19 @@ TEST_CASE("FuenteBitmap: los glifos TTF no necesitan la carpeta del juego") {
     CHECK(f.rasterizar(GLIFO_TTF_BASE + 'A', img));
     CHECK(img.alto == ALTO_GLIFO);
 }
+
+TEST_CASE("cara HTML original: proporcional, alto de celda 13 y sin colisión con la TTF") {
+    CHECK(ancho_html('i') < ancho_html('M'));
+    CHECK(ancho_html(' ') > 0);
+    std::vector<GlifoTexto> g;
+    glifos_de_texto_html("Hi", 2, g);
+    REQUIRE(g.size() == 2);
+    CHECK(g[0].glifo == GLIFO_HTML_BASE + 'H');
+    CHECK(g[0].ancho + g[1].ancho == ancho_texto_html("Hi", 2));
+    ImagenRGBA img;
+    REQUIRE(rasterizar_html('H', img));
+    CHECK(img.alto == ALTO_LINEA_HTML_ORIGINAL);
+    bool tinta = false;
+    for (u32 px : img.px) tinta |= px != 0;
+    CHECK(tinta);
+}

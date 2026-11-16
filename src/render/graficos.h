@@ -56,6 +56,8 @@ public:
 
     // Texto CP949 con la fuente original; devuelve el ancho en píxeles.
     int texto(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
+    // Texto de las páginas HTML de la interfaz original: cara proporcional, sin sombra ni contorno.
+    int texto_html(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
     // Texto con sombra negra de 1 px (como los nombres sobre los personajes).
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
 

@@ -1,19 +1,22 @@
 #include "recursos/html.h"
 #include <cctype>
 #include "recursos/fuente.h"
+#include "recursos/fuente_ttf.h"
 
 namespace lin {
 
 namespace {
 
-u32 rgba_hex(std::string_view hex) {
+u32 rgba_hex(std::string_view hex, bool original) {
+    const u32 defecto = original ? COLOR_TEXTO_HTML_ORIGINAL : COLOR_TEXTO_HTML;
     u32 v = 0;
     for (char c : hex.substr(0, 6)) {
         int d = std::isdigit(static_cast<unsigned char>(c)) ? c - '0' : (std::tolower(static_cast<unsigned char>(c)) - 'a' + 10);
-        if (d < 0 || d > 15) return COLOR_TEXTO_HTML;
+        if (d < 0 || d > 15) return defecto;
         v = v * 16 + static_cast<u32>(d);
     }
-    if (hex.size() < 6) return COLOR_TEXTO_HTML;
+    if (hex.size() < 6) return defecto;
+    if (original) return 0xFF000000u | v;  // COLORREF sin cambiar el orden de los bytes (0x43ad50 -> 0x43d2b3)
     return ((v >> 16) & 0xFF) | (v & 0xFF00) | ((v & 0xFF) << 16) | 0xFF000000u;
 }
 
@@ -48,13 +51,26 @@ u32 numero_src(std::string_view s) {
 
 class Maquetador {
 public:
-    Maquetador(PaginaHtml& p, int ancho, MedirImagen medir, void* ctx) : p_(p), ancho_(ancho), medir_(medir), ctx_(ctx) {}
+    Maquetador(PaginaHtml& p, int ancho, MedirImagen medir, void* ctx, bool original)
+        : p_(p), ancho_(ancho), medir_(medir), ctx_(ctx), original_(original),
+          alto_texto_(original ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO),
+          alto_linea_base_(original ? ALTO_LINEA_HTML_ORIGINAL : ALTO_LINEA_HTML), alto_linea_(alto_linea_base_) {
+        colores_[0] = original ? COLOR_TEXTO_HTML_ORIGINAL : COLOR_TEXTO_HTML;
+    }
 
     void color(u32 c) {
         if (n_colores_ < 16) colores_[n_colores_++] = c;
     }
     void fin_color() {
         if (n_colores_ > 1) --n_colores_;
+    }
+    // <a> en la interfaz original: el estilo del vínculo (color 0xB0FFFF) se apila con cada <a> y sale con </a>
+    // (0x437653 y 0x4378e6), aunque no lleve action ni link.
+    void abrir_a() {
+        if (original_) color(COLOR_VINCULO_HTML_ORIGINAL);
+    }
+    void cerrar_a() {
+        if (original_) fin_color();
     }
     void vinculo(std::string_view v, bool es_enlace) {
         if (v.empty()) {
@@ -74,14 +90,14 @@ public:
 
     void palabra(std::string_view t) {
         if (t.empty()) return;
-        int w = ancho_texto(t.data(), t.size());
-        int sp = (espacio_ && x_ > 0) ? ancho_texto(" ", 1) : 0;
+        int w = medir_texto(t);
+        int sp = (espacio_ && x_ > 0) ? medir_texto(" ") : 0;
         espacio_ = false;
         if (x_ > 0 && x_ + sp + w > ancho_) {
             nueva_linea();
             sp = 0;
         }
-        u32 col = vinculo_len_ ? COLOR_VINCULO_HTML : colores_[n_colores_ - 1];
+        u32 col = (!original_ && vinculo_len_) ? COLOR_VINCULO_HTML : colores_[n_colores_ - 1];
         // Se junta con la palabra anterior si comparte color y vínculo (menos elementos que dibujar).
         if (!p_.elementos.empty() && p_.elementos.size() > inicio_linea_) {
             ElementoHtml& u = p_.elementos.back();
@@ -100,7 +116,7 @@ public:
         e.x = static_cast<i16>(x_ + sp);
         e.y = static_cast<i16>(y_);
         e.w = static_cast<i16>(w);
-        e.h = ALTO_GLIFO;
+        e.h = static_cast<i16>(alto_texto_);
         e.color = col;
         e.texto_ofs = guardar(t);
         e.texto_len = static_cast<u32>(t.size());
@@ -112,7 +128,7 @@ public:
     void imagen(u32 n, std::string_view accion, std::string_view enlace, std::string_view ayuda) {
         int w = 0, h = 0;
         if (!medir_ || !medir_(ctx_, n, w, h)) return;
-        int sp = (espacio_ && x_ > 0) ? ancho_texto(" ", 1) : 0;
+        int sp = (espacio_ && x_ > 0) ? medir_texto(" ") : 0;
         espacio_ = false;
         if (x_ > 0 && x_ + sp + w > ancho_) {
             nueva_linea();
@@ -148,6 +164,9 @@ public:
     }
 
 private:
+    int medir_texto(std::string_view t) const {
+        return original_ ? ancho_texto_html(t.data(), t.size()) : ancho_texto(t.data(), t.size());
+    }
     u32 guardar(std::string_view t) {
         u32 ofs = static_cast<u32>(p_.textos.size());
         p_.textos.append(t);
@@ -168,10 +187,10 @@ private:
         // Las imágenes más altas que el texto bajan la línea: el texto se alinea abajo con ellas.
         for (size_t i = inicio_linea_; i < p_.elementos.size(); ++i)
             if (p_.elementos[i].tipo == ElementoHtml::Tipo::TEXTO)
-                p_.elementos[i].y = static_cast<i16>(y_ + (alto_linea_ - ALTO_LINEA_HTML) / 2);
+                p_.elementos[i].y = static_cast<i16>(y_ + (alto_linea_ - alto_linea_base_) / 2);
         y_ += alto_linea_;
         x_ = 0;
-        alto_linea_ = ALTO_LINEA_HTML;
+        alto_linea_ = alto_linea_base_;
         inicio_linea_ = p_.elementos.size();
         espacio_ = false;
     }
@@ -180,10 +199,12 @@ private:
     int ancho_;
     MedirImagen medir_;
     void* ctx_;
-    int x_ = 0, y_ = 0, alto_linea_ = ALTO_LINEA_HTML;
+    bool original_;
+    int alto_texto_, alto_linea_base_;
+    int x_ = 0, y_ = 0, alto_linea_;
     size_t inicio_linea_ = 0;
     bool centrado_ = false, espacio_ = false, es_enlace_ = false;
-    u32 colores_[16] = {COLOR_TEXTO_HTML};
+    u32 colores_[16] = {};
     int n_colores_ = 1;
     u32 vinculo_ofs_ = 0, vinculo_len_ = 0;
 };
@@ -201,9 +222,9 @@ std::string_view dato(std::string_view datos, char sep, u32 n) {
 }  // namespace
 
 void maquetar_html(std::string_view html, std::string_view datos, char separador, std::string_view usuario, int ancho,
-                   MedirImagen medir, void* contexto, PaginaHtml& salida) {
+                   MedirImagen medir, void* contexto, PaginaHtml& salida, bool original) {
     salida.limpiar();
-    Maquetador m(salida, ancho, medir, contexto);
+    Maquetador m(salida, ancho, medir, contexto, original);
     std::string palabra;
     auto cortar = [&] {
         m.palabra(palabra);
@@ -249,13 +270,15 @@ void maquetar_html(std::string_view html, std::string_view datos, char separador
                     m.fin_color();
                 } else {
                     std::string_view fg = atributo(tag, "fg");
-                    m.color(fg.empty() ? COLOR_TEXTO_HTML : rgba_hex(fg));
+                    m.color(fg.empty() ? (original ? COLOR_TEXTO_HTML_ORIGINAL : COLOR_TEXTO_HTML) : rgba_hex(fg, original));
                 }
             } else if (n == "a") {
                 cortar();
                 if (cierre) {
                     m.vinculo({}, false);
+                    m.cerrar_a();
                 } else {
+                    m.abrir_a();
                     std::string_view accion = atributo(tag, "action");
                     std::string_view enlace = atributo(tag, "link");
                     if (enlace.empty()) enlace = atributo(tag, "href");

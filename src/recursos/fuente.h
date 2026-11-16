@@ -45,5 +45,9 @@ size_t bytes_que_caben(const char* texto, size_t n, int ancho_max);
 // Con la fuente original, el ASCII imprimible de los textos UTF-8 se dibuja con eng.fnt (6×12),
 // como el cliente original; lo demás (acentos, símbolos) sigue en la TTF. Se fija al arrancar.
 void usar_fuente_original(bool si);
+// Texto de las páginas HTML de la interfaz original: cara proporcional (recursos/fuente_ttf.h). UTF-8 válido, o bytes
+// Latin-1 si no lo es. `glifos_de_texto_html` produce glifos GLIFO_HTML_BASE + cp.
+void glifos_de_texto_html(const char* texto, size_t n, std::vector<GlifoTexto>& salida);
+int ancho_texto_html(const char* texto, size_t n);
 
 }  // namespace lin

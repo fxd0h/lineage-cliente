@@ -11,6 +11,13 @@ namespace lin {
 // Glifos TTF en el espacio de glifos del atlas: GLIFO_TTF_BASE + punto de código Unicode.
 constexpr u32 GLIFO_TTF_BASE = 0x100000;
 
+// Glifos de la cara de las páginas HTML (Arial en el cliente original): GLIFO_HTML_BASE + punto de código.
+constexpr u32 GLIFO_HTML_BASE = 0x200000;
+// Alto de línea de las páginas HTML en la interfaz original (tmHeight de la fuente de tamaño 13).
+constexpr int ALTO_LINEA_HTML_ORIGINAL = 13;
+int ancho_html(u32 codepunto);
+bool rasterizar_html(u32 codepunto, ImagenRGBA& salida);
+
 // Avance del carácter en píxeles (proporcional). Un carácter que la fuente no tiene se dibuja como '?'.
 int ancho_ttf(u32 codepunto);
 // Celda RGBA premultiplicada (blanca con alfa), del ancho del avance y ALTO_GLIFO de alto.

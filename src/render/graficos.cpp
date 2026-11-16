@@ -277,6 +277,16 @@ int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 c
     return ancho;
 }
 
+int Graficos::texto_html(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
+    glifos_de_texto_html(t.data(), t.size(), glifos_tmp_);
+    int ancho = 0;
+    for (const GlifoTexto& g : glifos_tmp_) {
+        gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
+        ancho += g.ancho;
+    }
+    return ancho;
+}
+
 int Graficos::texto_sombra(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
     texto(t, x + 1, y + 1, clave_orden, rgba(0, 0, 0));
     return texto(t, x, y, clave_orden + (1u << 24), color);

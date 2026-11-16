@@ -16,6 +16,7 @@
 #include <cstring>
 #include "app/app.h"
 #include "app/item_icon.h"
+#include "recursos/fuente_ttf.h"
 
 namespace lin {
 
@@ -30,7 +31,16 @@ constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, 
 constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 18, NPC_TEXT_Y = 34, NPC_TEXT_W = 200, NPC_TEXT_H = 262;
 constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 45, NPC_SCROLL_H = 260, NPC_LINE = 12;  // scroll steps of a text line
 
-int page_width(const App& a) { return a.cfg.ui_simple ? ANCHO_PAGINA : NPC_TEXT_W; }
+// Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
+bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_original; }
+// The page window sets its text rectangle to the window rectangle inset by (3, 3, 7, 3) (SetRect at 0x43b4ea, from
+// left+3, top+3, right-7, bottom-3), when the client class at 0x43f130 builds it. The window rectangle itself is
+// taken from the existing NPC_TEXT_* constants (unverified: they were not derived from 0x47cd80's arguments).
+constexpr int HTML_INSET_L = 3, HTML_INSET_T = 3, HTML_INSET_R = 7, HTML_INSET_B = 3;
+int page_width(const App& a) {
+    if (a.cfg.ui_simple) return ANCHO_PAGINA;
+    return original_text(a) ? NPC_TEXT_W - HTML_INSET_L - HTML_INSET_R : NPC_TEXT_W;
+}
 constexpr int FILA_TIENDA = 34, FILAS_TIENDA = 6;
 constexpr int DISTANCIA_CIERRE = 6;  // al alejarse más, el diálogo se cierra
 constexpr u32 PRECIO_RETIRO = 30;    // adena por ítem retirado (C_Result del servidor)
@@ -71,7 +81,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
     a.npc_desplazamiento = 0;
     a.tienda = TipoTienda::NINGUNA;
     maquetar_html({reinterpret_cast<const char*>(html.data()), html.size()}, a.npc_datos, SEPARADOR_DATOS,
-                  nombre_personaje(a), page_width(a), medir_imagen, &a, a.npc_html);
+                  nombre_personaje(a), page_width(a), medir_imagen, &a, a.npc_html, original_text(a));
 }
 
 void cerrar(App& a) {
@@ -192,7 +202,10 @@ void dibujar_pagina(App& a, int x0, int y0) {
     const EntradaFrame& e = a.entrada;
     const PaginaHtml& p = a.npc_html;
     const bool simple = a.cfg.ui_simple;
-    const int left = simple ? MARGEN : NPC_TEXT_X, top = simple ? ARRIBA : NPC_TEXT_Y, view_h = simple ? ALTO_PAGINA : NPC_TEXT_H;
+    const bool orig_text = original_text(a);
+    const int left = simple ? MARGEN : NPC_TEXT_X + (orig_text ? HTML_INSET_L : 0);
+    const int top = simple ? ARRIBA : NPC_TEXT_Y + (orig_text ? HTML_INSET_T : 0);
+    const int view_h = simple ? ALTO_PAGINA : NPC_TEXT_H - (orig_text ? HTML_INSET_T + HTML_INSET_B : 0);
     const int max_desp = std::max(0, p.alto - view_h);
     if (!simple) {  // the scroll bar works in text lines
         if (draw_original_frame(a, x0, y0, IMG_NPC_BG, 8, 11, IMG_NPC_FRAME, NPC_CLOSE_X, NPC_CLOSE_Y)) {
@@ -212,11 +225,18 @@ void dibujar_pagina(App& a, int x0, int y0) {
     const int ox = x0 + left, oy = y0 + top - a.npc_desplazamiento;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), ki = clave_orden(CAPA_UI, 13);
     const ElementoHtml* bajo = nullptr;
+    // Original client: every word of the link under the pointer turns green, not only the one pointed at (0x43d2a2
+    // compares the link index of each run with the hovered one).
+    int sobre_vinculo = -1;
+    if (orig_text) {
+        for (const ElementoHtml& el : p.elementos)
+            if (el.vinculo_len && ui::sobre(e, ox + el.x, oy + el.y - 1, el.w, el.h + 2)) sobre_vinculo = static_cast<int>(el.vinculo_ofs);
+    }
     for (const ElementoHtml& el : p.elementos) {
         const int x = ox + el.x, y = oy + el.y;
         // Fuera de la vista (por la primera línea de texto: un botón un poco más alto que el resto
         // de su línea no se pierde).
-        if (y < y0 + top - 2 || y + ALTO_GLIFO > y0 + top + view_h + 2) continue;
+        if (y < y0 + top - 2 || y + (orig_text ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO) > y0 + top + view_h + 2) continue;
         const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2);
         if (encima) bajo = &el;
         if (el.tipo == ElementoHtml::Tipo::IMAGEN) {
@@ -227,8 +247,13 @@ void dibujar_pagina(App& a, int x0, int y0) {
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
             g.gpu().dibujar(use_hover ? hover : base, x, y, ki);
         } else {
-            g.texto(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, encima ? rgba(255, 255, 254) : el.color);
-            if (el.vinculo_len) g.gpu().rectangulo(x, y + ALTO_GLIFO, el.w, 1, ki, el.color);
+            if (orig_text) {  // no underline: the client never sets the underline flag of the run style
+                const bool verde = el.vinculo_len && static_cast<int>(el.vinculo_ofs) == sobre_vinculo;
+                g.texto_html(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, verde ? COLOR_SOBRE_HTML_ORIGINAL : el.color);
+            } else {
+                g.texto(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, encima ? rgba(255, 255, 254) : el.color);
+                if (el.vinculo_len) g.gpu().rectangulo(x, y + ALTO_GLIFO, el.w, 1, ki, el.color);
+            }
         }
     }
     if (simple && max_desp > 0) {  // barra de desplazamiento

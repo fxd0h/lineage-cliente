@@ -49,9 +49,19 @@ constexpr u32 COLOR_TEXTO_HTML = 0xFFBEDCE6u;   // rgba(230, 220, 190)
 constexpr u32 COLOR_VINCULO_HTML = 0xFF78E6FFu; // rgba(255, 230, 120)
 constexpr int ALTO_LINEA_HTML = 15;
 
-// Maqueta la página en `ancho` píxeles. `datos`: los de S_NPCTalkReturn separados por
+// Interfaz original: el cliente de 2009 (S3EP1U) guarda el color como COLORREF y se lo pasa tal cual a SetTextColor
+// (0x43d2b3), así que el texto por defecto es 0xEEEDEE (0x435cc6), el de los vínculos 0xB0FFFF (0x437830, el <a> lo
+// pone encima de cualquier <font>) y el atributo fg="v" se lee como hexadecimal sin cambiar el orden de los bytes:
+// rojo = byte bajo. El vínculo bajo el puntero se pinta (10, 240, 50) (0x43d2ac: 0x32F00A). Sin subrayado:
+// ninguna etiqueta enciende el indicador de subrayado (+0x16 del estilo, usado en 0x43d555).
+constexpr u32 COLOR_TEXTO_HTML_ORIGINAL = 0xFFEEEDEEu;    // rgba(238, 237, 238)
+constexpr u32 COLOR_VINCULO_HTML_ORIGINAL = 0xFFB0FFFFu;  // rgba(255, 255, 176)
+constexpr u32 COLOR_SOBRE_HTML_ORIGINAL = 0xFF32F00Au;    // rgba(10, 240, 50)
+
+// Maqueta la página en `ancho` píxeles. `original`: texto con la cara y el alto de línea del cliente original
+// (recursos/fuente_ttf.h) y sus colores; si no, la fuente de la interfaz simple. `datos`: los de S_NPCTalkReturn separados por
 // `separador`; `usuario`: el nombre del personaje.
 void maquetar_html(std::string_view html, std::string_view datos, char separador, std::string_view usuario, int ancho,
-                   MedirImagen medir, void* contexto, PaginaHtml& salida);
+                   MedirImagen medir, void* contexto, PaginaHtml& salida, bool original = false);
 
 }  // namespace lin
