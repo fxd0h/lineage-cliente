@@ -724,6 +724,8 @@ bool item_bendicion(Lector& l, Evento& e) { e.tipo = Ev::ITEM_BENDICION; e.id = 
 
 // S_HouseMap: d tablón, d casa.
 bool casa_mapa(Lector& l, Evento& e) { e.tipo = Ev::CASA_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
+// S_UseMap: d item objid, d map number (1..18; the original client reads it as one byte).
+bool usar_mapa(Lector& l, Evento& e) { e.tipo = Ev::USAR_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
 // S_War: c tipo, s clan 1, s clan 2.
 bool guerra(Lector& l, Evento& e) {
     e.tipo = Ev::GUERRA;
@@ -835,6 +837,7 @@ constexpr Decodificador TABLA[] = {
     fondos_castillo,  // TAXRATE
     fondos_castillo,  // DEPOSIT
     fondos_castillo,  // DRAWAL
+    usar_mapa,      // USEMAP
 };
 static_assert(sizeof(TABLA) / sizeof(TABLA[0]) == static_cast<size_t>(Srv::CANTIDAD));
 

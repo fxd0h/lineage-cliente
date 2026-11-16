@@ -137,6 +137,7 @@ add_executable(lineage
     src/app/reinicio_ui.cpp
     src/app/tablon_ui.cpp
     src/app/tienda_ui.cpp
+    src/app/map_ui.cpp
     src/app/mascotas_ui.cpp
     src/app/marcadores_ui.cpp
     src/core/asignaciones.cpp)  # operator new instrumentado (ver core/asignaciones.h)

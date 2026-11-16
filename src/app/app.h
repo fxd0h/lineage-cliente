@@ -146,6 +146,15 @@ struct Subastas {
     int desplazamiento = 0;  // filas
     u32 mapa = 0;            // casa cuyo mapa se muestra (0 = ninguno)
 };
+// World-map item window (map_ui.cpp): number 0 = closed; x == INT32_MIN = not placed yet.
+struct MapaItem {
+    int numero = 0;
+    ObjId objeto = 0;
+    int x = INT32_MIN, y = 0;  // window position
+    int pan_x = 0, pan_y = 0;  // top-left of the visible part of a picture bigger than the view
+    bool arrastrando = false;
+    int ult_x = 0, ult_y = 0;
+};
 // Castillos (castillos_ui.cpp): señores (S_CastleMaster), asedios en curso y guerras del clan.
 struct SenorCastillo {
     ObjId id = 0;
@@ -445,6 +454,7 @@ struct App {
     Correo correo;
     Subastas subastas;
     Castillos castillos;
+    MapaItem mapa_item;
     std::vector<std::string> bloqueados;  // C_Exclude: el servidor no le pasa sus mensajes
     std::vector<Marcador> marcadores;
     ElegirDestino destino;
@@ -773,6 +783,10 @@ bool comando_correo(App& a, std::string_view orden);
 void eventos_casas(App& a, const Evento& e);
 void dibujar_casas(App& a);
 bool sobre_casas(const App& a);
+// World-map items (map_ui.cpp).
+void eventos_mapa(App& a, const Evento& e);
+void dibujar_mapa_item(App& a);
+bool sobre_mapa(const App& a);
 void eventos_castillos(App& a, const Evento& e);
 void dibujar_castillos(App& a);
 bool comando_castillos(App& a, std::string_view orden, std::string_view resto);

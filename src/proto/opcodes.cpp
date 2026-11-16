@@ -41,7 +41,7 @@ constexpr ParSrv JP363_SRV[] = {
     {84, Srv::SOUND},         {190, Srv::PRIVATESHOPLIST},
     {64, Srv::BOARD},         {56, Srv::BOARDREAD},      {1, Srv::MAIL},
     {24, Srv::HOUSELIST},     {44, Srv::HOUSEMAP},       {123, Srv::WAR},          {66, Srv::CASTLEMASTER},
-    {72, Srv::TAXRATE},       {203, Srv::DEPOSIT},       {224, Srv::DRAWAL},
+    {72, Srv::TAXRATE},       {203, Srv::DEPOSIT},       {224, Srv::DRAWAL},       {100, Srv::USEMAP},
     // WARTIME usa el número de MAPID (150): se distinguen por el largo (ver mapa en decodificar.cpp).
     // SKILLICONGFX y SKILLICONAURA usan el número de PACKETBOX (40): son subtipos de esa caja.
 };
@@ -100,6 +100,7 @@ constexpr ParSrv TW380_SRV[] = {
     {140, Srv::PRIVATESHOPLIST}, {68, Srv::BOARD},        {148, Srv::BOARDREAD},    {186, Srv::MAIL},
     {156, Srv::HOUSELIST},     {187, Srv::HOUSEMAP},      {84, Srv::WAR},           {69, Srv::CASTLEMASTER},
     {185, Srv::TAXRATE},       {4, Srv::DEPOSIT},         {141, Srv::DRAWAL},
+    // USEMAP: the 3.80c Opcodes.java has no S_OPCODE_USEMAP, so the number is unknown here.
     {231, Srv::MAPID},  // S_WarTime: el decodificador de S_MapID lo distingue por el largo
 };
 constexpr ParCli TW380_CLI[] = {
@@ -155,6 +156,7 @@ constexpr ParSrv S3EP1_SRV[] = {
     {115, Srv::PRIVATESHOPLIST}, {93, Srv::BOARD}, {91, Srv::BOARDREAD}, {127, Srv::MAIL},
     {72, Srv::HOUSELIST}, {113, Srv::HOUSEMAP}, {94, Srv::WAR}, {111, Srv::CASTLEMASTER},
     {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::MAPID},
+    {14, Srv::USEMAP},  // S_UseMap: handler 0x48e0b0 of S3EP1U.bin, format "dc"
 };
 constexpr ParCli S3EP1_CLI[] = {
     {Cli::CLIENTVERSION, 34}, {Cli::LOGINPACKET, 113}, {Cli::COMMONCLICK, 46}, {Cli::NEWCHAR, 50},
@@ -190,7 +192,7 @@ const char* NOMBRES[] = {
     "SHOWSHOPSELLLIST", "SHOWRETRIEVELIST", "YES_NO", "TRADE", "TRADEADDITEM", "TRADESTATUS", "EMBLEM", "SKILLBUY",
     "DOOR", "PARALYSIS", "POISON", "CURSEBLIND", "INPUTAMOUNT", "PETCTRL", "SELECTTARGET", "TRUETARGET",
     "BOOKMARKS", "SELECTLIST", "IDENTIFYDESC", "INVIS", "RESURRECTION", "STRUP", "DEXUP", "PINKNAME", "LIQUOR", "BLESSOFEVA", "ABILITY", "SOUND", "PRIVATESHOPLIST", "BOARD", "BOARDREAD", "MAIL",
-    "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL",
+    "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL", "USEMAP",
 };
 static_assert(sizeof(NOMBRES) / sizeof(NOMBRES[0]) == static_cast<size_t>(Srv::CANTIDAD));
 

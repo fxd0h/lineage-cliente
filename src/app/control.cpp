@@ -551,6 +551,12 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         g.ctrl = p.size() > 1 && p[1] == "on";
     } else if (cmd == "shift") {
         g.shift = p.size() > 1 && p[1] == "on";
+    } else if (cmd == "mapa") {  // debug: mapa <1..18> opens the world-map window as S_UseMap would
+        Evento ev{};
+        ev.tipo = Ev::USAR_MAPA;
+        ev.v[0] = p.size() > 1 ? std::atoi(p[1].c_str()) : 0;
+        eventos_mapa(a, ev);
+        responder(c, "mapa=" + std::to_string(a.mapa_item.numero));
     } else if (cmd == "mudo") {
         a.mudo = p.size() < 2 || p[1] == "on";
         aplicar_volumenes(a);

@@ -287,6 +287,7 @@ void procesar_red(App& a) {
         eventos_tablon(a, e);
         eventos_correo(a, e);
         eventos_casas(a, e);
+        eventos_mapa(a, e);
         eventos_castillos(a, e);
         if (e.tipo == Ev::SONIDO) a.audio.efecto(static_cast<u32>(e.v[0]), 1.0f, a.entrada.ahora_ms);  // S_Sound
         eventos_cantidad(a, e);

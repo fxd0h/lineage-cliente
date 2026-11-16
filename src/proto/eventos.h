@@ -21,6 +21,7 @@ enum class Ev : u8 {
     PUERTA, PARALISIS, VENENO, CEGUERA, PEDIR_CANTIDAD, MASCOTA, ELEGIR_OBJETIVO_MASCOTA, MARCA_OBJETIVO,
     MARCADOR, INVISIBLE, RESUCITAR, NOMBRE_ROSA, LICOR, ANILLO, REINICIO, GRUPO, BLOQUEADO, SONIDO, TIENDA, TIENDA_LINEA, TABLON, TABLON_TEMA, TABLON_LEER, CORREO,
     CASAS, CASA, CASA_MAPA, GUERRA, ASEDIO, SENOR_CASTILLO, CASTILLO_FONDOS, FECHA_ASEDIO,
+    USAR_MAPA,
     IGNORADO,
 };
 
@@ -95,6 +96,7 @@ enum : int { GR_TIPO, GR_HP, GR_LIDER };
 // CASAS (S_HouseList): e.id el tablón de subastas; una CASA por casa: e.id la casa, s[0] el nombre,
 // CS_AREA, CS_MES y CS_DIA (cierre de la subasta) y CS_PRECIO (puja actual).
 // CASA_MAPA (S_HouseMap): e.id el tablón, v[0] la casa.
+// USAR_MAPA (S_UseMap): e.id the map item, v[0] the map number (1..18).
 enum : int { CS_AREA, CS_MES, CS_DIA, CS_PRECIO };
 // GUERRA (S_War): GU_TIPO (1 declara, 2 se rinde, 3 termina, 4 gana, 6/7 alianza, 8 "en guerra
 // con"), s[0] y s[1] los clanes. ASEDIO (S_PacketBox 0–4): GU_TIPO (0 empieza, 1 termina, 2 sigue,

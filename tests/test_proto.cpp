@@ -723,6 +723,24 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
     REQUIRE(decodificar(mapa, t, arena, ev));
     CHECK(ev[0].tipo == Ev::CASA_MAPA);
     CHECK(ev[0].v[0] == 262145);
+    // S_UseMap (jp363 opcode 100): item objid 0x01020304, map number 16.
+    ev.clear();
+    std::vector<u8> usemap = {100, 4, 3, 2, 1, 16, 0, 0, 0};
+    REQUIRE(decodificar(usemap, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::USAR_MAPA);
+    CHECK(ev[0].id == 0x01020304);
+    CHECK(ev[0].v[0] == 16);
+    {
+        TablaOpcodes us;  // the 2009 US client: handler 14 of S3EP1U.bin
+        tabla_opcodes("s3ep1", us);
+        ev.clear();
+        std::vector<u8> usmap = {14, 4, 3, 2, 1, 16, 0, 0, 0};
+        REQUIRE(decodificar(usmap, us, arena, ev));
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::USAR_MAPA);
+        CHECK(ev[0].v[0] == 16);
+    }
     // S_War 1: "A" declara la guerra a "B". S_CastleMaster: castillo 1, personaje 5.
     ev.clear();
     std::vector<u8> war = {123, 1, 'A', 0, 'B', 0, 66, 1, 5, 0, 0, 0};

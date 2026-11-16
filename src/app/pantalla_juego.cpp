@@ -775,7 +775,7 @@ void mover_jugador(App& a, u64 ahora) {
     const EntradaFrame& e = a.entrada;
     const Vista vi = vista(a);
     bool sobre_panel = (e.my >= vi.panel_y && e.mx >= vi.panel_x0 && e.mx < vi.panel_x1) || sobre_inventario(a) ||
-                       sobre_hechizos(a) || sobre_barra(a) || sobre_forma(a) || sobre_cantidad(a) || sobre_tienda(a) || sobre_tablon(a) || sobre_correo(a) || sobre_casas(a) || sobre_mascotas(a) || sobre_destino(a) || sobre_npc(a) || a.arrastrando != 0 || a.arrastrando_hechizo != 0 ||
+                       sobre_hechizos(a) || sobre_barra(a) || sobre_forma(a) || sobre_cantidad(a) || sobre_tienda(a) || sobre_tablon(a) || sobre_correo(a) || sobre_casas(a) || sobre_mapa(a) || sobre_mascotas(a) || sobre_destino(a) || sobre_npc(a) || a.arrastrando != 0 || a.arrastrando_hechizo != 0 ||
                        a.arrastrando_atajo >= 0 || a.autobuffs.arrastrando >= 0;
     // Objetivo: lo que hay bajo el puntero al apretar el botón, y se mantiene mientras siga
     // apretado aunque la cámara se mueva y el puntero ya no esté encima (se camina hasta él y se
@@ -1697,6 +1697,7 @@ void frame_juego(App& a) {
     dibujar_tablon(a);
     dibujar_correo(a);
     dibujar_casas(a);
+    dibujar_mapa_item(a);
     a.gpu.nivel_ventana(0);
     dibujar_castillos(a);
     a.gpu.nivel_ventana(NIVEL_SOBRE_VENTANAS);
