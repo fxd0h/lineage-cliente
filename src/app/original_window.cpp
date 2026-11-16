@@ -55,14 +55,16 @@ bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image) {
 }
 
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
-                        bool over_list, u32 track_image) {
+                        bool over_list, u32 track_image, int track_dy) {
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    g.gpu().dibujar(g.img(track_image ? track_image : IMG_TRACK), x, y + ARROW_H, KEY_FRAME);
+    g.gpu().dibujar(g.img(track_image ? track_image : IMG_TRACK), x, y + ARROW_H + track_dy, KEY_FRAME);
     const int track_y = y + ARROW_H, track_h = height - ARROW_H - ARROW_DOWN_H;
     const bool over_up = ui::sobre(e, x, y, 12, ARROW_H), over_down = ui::sobre(e, x, y + height - ARROW_DOWN_H, 12, ARROW_DOWN_H);
     g.gpu().dibujar(g.img(over_up ? IMG_UP_LIT : IMG_UP), x, y, KEY_CONTROL);
-    g.gpu().dibujar(g.img(over_down ? IMG_DOWN_LIT : IMG_DOWN), x, y + height - ARROW_DOWN_H, KEY_CONTROL);
+    // The down arrow (11 px wide) is right-aligned with the up arrow and the track (12 px), as in the original
+    // scroll bar class (0x47cd80): NPC dialog up (226,47), down x 227.
+    g.gpu().dibujar(g.img(over_down ? IMG_DOWN_LIT : IMG_DOWN), x + 1, y + height - ARROW_DOWN_H, KEY_CONTROL);
     if (total <= visible) {
         st = {};
         pos = 0;

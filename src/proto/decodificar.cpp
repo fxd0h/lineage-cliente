@@ -921,7 +921,10 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
                            : e.origen == Srv::SHOWSHOPSELLLIST ? LISTA_VENTA : LISTA_RETIRO;
         lista.v[LT_CANTIDAD] = n;
         // Almacén: c 3; inventario de una mascota (S_PetInventory, mismo formato de ítems): c 0x0b.
-        if (e.origen == Srv::SHOWRETRIEVELIST && l.c() == 0x0b) lista.v[LT_TIPO] = LISTA_MASCOTA;
+        if (e.origen == Srv::SHOWRETRIEVELIST) {
+            lista.v[LT_ALMACEN] = l.c();
+            if (lista.v[LT_ALMACEN] == 0x0b) lista.v[LT_TIPO] = LISTA_MASCOTA;
+        }
         if (l.error) return false;
         salida.push_back(lista);
         for (int i = 0; i < n && !l.error; ++i) {

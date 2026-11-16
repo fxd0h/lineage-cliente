@@ -130,7 +130,8 @@ enum : int { HT_DATOS, HT_CASA };
 // LISTA_TIENDA (id = NPC) abre una lista: LT_TIPO (TipoLista) y LT_CANTIDAD; le siguen tantos
 // ITEM_TIENDA (id = índice en la tienda o id del ítem, IT_GFX, TI_PRECIO, IT_CANTIDAD,
 // IT_BENDICION, s[0] = nombre).
-enum : int { LT_TIPO, LT_CANTIDAD };
+// LT_ALMACEN: the warehouse byte of S_Retrieve*List (3 personal, 5 clan, 9 elf; 0x0b pet bag), 0 for shops.
+enum : int { LT_TIPO, LT_CANTIDAD, LT_ALMACEN };
 // LISTA_REPARAR (S_SelectList / S_FixWeaponList): las armas dañadas; IT_CANTIDAD = el daño y
 // TI_PRECIO = lo que cuesta repararla (200 adena por punto).
 enum TipoLista : u8 { LISTA_COMPRA, LISTA_VENTA, LISTA_RETIRO, LISTA_MASCOTA, LISTA_REPARAR };

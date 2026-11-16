@@ -431,6 +431,9 @@ struct App {
     ObjId tienda_npc = 0;
     std::vector<FilaTienda> tienda_filas;
     u32 tienda_desplazamiento = 0;
+    u8 tienda_tipo = 0;       // original list window type (S3EP1U 0x4d1000): 0 buy, 1 sell, 2/3 warehouse, 4/5 clan, 8/9 elf, ...
+    int tienda_marcada = -1;  // row marked by a click (image 536)
+    int tienda_flecha = -1;   // quantity arrow held down: row * 2 + (1 = increase), -1 none
     bool hablar_objetivo = false;  // a.objetivo es un NPC al que se camina para hablarle
     bool objetivo_fijo = false;    // elegido al apretar el botón: se mantiene aunque el puntero ya no esté encima
     bool ataque_sostenido = false; // tecla A: se sigue atacando al objetivo sin mantener el botón
@@ -551,7 +554,7 @@ u8 opacidad_ventanas(const App& a);
 // Original client's framed windows (original_window.cpp): size, frame with close button (returns true
 // when it is clicked), ornaments drawn over the contents, and the image scroll bar.
 constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;  // inventory and status
-constexpr int SHOP_WINDOW_W = 208, SHOP_WINDOW_H = 291;  // frame image 1284 (shop lists)
+constexpr int SHOP_WINDOW_W = 258, SHOP_WINDOW_H = 335;  // frame image 1100 (shop, warehouse and other lists)
 constexpr int NPC_WINDOW_W = 258, NPC_WINDOW_H = 335;    // frame image 1356 (NPC dialog)
 void original_npc_size(const App& a, int& w, int& h);    // size of the NPC window in the original UI
 constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // size of frame image 934
@@ -564,7 +567,7 @@ void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image 
 bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
 void draw_original_ornament(App& a, int x, int y, u32 ornament);
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
-                        bool over_list, u32 track_image = 0);
+                        bool over_list, u32 track_image = 0, int track_dy = 0);
 // Botones para abrir las ventanas: los del panel original (esquina del panel derecho) o de texto
 // (UI simple; devuelve dónde terminan a la izquierda).
 void dibujar_botones_panel(App& a, int x, int y);

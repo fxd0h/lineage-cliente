@@ -29,7 +29,8 @@ private:
 };
 
 // Tipos de C_Result: 0 comprar (ítem = índice en la lista de la tienda), 1 vender, 2 guardar en el
-// almacén, 3 retirar.
+// almacén, 3 retirar. The warehouse types are the window types of the original client: 4 / 5 clan warehouse,
+// 8 / 9 elf warehouse (S3EP1U 0x4d1000; the L1J server reads them in C_Result).
 enum TipoResultado : u8 { RESULTADO_COMPRA = 0, RESULTADO_VENTA = 1, RESULTADO_DEPOSITO = 2, RESULTADO_RETIRO = 3 };
 struct LineaResultado {
     u32 item, cantidad;

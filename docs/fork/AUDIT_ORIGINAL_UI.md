@@ -234,18 +234,12 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Close | (181,18) | (164,6) | DIFFERENT | see section 7 |
 | bg/frame/ornament, MR centre 157, y 260 | 0x4af5c4, 0x4ae583 | same | MATCH | - |
 
-## 12. NPC dialog (ctor 0x43f130, draw 0x43f7f0) and shop (ctor 0x42dc30, draw 0x42dfd0)
+## 12. NPC dialog (ctor 0x43f130, draw 0x43f7f0); the window of ctor 0x42dc30 is the private shop
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Shop tooltip (known guess) | bordered box: fill alpha 0x8e, 2-tone border (189,189,189)/(123,123,123), black text, name coloured by state table 0x8f0f34 + "%s adena per item" (string 899) (0x42f0a0..0x42f3a2) | black 220-alpha box, white "name  N adena" | DIFFERENT | npc_ui.cpp `draw_shop_original` |
-| Shop text bars (known guess) | two edit controls at (34,224) and (34,241), 150x12, white (0x42dea7..0x42df0c) | text at x=28, y 226/243 | DIFFERENT | `SHOP_BAR_X=34` |
-| Shop selected item mark | img 696 at (x-1,y-1) (0x42ef2d) | hover rectangle + "*" text | DIFFERENT | draw_shop_original |
-| Shop ornament 1285 | at (-2,11) (0x42e1e4) | (0,0) | DIFFERENT | draw_shop_original |
-| Shop OK/Cancel hover art | 1291 / 1288 | 1290 / 1287 | DIFFERENT | see section 7 |
-| Shop icon position | cell origin | +1 px | DIFFERENT | |
-| Shop grids (43,51)/(43,145) pitch 34, OK (46,258), Cancel (109,258) | 0x42eee2, 0x42efc2 | same | MATCH | - |
-| NPC scroll bar | up (226,47), track 1354 (226,55), down x=227 (0x43f3df) | up y=45, all x=226 | DIFFERENT | npc_ui.cpp |
+| Window at ctor 0x42dc30 (frame 1284, 4x2 grids "Selling item" / "Buying item", price bars at (34,224)/(34,241), 696 mark, ornament 1285, OK 1291 / Cancel 1288) | it is the PRIVATE shop (callbacks 0x483410, adds items from the player inventory 0x701444, max 8 per grid), not the NPC shop; it is not drawn by the fork yet (U-D2) | previous fork code used it for NPC shop and warehouse | EXTRA (removed) | see section 18 for the NPC lists |
+| NPC scroll bar | up (226,47), track 1354 (226,55), down x=227 (0x43f3df, ctor 0x47cd80) | up (226,47), track 55, down x 227 | MATCH | - |
 | NPC bg/frame/ornament, close (226,15) | 0x43f25b | same | MATCH | - |
 
 ## 13. Prompts: yes/no question and quantity
@@ -253,7 +247,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
 | Yes/No question | bottom-screen bar: img 701 (320x32) drawn by 0x41fe30, "YES" at (361,447), "NO" at (401,447), no title (ctor 0x4d1cd0 x2, strings 0x6e5288/0x6e5284) | boxed 300x92 dialog with title (social_ui.cpp `dibujar_pregunta`) | DIFFERENT | social_ui.cpp (bar x: U-D4) |
-| Quantity / text input | input box 0x4cfa90: img 895 (134x93) + edit field, buttons 916/917, 918/919, 920/921 | generic 260x112 window with -/+ | DIFFERENT | cantidad_ui.cpp `dibujar_cantidad` |
+| Quantity / text input | input box 0x4cfa90: img 895 (134x93) + edit field, buttons 916/917, 918/919, 920/921; NOT used by the NPC lists (they step the amount with the row arrows) | generic 260x112 window with -/+ | DIFFERENT | cantidad_ui.cpp `dibujar_cantidad` |
 
 ## 14. Mail (list 0x417a90 / draw 0x417d50, letters 0x413500, 0x413a80, 0x416b50, 0x417320, compose 0x455800)
 
@@ -298,7 +292,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 |---|---|---|---|---|
 | Pet control window | 0x494820: frame 1170 (NAME/LEVEL/Exp/HP/MP, State, Hunger, [Equip] 4 + AC, [Command] 4x3), 1169, 1171, bars 1172/1173; command grid 0x493e90 sends aggressive/defensive/stay/alert/attackchr/getitem/changename/extend | gray bars + "Bag" button at the left; commands via HTML | DIFFERENT | mascotas_ui.cpp |
 | Summon control | 1196/1197 (0x4a9cd0, 0x4a6c90) | none | MISSING | mascotas_ui.cpp |
-| Warehouse list | 0x4bef40: frame 1100 (2 columns x 8 rows), 1099/1101, scroll 1354, buttons 1106/1109/1111, "%d/100/150/200"; opened for "retrieve" (0x40c69a) | shop-style list in the NPC dialog | DIFFERENT | new window, keep the S_RetrieveList parse |
+| NPC lists: shop buy / sell, warehouse (personal 3, clan 5, elf 9; deposits 2 / 4 / 8), pet bag, spells, repair | one window class 0x4f55d8 (ctor 0x4bef40, draw 0x4bf690, mouse 0x4bfdb0) over a row pane 0x4f557c (draw 0x4be220, rows 0x4bd250); type set by 0x4d1000 (byte table 0x4d115c: 0 buy, 1 sell, 2-5/8-12/19-21 OK, 7 buy, 16 OK ...); frame 1100 (258x335) bg 1099 (8,11), ornaments 1101 (2,11), close (225,15), label 1106 (29,31) + number (80,31) "total/adena" (red 0x5ca7 when it exceeds), pane (24,44)-(225,304) 7 rows of 36 from (25,51), scroll up 974 (225,47) track 1354 y 55 down 972 (226,293) thumb 976; row: icon at origin, name (+38,+3) with its 2nd line (+38,+17), amount right-aligned to +176 (y +19) between arrows 556 (left) / 554 (right at +180), price left of the left arrow with coin 325; selected row mark 536 at (-2,-2); chosen rows tinted; hover tooltip: 142 px box darkened 50 %, 2-tone border, text at (+5,+5); buttons y 306: Buy 1109 / Sell 1107 / OK 1114 at x 79, Cancel 1111 at x 131 (pressed art id+1); "%d/150", "/200", "/100" at (193,309) for retrievals 3 / 5 / 9; fee 30 per chosen row; the window type is the C_Result type | built from the shop-style 4x2 grid of the NPC dialog | MATCH (see open items) | npc_ui.cpp `draw_list_original` |
 | Party / alliance / buddy lists | frame 979+980 (978 back), scroll 971: 0x497240 ("party" 0x406994), 0x42fb40 ("alliancelist" 0x406900), 0x419040 ("buddy") | chat lines or nothing | MISSING | generic list window in original_window.cpp (assignment: U-D3) |
 | Calculator | 0x41da00, imgs 1359/1360/1361, "calc" command (0x4ff5a8) | absent | MISSING | optional |
 | Social window | none in the original (community = option2 HTML) | own window | EXTRA | social_ui.cpp |
@@ -372,14 +366,15 @@ attribute reset.
 - **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40.
 - **U-C8** NPC text rect; default positions of status, NPC, shop and trade (no code in their ctors; possibly a saved
   layout).
-- **U-C9** Trade grid rects (base 0x42cb60), the "Waiting" state, shop scroll bars, equipment icon size.
+- **U-C9** Trade grid rects (base 0x42cb60), the "Waiting" state, equipment icon size.
 - **U-C10** Quit buttons 1/2 mapping to Restart / Character select (0x4a0ba0, 0x4a0fc0).
 - **U-C11** Weight/food denominators 29 vs 240/225 (`[0x6f1da8]` >= 70083) — find its writer.
 - **U-C12** Map window internals (image table 0x6de444, mask, marker) were taken from fork comments and not re-verified.
 - **U-D1** Default screen position of the remaining framed windows (window manager 0x422650 / 0x4d0f30, saved layout).
-- **U-D2** Original windows for the board (S_Board), houses, private shop, polymorph prompt, teleport markers and
+- **U-D2** Original windows for the board (S_Board), houses, private shop (window of ctor 0x42dc30, see section 12), polymorph prompt, teleport markers and
   attribute reset — trace the server-opcode dispatch to the window global each one touches.
 - **U-D3** Exact party / alliance / buddy / pledge list assignment (0x497240 / 0x42fb40 / 0x419040 / 0x4b92f0).
 - **U-D4** Exact x of the Yes/No bar (0x41fe30 adds the view origin + 0x89).
 - **U-D5** 1480 window (0x4d43f0) versus pet window 1170; uses of 0x4208a0 (frame 1321) and 0x4b56c0 (1330).
 - **U-D6** Whether 0x44f5c0 (frame 997) is the pet inventory or the warehouse deposit side.
+- **U-E1** (NPC lists, open): (a) row highlight of chosen rows is a table blend 0x498d90 / 0x8f133c (low-byte table built at 0x4d1590, the high-byte half at +0x200 not found): the fork uses a translucent blue; (b) the border line geometry of the tooltip (eight 0x498720 calls) is approximated as a 2 px two-tone bevel (189 / 123); (c) the tooltip lacks the item property lines (S_ShopSellList attribute bytes are skipped by the decoder; rows' +0x14/+0x18 strings); (d) hit test of the row hover in 0x4be19e divides by 34 while rows are drawn every 36: the fork hits the drawn rows; (e) types 0xd / 0xe (repair, 0x4beb30) and the pet bag (0x0b) keep the fork flow (click on the row), their Buy / OK art follows the byte table only for 0xd; (f) deposit-pledge / deposit-elven checks (clan membership, message strings 0x2d8 / 0xd0 at 0x40a2ba) are left to the server; the "donate" action (type 0xa, 0x40a436) and retrieve-char (type 0xc) are not opened by the client; (g) `0x4bf690` mode word [0xa0] values other than 7 (0xbb8 for some NPC 0x8f states) hide the Adena label: not modelled; (h) the quantity wrap at the shop cap 1000 per row and the 1 000 000 / 10 000 000 price limits are from 0x4bd840 / 0x4bd8a0 (read, not run).

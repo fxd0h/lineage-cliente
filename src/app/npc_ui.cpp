@@ -26,10 +26,10 @@ constexpr int MARGEN = 14, ARRIBA = 30;
 constexpr int ANCHO_PAGINA = ui::VENTANA_ANCHO - 2 * MARGEN;
 constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
 // Original NPC dialog (client class at 0x43f130, draw 0x43f7f0): background 1355 at (8,11), frame 1356, ornaments
-// 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 45 and 293 over the track 1354.
+// 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 47 and 293 over the track 1354.
 constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
 constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 21, NPC_TEXT_Y = 48, NPC_TEXT_W = 197, NPC_TEXT_H = 251;
-constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 45, NPC_SCROLL_H = 260, NPC_LINE = 12;  // scroll steps of a text line
+constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 12;  // scroll steps of a text line
 
 // Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
 bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_original; }
@@ -89,6 +89,7 @@ void cerrar(App& a) {
     a.npc = 0;
     a.tienda = TipoTienda::NINGUNA;
     a.tienda_filas.clear();
+    a.tienda_marcada = a.tienda_flecha = -1;
 }
 
 }  // namespace
@@ -105,8 +106,12 @@ u32 adena_inventario(const App& a) {
 
 namespace {
 
-void abrir_tienda(App& a, ObjId npc, TipoTienda tipo) {
+// `window_type` is the type of the original list window (0x4d1000); 0 picks the one of `tipo`.
+void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
+    static constexpr u8 TYPES[] = {0, 0, 1, 3, 2, 0xf, 0x0b, 0xd};  // by TipoTienda
     a.tienda = tipo;
+    a.tienda_tipo = window_type ? window_type : TYPES[static_cast<int>(tipo)];
+    a.tienda_marcada = a.tienda_flecha = -1;
     a.tienda_npc = npc;
     a.tienda_filas.clear();
     a.tienda_desplazamiento = 0;
@@ -139,6 +144,10 @@ void activar(App& a, std::string_view vinculo, bool es_enlace) {
         enviar(a, cmd::armas_a_reparar(a.op));
     } else if (vinculo == "deposit") {
         abrir_tienda(a, a.npc, TipoTienda::DEPOSITO);
+    } else if (vinculo == "deposit-pledge") {  // clan warehouse (window type 4, C_Result type 4)
+        abrir_tienda(a, a.npc, TipoTienda::DEPOSITO, 4);
+    } else if (vinculo == "deposit-elven") {  // elf warehouse (window type 8)
+        abrir_tienda(a, a.npc, TipoTienda::DEPOSITO, 8);
     } else if (vinculo.substr(0, 6) == "raise-") {  // RaiseAttr: subir un atributo (C_Attr 479)
         enviar(a, cmd::subir_atributo(a.op, vinculo.substr(6)));
         cerrar(a);
@@ -181,9 +190,8 @@ void confirmar(App& a) {
     size_t n = 0;
     for (const FilaTienda& f : a.tienda_filas)
         if (f.elegido && n < 255) lineas[n++] = {f.id, f.elegido};
-    static constexpr TipoResultado TIPOS[] = {RESULTADO_COMPRA, RESULTADO_COMPRA, RESULTADO_VENTA, RESULTADO_RETIRO,
-                                              RESULTADO_DEPOSITO};
-    if (n) enviar(a, cmd::resultado(a.op, a.tienda_npc, TIPOS[static_cast<int>(a.tienda)], {lineas, n}));
+    // The window type is the C_Result type (0 buy, 1 sell, 2 / 4 / 8 deposits, 3 / 5 / 9 retrievals).
+    if (n) enviar(a, cmd::resultado(a.op, a.tienda_npc, static_cast<TipoResultado>(a.tienda_tipo), {lineas, n}));
     cerrar(a);
 }
 
@@ -218,7 +226,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
         const u32 prev = line;
         original_scrollbar(a, a.scroll.tienda, x0 + NPC_SCROLL_X, y0 + NPC_SCROLL_Y, NPC_SCROLL_H,
                            static_cast<u32>((p.alto + NPC_LINE - 1) / NPC_LINE), static_cast<u32>(view_h / NPC_LINE), line, false,
-                           IMG_NPC_TRACK);
+                           IMG_NPC_TRACK, -2);
         if (line != prev) a.npc_desplazamiento = static_cast<int>(line) * NPC_LINE;
     }
     if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * 30, 0, max_desp);
@@ -313,131 +321,231 @@ void row_click(App& a, int i, bool hover, std::string_view name) {
 }
 
 
-// Original shop window (client S3EP1U draw at 0x42dfd0, built at 0x42dc30): background 1283 at (7,7), frame 1284 at
-// the corner, ornaments 1285; "selling" grid of 4x2 cells of 34 px at (43,51), "buying" grid at (43,145), two text
-// bars at y 224 / 241, OK (1289) at (46,258) and Cancel (1286) at (109,258), close button at (174,18).
-constexpr u32 IMG_SHOP_BG = 1283, IMG_SHOP_FRAME = 1284, IMG_SHOP_ORNAMENT = 1285;
-constexpr u32 IMG_OK = 1289, IMG_OK_LIT = 1290, IMG_CANCEL = 1286, IMG_CANCEL_LIT = 1287;
-constexpr int SHOP_CLOSE_X = 174, SHOP_CLOSE_Y = 18, SHOP_CELL = 34, SHOP_COLS = 4, SHOP_ROWS = 2;
-constexpr int SHOP_GRID_X = 43, SHOP_SELL_Y = 51, SHOP_BUY_Y = 145, SHOP_SCROLL_X = 28;
-constexpr int SHOP_BAR_X = 28, SHOP_BAR1_Y = 224, SHOP_BAR2_Y = 241;
+// Original list window of the 2009 US client (S3EP1U): the NPC shop (buy and sell), the warehouses, the pet bag, the
+// spell list and the weapon repair list are all one window class (0x4f55d8, ctor 0x4bef40, draw 0x4bf690) whose
+// type (0x4d1000) only changes the button art and the texts. The earlier 4x2-grid window (frame 1284, ctor 0x42dc30)
+// is the private shop ("Selling item" / "Buying item"), not the NPC shop.
+//  - background 1099 at (8,11), frame 1100, ornaments 1101 at (2,11), close (225,15), label "Adena:" 1106 at (29,31),
+//    its number at (80,31);
+//  - pane (24,44)-(225,304): 7 rows of 36 px from (25,51) (0x4be220); scroll bar 1354 (up 974 at (225,47), track at y 55,
+//    down 972 at (226,293), thumb 976);
+//  - row (0x4bd250): icon at the row origin, name at (+38,+3), amount chosen right-aligned to +176 at y +19 between the
+//    arrows 556 (left) and 554 (right, at +180), the price left of the left arrow with the adena coin 325;
+//  - buttons at y 306: Buy 1109 / Sell 1107 / OK 1114 at x 79, Cancel 1111 at x 131 (pressed art = id + 1).
+constexpr u32 IMG_LIST_BG = 1099, IMG_LIST_FRAME = 1100, IMG_LIST_ORNAMENT = 1101, IMG_LIST_LABEL = 1106, IMG_LIST_TRACK = 1354;
+constexpr u32 IMG_BUY = 1109, IMG_SELL = 1107, IMG_OK = 1114, IMG_CANCEL = 1111, IMG_COIN = 325, IMG_ROW_MARK = 536;
+constexpr u32 IMG_ARROW_RIGHT = 554, IMG_ARROW_LEFT = 556;  // +1: pressed
+constexpr int LIST_CLOSE_X = 225, LIST_CLOSE_Y = 15, LIST_ROWS = 7, LIST_ROW_H = 36, LIST_ROW_X = 25, LIST_ROW_Y = 51;
+constexpr int LIST_PANE_X = 24, LIST_PANE_Y = 44, LIST_PANE_W = 201, LIST_PANE_H = 260;
+constexpr int LIST_SCROLL_X = 225, LIST_SCROLL_Y = 47, LIST_SCROLL_H = 258;
+constexpr int LIST_BTN_Y = 306, LIST_BTN_X = 79, LIST_CANCEL_X = 131;
+constexpr int ARROW_SIDE = 12;  // clickable side of a quantity arrow (0x4be0..: rect of 12 x 12)
 
-// Rows of the shop that are part of the selection, as indices (in order). Returns how many fit in `out`.
-size_t chosen_rows(const App& a, int* out, size_t cap) {
-    size_t n = 0;
-    for (size_t i = 0; i < a.tienda_filas.size() && n < cap; ++i)
-        if (a.tienda_filas[i].elegido) out[n++] = static_cast<int>(i);
-    return n;
+// Text colours 0x8f0f34[]: 0 blessed (255,246,180), 1 normal white, 2 cursed red, 3 unidentified grey; set at 0x4d16bc.
+u32 state_color(u8 state) {
+    static constexpr u16 PALETTE[] = {0x7fd6, 0x7fff, 0x5ca7, 0x5ef7};
+    return rgb555(PALETTE[state & 3]);
 }
 
-void draw_shop_original(App& a, int x0, int y0) {
+// Original text of a number: thousands separated (0x44f4f0).
+const char* digits(u64 v, char* buf, size_t n) { return con_miles(v, buf, n); }
+
+// Quantity arrows, as 0x4bd840 (left) and 0x4bd8a0 (right): the amount wraps between 0 and the stack size (a row
+// of a shop has no stack limit but 1000 per click series, the type 0 cap pushed at 0x4bddd1), and a price of
+// 10 000 000 or more allows one only.
+void step_amount(const App& a, FilaTienda& f, bool increase) {
+    const bool buying = a.tienda == TipoTienda::COMPRA;
+    const u32 stack = buying ? 0u : f.maximo, cap = buying ? 1000u : 0u;
+    u32 n = f.elegido;
+    if (increase) {
+        ++n;
+        if (stack && n > stack) n = 0;
+        if (cap && n > cap) n = n == cap + 1 ? 0 : cap;
+    } else if (n) {
+        --n;
+    } else if (stack) {
+        n = stack;
+    }
+    if (cap && n > cap) n = cap;
+    if (f.precio >= 10000000u && n > 1) n = increase ? 0 : 1;
+    if (buying && f.precio >= 1000000u && n > 10) n = 10;
+    f.elegido = n;
+}
+
+// The two-tone frame and the 50 % darkening of the list tooltip (0x4be41e..0x4be576): 142 px wide at the pane
+// x + 10 (the y thresholds are screen coordinates), name lines at +5 / +5 + 12 k.
+void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char* line2, u32 color) {
     Graficos& g = *a.g;
-    const EntradaFrame& e = a.entrada;
-    const u64 kt = clave_orden(CAPA_UI_TEXTO, 14), ki = clave_orden(CAPA_UI, 13), kh = clave_orden(CAPA_UI, 14);
-    if (draw_original_frame(a, x0, y0, IMG_SHOP_BG, 7, 7, IMG_SHOP_FRAME, SHOP_CLOSE_X, SHOP_CLOSE_Y)) {
+    const int lines = line2[0] ? 2 : 1;
+    const int h = 12 * lines + 10, w = 142, x = x0 + 34;
+    int top = row_y + 32 > 300 ? row_y - 12 : row_y + 32;
+    if (top > 157) top = std::max(10, top - 12 * (lines - 1) - 22);
+    else top = std::min(top - 33, 330 - h);
+    const u64 kb = clave_orden(CAPA_UI, 30), kl = clave_orden(CAPA_UI, 31), kt = clave_orden(CAPA_UI_TEXTO, 30);
+    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 128));
+    const u32 light = rgba(189, 189, 189), dark = rgba(123, 123, 123);
+    g.gpu().rectangulo(x, top, w, 1, kl, light);
+    g.gpu().rectangulo(x + 1, top + 1, w - 2, 1, kl, light);
+    g.gpu().rectangulo(x, top, 1, h, kl, light);
+    g.gpu().rectangulo(x + 1, top + 1, 1, h - 2, kl, light);
+    g.gpu().rectangulo(x, top + h - 1, w, 1, kl, dark);
+    g.gpu().rectangulo(x + 1, top + h - 2, w - 2, 1, kl, dark);
+    g.gpu().rectangulo(x + w - 1, top, 1, h, kl, dark);
+    g.gpu().rectangulo(x + w - 2, top + 1, 1, h - 2, kl, dark);
+    g.texto_sombra(line1, static_cast<float>(x + 5), static_cast<float>(top + 5), kt, color);
+    if (line2[0]) g.texto_sombra(line2, static_cast<float>(x + 5), static_cast<float>(top + 17), kt, color);
+}
+
+// A name as one or two lines: the second one starts at the last space that keeps the first within `width`.
+void split_name(std::string_view name, int width, char* l1, char* l2, size_t cap) {
+    size_t cut = name.size();
+    while (cut > 0 && ancho_texto(name.data(), cut) > width) {
+        const size_t sp = name.rfind(' ', cut - 1);
+        cut = sp == std::string_view::npos || sp == 0 ? cut - 1 : sp;
+    }
+    const size_t n1 = std::min(cut, cap - 1);
+    std::memcpy(l1, name.data(), n1);
+    l1[n1] = 0;
+    size_t start = cut;
+    while (start < name.size() && name[start] == ' ') ++start;
+    const size_t n2 = std::min(name.size() - start, cap - 1);
+    std::memcpy(l2, name.data() + start, n2);
+    l2[n2] = 0;
+}
+
+void draw_list_original(App& a, int x0, int y0) {
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    const u64 kt = clave_orden(CAPA_UI_TEXTO, 14), ki = clave_orden(CAPA_UI, 13), km = clave_orden(CAPA_UI, 12), kc = clave_orden(CAPA_UI, 16);
+    if (draw_original_frame(a, x0, y0, IMG_LIST_BG, 8, 11, IMG_LIST_FRAME, LIST_CLOSE_X, LIST_CLOSE_Y)) {
         cerrar(a);
         return;
     }
-    draw_original_overlay(a, x0, y0, IMG_SHOP_ORNAMENT);
-    const bool free_pointer = !sobre_cantidad(a);  // the amount dialog sits on top
+    draw_original_overlay(a, x0 + 2, y0 + 11, IMG_LIST_ORNAMENT);
+    const bool free_pointer = !sobre_cantidad(a);
     const int n = static_cast<int>(a.tienda_filas.size());
-    int chosen[256];
-    const int n_chosen = static_cast<int>(chosen_rows(a, chosen, std::size(chosen)));
-    // Scroll bars in the dark column left of each grid, one row (4 items) per step.
-    u32& chosen_pos = a.scroll.tienda_elegidas_pos;
-    const u32 sell_rows = static_cast<u32>((n + SHOP_COLS - 1) / SHOP_COLS), buy_rows = static_cast<u32>((n_chosen + SHOP_COLS - 1) / SHOP_COLS);
-    original_scrollbar(a, a.scroll.tienda, x0 + SHOP_SCROLL_X, y0 + SHOP_SELL_Y, SHOP_ROWS * SHOP_CELL, sell_rows, SHOP_ROWS,
-                       a.tienda_desplazamiento, ui::sobre(e, x0 + SHOP_GRID_X, y0 + SHOP_SELL_Y, SHOP_COLS * SHOP_CELL, SHOP_ROWS * SHOP_CELL) && free_pointer);
-    original_scrollbar(a, a.scroll.tienda_elegidas, x0 + SHOP_SCROLL_X, y0 + SHOP_BUY_Y, SHOP_ROWS * SHOP_CELL, buy_rows, SHOP_ROWS,
-                       chosen_pos, ui::sobre(e, x0 + SHOP_GRID_X, y0 + SHOP_BUY_Y, SHOP_COLS * SHOP_CELL, SHOP_ROWS * SHOP_CELL) && free_pointer);
-    const FilaTienda* tip = nullptr;
-    int tip_row = -1;
-    char buf[256], num[32], m1[32];
-    auto cell = [&](int grid_y, int k, int row, bool selection) {  // draws cell k of a grid (row: shop row or -1)
-        const int cx = x0 + SHOP_GRID_X + (k % SHOP_COLS) * SHOP_CELL, cy = y0 + grid_y + (k / SHOP_COLS) * SHOP_CELL;
-        if (row < 0) return;
-        FilaTienda& f = a.tienda_filas[static_cast<size_t>(row)];
-        const bool over = ui::sobre(e, cx, cy, SHOP_CELL - 1, SHOP_CELL - 1) && free_pointer;
-        if (over) g.gpu().rectangulo(cx, cy, SHOP_CELL - 1, SHOP_CELL - 1, kh - 1, rgba(120, 100, 40, 110));
-        draw_item_icon(g.gpu(), g.icono(f.gfx), cx + 1, cy + 1, ki, f.bendicion);
-        // Amount: the selected one in the selection grid, the stack size in the list (only for stacks).
-        const u32 amount = selection ? f.elegido : (a.tienda == TipoTienda::DEPOSITO || a.tienda == TipoTienda::RETIRO || a.tienda == TipoTienda::MASCOTA) ? f.maximo : 0;
-        if (amount > 1) {
-            std::snprintf(num, sizeof num, "%u", amount);
-            g.texto_sombra(num, static_cast<float>(cx + SHOP_CELL - 3 - ancho_texto(num, std::strlen(num))), static_cast<float>(cy + SHOP_CELL - ALTO_GLIFO - 2),
-                           kt, rgba(255, 255, 254));
-        } else if (!selection && f.elegido) {  // marks what is already in the selection
-            g.texto_sombra("*", static_cast<float>(cx + 3), static_cast<float>(cy + 2), kt, rgba(255, 230, 120));
+    const bool pane_hover = ui::sobre(e, x0 + LIST_PANE_X, y0 + LIST_PANE_Y, LIST_PANE_W, LIST_PANE_H) && free_pointer;
+    original_scrollbar(a, a.scroll.tienda, x0 + LIST_SCROLL_X, y0 + LIST_SCROLL_Y, LIST_SCROLL_H, static_cast<u32>(n), LIST_ROWS,
+                       a.tienda_desplazamiento, pane_hover, IMG_LIST_TRACK, -2);
+    char b1[40], b2[40], b3[40];
+    // Totals (0x4be800 sums price x amount, 0x4be830 counts the rows with an amount).
+    u64 total_price = 0;
+    u32 chosen_rows = 0;
+    for (const FilaTienda& f : a.tienda_filas) {
+        total_price += static_cast<u64>(f.precio) * f.elegido;
+        chosen_rows += f.elegido ? 1u : 0u;
+    }
+    const u64 adena = adena_inventario(a);
+    const bool fee = a.tienda == TipoTienda::RETIRO;
+    const u64 amount = fee ? static_cast<u64>(chosen_rows) * PRECIO_RETIRO : total_price;
+    // Rows.
+    const bool show_price = true;  // 0x4bd250 flag [+0x95]: set by the list constructor (0x4bd980), cleared only for type 0x10
+    int hover_row = -1;
+    bool hover_arrow = false;
+    char tip1[160] = "", tip2[160] = "";
+    u32 tip_color = state_color(1);
+    int tip_y = 0;
+    const int first = static_cast<int>(a.tienda_desplazamiento);
+    for (int k = 0; k < LIST_ROWS; ++k) {
+        const int idx = first + k;
+        if (idx >= n) break;
+        FilaTienda& f = a.tienda_filas[static_cast<size_t>(idx)];
+        const int rx = x0 + LIST_ROW_X, ry = y0 + LIST_ROW_Y + k * LIST_ROW_H;
+        const u32 color = state_color(f.bendicion);
+        digits(f.elegido, b1, sizeof b1);
+        const int num_w = ancho_texto(b1, std::strlen(b1));
+        const int num_x = rx + 180 - num_w - 4, ay = ry + 19;
+        const int left_x = num_x - 13, right_x = rx + 180;
+        const bool over_row = ui::sobre(e, x0 + LIST_PANE_X, ry - 2, LIST_PANE_W, LIST_ROW_H) && free_pointer;
+        const bool over_left = ui::sobre(e, left_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
+        const bool over_right = ui::sobre(e, right_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
+        if (f.elegido) g.gpu().rectangulo(x0 + 24, ry - 2, 192, 34, km, rgba(120, 140, 255, 70));  // 0x498d90 with table 0x8f133c
+        if (idx == a.tienda_marcada) g.gpu().dibujar(g.img(IMG_ROW_MARK), rx - 2, ry - 2, km);
+        draw_item_icon(g.gpu(), g.icono(f.gfx), rx, ry, ki, f.bendicion);
+        char name[256];
+        const size_t m = nombre_fila(a, f, name, sizeof name);
+        char l1[160], l2[160];
+        split_name({name, m}, 140, l1, l2, sizeof l1);
+        g.texto_sombra(l1, static_cast<float>(rx + 38), static_cast<float>(ry + 3), kt, color);
+        // The second line shares its height with the price: it stops before the coin (16 characters at most, 0x4bd808).
+        size_t n2 = std::strlen(l2);
+        const int limit = (show_price ? left_x - 4 - ancho_texto(digits(f.precio, b2, sizeof b2), std::strlen(b2)) - 4 - 13 : left_x) - (rx + 38);
+        while (n2 > 0 && ancho_texto(l2, n2) > limit) --n2;
+        l2[n2] = 0;
+        if (l2[0]) g.texto_sombra(l2, static_cast<float>(rx + 38), static_cast<float>(ry + 17), kt, color);
+        // Amount and arrows.
+        g.texto_sombra(b1, static_cast<float>(num_x), static_cast<float>(ay), kt, color);
+        const bool held_left = a.tienda_flecha == idx * 2 && e.presionado && over_left;
+        const bool held_right = a.tienda_flecha == idx * 2 + 1 && e.presionado && over_right;
+        g.gpu().dibujar(g.img(IMG_ARROW_LEFT + (held_left ? 1 : 0)), left_x, ay, kc);
+        g.gpu().dibujar(g.img(IMG_ARROW_RIGHT + (held_right ? 1 : 0)), right_x, ay, kc);
+        if (show_price) {
+            const u64 price = f.precio;
+            digits(price, b2, sizeof b2);
+            const int price_w = ancho_texto(b2, std::strlen(b2));
+            const int price_x = left_x - price_w - 4;
+            u32 price_color = color;
+            if (a.tienda == TipoTienda::REPARAR) {  // types 0xd / 0xe colour the price by magnitude (0x4bd637)
+                static constexpr u16 STEPS[] = {0x7fd6, 0x63b6, 0x5a36, 0x5fbc, 0x509e, 0x5e8d};
+                static constexpr u64 LIMITS[] = {10000, 100000, 1000000, 10000000, 100000000};
+                int s = 0;
+                while (s < 5 && price >= LIMITS[s]) ++s;
+                price_color = s == 0 ? color : rgb555(STEPS[s]);
+            }
+            g.texto_sombra(b2, static_cast<float>(price_x), static_cast<float>(ay), kt, price_color);
+            g.gpu().dibujar(g.img(IMG_COIN), price_x - 13, ay, kc);
         }
-        if (over) {
-            tip = &f;
-            tip_row = row;
+        // Pointer: the icon column shows the tooltip; an arrow press starts a held arrow; the row press marks it.
+        if (over_row && e.pulsado) a.tienda_marcada = idx;
+        if (e.pulsado && over_left) a.tienda_flecha = idx * 2;
+        if (e.pulsado && over_right) a.tienda_flecha = idx * 2 + 1;
+        // The release over the arrow acts (0x4bdd9d); a click injected as release only (no press seen) counts too.
+        if (e.clic && (a.tienda_flecha == idx * 2 || a.tienda_flecha < 0) && over_left) step_amount(a, f, false);
+        if (e.clic && (a.tienda_flecha == idx * 2 + 1 || a.tienda_flecha < 0) && over_right) step_amount(a, f, true);
+        if (over_left || over_right) hover_arrow = true;
+        if (free_pointer && ui::sobre(e, rx, ry, LIST_ROW_H, LIST_ROW_H)) {
+            hover_row = idx;
+            std::snprintf(tip1, sizeof tip1, "%s", l1);
+            std::snprintf(tip2, sizeof tip2, "%s", l2);
+            tip_color = color;
+            tip_y = ry;
         }
+        // The pet bag and the repair list act on a plain click of the row (fork flow: the arrows do not apply to them).
+        if (over_row && !over_left && !over_right && e.clic && (a.tienda == TipoTienda::MASCOTA || a.tienda == TipoTienda::REPARAR))
+            row_click(a, idx, true, {name, m});
+    }
+    if (e.clic || !e.presionado) a.tienda_flecha = -1;
+    // Adena label and the amount (0x4bf8e0..0x4bfc5d): "total/adena", red when the adena does not cover it.
+    {
+        g.gpu().dibujar(g.img(IMG_LIST_LABEL), x0 + 29, y0 + 31, kc);
+        digits(amount, b1, sizeof b1);
+        digits(adena, b2, sizeof b2);
+        const bool pair = a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::MAGIA || a.tienda == TipoTienda::REPARAR || fee;
+        std::snprintf(b3, sizeof b3, pair ? "%s/%s" : "%s", b1, b2);
+        g.texto_sombra(b3, static_cast<float>(x0 + 80), static_cast<float>(y0 + 31), kt, state_color(pair && amount > adena ? 2 : 0));
+    }
+    // Warehouse capacity: "%d/150" personal (type 3), "/200" clan (5), "/100" elf (9), at (193,309) (0x4bfc78).
+    if (a.tienda == TipoTienda::RETIRO && (a.tienda_tipo == 3 || a.tienda_tipo == 5 || a.tienda_tipo == 9)) {
+        std::snprintf(b3, sizeof b3, "%d/%d", n, a.tienda_tipo == 3 ? 150 : a.tienda_tipo == 5 ? 200 : 100);
+        g.texto_sombra(b3, static_cast<float>(x0 + 193), static_cast<float>(y0 + 309), kt, state_color(0));
+    }
+    if (hover_row >= 0 && !hover_arrow && tip1[0]) draw_list_tooltip(a, x0, tip_y, tip1, tip2, tip_color);
+    // Buttons: pressed art while the button is held (0x47c2d0 buttons have no hover art).
+    auto button = [&](int x, u32 image) {
+        const RegionAtlas base = g.img(image);
+        const bool over = ui::sobre(e, x0 + x, y0 + LIST_BTN_Y, base.w, base.h) && free_pointer;
+        g.gpu().dibujar(over && e.presionado ? g.img(image + 1) : base, x0 + x, y0 + LIST_BTN_Y, kc);
+        return over && e.clic;
     };
-    for (int k = 0; k < SHOP_COLS * SHOP_ROWS; ++k) {
-        const int i = static_cast<int>(a.tienda_desplazamiento) * SHOP_COLS + k;
-        cell(SHOP_SELL_Y, k, i < n ? i : -1, false);
-    }
-    const int sell_tip = tip_row;
-    const FilaTienda* sell_tip_row = tip;
-    tip = nullptr;
-    tip_row = -1;
-    for (int k = 0; k < SHOP_COLS * SHOP_ROWS; ++k) {
-        const int j = static_cast<int>(chosen_pos) * SHOP_COLS + k;
-        cell(SHOP_BUY_Y, k, j < n_chosen ? chosen[j] : -1, true);
-    }
-    const int selection_hover = tip_row;
-    // Clicks: a list cell selects (or asks the amount of a stack), a selection cell takes one back (Shift: all).
-    if (sell_tip_row) {
-        size_t m = nombre_fila(a, *sell_tip_row, buf, sizeof buf);
-        row_click(a, sell_tip, true, {buf, m});
-    } else if (selection_hover >= 0) {
-        FilaTienda& f = a.tienda_filas[static_cast<size_t>(selection_hover)];
-        if (e.clic) f.elegido = e.shift ? 0 : f.elegido - 1;
-        if (e.clic_derecho) f.elegido = 0;
-    }
-    // Name and price of the item under the pointer.
-    if (const FilaTienda* t = sell_tip_row ? sell_tip_row : tip; t) {
-        const size_t m = nombre_fila(a, *t, buf, sizeof buf);
-        std::string_view name{buf, m};
-        char line[320];
-        if (a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::VENTA || a.tienda == TipoTienda::REPARAR)
-            std::snprintf(line, sizeof line, "%.*s  %s adena", static_cast<int>(name.size()), name.data(), con_miles(t->precio, m1, sizeof m1));
-        else
-            std::snprintf(line, sizeof line, "%.*s", static_cast<int>(name.size()), name.data());
-        const int w = ancho_texto(line, std::strlen(line));
-        g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-        g.texto(line, static_cast<float>(e.mx + 14), static_cast<float>(e.my + 17), clave_orden(CAPA_UI_TEXTO, 30));
-    }
-    // The two text bars: what the selection costs / yields, and the adena carried (or a hint).
-    char l1[96], l2[96], m2[32];
-    const u64 t = total(a);
-    l2[0] = 0;
-    switch (a.tienda) {
-    case TipoTienda::MAGIA:
-        if (a.tienda_filas.empty()) {
-            std::snprintf(l1, sizeof l1, "Nothing to learn now");
-            break;
-        }
-        [[fallthrough]];
-    case TipoTienda::COMPRA:
-        std::snprintf(l1, sizeof l1, "Total %s adena", con_miles(t, m1, sizeof m1));
-        std::snprintf(l2, sizeof l2, "Adena %s", con_miles(adena_inventario(a), m2, sizeof m2));
-        break;
-    case TipoTienda::VENTA: std::snprintf(l1, sizeof l1, "You get %s adena", con_miles(t, m1, sizeof m1)); break;
-    case TipoTienda::RETIRO: std::snprintf(l1, sizeof l1, "Fee %s adena (30 each)", con_miles(t, m1, sizeof m1)); break;
-    case TipoTienda::MASCOTA: std::snprintf(l1, sizeof l1, a.tienda_filas.empty() ? "The pet carries nothing" : "Click: use or equip"); break;
-    case TipoTienda::REPARAR: std::snprintf(l1, sizeof l1, a.tienda_filas.empty() ? "No damaged weapons" : "Click a weapon to repair it"); break;
-    default: std::snprintf(l1, sizeof l1, "Click: amount  Shift: +10"); break;
-    }
-    g.texto_sombra(l1, static_cast<float>(x0 + SHOP_BAR_X), static_cast<float>(y0 + SHOP_BAR1_Y + 2), kt, rgba(255, 255, 254));
-    if (l2[0]) g.texto_sombra(l2, static_cast<float>(x0 + SHOP_BAR_X), static_cast<float>(y0 + SHOP_BAR2_Y + 2), kt, rgba(255, 255, 254));
-    if (draw_original_button(a, x0 + 46, y0 + 258, IMG_OK, IMG_OK_LIT)) confirmar(a);
-    else if (draw_original_button(a, x0 + 109, y0 + 258, IMG_CANCEL, IMG_CANCEL_LIT)) cerrar(a);
+    const u32 confirm_image = a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::MAGIA ? IMG_BUY
+                              : a.tienda == TipoTienda::VENTA                                  ? IMG_SELL
+                                                                                               : IMG_OK;
+    if (button(LIST_BTN_X, confirm_image)) confirmar(a);
+    else if (button(LIST_CANCEL_X, IMG_CANCEL)) cerrar(a);
 }
 
 void dibujar_tienda(App& a, int x0, int y0) {
-    if (!a.cfg.ui_simple) return draw_shop_original(a, x0, y0);
+    if (!a.cfg.ui_simple) return draw_list_original(a, x0, y0);
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), kf = clave_orden(CAPA_UI, 12), ki = clave_orden(CAPA_UI, 13);
@@ -551,7 +659,9 @@ void eventos_npc(App& a, const Evento& e) {
         static_assert(std::size(TIPOS) == LISTA_REPARAR + 1);
         if (a.npc == 0) a.npc = e.id;
         // La de reparar no trae el NPC: es el herrero con el que se habla.
-        abrir_tienda(a, e.v[LT_TIPO] == LISTA_REPARAR ? a.npc : e.id, TIPOS[e.v[LT_TIPO]]);
+        const TipoTienda tipo = TIPOS[e.v[LT_TIPO]];
+        abrir_tienda(a, e.v[LT_TIPO] == LISTA_REPARAR ? a.npc : e.id, tipo,
+                     tipo == TipoTienda::RETIRO && e.v[LT_ALMACEN] ? static_cast<u8>(e.v[LT_ALMACEN]) : u8{0});
         break;
     }
     case Ev::MAGIA_EN_VENTA: {
@@ -564,6 +674,7 @@ void eventos_npc(App& a, const Evento& e) {
             f.id = k;
             f.gfx = h.icono;
             f.maximo = 1;
+            f.bendicion = 1;
             f.precio = 100 * (k / 8 + 1) * (k / 8 + 1);
             f.nombre = h.existe() ? std::string(h.nombre) : "Spell " + std::to_string(k + 1);
             a.tienda_filas.push_back(std::move(f));
@@ -584,7 +695,7 @@ void eventos_npc(App& a, const Evento& e) {
         } else {
             f.gfx = static_cast<u16>(e.v[IT_GFX]);
             f.maximo = a.tienda == TipoTienda::COMPRA ? 9999 : static_cast<u32>(e.v[IT_CANTIDAD]);
-            f.bendicion = static_cast<u8>(e.v[IT_BENDICION]);
+            f.bendicion = a.tienda == TipoTienda::COMPRA ? u8{1} : static_cast<u8>(e.v[IT_BENDICION]);  // the shop sends no state: normal
             f.nombre = e.s[0];
             if (a.tienda == TipoTienda::MASCOTA && e.v[IT_IDENTIFICADO] >= 2) f.nombre += " (worn)";  // 2/3: equipado
         }
