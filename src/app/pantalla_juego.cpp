@@ -1007,8 +1007,6 @@ void dibujar_panel(App& a) {
     barra(g, IMG_BARRA_EXP, X + 3, Y + 386, pexp / 100.0f, t);
     std::snprintf(t, sizeof t, "%d/%d", j.hp, j.hp_max);
     barra(g, IMG_BARRA_HP, X + 3, Y + 402, j.hp_max > 0 ? static_cast<float>(j.hp) / j.hp_max : 0.0f, t);
-    dibujar_indicador_pocion(a, static_cast<float>(X + 3 + g.img(IMG_BARRA_HP).w - 44),
-                             static_cast<float>(Y + 402 + (g.img(IMG_BARRA_HP).h - ALTO_GLIFO) / 2), clave_orden(CAPA_UI_TEXTO, 1));
     std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
     barra(g, IMG_BARRA_MP, X + 3, Y + 423, j.mp_max > 0 ? static_cast<float>(j.mp) / j.mp_max : 0.0f, t);
     // Cuatro casillas con ícono: CA, alineamiento, peso y comida.
@@ -1635,8 +1633,10 @@ void frame_juego(App& a) {
     procesar_gm_apuntado(a, ahora);
     procesar_mascotas(a);
     procesar_barra(a);
-    procesar_autobuffs(a);
-    procesar_autopocion(a);
+    if (a.cfg.ui_simple) {  // auto-buff and auto-potion macros: simple UI only
+        procesar_autobuffs(a);
+        procesar_autopocion(a);
+    }
     procesar_npc(a, ahora);
     elegir_cursor(a);
     mover_jugador(a, ahora);
@@ -1670,8 +1670,10 @@ void frame_juego(App& a) {
         dibujar_panel(a);
     }
     dibujar_barra(a, vi.panel_y - 36 - 6);
-    dibujar_autobuffs(a);
-    dibujar_boton_pocion(a);
+    if (a.cfg.ui_simple) {  // client-side macros, not in the original client
+        dibujar_autobuffs(a);
+        dibujar_boton_pocion(a);
+    }
     dibujar_mascotas(a);
     dibujar_grupo(a);
     // Tienda, tablón y correo encima de las ventanas (nivel 30); el diálogo de cantidad, encima de todo.

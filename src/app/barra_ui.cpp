@@ -260,7 +260,7 @@ void dibujar_barra(App& a, int y) {
     // Panel original: no hay barra de atajos ni casilleros Auto dibujados (los atajos de teclado siguen);
     // se sacan de la pantalla para que tampoco reciban clics. barra_y se conserva (lo usan las ventanas).
     if (!a.cfg.ui_simple) {
-        a.barra_x = a.autobuffs.x = -10000;
+        a.barra_x = a.autobuffs.x = a.autopocion.x = -10000;
         return;
     }
     const u64 kf = clave_orden(CAPA_UI, 5), ki = clave_orden(CAPA_UI, 6), kt = clave_orden(CAPA_UI_TEXTO, 5);
