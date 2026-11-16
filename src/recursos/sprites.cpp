@@ -1,7 +1,26 @@
 #include <algorithm>
+#include <cstring>
 #include "recursos/sprites.h"
 
 namespace lin {
+
+u32 contar_frames_spr(Bytes spr) {
+    size_t i = 0;
+    if (spr.size() >= 5 && std::memcmp(spr.data(), "SPR_", 4) == 0) {
+        if (spr[4] != '0') return 0;
+        i = 5;
+    }
+    if (i >= spr.size()) return 0;
+    i8 n = static_cast<i8>(spr[i++]);
+    if (n < 0) {
+        if (i >= spr.size()) return 0;
+        const size_t entradas = spr[i] == 0 ? 256 : spr[i];
+        i += 1 + entradas * 2;
+        if (i >= spr.size()) return 0;
+        n = static_cast<i8>(spr[i]);
+    }
+    return n > 0 ? static_cast<u32>(n) : 0;
+}
 
 bool ArchivoSpr::abrir(Bytes spr) {
     frames.clear();

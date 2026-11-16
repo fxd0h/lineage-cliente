@@ -1,10 +1,13 @@
 // list.spz (plaintext sprite list, user-supplied and never shipped): parsing, merge into
 // sprite_table.txt, and that common gfx resolve the same actions. Skipped when the file is absent.
 #include <doctest/doctest.h>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
 #include "comun.h"
+#include "recursos/pak.h"
+#include "recursos/sprites.h"
 #include "recursos/tabla_sprites.h"
 
 using namespace lin;
@@ -109,4 +112,62 @@ TEST_CASE("list.spz: gfx already in sprite_table.txt keep their rows" * doctest:
             if (x) CHECK(iguales(antes, *x, despues, *y));
         }
     }
+}
+
+namespace {
+
+// Image count of "<gfx>-<sub>.spr" in the user's paks.
+ContadorFrames contador_de(const Recursos& rec) {
+    return [&rec](GfxId g, u16 sub) {
+        char n[32];
+        std::snprintf(n, sizeof n, "%u-%u.spr", g, sub);
+        return contar_frames_spr(rec.sprite(n));
+    };
+}
+
+}  // namespace
+
+TEST_CASE("list.spz: validated against our paks, every drawn frame exists" *
+          doctest::skip(ruta_lista().empty() || carpeta_juego().empty())) {
+    Recursos rec;
+    REQUIRE(rec.abrir(carpeta_juego()));
+    const ContadorFrames contador = contador_de(rec);
+    TablaSprites t;
+    REQUIRE(cargar_tabla(t));
+    ResumenLista r;
+    REQUIRE(t.fusionar_lista_archivo(ruta_lista(), r, &contador));
+    MESSAGE("list.spz gfx with a missing/redirected file: " << r.sin_archivo << ", with frames dropped: " << r.recortados
+                                                            << ", new: " << r.nuevos);
+
+    // Young gilian: the walk (action 0) resolves to an existing image in all 8 headings.
+    const RangoAccion* w = t.accion(8913, ACC_CAMINAR);
+    REQUIRE(w);
+    CHECK(w->cantidad > 0);
+    for (u32 i = 0; i < w->cantidad; ++i)
+        for (u16 d = 0; d < 8; ++d) {
+            const FrameAccion& f = t.frame(w->primer + i);
+            CAPTURE(i);
+            CAPTURE(d);
+            CHECK(f.frame < contador(t.gfx_archivos(8913), static_cast<u16>(f.sub + d)));
+        }
+
+    // Storage^Nodim: list.spz points 10669 at a file we lack; it must not stay redirected there.
+    const GfxId a = t.gfx_archivos(10669);
+    CHECK((a == 10669 || contador(a, 0) > 0));
+    if (const RangoAccion* q = t.accion(10669, ACC_QUIETO))
+        CHECK(t.frame(q->primer).frame < contador(a, t.frame(q->primer).sub));
+
+    // Every action of every gfx list.spz added: all its frames exist (any heading).
+    u32 malos = 0;
+    for (GfxId g = 0; g < t.cantidad_gfx(); ++g)
+        for (u32 id = 0; id < 256; ++id) {
+            const RangoAccion* x = t.accion(g, static_cast<u8>(id));
+            if (!x) continue;
+            for (u32 i = 0; i < x->cantidad; ++i) {
+                const FrameAccion& f = t.frame(x->primer + i);
+                const u32 c = contador(t.gfx_archivos(g), f.sub);
+                if (c > 0 && f.frame >= c && t.gfx_de_tabla() == 0) ++malos;
+            }
+        }
+    CHECK(malos == 0);
 }

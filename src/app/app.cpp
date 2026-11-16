@@ -42,9 +42,16 @@ static void cargar_lista_sprites(App& a) {
     }
     if (ruta.empty()) return;
     ResumenLista r;
-    if (a.sprites.fusionar_lista_archivo(ruta, r))
-        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already in sprite_table.txt kept, %u without actions skipped)", r.nuevos,
-                ruta.c_str(), r.nuevos, r.reemplazados, r.omitidos);
+    // list.spz comes from a newer client: check every row against the sprite files we actually have.
+    const ContadorFrames contador = [&a](GfxId g, u16 sub) {
+        char nombre[32];
+        std::snprintf(nombre, sizeof nombre, "%u-%u.spr", g, sub);
+        return contar_frames_spr(a.rec.sprite(nombre));
+    };
+    if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
+        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already in sprite_table.txt kept, %u without actions or files skipped; "
+                "%u with a missing/redirected file, %u with frames dropped)", r.nuevos, ruta.c_str(), r.nuevos, r.reemplazados,
+                r.omitidos, r.sin_archivo, r.recortados);
     else
         LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
 }

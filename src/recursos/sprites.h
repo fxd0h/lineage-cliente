@@ -37,4 +37,7 @@ struct ArchivoSpr {
     bool componer_frame(u32 frame, ImagenRGBA& salida) const;
 };
 
+// Image count of a .spr from its header alone (no decoding); 0 if empty or malformed.
+u32 contar_frames_spr(Bytes spr);
+
 }  // namespace lin

@@ -13,6 +13,7 @@
 // Diseño orientado a datos: todos los frames de todas las acciones van en un solo arreglo y
 // una tabla hash (gfx, acción) -> rango.
 #pragma once
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -52,7 +53,12 @@ struct ResumenLista {
     u32 nuevos = 0;        // gfx with actions that had no row in sprite_table.txt
     u32 reemplazados = 0;  // gfx already in sprite_table.txt: kept, the list.spz rows are ignored
     u32 omitidos = 0;      // entries without any action (attribute-only), left alone
+    u32 sin_archivo = 0;   // new gfx whose sprite file (alias) is missing from our paks: redirected or left out
+    u32 recortados = 0;    // new gfx with frames (or whole actions) dropped because our paks lack those images
 };
+
+// Number of images in sprite file "<gfx>-<sub>.spr" of the loaded paks; 0 when the file is absent.
+using ContadorFrames = std::function<u32(GfxId gfx, u16 sub)>;
 
 class TablaSprites {
 public:
@@ -60,8 +66,12 @@ public:
     bool cargar_archivo(const std::string& ruta);
     // Merges a plaintext list.spz (see lista_sprites.cpp): its gfx replace or add to the loaded ones.
     // Call after cargar(). Returns false when the text has no usable entry.
-    bool fusionar_lista(std::string_view texto, ResumenLista& resumen);
-    bool fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen);
+    // With `contador`, rows are checked against our sprite paks (list.spz comes from a newer client): frames
+    // pointing at images we lack are dropped, an alias without files falls back to the gfx's own file, and
+    // entries with no drawable file are left out (the gfx keeps the no-row behaviour).
+    bool fusionar_lista(std::string_view texto, ResumenLista& resumen, const ContadorFrames* contador = nullptr);
+    bool fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen,
+                                const ContadorFrames* contador = nullptr);
     // gfx with at least one action row in sprite_table.txt (before any merge).
     u32 gfx_de_tabla() const { return gfx_de_tabla_; }
 

@@ -135,9 +135,63 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
     }
 }
 
+// Checks an entry against our sprite files. Picks the file gfx (the alias, else the gfx itself when the alias has
+// no files), then drops every frame whose image we lack in some heading it can be drawn with. Actions left empty
+// are removed. Returns false when no file of the entry exists at all.
+bool validar_entrada(Entrada& e, const ContadorFrames& contador, bool& recortada) {
+    std::vector<std::pair<u32, u32>> cache;  // (file gfx << 16 | sub) -> image count
+    auto cuenta = [&](GfxId g, u16 sub) {
+        const u32 k = (static_cast<u32>(g) << 16) | sub;
+        for (const auto& [kk, n] : cache)
+            if (kk == k) return n;
+        const u32 n = contador(g, sub);
+        cache.emplace_back(k, n);
+        return n;
+    };
+    // Does `g` hold any file used by the entry's actions?
+    auto tiene_archivos = [&](GfxId g) {
+        for (const auto& [id, r] : e.acciones)
+            for (u32 i = 0; i < r.cantidad; ++i) {
+                const FrameAccion& f = e.frames[r.primer + i];
+                for (u16 d = 0; d < (r.direccional ? 8 : 1); ++d)
+                    if (cuenta(g, static_cast<u16>(f.sub + d)) > 0) return true;
+            }
+        return false;
+    };
+    if (!tiene_archivos(e.archivos)) {
+        if (e.archivos == e.gfx || !tiene_archivos(e.gfx)) return false;
+        e.archivos = e.gfx;
+    }
+    std::vector<FrameAccion> nuevos;
+    std::vector<std::pair<u8, RangoAccion>> acciones;
+    for (auto& [id, r] : e.acciones) {
+        RangoAccion n = r;
+        n.primer = static_cast<u32>(nuevos.size());
+        n.cantidad = 0;
+        for (u32 i = 0; i < r.cantidad; ++i) {
+            const FrameAccion& f = e.frames[r.primer + i];
+            bool ok = true, alguno = false;
+            for (u16 d = 0; d < (r.direccional ? 8 : 1); ++d) {
+                const u32 c = cuenta(e.archivos, static_cast<u16>(f.sub + d));
+                alguno |= c > 0;
+                if (c > 0 && f.frame >= c) ok = false;  // a missing heading file is not this frame's fault
+            }
+            if (ok && alguno) {
+                nuevos.push_back(f);
+                ++n.cantidad;
+            }
+        }
+        if (n.cantidad != r.cantidad) recortada = true;
+        if (n.cantidad > 0) acciones.emplace_back(id, n);
+    }
+    e.frames = std::move(nuevos);
+    e.acciones = std::move(acciones);
+    return !e.acciones.empty();
+}
+
 }  // namespace
 
-bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen) {
+bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen, const ContadorFrames* contador) {
     const char* p = texto.data();
     const char* fin = p + texto.size();
     // Entry boundaries: lines that begin with '#' and a digit.
@@ -185,6 +239,18 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen)
                 p = sig;
                 continue;
             }
+            if (contador) {
+                bool recortada = false;
+                const GfxId pedido = e.archivos;
+                const bool ok = validar_entrada(e, *contador, recortada);
+                if (!ok || e.archivos != pedido) ++resumen.sin_archivo;
+                if (!ok) {
+                    ++resumen.omitidos;
+                    p = sig;
+                    continue;
+                }
+                if (recortada) ++resumen.recortados;
+            }
             ++resumen.nuevos;
             alias_[e.gfx] = e.archivos;
             sombra_[e.gfx] = e.sombra;
@@ -204,10 +270,11 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen)
     return resumen.nuevos + resumen.reemplazados > 0;
 }
 
-bool TablaSprites::fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen) {
+bool TablaSprites::fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen,
+                                          const ContadorFrames* contador) {
     std::vector<u8> t;
     return leer_archivo(ruta, t) &&
-           fusionar_lista({reinterpret_cast<const char*>(t.data()), t.size()}, resumen);
+           fusionar_lista({reinterpret_cast<const char*>(t.data()), t.size()}, resumen, contador);
 }
 
 }  // namespace lin
