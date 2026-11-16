@@ -40,7 +40,8 @@ constexpr u64 MS_ENCADENAR_PASO = 10;
 // Panel inferior original: posiciones de draw_game.cpp y chat_window.cpp de l1j-client, relativas
 // al bloque de 640×480 del original (Vista::hx, hy).
 constexpr int HUD_Y = 366;  // desde esta fila hacia abajo está el panel: el clic no camina
-constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_ENTRADA_CHAT = 1039;
+constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_ENTRADA_CHAT = 1039,
+              IMG_CHAT_ADORNO = 1043, IMG_CHAT_ALAS = 1044;
 // Day/night orb on top of the chat frame: 34 frames of 30x31 (1213 = noon, going through dusk, night with
 // the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
 constexpr u32 IMG_ORBE_PRIMERA = 1213;
@@ -936,18 +937,32 @@ void dibujar_panel(App& a) {
     const EstadoJugador& j = a.mundo.jugador;
     const Vista vi = vista(a);
     const int X = vi.hx, Y = vi.hy;
-    g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 0));
-    g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 0));
+    // Original layout (S3EP1U 0x416160): backdrop 1042 at (115,358), wings 1044 one pixel lower, flourishes 1043 at
+    // (121,371), all drawn under the side panels (1028 at (0,368), 1019 at (485,366)) which cover its ends.
+    g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ADORNO), X + 121, Y + 371, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 1));
+    g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 1));
     dibujar_teclas_f(a, X + 485, Y + 366);
-    g.gpu().dibujar(g.img(IMG_CHAT), X + 124, Y + 363, clave_orden(CAPA_UI, 1));
-    g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 124 + 13, Y + 363 + 99, clave_orden(CAPA_UI, 2));
+    g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 120, Y + 462, clave_orden(CAPA_UI, 0));  // its left end hides under 1028
+    {
+        // Chat scrollbar (caps 1052/1051, track 1047, thumb 1055), scroll button 1045 and the chat-mode "A" button 1041.
+        const u64 kb = clave_orden(CAPA_UI, 2);
+        g.gpu().dibujar(g.img(1052), X + 470, Y + 393, kb);
+        g.gpu().dibujar(g.img(1047), X + 470, Y + 401, kb);
+        g.gpu().dibujar(g.img(1051), X + 470, Y + 451, kb);
+        g.gpu().dibujar(g.img(1055), X + 469, Y + 436, kb);
+        g.gpu().dibujar(g.img(1045), X + 471, Y + 463, kb);
+        g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
+    }
     {
         // Frame 0 is noon; the orb advances through the afternoon, night (frame 17) and morning.
         const int seg = static_cast<int>(((hora_de_juego(a) % 86400) + 86400) % 86400);
         const int fr = ((seg + 43200) % 86400) * ORBE_FRAMES / 86400;
         g.gpu().dibujar(g.img(IMG_ORBE_PRIMERA + static_cast<u32>(fr)), X + ORBE_X, Y + ORBE_Y, clave_orden(CAPA_UI, 2));
     }
-    dibujar_botones_panel(a, X, Y);  // after the chat backdrop (1042, 390 px wide), which reaches x=514
+    dibujar_botones_panel(a, X, Y);
     // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
     const Slot yo = a.mundo.objetos.buscar(j.id);
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
