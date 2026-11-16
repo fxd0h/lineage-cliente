@@ -39,8 +39,10 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
   `ExtTextOut` (0x43d4a7), no outline, no shadow. Colors are raw COLORREFs: text 0xEEEDEE (0x435cc6), link 0xB0FFFF
   (0x437830), `fg=` hex not byte-swapped (0x43ad50), hovered link (10,240,50) (0x43d2ac), links not underlined (the
   underline flag, style +0x16, is never set by a tag). The text rectangle is the window rectangle inset (3,3,7,3)
-  (0x43b4ea). The fork draws it with Liberation Sans (Arial metrics, SIL OFL) at ascent+descent = 13 px.
-  Unknown: Windows' font smoothing for quality 0, exact Arial hinting, the window rectangle passed to 0x47cd80.
+  (0x43b4ea). The fork draws it with pre-rendered hinted 1-bit Liberation Sans glyphs at 11 ppem (lfHeight 13 = ascent 10 + descent 3;
+  XP draws Arial that small unsmoothed; tools/generar_fuente_html.py). The page widget rect is (10,48)-(207,299) (0x4589b0,
+  ctor 0x43e170), drawn +11 px in x from the frame origin. Unknown: exact Arial hinting (a stand-in), `<b>` weight 700
+  (not rendered bold), the x offset of the widget rect (inferred from the panel borders).
   eng.fnt itself (chat and other `0x4334f0` text): 95 glyphs x 12 bytes, fixed 6 px advance, 12 px rows, drawn with
   a black 1 px outline mask built at 0x431a20 (8x14 cells, blitted at x-1,y-1 first, 0x4333b3-0x433407).
 - **Zoom:** the window title bar no longer counts toward the scale, so a 1080p screen reaches ×2

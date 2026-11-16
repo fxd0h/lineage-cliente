@@ -68,46 +68,20 @@ const Ttf& ttf() {
 }
 
 
-// ---- Cara de las páginas HTML (interfaz original) -------------------------------------------------
-// El cliente de 2009 dibuja las páginas de los NPC con una fuente GDI, no con eng.fnt: 0x4359f0 arma un LOGFONT
-// (altura = tamaño del estilo, peso 400 o 700 según <b>, charset 0, familia 0x22 = variable|swiss, calidad 0) y
-// 0x435520 le pone la cara "Arial" (cadena en 0x5037a2). El tamaño es 13 para CP1252 (0x435370 devuelve 0xd; 0xc en
-// las páginas de códigos asiáticos). Un lfHeight positivo es la altura de celda: la fuente se escala para que
-// ascenso + descenso = 13 px (tmHeight), y 0x43d90c toma esa altura como alto de línea. Los avances son los de
-// GetCharABCWidths (A+B+C, enteros), y el texto sale con ExtTextOut sin sombra ni contorno (0x43d4a7).
-// Liberation Sans tiene las métricas de Arial y es libre (OFL): ocupa su lugar.
+// ---- Face of the HTML pages (original interface) ---------------------------------------------------
+// The 2009 client draws NPC pages with a GDI font, not eng.fnt: 0x4359f0 builds a LOGFONT (height 13, weight 400/700,
+// charset 0, family 0x22, quality 0 = default) and 0x435520 sets the face "Arial" (string at 0x5037a2). lfHeight 13 is
+// a cell height: it resolves to 11 ppem (ascent 10 + descent 3 = 13, which is also the line height 0x43d90c uses).
+// Windows XP draws Arial at that size hinted and without anti-aliasing, so the glyphs are pre-rendered 1-bit hinted
+// bitmaps of Liberation Sans (Arial metrics, OFL) made by tools/generar_fuente_html.py, with hinted integer advances.
 constexpr int ALTO_CELDA_HTML = ALTO_LINEA_HTML_ORIGINAL;
 
-struct TtfHtml {
-    stbtt_fontinfo info{};
-    float escala = 0;
-    int ascenso = 0;
-    bool ok = false;
-    u8 ancho[CODEPUNTOS_TABLA] = {};
-};
-
-int calcular_ancho_html(const TtfHtml& t, u32 cp) {
-    int idx = stbtt_FindGlyphIndex(&t.info, static_cast<int>(cp));
-    if (idx == 0) idx = stbtt_FindGlyphIndex(&t.info, '?');
-    int adv = 0, lsb = 0;
-    stbtt_GetGlyphHMetrics(&t.info, idx, &adv, &lsb);
-    return static_cast<int>(std::lround(adv * t.escala));
-}
-
-const TtfHtml& ttf_html() {
-    static const TtfHtml t = [] {
-        TtfHtml r;
-        r.ok = stbtt_InitFont(&r.info, FUENTE_HTML_DATOS, 0) != 0;
-        if (r.ok) {
-            int asc = 0, desc = 0, gap = 0;
-            stbtt_GetFontVMetrics(&r.info, &asc, &desc, &gap);
-            r.escala = static_cast<float>(ALTO_CELDA_HTML) / static_cast<float>(asc - desc);  // asc - desc = ascenso + descenso
-            r.ascenso = static_cast<int>(std::lround(asc * r.escala));
-            for (u32 cp = 0; cp < CODEPUNTOS_TABLA; ++cp) r.ancho[cp] = static_cast<u8>(std::clamp(calcular_ancho_html(r, cp), 0, 255));
-        }
-        return r;
-    }();
-    return t;
+int indice_html(u32 cp) {
+    const unsigned short* fin = FUENTE_HTML_CP + FUENTE_HTML_N;
+    const unsigned short* it = std::lower_bound(FUENTE_HTML_CP, fin, cp);
+    if (it != fin && *it == cp) return static_cast<int>(it - FUENTE_HTML_CP);
+    if (cp == '?') return 0;
+    return indice_html('?');
 }
 
 }  // namespace
@@ -145,33 +119,18 @@ bool rasterizar_ttf(u32 cp, ImagenRGBA& salida) {
     return true;
 }
 
-int ancho_html(u32 cp) {
-    const TtfHtml& t = ttf_html();
-    if (!t.ok) return ANCHO_GLIFO_ASCII;
-    return cp < CODEPUNTOS_TABLA ? t.ancho[cp] : calcular_ancho_html(t, cp);
-}
+int ancho_html(u32 cp) { return FUENTE_HTML_ANCHO[indice_html(cp)]; }
 
 bool rasterizar_html(u32 cp, ImagenRGBA& salida) {
-    const TtfHtml& t = ttf_html();
-    if (!t.ok) return false;
-    int idx = stbtt_FindGlyphIndex(&t.info, static_cast<int>(cp));
-    if (idx == 0) idx = stbtt_FindGlyphIndex(&t.info, '?');
-    const int ancho = std::max(1, ancho_html(cp));
-    salida.preparar(static_cast<u16>(ancho), ALTO_CELDA_HTML);
-    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-    stbtt_GetGlyphBitmapBox(&t.info, idx, t.escala, t.escala, &x0, &y0, &x1, &y1);
-    const int w = x1 - x0, h = y1 - y0;
-    if (w <= 0 || h <= 0) return true;
-    static thread_local std::vector<unsigned char> alfa;
-    alfa.assign(static_cast<size_t>(w) * h, 0);
-    stbtt_MakeGlyphBitmap(&t.info, alfa.data(), w, h, w, t.escala, t.escala, idx);
-    for (int y = 0; y < h; ++y) {
-        const int cy = t.ascenso + y0 + y;
-        for (int x = 0; x < w; ++x) {
-            const int cx = x0 + x;
-            if (cx < 0 || cy < 0 || cx >= ancho || cy >= ALTO_CELDA_HTML) continue;
-            // Suavizado en escala de grises (calidad 0 del LOGFONT: la del sistema; ver README). Premultiplicado.
-            salida.px[static_cast<size_t>(cy) * ancho + cx] = alfa[static_cast<size_t>(y) * w + x] * 0x01010101u;
+    const int idx = indice_html(cp);
+    const int avance = std::max(1, static_cast<int>(FUENTE_HTML_ANCHO[idx]));
+    salida.preparar(static_cast<u16>(avance), ALTO_CELDA_HTML);
+    for (int y = 0; y < ALTO_CELDA_HTML; ++y) {
+        const unsigned bits = FUENTE_HTML_FILAS[idx][y];
+        for (int c = 0; c < 16; ++c) {
+            const int x = c - FUENTE_HTML_PLUMA;
+            if (!(bits & (0x8000u >> c)) || x < 0 || x >= avance) continue;
+            salida.px[static_cast<size_t>(y) * avance + x] = 0xFFFFFFFFu;  // opaque white (premultiplied)
         }
     }
     return true;
