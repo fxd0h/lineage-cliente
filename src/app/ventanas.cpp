@@ -224,7 +224,7 @@ bool tapa_a_otra(const App& a, IdVentana v) {
 // Bottom-strip button. `n` is the pair's odd image (a dark grey-scale icon on a box); the original shows the even
 // image n + 1 at rest, but as a monochrome dark-brown icon, so it is drawn here by luminance times a sepia tint
 // (fitted against its screenshots, 1 px below the strip's top). Hovering shows the even image in colour. The mail
-// button (1585/1586) is plain art.
+// button (1585/1586) is plain art and toggles the mail window (correo_ui.cpp).
 static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
     Graficos& g = *a.g;
     const RegionAtlas reposo = g.img(mono ? n + 1 : n);
@@ -248,7 +248,10 @@ void dibujar_botones_panel(App& a, int x, int y) {
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
     if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) a.ayuda_teclas = !a.ayuda_teclas;
-    boton_panel(a, 1585, x + 507, y + BY, "Mail", false);  // no mail window yet
+    if (boton_panel(a, 1585, x + 507, y + BY, "Mail", false)) {
+        if (a.correo.abierto) a.correo.abierto = a.correo.escribiendo = false;
+        else comando_correo(a, "mail");
+    }
     if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
     if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
     if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
