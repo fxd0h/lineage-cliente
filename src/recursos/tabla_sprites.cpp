@@ -41,6 +41,18 @@ struct Cursor {
 
 }  // namespace
 
+// The table lists every action rotated: its first entry is the sprite file's last frame and the rest
+// run 0..n-2. That is harmless for loops, but a death played as listed starts lying down, stands up
+// and falls again, ending on the next-to-last pose (1556 of 1709 death rows, e.g. Ogre 1020: 6,0..5).
+// Move that leading entry to the end so the fall runs 0..n-1 and holds the corpse pose.
+static void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
+    if (r.cantidad < 3) return;
+    FrameAccion* f = &frames[r.primer];
+    for (u32 i = 1; i < r.cantidad; ++i)
+        if (f[i].sub != f[0].sub || f[i].frame >= f[0].frame) return;
+    std::rotate(f, f + 1, f + r.cantidad);
+}
+
 bool TablaSprites::cargar(const std::vector<u8>& texto) {
     frames_.clear();
     rangos_.clear();
@@ -126,6 +138,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                     frames_.push_back(f);
                     ++r.cantidad;
                 }
+                if (v == ACC_MORIR) poner_cadaver_al_final(frames_, r);
                 if (v >= 0 && v < 256 && r.cantidad > 0) {
                     indice_.poner((static_cast<u64>(gfx) << 8) | static_cast<u64>(v), static_cast<u32>(rangos_.size()));
                     rangos_.push_back(r);

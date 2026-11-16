@@ -171,6 +171,7 @@ if(LIN_TESTS)
         tests/test_des.cpp
         tests/test_proto.cpp
         tests/test_recursos.cpp
+        tests/test_muerte_ogro.cpp
 tests/test_pe_resources.cpp
         tests/test_mundo.cpp
         tests/test_chat.cpp
