@@ -241,6 +241,12 @@ constexpr u8 ALFA_SILUETA = 120;
 // personaje encima. Con Floating Eye se ve algo a través.
 constexpr u32 PROF_CEGUERA = 0xF00000;
 
+// Light tiles (flames, glows) add their colour to what is behind them.
+Mezcla mezcla_tile(Graficos& g, u32 tile) {
+    bool pendiente = false;
+    return g.tile_aditivo(tile, pendiente) ? Mezcla::ADITIVA : Mezcla::NORMAL;
+}
+
 void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double oy) {
     Graficos& g = *a.g;
     int cx = static_cast<int>(cam_x), cy = static_cast<int>(cam_y);
@@ -297,7 +303,8 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                         // de todo lo que se levanta (también las sombras: ver en_sombra).
                         i32 fila = static_cast<i32>(mundo_py(x, y)) + (1 << 20);
                         u32 orden = (static_cast<u32>(t.capa + 1) << 21) | (static_cast<u32>(fila < 0 ? 0 : fila) & 0x1FFFFF);
-                        g.gpu().dibujar_en(g.medio_tile(t.tile, (t.x & 1) != 0), sx, sy, clave_orden(CAPA_SUELO, orden));
+                        g.gpu().dibujar_en(g.medio_tile(t.tile, (t.x & 1) != 0), sx, sy, clave_orden(CAPA_SUELO, orden), BLANCO,
+                                           mezcla_tile(g, t.tile));
                         continue;
                     }
                     // Pie de la pieza (ver COLUMNAS_BASE en mapa.h); dentro de la misma fila de pie, las
@@ -308,7 +315,7 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                     // interior y la pared de atrás siguen opacos.
                     const bool delante = tapa && prof > yo->profundidad;
                     g.gpu().dibujar_en(g.medio_tile(t.tile, (t.x & 1) != 0), sx, sy, clave_orden(CAPA_MUNDO, prof),
-                                       delante ? rgba(255, 255, 255, ALFA_TAPA) : BLANCO);
+                                       delante ? rgba(255, 255, 255, ALFA_TAPA) : BLANCO, mezcla_tile(g, t.tile));
                 }
             }
         }

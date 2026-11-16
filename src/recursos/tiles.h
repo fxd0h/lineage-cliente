@@ -24,6 +24,9 @@ struct JuegoTiles {
     // Decodifica la mitad de un tile; si es un tile con transparencia la mitad no importa.
     bool decodificar(u32 i, bool derecha, ImagenRGBA& salida) const;
     bool translucido(u32 i) const;
+    // Light tile (type bit 0x10: candle/brazier flames and their glow): drawn additively, so its dark
+    // backdrop adds nothing instead of showing as an opaque rectangle.
+    bool aditivo(u32 i) const;
     // Placeholder tile for "no ground" (type bit 0x08; only 47.til #199/#202): never drawn, the void is black.
     bool vacio(u32 i) const;
 };
@@ -39,5 +42,6 @@ constexpr u8 ALFA_TRANSLUCIDO = 128;
 // bones and dust stains on dungeon floors: pale dithered pixels meant to be blended, not opaque).
 constexpr u8 TILE_TRANSLUCIDO = 0x04 | 0x20;
 constexpr u8 TILE_VACIO = 0x08;
+constexpr u8 TILE_ADITIVO = 0x10;
 
 }  // namespace lin

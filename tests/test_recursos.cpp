@@ -393,3 +393,26 @@ TEST_CASE("Gfx 10573 (Drake) no tiene fila pero sí un archivo por dirección" *
         CHECK_FALSE(r.sprite(n).empty());
     }
 }
+
+TEST_CASE("Map 666: candelabrum flame tiles (type bit 0x10) are additive light tiles" * doctest::skip(carpeta_juego().empty())) {
+    // Hell, segment (32704, 32832): the candelabrum at ~(32720,32834) is set 3971 tiles 219-238 (types
+    // 0x12/0x13) with a dark glow backdrop; drawn opaque it showed as a black rectangle behind the flames.
+    Recursos r;
+    REQUIRE(r.abrir(carpeta_juego()));
+    JuegoTiles til;
+    REQUIRE(til.abrir(r.tile("3971.til")));
+    for (u32 i : {219u, 220u, 228u, 230u}) CHECK(til.aditivo(i));
+    CHECK_FALSE(til.aditivo(239));
+    CHECK_FALSE(til.translucido(230));
+    JuegoTiles piso;
+    REQUIRE(piso.abrir(r.tile("0.til")));
+    CHECK_FALSE(piso.aditivo(0));
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(666, 32720, 32834), d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32704, 32832, s));
+    int luces = 0;
+    for (const TileObjetoMapa& t : s.tiles_objetos)
+        if ((t.tile >> 8) == 3971 && til.aditivo(t.tile & 0xFF)) ++luces;
+    CHECK(luces > 10);
+}

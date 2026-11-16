@@ -52,6 +52,11 @@ bool JuegoTiles::translucido(u32 i) const {
     return !t.empty() && (t[0] & TILE_TRANSLUCIDO);
 }
 
+bool JuegoTiles::aditivo(u32 i) const {
+    Bytes t = tile(i);
+    return !t.empty() && (t[0] & TILE_ADITIVO);
+}
+
 bool JuegoTiles::vacio(u32 i) const {
     Bytes t = tile(i);
     return !t.empty() && (t[0] & TILE_VACIO);
