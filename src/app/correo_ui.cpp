@@ -24,6 +24,12 @@ namespace {
 constexpr int ANCHO = 238, ALTO = 350, FILA = 26;
 constexpr u32 IMG_PAPEL = 656, IMG_LEIDA = 657, IMG_CERRAR = 658, IMG_WRITE = 662,
               IMG_DELETE = 664, IMG_CANCEL = 578, IMG_SEND = 582;
+// Original layout (S3EP1U.bin, mail list window ctor 0x417a90, draw 0x417d50; compose ctor 0x455800): the list
+// is paper 656 (238x350), 8 rows of 30 px from y=50, buttons placed in window coordinates.
+constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668, IMG_PAPER_READ = 671, IMG_PAPER_WRITE = 577,
+              IMG_CLOSE_READ = 580;
+constexpr int ROWS = 8, ROW_H = 30, ROW_Y = 50;
+int selected_row = -1, page = 0;  // list state of the original window (reset on opening a mailbox)
 // Los colores del texto: tinta sobre el papel, o los de la UI simple (se eligen en cada cuadro).
 u32 TINTA, TINTA_SUAVE, TINTA_VIVA;
 constexpr const char* BANDEJAS[3] = {"Inbox", "Clan", "Saved"};
@@ -50,7 +56,128 @@ void abrir_bandeja(App& a, u8 b) {
     c.bandeja = b;
     c.cartas.clear();  // el servidor no manda nada si está vacía
     c.leyendo = 0;
+    selected_row = -1;
+    page = 0;
     enviar(a, cmd::correo(a.op, b));
+}
+
+// Copy of s clipped to a pixel width (no allocation: the caller gives the buffer).
+std::string_view clip(std::string_view s, int w, char* buf, size_t cap) {
+    size_t n = std::min(s.size(), cap - 1);
+    while (n > 0 && ancho_texto(s.data(), n) > w) --n;
+    std::copy_n(s.data(), n, buf);
+    buf[n] = 0;
+    return {buf, n};
+}
+
+// The original mail window (ui_simple == 0): paper 656 list with 8 rows, paper 671 reading, paper 577 writing.
+void draw_original_mail(App& a) {
+    Correo& c = a.correo;
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    const int x = x0(a), y = y0();
+    const u64 kt = clave_orden(CAPA_UI_TEXTO, 72), kf = clave_orden(CAPA_UI, 0);
+    TINTA = rgba(66, 66, 66), TINTA_SUAVE = rgba(105, 98, 88), TINTA_VIVA = rgba(150, 40, 20);  // ink 0x500510 = RGB555 0x2108
+    char buf[96];
+    char txt[200];
+    auto text = [&](std::string_view t, int tx, int ty, u32 col) {
+        g.texto(t, static_cast<float>(x + tx), static_cast<float>(y + ty), kt, col);
+    };
+
+    if (c.escribiendo) {
+        g.gpu().dibujar(g.img(IMG_PAPER_WRITE), x, y, kf);
+        // The printed labels From / To / Subject sit at y 53 / 69 / 89; the entry fields run on their right.
+        text(c.al_clan ? "Pledge: 1000 adena each" : "50 adena", 85, 50, TINTA_SUAVE);
+        const char* rotulos[3] = {c.al_clan ? "Pledge" : "To", "Subject", "Text"};
+        (void)rotulos;
+        std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
+        const size_t maximos[3] = {16, 40, 400};
+        const int fy[3] = {66, 86, 108}, fx[3] = {85, 85, 45}, fw[3] = {136, 136, 160};
+        for (int i = 0; i < 3; ++i) {
+            if (e.clic && ui::sobre(e, x + fx[i], y + fy[i], fw[i], 16)) c.foco = i;
+            g.gpu().rectangulo(x + fx[i], y + fy[i] + 15, fw[i], 1, kf + 1, c.foco == i ? TINTA_VIVA : TINTA_SUAVE);
+            ui::caja_texto(g, e, *campos[i], x + fx[i] + 2, y + fy[i] + 1, fw[i] - 4, c.foco == i, false, maximos[i]);
+        }
+        if (e.tab) c.foco = (c.foco + 1) % 3;
+        texto_ajustado(g, c.cuerpo, x + 45, y + 130, 160, kt, TINTA, 9);
+        if (vinculo(g, e, c.al_clan ? "To a character instead" : "To the pledge instead", x + 45, y + 276, kt, false))
+            c.al_clan = !c.al_clan;
+        if (!c.destino.empty() && !c.asunto.empty() && ui::boton(g, e, IMG_SEND, x + 97, y + 298)) {
+            enviar(a, cmd::escribir_correo(a.op, c.al_clan, sin_espacios(c.destino), sin_espacios(c.asunto), sin_espacios(c.cuerpo)));
+            c.escribiendo = false;
+            c.asunto.clear();
+            c.cuerpo.clear();
+        }
+        if (ui::boton(g, e, IMG_CANCEL, x + 145, y + 298) || e.escape) {
+            c.escribiendo = false;
+            e.escape = false;
+        }
+        e.ntexto = 0;
+        e.enter = false;
+        return;
+    }
+
+    if (c.leyendo) {
+        g.gpu().dibujar(g.img(IMG_PAPER_READ), x, y, kf);
+        const auto it = std::find_if(c.cartas.begin(), c.cartas.end(), [&](const Carta& m) { return m.id == c.leyendo; });
+        if (it != c.cartas.end()) {
+            std::snprintf(txt, sizeof txt, "%s %s", it->enviada ? "To" : "From", it->otro.c_str());
+            text(clip(txt, 200, buf, sizeof buf), 20, 20, TINTA_SUAVE);
+            texto_ajustado(g, it->asunto, x + 20, y + 36, 200, kt, TINTA, 2);
+        }
+        texto_ajustado(g, c.texto, x + 20, y + 70, 200, kt, TINTA, 16);
+        if (ui::boton(g, e, IMG_DELETE, x + 60, y + 302)) enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.leyendo));
+        if (c.bandeja == 0 && vinculo(g, e, "Keep", x + 20, y + 312, kt, false)) enviar(a, cmd::correo(a.op, 0x40, c.leyendo));
+        if (ui::boton(g, e, IMG_CLOSE_READ, x + 120, y + 299) || e.escape) {
+            c.leyendo = 0;
+            e.escape = false;
+        }
+        return;
+    }
+
+    g.gpu().dibujar(g.img(IMG_PAPEL), x, y, kf);
+    // The original has one mailbox per window: the title (y 15) shows it, a click switches to the next.
+    const int pages = std::max(1, (static_cast<int>(c.cartas.size()) + ROWS - 1) / ROWS);
+    page = std::clamp(page, 0, pages - 1);
+    std::snprintf(txt, sizeof txt, "%s  %d/%d", BANDEJAS[c.bandeja], page + 1, pages);
+    text(txt, 30, 15, TINTA);
+    if (e.clic && ui::sobre(e, x + 30, y + 13, 150, 14)) abrir_bandeja(a, static_cast<u8>((c.bandeja + 1) % 3));
+    if (c.cartas.empty()) text("No mail.", 30, ROW_Y, TINTA_SUAVE);
+    const int n = static_cast<int>(c.cartas.size());
+    for (int r = 0; r < ROWS && page * ROWS + r < n; ++r) {
+        const int i = page * ROWS + r, fy = ROW_Y + r * ROW_H;
+        const Carta& m = c.cartas[static_cast<size_t>(i)];
+        const bool over = ui::sobre(e, x + 16, y + fy - 2, 200, ROW_H - 2);
+        if (over && e.clic) selected_row = i;
+        const u32 col = m.leida ? TINTA_SUAVE : TINTA;
+        if (selected_row == i) g.gpu().dibujar(g.img(IMG_LEIDA), x + 18, y + fy, kf + 2);
+        std::snprintf(txt, sizeof txt, "%d", static_cast<int>(m.id % 10000));
+        text(clip(txt, 24, buf, sizeof buf), 30, fy, col);
+        text(clip(m.otro, 72, buf, sizeof buf), 60, fy, col);
+        const std::time_t f = static_cast<std::time_t>(m.fecha);
+        char fecha[32] = "";
+        if (const std::tm* tm = std::localtime(&f)) std::strftime(fecha, sizeof fecha, "%m-%d %H:%M", tm);
+        text(clip(fecha, 80, buf, sizeof buf), 135, fy, TINTA_SUAVE);
+        text(clip(m.asunto, 160, buf, sizeof buf), 30, fy + 12, col);
+    }
+    if (ui::sobre(e, x, y, ANCHO, ALTO) && e.rueda) page = std::clamp(page - (e.rueda > 0 ? 1 : -1), 0, pages - 1);
+    // Buttons (window coordinates from the constructor): close, Read, Write, Delete, page up / down.
+    if (ui::boton(g, e, IMG_CERRAR, x + 209, y + 305) || e.escape) {
+        c.abierto = false;
+        e.escape = false;
+        return;
+    }
+    const bool has_sel = selected_row >= 0 && selected_row < n;
+    if (ui::boton(g, e, IMG_READ, x + 34, y + 332) && has_sel)
+        enviar(a, cmd::correo(a.op, static_cast<u8>(0x10 + c.bandeja), c.cartas[static_cast<size_t>(selected_row)].id));
+    if (ui::boton(g, e, IMG_WRITE, x + 139, y + 304)) {
+        c.escribiendo = true;
+        c.foco = c.destino.empty() ? 0 : 1;
+    }
+    if (ui::boton(g, e, IMG_DELETE, x + 171, y + 304) && has_sel)
+        enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.cartas[static_cast<size_t>(selected_row)].id));
+    if (ui::boton(g, e, IMG_PAGE_UP, x + 64, y + 311) && page > 0) --page;
+    if (ui::boton(g, e, IMG_PAGE_DOWN, x + 99, y + 311) && page + 1 < pages) ++page;
 }
 
 }  // namespace
@@ -133,6 +260,7 @@ void dibujar_correo(App& a) {
     dibujar_sobre(a);
     Correo& c = a.correo;
     if (!c.abierto) return;
+    if (!a.cfg.ui_simple && a.g->img(IMG_PAPEL).valida()) return draw_original_mail(a);
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const int x = x0(a), y = y0();
