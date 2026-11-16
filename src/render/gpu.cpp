@@ -383,6 +383,7 @@ bool Gpu::crear_pipeline() {
             static const Modulo modulos[] = {
                 {"vs_sprite", spirv::sprite_vert, sizeof spirv::sprite_vert},
                 {"fs_sprite", spirv::sprite_frag, sizeof spirv::sprite_frag},
+                {"fs_texto", spirv::texto_frag, sizeof spirv::texto_frag},
                 {"vs_brillo", spirv::brillo_vert, sizeof spirv::brillo_vert},
                 {"fs_brillo", spirv::brillo_frag, sizeof spirv::brillo_frag},
                 {"vs_mundo", spirv::mundo_vert, sizeof spirv::mundo_vert},
@@ -448,6 +449,14 @@ bool Gpu::crear_pipeline() {
     pi.target_info.color_target_descriptions = &ct;
     pi.target_info.num_color_targets = 1;
     pipeline_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
+    if (usar_spirv_) {
+        SDL_GPUShaderCreateInfo tf = fs;
+        tf.entrypoint = "fs_texto";
+        if (SDL_GPUShader* ft = crear(tf)) {
+            crear_pipelines_texto(pi, ft);
+            SDL_ReleaseGPUShader(dev_, ft);
+        }
+    }
     SDL_ReleaseGPUShader(dev_, v);
     SDL_ReleaseGPUShader(dev_, f);
     if (!pipeline_) LIN_LOG("SDL_CreateGPUGraphicsPipeline: %s", SDL_GetError());
@@ -571,6 +580,91 @@ bool Gpu::crear_pipeline() {
     return pipeline_ != nullptr && pipeline_brillo_ != nullptr && pipeline_mundo_ != nullptr;
 }
 
+void Gpu::crear_pipelines_texto(SDL_GPUGraphicsPipelineCreateInfo pi, SDL_GPUShader* fs_texto) {
+    const SDL_GPUTextureFormat formatos[2] = {SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                                               SDL_GetGPUSwapchainTextureFormat(dev_, ventana_)};
+    pi.target_info.has_depth_stencil_target = true;
+    pi.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+    pi.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
+    pi.depth_stencil_state.enable_depth_test = true;
+    for (int k = 0; k < 2; ++k) {
+        SDL_GPUColorTargetDescription ct = pi.target_info.color_target_descriptions[0];
+        ct.format = formatos[k];
+        pi.target_info.color_target_descriptions = &ct;
+        // Occluders: the sprite shader, depth only.
+        SDL_GPUColorTargetDescription co = ct;
+        co.blend_state.enable_color_write_mask = true;
+        co.blend_state.color_write_mask = 0;
+        SDL_GPUGraphicsPipelineCreateInfo po = pi;
+        po.target_info.color_target_descriptions = &co;
+        po.depth_stencil_state.enable_depth_write = true;
+        pipe_oclusor_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &po);
+        pi.fragment_shader = fs_texto;
+        pi.depth_stencil_state.enable_depth_write = false;
+        pipe_texto_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
+        if (!pipe_oclusor_[k] || !pipe_texto_[k]) {
+            LIN_LOG("HD text pipelines: %s", SDL_GetError());
+            if (k == 0) {  // without the RGBA ones there is no HD text at all
+                SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_oclusor_[0]);
+                SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_[0]);
+                pipe_oclusor_[0] = pipe_texto_[0] = nullptr;
+            }
+        }
+    }
+}
+
+void Gpu::pase_texto(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* destino, int w, int h, int formato, const RectVista* rect) {
+    const u32 n = static_cast<u32>(inst_ordenadas_.size());
+    if (!texto_hd_ || primer_texto_ >= n || !pipe_texto_[0] || !pipe_texto_[formato] || !pipe_oclusor_[formato] || w < 1 || h < 1)
+        return;
+    if (!profundidad_ || prof_w_ != w || prof_h_ != h) {
+        if (profundidad_) SDL_ReleaseGPUTexture(dev_, profundidad_);
+        SDL_GPUTextureCreateInfo td{};
+        td.type = SDL_GPU_TEXTURETYPE_2D;
+        td.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+        td.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
+        td.width = static_cast<Uint32>(w);
+        td.height = static_cast<Uint32>(h);
+        td.layer_count_or_depth = 1;
+        td.num_levels = 1;
+        profundidad_ = SDL_CreateGPUTexture(dev_, &td);
+        prof_w_ = w;
+        prof_h_ = h;
+        if (!profundidad_) return;
+    }
+    SDL_GPUColorTargetInfo ct{};
+    ct.texture = destino;
+    ct.load_op = SDL_GPU_LOADOP_LOAD;
+    ct.store_op = SDL_GPU_STOREOP_STORE;
+    SDL_GPUDepthStencilTargetInfo dt{};
+    dt.texture = profundidad_;
+    dt.clear_depth = 1.0f;
+    dt.load_op = SDL_GPU_LOADOP_CLEAR;
+    dt.store_op = SDL_GPU_STOREOP_DONT_CARE;
+    dt.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
+    dt.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+    SDL_GPURenderPass* p = SDL_BeginGPURenderPass(cmd, &ct, 1, &dt);
+    if (!p) return;
+    if (rect) {
+        SDL_GPUViewport vp{static_cast<float>(rect->x), static_cast<float>(rect->y), static_cast<float>(rect->w),
+                           static_cast<float>(rect->h), 0.0f, 1.0f};
+        SDL_SetGPUViewport(p, &vp);
+    }
+    SDL_BindGPUVertexStorageBuffers(p, 0, &instancias_gpu_, 1);
+    const SDL_GPUTextureSamplerBinding tsb[2] = {{atlas_, muestreo_}, {atlas_, muestreo_lineal_}};
+    SDL_BindGPUFragmentSamplers(p, 0, tsb, 2);
+    float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(primer_texto_), 3};
+    SDL_BindGPUGraphicsPipeline(p, pipe_oclusor_[formato]);
+    SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
+    SDL_DrawGPUPrimitives(p, 6, n - primer_texto_, 0, 0);
+    SDL_BindGPUGraphicsPipeline(p, pipe_texto_[formato]);
+    uni[3] = 2;
+    SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
+    SDL_DrawGPUPrimitives(p, 6, n - primer_texto_, 0, 0);
+    llamadas_ += 2;
+    SDL_EndGPURenderPass(p);
+}
+
 void Gpu::cerrar() {
     if (!dev_) return;
     SDL_WaitForGPUIdle(dev_);
@@ -584,6 +678,11 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_pantalla_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_brillo_);
+    for (int k = 0; k < 2; ++k) {
+        SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_[k]);
+        SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_oclusor_[k]);
+    }
+    SDL_ReleaseGPUTexture(dev_, profundidad_);
     SDL_ReleaseGPUTexture(dev_, luz_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_luz_);
     SDL_ReleaseGPUTexture(dev_, copia_);
@@ -702,6 +801,8 @@ void Gpu::ordenar() {
     // Como la capa es el byte alto de la clave, lo que va antes de CAPA_EFECTOS es un prefijo.
     n_mundo_ = 0;
     while (n_mundo_ < n && (claves_[orden_[n_mundo_]] >> 56) < CAPA_EFECTOS) ++n_mundo_;
+    primer_texto_ = 0;
+    while (primer_texto_ < n && !(inst_ordenadas_[primer_texto_].mezcla & 64u)) ++primer_texto_;
 }
 
 // Una vista lógica grande (poca escala en una pantalla de muchos píxeles) puede pedir más celdas que
@@ -849,6 +950,7 @@ void Gpu::preparar_frame() {
     else {
         inst_ordenadas_.clear();
         n_mundo_ = 0;
+        primer_texto_ = 0;
     }
     preparado_ = true;
 }
@@ -1020,6 +1122,7 @@ void Gpu::presentar() {
     // 2b. Scaling filter: destino_ (logical grid, nearest-sampled at texel centres) -> copia_ (same
     // size; free at this point). The final capture reads it back.
     SDL_GPUTexture* final_tex = destino_;
+    const bool hay_texto = texto_hd_ && primer_texto_ < n;
     if (escalado_ == Escalado::ANIME4K) {
         if (SDL_GPUTexture* t = pase_anime4k(cmd)) final_tex = t;
     } else if (escalado_ != Escalado::ENTERO && pipeline_esc_[static_cast<int>(escalado_)] && copia_) {
@@ -1039,6 +1142,7 @@ void Gpu::presentar() {
             final_tex = copia_;
         }
     }
+    if (hay_texto && !vista_fija_) pase_texto(cmd, final_tex, destino_w_, destino_h_, 0, nullptr);
     if (!ruta_final_.empty()) {
         SDL_GPUTexture* ventana_tex = nullptr;
         if (vista_fija_) {
@@ -1052,7 +1156,10 @@ void Gpu::presentar() {
             td.layer_count_or_depth = 1;
             td.num_levels = 1;
             ventana_tex = SDL_CreateGPUTexture(dev_, &td);
-            if (ventana_tex) blit_vista(cmd, final_tex, ventana_tex);
+            if (ventana_tex) {
+                blit_vista(cmd, final_tex, ventana_tex);
+                if (hay_texto) pase_texto(cmd, ventana_tex, ventana_pw_, ventana_ph_, 0, &rect_);
+            }
         }
         if (ventana_tex) {
             cmd = guardar_captura(cmd, ventana_tex, ventana_pw_, ventana_ph_, ruta_final_, false);
@@ -1073,6 +1180,7 @@ void Gpu::presentar() {
             ventana_ph_ = static_cast<int>(sh);
             rect_ = rect_vista(ventana_pw_, ventana_ph_, grid_w_, grid_h_, escalado_ == Escalado::ENTERO);
             blit_vista(cmd, final_tex, swap);
+            if (hay_texto) pase_texto(cmd, swap, static_cast<int>(sw), static_cast<int>(sh), 1, &rect_);
         } else {
             Uint32 dw = static_cast<Uint32>(destino_w_), dh = static_cast<Uint32>(destino_h_);
             SDL_GPUBlitInfo b{};

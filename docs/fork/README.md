@@ -31,6 +31,8 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 
 ### Original-client look (`ui_simple=0`)
 
+- **HD text** (`texto_hd=1`, default): see [hd_text.md](hd_text.md).
+
 - **Font:** `fuente_original=1` (default) draws printable ASCII with the game's `font/eng.fnt` instead
   of Departure Mono; other characters fall back to the TTF.
 - **NPC HTML pages** (S3EP1U, all addresses are VAs): the 2009 client does not use eng.fnt there. Page text is a GDI

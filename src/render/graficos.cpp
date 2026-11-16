@@ -1,4 +1,5 @@
 #include "render/graficos.h"
+#include "recursos/fuente_hd.h"
 #include <algorithm>
 #include <cstdio>
 #include "render/icon_aura.h"
@@ -267,11 +268,25 @@ const RegionAtlas& Graficos::glifo(u32 g) {
     return cargar(clave(T_GLIFO, g), [&] { return fuente_.rasterizar(g, tmp_) ? Carga::OK : Carga::FALLO; });
 }
 
+const RegionAtlas& Graficos::glifo_hd(u32 g) {
+    constexpr u32 VARIANTE_HD = 1u << 28;  // apart from the pixel glyphs in the cache key
+    return cargar(clave(T_GLIFO, g | VARIANTE_HD), [&] {
+        if (!fuente_.rasterizar_hd(g, tmp_)) return Carga::FALLO;
+        escala_tmp_ = HD_ESCALA;
+        return Carga::OK;
+    });
+}
+
+// Layers below the UI are drawn before the scaling filter, so only UI text can go through the HD pass.
+bool Graficos::texto_hd_para(u64 clave_orden) const { return (clave_orden >> 56) >= CAPA_UI && gpu_.texto_hd(); }
+
 int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
     glifos_de_texto(t.data(), t.size(), glifos_tmp_);
+    const bool hd = texto_hd_para(clave_orden);
     int ancho = 0;
     for (const GlifoTexto& g : glifos_tmp_) {
-        gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
+        if (hd) gpu_.dibujar_en(glifo_hd(g.glifo), x + ancho, y, clave_orden, color, Mezcla::TEXTO_HD);
+        else gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
         ancho += g.ancho;
     }
     return ancho;
@@ -279,9 +294,11 @@ int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 c
 
 int Graficos::texto_html(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
     glifos_de_texto_html(t.data(), t.size(), glifos_tmp_);
+    const bool hd = texto_hd_para(clave_orden);
     int ancho = 0;
     for (const GlifoTexto& g : glifos_tmp_) {
-        gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
+        if (hd) gpu_.dibujar_en(glifo_hd(g.glifo), x + ancho, y, clave_orden, color, Mezcla::TEXTO_HD);
+        else gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
         ancho += g.ancho;
     }
     return ancho;

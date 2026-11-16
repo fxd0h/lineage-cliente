@@ -189,6 +189,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `ui_simple` | `1` simple interface, `0` original panel (F2) |
 | `vista` | `fija` (default): fixed 640×480 view, as in the original, scaled to the window; `amplia`: the view grows with the window and the zoom |
 | `escalado` | Filter used to scale the fixed view: `entero` (nearest), `xbr`, `fsr` (default), `crt`, `anime4k` (Shift+F5) |
+| `texto_hd` | `1` (default): UI text is drawn after the scaling filter at the output resolution (sharp at any scale, same glyphs and layout; docs/fork/hd_text.md); `0` pixel text drawn into the 640×480 frame. Live: `texto-hd on|off` |
 | `fuente_original` | `1` (default) ASCII text with the game's `font/eng.fnt`; `0` Departure Mono |
 | `lista_sprites` | Path of a plaintext `list.spz` (your own copy; never shipped). It adds the gfx missing from `datos/sprite_table.txt`. Empty = `list.spz` or `spritelist/list.spz` in the game folder, if present |
 | `hd` | Folder with an upscaled UI pack (`img_<id>.png`, `tbt_<id>.png`, 4× the original size); empty = off |

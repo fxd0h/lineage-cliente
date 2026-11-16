@@ -1,6 +1,7 @@
 #include "plataforma/archivo_mapeado.h"
 #include "recursos/cp949.h"
 #include "recursos/fuente.h"
+#include "recursos/fuente_hd.h"
 #include "recursos/fuente_ttf.h"
 
 namespace lin {
@@ -43,6 +44,13 @@ bool FuenteBitmap::rasterizar(u32 glifo, ImagenRGBA& salida) const {
             if (fila & (0x8000 >> x)) salida.px[y * ANCHO_GLIFO_KOR + x] = 0xFFFFFFFFu;
     }
     return true;
+}
+
+bool FuenteBitmap::rasterizar_hd(u32 glifo, ImagenRGBA& salida) const {
+    if (glifo >= GLIFO_HTML_BASE) return rasterizar_html_hd(glifo - GLIFO_HTML_BASE, salida);
+    static thread_local ImagenRGBA mascara;  // reused cell
+    if (!rasterizar(glifo, mascara)) return false;
+    return campo_de_mascara(mascara, salida);
 }
 
 size_t largo_utf8(const char* t, size_t n, size_t i, u32& cp) {

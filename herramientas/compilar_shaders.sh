@@ -11,7 +11,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
   echo "#pragma once"
   echo "#include <cstddef>"
   echo "namespace lin::spirv {"
-  for f in sprite.vert sprite.frag brillo.vert brillo.frag mundo.vert mundo.frag escalado_xbr.frag escalado_fsr.frag escalado_crt.frag anime4k_c1.frag anime4k_c2.frag anime4k_c3.frag anime4k_c4.frag anime4k_d2s.frag anime4k_resample.frag; do
+  for f in sprite.vert sprite.frag texto.frag brillo.vert brillo.frag mundo.vert mundo.frag escalado_xbr.frag escalado_fsr.frag escalado_crt.frag anime4k_c1.frag anime4k_c2.frag anime4k_c3.frag anime4k_c4.frag anime4k_d2s.frag anime4k_resample.frag; do
     nombre="${f/./_}"
     glslangValidator -V --target-env vulkan1.0 -o "$tmp/$f.spv" "$dir/$f" >/dev/null
     echo "alignas(4) inline constexpr unsigned char ${nombre}[] = {"

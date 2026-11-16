@@ -454,6 +454,7 @@ void bucle_app(App& a) {
         if (a.g) a.g->nuevo_frame();
         // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480.
         a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
+        a.gpu.fijar_texto_hd(a.cfg.texto_hd);
         a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");
         a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a));
 #if LIN_CONTROL

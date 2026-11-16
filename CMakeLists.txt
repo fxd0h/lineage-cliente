@@ -71,6 +71,7 @@ add_library(lin_recursos STATIC
     src/recursos/lista_sprites.cpp
     src/recursos/mapa.cpp
     src/recursos/fuente.cpp
+    src/recursos/fuente_hd.cpp
     src/recursos/fuente_ttf.cpp
     src/recursos/cp949.cpp
     src/recursos/textos.cpp
@@ -187,6 +188,7 @@ if(LIN_TESTS)
         tests/test_npc.cpp
         tests/test_sonidos.cpp
         tests/test_fuente.cpp
+        tests/test_fuente_hd.cpp
         tests/test_textos.cpp
         tests/test_ajustes.cpp
         tests/test_vista.cpp

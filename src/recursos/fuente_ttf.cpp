@@ -5,7 +5,9 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 #include "recursos/fuente.h"
+#include "recursos/fuente_hd.h"
 #include "recursos/fuente_html_datos.inc"
+#include "recursos/fuente_html_hd_datos.inc"
 #include "recursos/fuente_ui_datos.inc"
 
 namespace lin {
@@ -134,6 +136,30 @@ bool rasterizar_html(u32 cp, ImagenRGBA& salida) {
         }
     }
     return true;
+}
+
+// HD variant of the HTML face: the real (unhinted) Liberation Sans outlines rasterized at HD_ESCALA times the 11 ppem
+// size, placed on the same pen position and baseline as the pixel glyph, so only the edges differ.
+bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida) {
+    static const stbtt_fontinfo* info = [] {
+        static stbtt_fontinfo f;
+        return stbtt_InitFont(&f, FUENTE_HTML_HD_DATOS, 0) ? &f : nullptr;
+    }();
+    if (!info) return false;
+    const int fila = indice_html(cp);
+    const int avance = std::max(1, static_cast<int>(FUENTE_HTML_ANCHO[fila]));
+    u32 real = FUENTE_HTML_CP[fila];  // the code point actually drawn ('?' for unknown ones)
+    const int idx = stbtt_FindGlyphIndex(info, static_cast<int>(real));
+    const float escala = stbtt_ScaleForMappingEmToPixels(info, 11.0f * HD_ESCALA);
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetGlyphBitmapBox(info, idx, escala, escala, &x0, &y0, &x1, &y1);
+    const int w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) return false;
+    static thread_local std::vector<unsigned char> cob;
+    cob.assign(static_cast<size_t>(w) * h, 0);
+    stbtt_MakeGlyphBitmap(info, cob.data(), w, h, w, escala, escala, idx);
+    return campo_de_cobertura(cob.data(), w, h, x0, FUENTE_HTML_ASCENSO * HD_ESCALA + y0, avance, ALTO_CELDA_HTML,
+                              salida);
 }
 
 }  // namespace lin

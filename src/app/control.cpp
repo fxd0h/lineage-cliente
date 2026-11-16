@@ -302,7 +302,7 @@ const char* AYUDA[] = {
     "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
     "tecla <nombre> (ctrl+ alt+ shift+)   texto \"...\"   ctrl on|off   shift on|off",
     "esperar pantalla=X | paquete=NOMBRE | html=X | ventana=X | dialogo=pregunta|cantidad | chat=texto | frames=n | ms=n  [plazo=ms]",
-    "captura <ruta.bmp>   captura-final <ruta.bmp> (tras el filtro)   escalado entero|xbr|fsr|crt|anime4k   mudo on|off   traza on|off   traza-html on|off   perf on|off   depuracion on|off   salir",
+    "captura <ruta.bmp>   captura-final <ruta.bmp> (tras el filtro)   texto-hd on|off   escalado entero|xbr|fsr|crt|anime4k   mudo on|off   traza on|off   traza-html on|off   perf on|off   depuracion on|off   salir",
     "forzar-hora <segundos del día 0-86399>|off (luz y sonido, para pruebas; el día del año pasa a ser el 1 de enero)",
 };
 
@@ -577,6 +577,9 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.tipo = Espera::FRAMES;
         es.frame = a.frame + 2;
         return false;
+    } else if (cmd == "texto-hd") {
+        if (p.size() < 2) return error("uso: texto-hd on|off");
+        a.cfg.texto_hd = p[1] == "on" || p[1] == "1";
     } else if (cmd == "escalado") {
         if (p.size() < 2) return error("uso: escalado entero|xbr|fsr|crt");
         a.cfg.escalado = nombre_escalado(escalado_desde(p[1]));

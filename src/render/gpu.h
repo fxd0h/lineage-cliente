@@ -37,7 +37,9 @@ static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader"
 // PANTALLA: screen blend, dst' = src + dst * (1 - src) per channel (the original client's buff icons);
 // drawn in a second draw call after the normal ones of the same pass.
 // GRIS (bit 5): the texture's luminance times the tint, for the original's monochrome bottom-strip icons.
-enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32 };
+// TEXTO_HD (bit 6): HD text glyph (the atlas region is a field, recursos/fuente_hd.h). Skipped by the pre-filter passes
+// and drawn by Gpu::pase_texto after the scaling filter, at output resolution.
+enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32, TEXTO_HD = 64 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
 // Gpu::nivel_ventana lleva lo que se dibuja en CAPA_UI y CAPA_UI_TEXTO mientras se dibuja una
@@ -135,6 +137,11 @@ public:
     // Saves the final image (after the scaling filter, at window-grid resolution) as BMP.
     void pedir_captura_final(const std::string& ruta_bmp) { ruta_final_ = ruta_bmp; }
     void fijar_escalado(Escalado e) { escalado_ = e; }
+    // HD text (settings.ini "texto_hd"): glyphs drawn after the scaling filter at output resolution. Needs the SPIR-V
+    // path (MULTIPLATFORM: no MSL twin of the text shaders yet) and is off while a logical capture is pending, so
+    // `captura` still shows the text.
+    void fijar_texto_hd(bool si) { texto_hd_ = si; }
+    bool texto_hd() const { return texto_hd_ && usar_spirv_ && pipe_texto_[0] && ruta_captura_.empty(); }
 
     // Ventana (píxeles) -> coordenadas lógicas.
     void a_logico(float wx, float wy, int& lx, int& ly) const;
@@ -184,6 +191,17 @@ private:
     SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors
     u32 n_pantalla_ = 0;                                    // screen-blend instances queued this frame
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
+    // HD text pass: [0] targets R8G8B8A8 textures, [1] the swapchain format. Occluders write depth only, so UI drawn
+    // after a piece of text (a window above it) hides it.
+    SDL_GPUGraphicsPipeline* pipe_texto_[2] = {};
+    SDL_GPUGraphicsPipeline* pipe_oclusor_[2] = {};
+    SDL_GPUTexture* profundidad_ = nullptr;
+    int prof_w_ = 0, prof_h_ = 0;
+    bool texto_hd_ = false;
+    u32 primer_texto_ = 0;  // index of the first TEXTO_HD instance in the sorted list (== n if none)
+    void crear_pipelines_texto(SDL_GPUGraphicsPipelineCreateInfo pi, SDL_GPUShader* fs_texto);
+    // Draws the HD text over `destino` (`w` x `h`); `rect`: where the logical grid lands (nullptr = all of it).
+    void pase_texto(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* destino, int w, int h, int formato, const RectVista* rect);
     SDL_GPUGraphicsPipeline* pipeline_esc_[N_ESCALADOS] = {};  // [0] unused (nearest blit)
     Escalado escalado_ = Escalado::ENTERO;
     // Anime4K: conv1..conv4, depth-to-space, resample. a4k_a_/a4k_b_ ping-pong at the logical grid size

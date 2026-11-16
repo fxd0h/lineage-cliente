@@ -28,7 +28,7 @@ constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
 // Original NPC dialog (client class at 0x43f130, draw 0x43f7f0): background 1355 at (8,11), frame 1356, ornaments
 // 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 47 and 293 over the track 1354.
 constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
-constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 21, NPC_TEXT_Y = 48, NPC_TEXT_W = 197, NPC_TEXT_H = 251;
+constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 24, NPC_TEXT_Y = 48, NPC_TEXT_W = 194, NPC_TEXT_H = 251;
 constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 13;  // scroll step = text line height (0x43c080 / 0x43c0b0 use 0x435370 = 13)
 
 // Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
@@ -36,7 +36,9 @@ bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_origi
 // The page window sets its text rectangle to the window rectangle inset by (3, 3, 7, 3) (SetRect at 0x43b4ea, from
 // left+3, top+3, right-7, bottom-3), when the client class at 0x43f130 builds it. The window rectangle itself is
 // the widget rect (10,48)-(207,299) built at 0x458994..0x4589b0 (ctor 0x43e170), shifted +11 in x to the frame's
-// origin (it then spans the panel border to border: bright lines at x 22/218, y 47/299 in the capture).
+// origin (it then spans the panel border to border: bright lines at x 22/218, y 47/299 in the capture). The x shift is
+// not decoded: with +11 the text touched the left border line (2 px), so the left edge is calibrated to +14 (5 px
+// from the line, like the right margin); the right edge stays where it was.
 constexpr int HTML_INSET_L = 3, HTML_INSET_T = 3, HTML_INSET_R = 7, HTML_INSET_B = 3;
 int page_width(const App& a) {
     if (a.cfg.ui_simple) return ANCHO_PAGINA;

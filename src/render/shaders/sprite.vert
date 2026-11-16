@@ -13,9 +13,18 @@ void main() {
     Instancia i = inst[uint(gl_InstanceIndex) + uint(u.relleno.x)];
     vec2 e = esquinas[gl_VertexIndex];
     vec2 p = i.destino.xy + e * i.destino.zw;
-    gl_Position = vec4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla).
-    if (((i.mezcla & 8u) != 0u) != (u.relleno.y > 0.5)) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    // Depth only matters in the HD text pass (later in the sorted list = nearer); the other passes have no depth buffer.
+    float z = 1.0 - float(uint(gl_InstanceIndex) + uint(u.relleno.x) + 1u) / 131074.0;
+    gl_Position = vec4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, z, 1.0);
+    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 2 = HD text
+    // (bit 6), 3 = occluders of the HD text pass (everything that is neither text nor additive/screen).
+    const uint modo = uint(u.relleno.y + 0.5);
+    const bool texto = (i.mezcla & 64u) != 0u;
+    bool oculto;
+    if (modo == 2u) oculto = !texto;
+    else if (modo == 3u) oculto = texto || (i.mezcla & 9u) != 0u;
+    else oculto = texto || ((i.mezcla & 8u) != 0u) != (modo == 1u);
+    if (oculto) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     o_uv = mix(i.uv.xy, i.uv.zw, e);
     o_color = unpackUnorm4x8(i.color);
     o_pagina = i.pagina;

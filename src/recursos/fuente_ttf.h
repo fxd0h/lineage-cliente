@@ -17,6 +17,8 @@ constexpr u32 GLIFO_HTML_BASE = 0x200000;
 constexpr int ALTO_LINEA_HTML_ORIGINAL = 13;
 int ancho_html(u32 codepunto);
 bool rasterizar_html(u32 codepunto, ImagenRGBA& salida);
+// HD field (recursos/fuente_hd.h) from the real outlines; false for glyphs without ink.
+bool rasterizar_html_hd(u32 codepunto, ImagenRGBA& salida);
 
 // Avance del carácter en píxeles (proporcional). Un carácter que la fuente no tiene se dibuja como '?'.
 int ancho_ttf(u32 codepunto);
