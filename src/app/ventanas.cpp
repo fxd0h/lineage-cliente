@@ -70,7 +70,13 @@ Rect por_defecto(const App& a, IdVentana v) {
     case IdVentana::INVENTARIO: return {der_inv - w, y, w, h};
     case IdVentana::ESTADO: return {der_estado - w, y, w, h};
     case IdVentana::HECHIZOS: return {der_hechizos - w, y, w, h};
-    case IdVentana::NPC: return {MARGEN, y, w, h};
+    case IdVentana::NPC:
+        if (!a.cfg.ui_simple) {
+            int nw, nh;
+            original_npc_size(a, nw, nh);
+            return {MARGEN, y, nw, nh};
+        }
+        return {MARGEN, y, w, h};
     case IdVentana::OPCIONES: return {(a.gpu.ancho() - ANCHO_OPCIONES) / 2, y + 28, ANCHO_OPCIONES, ALTO_OPCIONES};
     case IdVentana::SALIDA: return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
     case IdVentana::SOCIAL: return rect_social(a);

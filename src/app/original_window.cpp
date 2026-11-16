@@ -29,13 +29,14 @@ bool uses_original_frame(const App& a, IdVentana v) {
     return !a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO || v == IdVentana::HECHIZOS);
 }
 
-bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame) {
+bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame, int close_x, int close_y) {
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     g.gpu().dibujar(g.img(background), x + bg_x, y + bg_y, KEY_BACKGROUND, rgba(255, 255, 255, std::max<u8>(opacidad_ventanas(a), 160)));
     g.gpu().dibujar(g.img(frame), x, y, KEY_FRAME);
-    const bool over = ui::sobre(e, x + CLOSE_X - 2, y + CLOSE_Y - 2, CLOSE_SIDE + 4, CLOSE_SIDE + 4);
-    g.gpu().dibujar(g.img(IMG_CLOSE), x + CLOSE_X, y + CLOSE_Y, KEY_CONTROL, over ? rgba(255, 255, 255) : rgba(200, 200, 200));
+    if (close_x < 0) close_x = CLOSE_X, close_y = CLOSE_Y;
+    const bool over = ui::sobre(e, x + close_x - 2, y + close_y - 2, CLOSE_SIDE + 4, CLOSE_SIDE + 4);
+    g.gpu().dibujar(g.img(IMG_CLOSE), x + close_x, y + close_y, KEY_CONTROL, over ? rgba(255, 255, 255) : rgba(200, 200, 200));
     return over && e.clic;
 }
 
@@ -43,11 +44,21 @@ void draw_original_ornament(App& a, int x, int y, u32 ornament) {
     a.g->gpu().dibujar(a.g->img(ornament), x, y + 11, KEY_ORNAMENT);
 }
 
+void draw_original_overlay(App& a, int x, int y, u32 image) { a.g->gpu().dibujar(a.g->img(image), x, y, KEY_ORNAMENT); }
+
+bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image) {
+    const EntradaFrame& e = a.entrada;
+    const RegionAtlas base = a.g->img(image);  // copy: loading the hover image may move the cache
+    const bool over = ui::sobre(e, x, y, base.w, base.h) && !sobre_cantidad(a);
+    a.g->gpu().dibujar(over ? a.g->img(hover_image) : base, x, y, KEY_CONTROL);
+    return over && e.clic;
+}
+
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
-                        bool over_list) {
+                        bool over_list, u32 track_image) {
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    g.gpu().dibujar(g.img(IMG_TRACK), x, y + ARROW_H, KEY_FRAME);
+    g.gpu().dibujar(g.img(track_image ? track_image : IMG_TRACK), x, y + ARROW_H, KEY_FRAME);
     const int track_y = y + ARROW_H, track_h = height - ARROW_H - ARROW_DOWN_H;
     const bool over_up = ui::sobre(e, x, y, 12, ARROW_H), over_down = ui::sobre(e, x, y + height - ARROW_DOWN_H, 12, ARROW_DOWN_H);
     g.gpu().dibujar(g.img(over_up ? IMG_UP_LIT : IMG_UP), x, y, KEY_CONTROL);

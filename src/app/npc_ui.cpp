@@ -24,6 +24,13 @@ namespace {
 constexpr int MARGEN = 14, ARRIBA = 30;
 constexpr int ANCHO_PAGINA = ui::VENTANA_ANCHO - 2 * MARGEN;
 constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
+// Original NPC dialog (client class at 0x43f130, draw 0x43f7f0): background 1355 at (8,11), frame 1356, ornaments
+// 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 45 and 293 over the track 1354.
+constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
+constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 18, NPC_TEXT_Y = 34, NPC_TEXT_W = 200, NPC_TEXT_H = 262;
+constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 45, NPC_SCROLL_H = 260, NPC_LINE = 12;  // scroll steps of a text line
+
+int page_width(const App& a) { return a.cfg.ui_simple ? ANCHO_PAGINA : NPC_TEXT_W; }
 constexpr int FILA_TIENDA = 34, FILAS_TIENDA = 6;
 constexpr int DISTANCIA_CIERRE = 6;  // al alejarse más, el diálogo se cierra
 constexpr u32 PRECIO_RETIRO = 30;    // adena por ítem retirado (C_Result del servidor)
@@ -64,7 +71,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
     a.npc_desplazamiento = 0;
     a.tienda = TipoTienda::NINGUNA;
     maquetar_html({reinterpret_cast<const char*>(html.data()), html.size()}, a.npc_datos, SEPARADOR_DATOS,
-                  nombre_personaje(a), ANCHO_PAGINA, medir_imagen, &a, a.npc_html);
+                  nombre_personaje(a), page_width(a), medir_imagen, &a, a.npc_html);
 }
 
 void cerrar(App& a) {
@@ -184,17 +191,32 @@ void dibujar_pagina(App& a, int x0, int y0) {
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     const PaginaHtml& p = a.npc_html;
-    const int max_desp = std::max(0, p.alto - ALTO_PAGINA);
+    const bool simple = a.cfg.ui_simple;
+    const int left = simple ? MARGEN : NPC_TEXT_X, top = simple ? ARRIBA : NPC_TEXT_Y, view_h = simple ? ALTO_PAGINA : NPC_TEXT_H;
+    const int max_desp = std::max(0, p.alto - view_h);
+    if (!simple) {  // the scroll bar works in text lines
+        if (draw_original_frame(a, x0, y0, IMG_NPC_BG, 8, 11, IMG_NPC_FRAME, NPC_CLOSE_X, NPC_CLOSE_Y)) {
+            cerrar(a);
+            return;
+        }
+        draw_original_overlay(a, x0 + 2, y0 + 11, IMG_NPC_ORNAMENT);
+        u32 line = static_cast<u32>(std::clamp(a.npc_desplazamiento, 0, max_desp) / NPC_LINE);
+        const u32 prev = line;
+        original_scrollbar(a, a.scroll.tienda, x0 + NPC_SCROLL_X, y0 + NPC_SCROLL_Y, NPC_SCROLL_H,
+                           static_cast<u32>((p.alto + NPC_LINE - 1) / NPC_LINE), static_cast<u32>(view_h / NPC_LINE), line, false,
+                           IMG_NPC_TRACK);
+        if (line != prev) a.npc_desplazamiento = static_cast<int>(line) * NPC_LINE;
+    }
     if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * 30, 0, max_desp);
     a.npc_desplazamiento = std::clamp(a.npc_desplazamiento, 0, max_desp);
-    const int ox = x0 + MARGEN, oy = y0 + ARRIBA - a.npc_desplazamiento;
+    const int ox = x0 + left, oy = y0 + top - a.npc_desplazamiento;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), ki = clave_orden(CAPA_UI, 13);
     const ElementoHtml* bajo = nullptr;
     for (const ElementoHtml& el : p.elementos) {
         const int x = ox + el.x, y = oy + el.y;
         // Fuera de la vista (por la primera línea de texto: un botón un poco más alto que el resto
         // de su línea no se pierde).
-        if (y < y0 + ARRIBA - 2 || y + ALTO_GLIFO > y0 + ARRIBA + ALTO_PAGINA + 2) continue;
+        if (y < y0 + top - 2 || y + ALTO_GLIFO > y0 + top + view_h + 2) continue;
         const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2);
         if (encima) bajo = &el;
         if (el.tipo == ElementoHtml::Tipo::IMAGEN) {
@@ -209,7 +231,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
             if (el.vinculo_len) g.gpu().rectangulo(x, y + ALTO_GLIFO, el.w, 1, ki, el.color);
         }
     }
-    if (max_desp > 0) {  // barra de desplazamiento
+    if (simple && max_desp > 0) {  // barra de desplazamiento
         int h = ALTO_PAGINA * ALTO_PAGINA / p.alto, yb = y0 + ARRIBA + (ALTO_PAGINA - h) * a.npc_desplazamiento / max_desp;
         g.gpu().rectangulo(x0 + ui::VENTANA_ANCHO - 8, yb, 3, h, ki, rgba(160, 130, 80, 200));
     }
@@ -224,7 +246,172 @@ void dibujar_pagina(App& a, int x0, int y0) {
     }
 }
 
+// Click handling of a shop row, shared by the simple list and the original grid: repair, pet bag, the amount
+// dialog for stacks, and plain +1 / -1 selection. `hover` is whether the pointer is over the row.
+void row_click(App& a, int i, bool hover, std::string_view name) {
+    const EntradaFrame& e = a.entrada;
+    FilaTienda& f = a.tienda_filas[static_cast<size_t>(i)];
+    const bool encima = hover;
+    if (encima && e.clic && a.tienda == TipoTienda::REPARAR && f.precio) {
+        // Reparar esta arma (C_SelectList; el servidor cobra y la deja sin daño).
+        enviar(a, cmd::reparar_arma(a.op, f.id, a.tienda_npc));
+        f.precio = 0;
+        f.nombre += " (repaired)";
+        return;
+    }
+    if (encima && e.clic && a.tienda == TipoTienda::MASCOTA) {
+        // Usar o equipar el ítem de la mascota (por su fila) y volver a pedir la lista.
+        enviar(a, cmd::usar_item_mascota(a.op, a.tienda_npc, static_cast<u8>(i)));
+        enviar(a, cmd::inventario_mascota(a.op, a.tienda_npc));
+        return;
+    }
+    if (encima && e.clic && !e.shift && f.maximo > 1 && a.tienda != TipoTienda::MAGIA) {
+        // De una pila: el diálogo de cantidad (se escribe el número; 0 la quita de la lista).
+        DialogoCantidad& d = a.cantidad;
+        d = {};
+        d.abierto = true;
+        d.tienda = CANTIDAD_FILA_NPC;
+        d.objeto = a.tienda_npc;
+        d.item = static_cast<ObjId>(i);
+        d.titulo.assign(name);
+        d.accion = "How many? (0: none)";
+        d.min = 0;
+        d.max = static_cast<i32>(f.maximo);
+        d.valor = f.elegido ? static_cast<i32>(f.elegido) : 1;
+        if (a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::VENTA) d.precio = static_cast<i32>(f.precio);
+        a.entrada.clic = false;  // que este clic no llegue a los botones del diálogo
+        return;
+    }
+    if (encima && e.clic) f.elegido = std::min(f.maximo, f.elegido + (e.shift ? (f.maximo > 10 ? 10u : f.maximo) : 1u));
+    if (encima && e.clic_derecho) f.elegido = e.shift ? 0 : (f.elegido ? f.elegido - 1 : 0);
+}
+
+
+// Original shop window (client S3EP1U draw at 0x42dfd0, built at 0x42dc30): background 1283 at (7,7), frame 1284 at
+// the corner, ornaments 1285; "selling" grid of 4x2 cells of 34 px at (43,51), "buying" grid at (43,145), two text
+// bars at y 224 / 241, OK (1289) at (46,258) and Cancel (1286) at (109,258), close button at (174,18).
+constexpr u32 IMG_SHOP_BG = 1283, IMG_SHOP_FRAME = 1284, IMG_SHOP_ORNAMENT = 1285;
+constexpr u32 IMG_OK = 1289, IMG_OK_LIT = 1290, IMG_CANCEL = 1286, IMG_CANCEL_LIT = 1287;
+constexpr int SHOP_CLOSE_X = 174, SHOP_CLOSE_Y = 18, SHOP_CELL = 34, SHOP_COLS = 4, SHOP_ROWS = 2;
+constexpr int SHOP_GRID_X = 43, SHOP_SELL_Y = 51, SHOP_BUY_Y = 145, SHOP_SCROLL_X = 28;
+constexpr int SHOP_BAR_X = 28, SHOP_BAR1_Y = 224, SHOP_BAR2_Y = 241;
+
+// Rows of the shop that are part of the selection, as indices (in order). Returns how many fit in `out`.
+size_t chosen_rows(const App& a, int* out, size_t cap) {
+    size_t n = 0;
+    for (size_t i = 0; i < a.tienda_filas.size() && n < cap; ++i)
+        if (a.tienda_filas[i].elegido) out[n++] = static_cast<int>(i);
+    return n;
+}
+
+void draw_shop_original(App& a, int x0, int y0) {
+    Graficos& g = *a.g;
+    const EntradaFrame& e = a.entrada;
+    const u64 kt = clave_orden(CAPA_UI_TEXTO, 14), ki = clave_orden(CAPA_UI, 13), kh = clave_orden(CAPA_UI, 14);
+    if (draw_original_frame(a, x0, y0, IMG_SHOP_BG, 7, 7, IMG_SHOP_FRAME, SHOP_CLOSE_X, SHOP_CLOSE_Y)) {
+        cerrar(a);
+        return;
+    }
+    draw_original_overlay(a, x0, y0, IMG_SHOP_ORNAMENT);
+    const bool free_pointer = !sobre_cantidad(a);  // the amount dialog sits on top
+    const int n = static_cast<int>(a.tienda_filas.size());
+    int chosen[256];
+    const int n_chosen = static_cast<int>(chosen_rows(a, chosen, std::size(chosen)));
+    // Scroll bars in the dark column left of each grid, one row (4 items) per step.
+    u32& chosen_pos = a.scroll.tienda_elegidas_pos;
+    const u32 sell_rows = static_cast<u32>((n + SHOP_COLS - 1) / SHOP_COLS), buy_rows = static_cast<u32>((n_chosen + SHOP_COLS - 1) / SHOP_COLS);
+    original_scrollbar(a, a.scroll.tienda, x0 + SHOP_SCROLL_X, y0 + SHOP_SELL_Y, SHOP_ROWS * SHOP_CELL, sell_rows, SHOP_ROWS,
+                       a.tienda_desplazamiento, ui::sobre(e, x0 + SHOP_GRID_X, y0 + SHOP_SELL_Y, SHOP_COLS * SHOP_CELL, SHOP_ROWS * SHOP_CELL) && free_pointer);
+    original_scrollbar(a, a.scroll.tienda_elegidas, x0 + SHOP_SCROLL_X, y0 + SHOP_BUY_Y, SHOP_ROWS * SHOP_CELL, buy_rows, SHOP_ROWS,
+                       chosen_pos, ui::sobre(e, x0 + SHOP_GRID_X, y0 + SHOP_BUY_Y, SHOP_COLS * SHOP_CELL, SHOP_ROWS * SHOP_CELL) && free_pointer);
+    const FilaTienda* tip = nullptr;
+    int tip_row = -1;
+    char buf[256], num[32], m1[32];
+    auto cell = [&](int grid_y, int k, int row, bool selection) {  // draws cell k of a grid (row: shop row or -1)
+        const int cx = x0 + SHOP_GRID_X + (k % SHOP_COLS) * SHOP_CELL, cy = y0 + grid_y + (k / SHOP_COLS) * SHOP_CELL;
+        if (row < 0) return;
+        FilaTienda& f = a.tienda_filas[static_cast<size_t>(row)];
+        const bool over = ui::sobre(e, cx, cy, SHOP_CELL - 1, SHOP_CELL - 1) && free_pointer;
+        if (over) g.gpu().rectangulo(cx, cy, SHOP_CELL - 1, SHOP_CELL - 1, kh - 1, rgba(120, 100, 40, 110));
+        draw_item_icon(g.gpu(), g.icono(f.gfx), cx + 1, cy + 1, ki, f.bendicion);
+        // Amount: the selected one in the selection grid, the stack size in the list (only for stacks).
+        const u32 amount = selection ? f.elegido : (a.tienda == TipoTienda::DEPOSITO || a.tienda == TipoTienda::RETIRO || a.tienda == TipoTienda::MASCOTA) ? f.maximo : 0;
+        if (amount > 1) {
+            std::snprintf(num, sizeof num, "%u", amount);
+            g.texto_sombra(num, static_cast<float>(cx + SHOP_CELL - 3 - ancho_texto(num, std::strlen(num))), static_cast<float>(cy + SHOP_CELL - ALTO_GLIFO - 2),
+                           kt, rgba(255, 255, 254));
+        } else if (!selection && f.elegido) {  // marks what is already in the selection
+            g.texto_sombra("*", static_cast<float>(cx + 3), static_cast<float>(cy + 2), kt, rgba(255, 230, 120));
+        }
+        if (over) {
+            tip = &f;
+            tip_row = row;
+        }
+    };
+    for (int k = 0; k < SHOP_COLS * SHOP_ROWS; ++k) {
+        const int i = static_cast<int>(a.tienda_desplazamiento) * SHOP_COLS + k;
+        cell(SHOP_SELL_Y, k, i < n ? i : -1, false);
+    }
+    const int sell_tip = tip_row;
+    const FilaTienda* sell_tip_row = tip;
+    tip = nullptr;
+    tip_row = -1;
+    for (int k = 0; k < SHOP_COLS * SHOP_ROWS; ++k) {
+        const int j = static_cast<int>(chosen_pos) * SHOP_COLS + k;
+        cell(SHOP_BUY_Y, k, j < n_chosen ? chosen[j] : -1, true);
+    }
+    const int selection_hover = tip_row;
+    // Clicks: a list cell selects (or asks the amount of a stack), a selection cell takes one back (Shift: all).
+    if (sell_tip_row) {
+        size_t m = nombre_fila(a, *sell_tip_row, buf, sizeof buf);
+        row_click(a, sell_tip, true, {buf, m});
+    } else if (selection_hover >= 0) {
+        FilaTienda& f = a.tienda_filas[static_cast<size_t>(selection_hover)];
+        if (e.clic) f.elegido = e.shift ? 0 : f.elegido - 1;
+        if (e.clic_derecho) f.elegido = 0;
+    }
+    // Name and price of the item under the pointer.
+    if (const FilaTienda* t = sell_tip_row ? sell_tip_row : tip; t) {
+        const size_t m = nombre_fila(a, *t, buf, sizeof buf);
+        std::string_view name{buf, m};
+        char line[320];
+        if (a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::VENTA || a.tienda == TipoTienda::REPARAR)
+            std::snprintf(line, sizeof line, "%.*s  %s adena", static_cast<int>(name.size()), name.data(), con_miles(t->precio, m1, sizeof m1));
+        else
+            std::snprintf(line, sizeof line, "%.*s", static_cast<int>(name.size()), name.data());
+        const int w = ancho_texto(line, std::strlen(line));
+        g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
+        g.texto(line, static_cast<float>(e.mx + 14), static_cast<float>(e.my + 17), clave_orden(CAPA_UI_TEXTO, 30));
+    }
+    // The two text bars: what the selection costs / yields, and the adena carried (or a hint).
+    char l1[96], l2[96], m2[32];
+    const u64 t = total(a);
+    l2[0] = 0;
+    switch (a.tienda) {
+    case TipoTienda::MAGIA:
+        if (a.tienda_filas.empty()) {
+            std::snprintf(l1, sizeof l1, "Nothing to learn now");
+            break;
+        }
+        [[fallthrough]];
+    case TipoTienda::COMPRA:
+        std::snprintf(l1, sizeof l1, "Total %s adena", con_miles(t, m1, sizeof m1));
+        std::snprintf(l2, sizeof l2, "Adena %s", con_miles(adena_inventario(a), m2, sizeof m2));
+        break;
+    case TipoTienda::VENTA: std::snprintf(l1, sizeof l1, "You get %s adena", con_miles(t, m1, sizeof m1)); break;
+    case TipoTienda::RETIRO: std::snprintf(l1, sizeof l1, "Fee %s adena (30 each)", con_miles(t, m1, sizeof m1)); break;
+    case TipoTienda::MASCOTA: std::snprintf(l1, sizeof l1, a.tienda_filas.empty() ? "The pet carries nothing" : "Click: use or equip"); break;
+    case TipoTienda::REPARAR: std::snprintf(l1, sizeof l1, a.tienda_filas.empty() ? "No damaged weapons" : "Click a weapon to repair it"); break;
+    default: std::snprintf(l1, sizeof l1, "Click: amount  Shift: +10"); break;
+    }
+    g.texto_sombra(l1, static_cast<float>(x0 + SHOP_BAR_X), static_cast<float>(y0 + SHOP_BAR1_Y + 2), kt, rgba(255, 255, 254));
+    if (l2[0]) g.texto_sombra(l2, static_cast<float>(x0 + SHOP_BAR_X), static_cast<float>(y0 + SHOP_BAR2_Y + 2), kt, rgba(255, 255, 254));
+    if (draw_original_button(a, x0 + 46, y0 + 258, IMG_OK, IMG_OK_LIT)) confirmar(a);
+    else if (draw_original_button(a, x0 + 109, y0 + 258, IMG_CANCEL, IMG_CANCEL_LIT)) cerrar(a);
+}
+
 void dibujar_tienda(App& a, int x0, int y0) {
+    if (!a.cfg.ui_simple) return draw_shop_original(a, x0, y0);
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), kf = clave_orden(CAPA_UI, 12), ki = clave_orden(CAPA_UI, 13);
@@ -258,38 +445,7 @@ void dibujar_tienda(App& a, int x0, int y0) {
             g.texto(linea, static_cast<float>(x + w - 6 - ancho_texto(linea, std::strlen(linea))), static_cast<float>(y + 17), kt,
                     rgba(255, 230, 120));
         }
-        if (encima && e.clic && a.tienda == TipoTienda::REPARAR && f.precio) {
-            // Reparar esta arma (C_SelectList; el servidor cobra y la deja sin daño).
-            enviar(a, cmd::reparar_arma(a.op, f.id, a.tienda_npc));
-            f.precio = 0;
-            f.nombre += " (repaired)";
-            continue;
-        }
-        if (encima && e.clic && a.tienda == TipoTienda::MASCOTA) {
-            // Usar o equipar el ítem de la mascota (por su fila) y volver a pedir la lista.
-            enviar(a, cmd::usar_item_mascota(a.op, a.tienda_npc, static_cast<u8>(i)));
-            enviar(a, cmd::inventario_mascota(a.op, a.tienda_npc));
-            continue;
-        }
-        if (encima && e.clic && !e.shift && f.maximo > 1 && a.tienda != TipoTienda::MAGIA) {
-            // De una pila: el diálogo de cantidad (se escribe el número; 0 la quita de la lista).
-            DialogoCantidad& d = a.cantidad;
-            d = {};
-            d.abierto = true;
-            d.tienda = CANTIDAD_FILA_NPC;
-            d.objeto = a.tienda_npc;
-            d.item = static_cast<ObjId>(i);
-            d.titulo.assign(buf, m);
-            d.accion = "How many? (0: none)";
-            d.min = 0;
-            d.max = static_cast<i32>(f.maximo);
-            d.valor = f.elegido ? static_cast<i32>(f.elegido) : 1;
-            if (a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::VENTA) d.precio = static_cast<i32>(f.precio);
-            a.entrada.clic = false;  // que este clic no llegue a los botones del diálogo
-            continue;
-        }
-        if (encima && e.clic) f.elegido = std::min(f.maximo, f.elegido + (e.shift ? (f.maximo > 10 ? 10u : f.maximo) : 1u));
-        if (encima && e.clic_derecho) f.elegido = e.shift ? 0 : (f.elegido ? f.elegido - 1 : 0);
+        row_click(a, i, encima, {buf, m});
     }
     const int yp = y0 + ARRIBA + FILAS_TIENDA * FILA_TIENDA + 4;
     char pie[96], m1[32], m2[32];
@@ -413,6 +569,12 @@ void eventos_npc(App& a, const Evento& e) {
     }
 }
 
+void original_npc_size(const App& a, int& w, int& h) {
+    const bool shop = a.tienda != TipoTienda::NINGUNA;
+    w = shop ? SHOP_WINDOW_W : NPC_WINDOW_W;
+    h = shop ? SHOP_WINDOW_H : NPC_WINDOW_H;
+}
+
 bool sobre_npc(const App& a) { return sobre_ventana(a, IdVentana::NPC); }
 
 void procesar_npc(App& a, u64 ahora) {
@@ -433,7 +595,13 @@ void dibujar_npc(App& a) {
     }
     arrastrar_ventana(a, IdVentana::NPC);
     const Rect rv = rect_ventana(a, IdVentana::NPC);
-    if (ui::ventana(g, a.entrada, a.cfg.ui_simple, rv.x, rv.y, titulo, opacidad_ventanas(a)) || a.entrada.escape) {
+    if (a.entrada.escape) {
+        cerrar(a);
+        return;
+    }
+    // The original shop draws its own frame; the other windows still use the generic one.
+    if (!a.cfg.ui_simple) {
+    } else if (ui::ventana(g, a.entrada, a.cfg.ui_simple, rv.x, rv.y, titulo, opacidad_ventanas(a))) {
         cerrar(a);
         return;
     }

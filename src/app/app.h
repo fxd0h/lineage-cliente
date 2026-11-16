@@ -179,7 +179,8 @@ struct Marcador {
 };
 // Barras de scroll de las ventanas que no tienen un struct propio (ver barra_scroll_ventana).
 struct ScrollVentanas {
-    ui::BarraScroll hechizos, inventario, tienda, opciones, forma;
+    ui::BarraScroll hechizos, inventario, tienda, tienda_elegidas, opciones, forma;
+    u32 tienda_elegidas_pos = 0;  // first visible row of the original shop's selection grid
     u32 opciones_pos = 0;    // primera fila visible de Opciones
     u32 opciones_filas = 0;  // filas de Opciones en el frame anterior: la barra va antes de las filas
     u32 forma_pos = 0;       // primera sugerencia visible de polymorph
@@ -541,13 +542,20 @@ u8 opacidad_ventanas(const App& a);
 // Original client's framed windows (original_window.cpp): size, frame with close button (returns true
 // when it is clicked), ornaments drawn over the contents, and the image scroll bar.
 constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;  // inventory and status
+constexpr int SHOP_WINDOW_W = 208, SHOP_WINDOW_H = 291;  // frame image 1284 (shop lists)
+constexpr int NPC_WINDOW_W = 258, NPC_WINDOW_H = 335;    // frame image 1356 (NPC dialog)
+void original_npc_size(const App& a, int& w, int& h);    // size of the NPC window in the original UI
 constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // size of frame image 934
 bool uses_original_frame(const App& a, IdVentana v);
 void draw_original_status(App& a, int x, int y);  // status window: equipment and attributes tabs
-bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame);
+// close_x < 0: the close button of the inventory-sized windows. Returns true when the close button was clicked.
+bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame, int close_x = -1, int close_y = -1);
+void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image at the window position as is
+// A button made of two images (normal, pointer over); true when clicked.
+bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
 void draw_original_ornament(App& a, int x, int y, u32 ornament);
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
-                        bool over_list);
+                        bool over_list, u32 track_image = 0);
 // Botones para abrir las ventanas: los del panel original (esquina del panel derecho) o de texto
 // (UI simple; devuelve dónde terminan a la izquierda).
 void dibujar_botones_panel(App& a, int x, int y);
