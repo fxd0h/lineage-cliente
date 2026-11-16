@@ -68,7 +68,7 @@ struct Conexion {
 // Un paso de mouse inyectado: se aplica en un frame (después de leer la entrada real).
 struct PasoMouse {
     int x, y;
-    u8 boton;  // 0 izquierdo, 1 derecho, 2 medio
+    u8 boton;  // 0 izquierdo, 1 derecho, 2 medio, 4 doble clic derecho
     bool apretar, soltar;
     int rueda = 0;  // pasos de la rueda en ese frame (+ hacia arriba)
 };
@@ -297,7 +297,7 @@ const char* AYUDA[] = {
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
     "abrir|cerrar inventario|estado|hechizos|opciones|social|salida|teclas",
     "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
-    "clic <x> <y> [der|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
+    "clic <x> <y> [der|dder|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
     "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
     "tecla <nombre> (ctrl+ alt+ shift+)   texto \"...\"   ctrl on|off   shift on|off",
@@ -540,8 +540,8 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         if (p.size() > 1) cambiar_pagina_barra(a, std::atoi(p[1].c_str()) - 1);
         responder(c, "pagina=" + std::to_string(a.pagina_barra + 1) + " paginas=" + std::to_string(a.cfg.paginas_barra));
     } else if (cmd == "clic") {
-        if (p.size() < 3) return error("uso: clic <x> <y> [der|medio]");
-        clic(std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), p.size() > 3 ? (p[3] == "der" ? 1 : p[3] == "medio" ? 2 : 0) : 0);
+        if (p.size() < 3) return error("uso: clic <x> <y> [der|dder|medio]");
+        clic(std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), p.size() > 3 ? (p[3] == "der" ? 1 : p[3] == "dder" ? 4 : p[3] == "medio" ? 2 : 0) : 0);
     } else if (cmd == "tecla") {
         if (p.size() < 2 || !tecla(p[1])) return error("tecla desconocida");
     } else if (cmd == "texto") {
@@ -768,9 +768,10 @@ void control_entrada(App& a) {
         e.pulsado = m.apretar && !g.izquierdo;  // apretado en este paso, no mantenido desde el anterior
         e.presionado = g.izquierdo = m.apretar;
         e.clic = m.soltar;
-    } else if (m.boton == 1) {
+    } else if (m.boton == 1 || m.boton == 4) {  // 4 = right double click
         e.derecho_presionado = m.apretar;
         e.clic_derecho = m.soltar;
+        e.doble_derecho = m.boton == 4 && m.apretar;
     } else if (m.boton == 2) {
         e.medio_presionado = m.apretar;
         e.clic_medio = m.soltar;

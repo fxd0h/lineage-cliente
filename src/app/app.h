@@ -146,12 +146,11 @@ struct Subastas {
     int desplazamiento = 0;  // filas
     u32 mapa = 0;            // casa cuyo mapa se muestra (0 = ninguno)
 };
-// World-map item window (map_ui.cpp): number 0 = closed; x == INT32_MIN = not placed yet.
+// World-map item window (map_ui.cpp): number 0 = closed.
 struct MapaItem {
     int numero = 0;
     ObjId objeto = 0;
-    int x = INT32_MIN, y = 0;  // window position
-    int pan_x = 0, pan_y = 0;  // top-left of the visible part of a picture bigger than the view
+    int x = 0, y = 0;  // window position (origin of the game surface when opened)
     bool arrastrando = false;
     int ult_x = 0, ult_y = 0;
 };

@@ -56,7 +56,7 @@ bool cargar_recursos(App& a) {
 
 void leer_entrada(App& a) {
     EntradaFrame& e = a.entrada;
-    e.clic = e.clic_derecho = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = false;
+    e.clic = e.clic_derecho = e.doble_derecho = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = false;
     e.pagina_arriba = e.pagina_abajo = e.alt_c = e.alt_i = e.alt_s = e.pulsado = false;
     e.atajo_ctrl = 0;
     e.tecla_f = 0;
@@ -82,7 +82,7 @@ void leer_entrada(App& a) {
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             a.gpu.a_logico(ev.button.x, ev.button.y, e.mx, e.my);
             if (ev.button.button == SDL_BUTTON_LEFT) e.presionado = e.pulsado = true, e.salio_con_boton = false;
-            if (ev.button.button == SDL_BUTTON_RIGHT) e.derecho_presionado = true;
+            if (ev.button.button == SDL_BUTTON_RIGHT) e.derecho_presionado = true, e.doble_derecho = ev.button.clicks >= 2;
             if (ev.button.button == SDL_BUTTON_MIDDLE) e.medio_presionado = true;
             break;
         case SDL_EVENT_MOUSE_BUTTON_UP:

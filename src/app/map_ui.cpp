@@ -5,15 +5,23 @@
 //  - the picture is Sprite.pak image table[number - 1] at 0x6de444:
 //    1296 1305 1307 1309 1303 1312 1311 1302 1304 1295 1293 1306 1308 1310 1301 1294 1292 1417
 //    (380x230 each, except 1294 = 1478x825 and 1301 = 500x320);
-//  - there is no frame: the bare picture is clipped to a view through the mask "19.alp", at the
-//    window object's position (starts at 0,0 of the game surface), dragged with the mouse (0x46afc0);
-//  - the player marker is image 1297..1299 (animated every 250 ms), drawn only while the player is on
-//    the map the picture shows, placed through per-map tables built at run time (not reproduced here);
-//  - a right button double click inside the view closes it (0x46c1b0); the open windows are a stack.
-// Here: the picture is centered on first show, a left drag moves the window (or pans a picture bigger
-// than the view), right click or Escape closes it. The simple UI adds a framed title bar with [x].
+//  - there is no frame: the bare picture is clipped to a 311x215 view (the size of the mask "0.alp",
+//    Sprite.pak; its soft edge alpha is not reproduced, only its size and its zero pixels), drawn at the
+//    window position, which starts at 0,0 of the game surface;
+//  - dragging: a left drag started inside the rect (54,45) 200x125 of the window moves the window
+//    (callback 0x46afc0 adds the mouse delta to the window position; no clamping);
+//  - a right button double click (WM_RBUTTONDBLCLK) inside the rect (39,30)-(245,170) of the window closes
+//    it (0x46c1b0); a left or right press there only brings it to the front. There is no Escape handler;
+//  - when the player's map is the one the picture shows, the picture is panned to center the player (the
+//    view follows him, clamped to the picture) and the marker, image 1297 + frame, is drawn. Otherwise the
+//    pan is 0 and there is no marker. The frame goes 0,1,2 every 250 ms (timer 0xfa, 0x46af90). The marker is
+//    drawn only when it is strictly inside the view and the mask pixel under it is non-zero. Its position:
+//    world coordinates relative to a per-picture anchor (tables below, built by 0x46acc0 and 0x46ae30):
+//      dx = x - A[n], dy = y - B[n]; a = dx * 30 / 64, b = dy * 30 / 64 (truncated toward zero);
+//      X = C[n] + a + b, Y = D[n] + (b - a) / 2          (picture pixels)
+//    drawn with its top-left at (window + X - OX[frame] - pan_x, window + Y - image height - pan_y).
 #include <algorithm>
-#include <cstdio>
+#include <vector>
 #include "app/app.h"
 
 namespace lin {
@@ -24,11 +32,85 @@ constexpr int MAP_COUNT = 18;
 // Sprite.pak image of each map number (index = number - 1), the table at 0x6de444 of the original.
 constexpr u32 MAP_IMAGE[MAP_COUNT] = {1296, 1305, 1307, 1309, 1303, 1312, 1311, 1302, 1304,
                                       1295, 1293, 1306, 1308, 1310, 1301, 1294, 1292, 1417};
-constexpr int FRAME_PAD = 8, TITLE_H = 22;
-
-struct View {
-    int x, y, w, h;  // the picture view, in logical pixels
+// World-to-picture anchors per picture index: {A, B, C, D}. A, B: world tile x, y (0x816a78, 0x816a7c, set
+// by 0x46acc0); C, D: the picture pixel of that tile (0x8169e8, 0x8169ec, set by 0x46ae30).
+struct Anchor {
+    int a, b, c, d;
 };
+constexpr Anchor ANCHOR[MAP_COUNT] = {
+    {32632, 32983, 221, 93},  {32560, 32726, 125, 151}, {33014, 32785, 143, 128}, {32655, 32523, 218, 182},
+    {33136, 32244, 188, 93},  {32865, 33251, 252, 74},  {32865, 33251, 38, 152},  {33136, 32244, 1, 149},
+    {33505, 32735, 177, 115}, {32818, 32745, 195, 110}, {32688, 32870, 220, 110}, {33443, 33493, 200, 160},
+    {33714, 32498, 264, 136}, {34035, 32178, 102, 108}, {34217, 33134, 278, 138}, {32614, 32696, 284, 562},
+    {32753, 32905, 191, 129}, {32280, 33066, 98, 175}};
+constexpr int MARKER_IMAGE = 1297, MARKER_FRAMES = 3, MARKER_MS = 250;
+constexpr int MARKER_OX[MARKER_FRAMES] = {11, 6, 7};  // ebp-0x20.. in 0x46ba90
+constexpr int DEFAULT_MASK_W = 311, DEFAULT_MASK_H = 215;
+// Rects relative to the window: drag (0x46b0db args) and close/hit (0x46c1b0).
+constexpr int DRAG_X = 54, DRAG_Y = 45, DRAG_W = 200, DRAG_H = 125;
+constexpr int HIT_X0 = 39, HIT_Y0 = 30, HIT_X1 = 245, HIT_Y1 = 170;
+
+struct Mask {
+    int w = DEFAULT_MASK_W, h = DEFAULT_MASK_H;
+    std::vector<u8> px;  // empty: every pixel counts
+};
+
+const Mask& mask(const App& a) {
+    static Mask m;
+    static bool loaded = false;
+    if (!loaded) {
+        loaded = true;
+        const Bytes b = a.rec.sprite("0.alp");  // u16 w, u16 h, then w*h alpha bytes
+        if (b.size() >= 4) {
+            const int w = b[0] | b[1] << 8, h = b[2] | b[3] << 8;
+            if (w > 0 && h > 0 && b.size() >= 4 + static_cast<size_t>(w) * h) {
+                m.w = w;
+                m.h = h;
+                m.px.assign(b.begin() + 4, b.begin() + 4 + static_cast<size_t>(w) * h);
+            }
+        }
+    }
+    return m;
+}
+
+// Does the player's map show on picture `idx`? (0x46bbb3 / 0x46bf3c)
+bool player_on_picture(MapId map, int idx) {
+    switch (map) {
+    case 4: return idx != 9 && idx != 10 && idx != 0 && idx != 16 && idx != 17;
+    case 0x44: return idx == 9;
+    case 0x45: return idx == 10;
+    case 0x130: return idx == 16;
+    case 0: return idx == 0;
+    case 0x1b8: return idx == 17;
+    default: return false;
+    }
+}
+
+// Truncating division of 30 * v by 64, as the original's cdq / and 0x3f / add / sar 6.
+int scale30(int v) {
+    const int p = v * 30;
+    return (p + (p < 0 ? 63 : 0)) >> 6;
+}
+
+struct Marker {
+    bool on_map = false;
+    int x = 0, y = 0;  // picture pixels
+};
+
+Marker marker_of(const App& a, int idx) {
+    Marker r;
+    if (!player_on_picture(a.mundo.mapa, idx)) return r;
+    const TablaObjetos& o = a.mundo.objetos;
+    const Slot s = o.buscar(a.mundo.jugador.id);
+    if (s == SIN_SLOT) return r;
+    const Anchor& k = ANCHOR[idx];
+    const int px = scale30(o.col<O_X>()[s] - k.a), py = scale30(o.col<O_Y>()[s] - k.b);
+    const int d = py - px;
+    r.on_map = true;
+    r.x = k.c + py + px;
+    r.y = k.d + d / 2;  // C++ division truncates toward zero, like the original
+    return r;
+}
 
 }  // namespace
 
@@ -37,33 +119,17 @@ void eventos_mapa(App& a, const Evento& e) {
     MapaItem& m = a.mapa_item;
     const int n = e.v[0];
     if (n < 1 || n > MAP_COUNT) return;
-    m = {};
+    m = {};  // the window opens at 0,0 of the game surface
     m.numero = n;
     m.objeto = e.id;
-}
-
-static View view_of(const App& a, const RegionAtlas& r) {
-    const MapaItem& m = a.mapa_item;
-    const int margin = a.cfg.ui_simple ? FRAME_PAD : 0, top = a.cfg.ui_simple ? TITLE_H + FRAME_PAD : 0;
-    const int w = std::min<int>(r.w, a.gpu.ancho() - 2 * margin - 4);
-    const int h = std::min<int>(r.h, a.gpu.alto() - top - margin - 4);
-    View v{m.x, m.y, w, h};
-    if (m.x == INT32_MIN) {  // first frame: centered
-        v.x = (a.gpu.ancho() - w) / 2;
-        v.y = (a.gpu.alto() - h) / 2 + top / 2;
-    }
-    return v;
 }
 
 bool sobre_mapa(const App& a) {
     const MapaItem& m = a.mapa_item;
     if (!m.numero) return false;
     if (m.arrastrando) return true;
-    const RegionAtlas& r = a.g->img(MAP_IMAGE[m.numero - 1]);
-    if (!r.valida()) return false;
-    const View v = view_of(a, r);
-    const int pad = a.cfg.ui_simple ? FRAME_PAD : 0, top = a.cfg.ui_simple ? TITLE_H + FRAME_PAD : 0;
-    return ui::sobre(a.entrada, v.x - pad, v.y - top, v.w + 2 * pad, v.h + top + pad);
+    return ui::sobre(a.entrada, m.x + HIT_X0, m.y + HIT_Y0, HIT_X1 - HIT_X0, HIT_Y1 - HIT_Y0) ||
+           ui::sobre(a.entrada, m.x + DRAG_X, m.y + DRAG_Y, DRAG_W, DRAG_H);
 }
 
 void dibujar_mapa_item(App& a) {
@@ -71,76 +137,59 @@ void dibujar_mapa_item(App& a) {
     if (!m.numero) return;
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    const RegionAtlas full = g.img(MAP_IMAGE[m.numero - 1]);  // copy: other loads may move the cache
-    const u64 kt = clave_orden(CAPA_UI_TEXTO, 76), kf = clave_orden(CAPA_UI, 76);
-    if (e.escape) {
-        m = {};
-        e.escape = false;
-        return;
-    }
-    if (!full.valida()) return;  // still loading
-    View v = view_of(a, full);
-    if (m.x == INT32_MIN) {
-        m.x = v.x;
-        m.y = v.y;
-        m.pan_x = (full.w - v.w) / 2;  // a picture bigger than the view starts centered
-        m.pan_y = (full.h - v.h) / 2;
-    }
-    const bool simple = a.cfg.ui_simple;
-    const int pad = simple ? FRAME_PAD : 0, top = simple ? TITLE_H + FRAME_PAD : 0;
-    if (simple) {
-        ui::recuadro(g, v.x - pad, v.y - top, v.w + 2 * pad, v.h + top + pad, 245);
-        char txt[48];
-        std::snprintf(txt, sizeof txt, "Map %d", m.numero);
-        g.texto(txt, static_cast<float>(v.x), static_cast<float>(v.y - top + 5), kt, ui::COLOR_TITULO);
-        const int cx = v.x + v.w - 22, cy = v.y - top + 3;
-        g.texto("[x]", static_cast<float>(cx), static_cast<float>(cy + 2), kt, ui::COLOR_TEXTO);
-        if (e.clic && ui::sobre(e, cx - 2, cy, 26, 18)) {
-            m = {};
-            return;
-        }
-    }
-    const bool over = ui::sobre(e, v.x, v.y, v.w, v.h);
-    if (over && e.clic_derecho) {  // the original closes with a right button double click
+    const int idx = m.numero - 1;
+    const RegionAtlas full = g.img(MAP_IMAGE[idx]);  // copy: other loads may move the cache
+    if (!full.valida()) return;                      // still loading
+    const Mask& mk = mask(a);
+    const u64 kf = clave_orden(CAPA_UI, 76);
+
+    // Right double click inside the hit rect closes it; any press there is consumed (sobre_mapa).
+    if (e.doble_derecho && ui::sobre(e, m.x + HIT_X0, m.y + HIT_Y0, HIT_X1 - HIT_X0, HIT_Y1 - HIT_Y0)) {
         m = {};
         return;
     }
-    // Drag: moves the window, or pans the picture when it is bigger than the view.
-    const bool bigger = full.w > v.w || full.h > v.h;
-    if (e.pulsado && (over || (simple && ui::sobre(e, v.x - pad, v.y - top, v.w + 2 * pad, top)))) {
+    // Drag: moves the window by the mouse delta (no clamping, like 0x46afc0).
+    if (e.pulsado && ui::sobre(e, m.x + DRAG_X, m.y + DRAG_Y, DRAG_W, DRAG_H)) {
         m.arrastrando = true;
         m.ult_x = e.mx;
         m.ult_y = e.my;
     }
     if (m.arrastrando && e.presionado) {
-        const int dx = e.mx - m.ult_x, dy = e.my - m.ult_y;
-        if (bigger && over) {
-            m.pan_x -= dx;
-            m.pan_y -= dy;
-        } else {
-            m.x += dx;
-            m.y += dy;
-        }
+        m.x += e.mx - m.ult_x;
+        m.y += e.my - m.ult_y;
         m.ult_x = e.mx;
         m.ult_y = e.my;
     }
     if (!e.presionado) m.arrastrando = false;
-    m.x = std::clamp(m.x, -v.w + 40, a.gpu.ancho() - 40);
-    m.y = std::clamp(m.y, 0, a.gpu.alto() - 20);
-    m.pan_x = std::clamp(m.pan_x, 0, std::max(0, full.w - v.w));
-    m.pan_y = std::clamp(m.pan_y, 0, std::max(0, full.h - v.h));
-    v.x = m.x;
-    v.y = m.y;
+
+    // Pan: centered on the player when his map is the picture's, else 0.
+    const Marker pm = marker_of(a, idx);
+    int pan_x = 0, pan_y = 0;
+    if (pm.on_map) {
+        pan_x = std::clamp(pm.x - mk.w / 2, 0, std::max(0, full.w - mk.w));
+        pan_y = std::clamp(pm.y - mk.h / 2, 0, std::max(0, full.h - mk.h));
+    }
     // The visible part of the picture: a sub-rectangle of the atlas region.
     RegionAtlas part = full;
     const u32 k = full.escala_texel();
-    part.x = static_cast<u16>(full.x + static_cast<u32>(m.pan_x) * k);
-    part.y = static_cast<u16>(full.y + static_cast<u32>(m.pan_y) * k);
-    part.w = static_cast<u16>(v.w);
-    part.h = static_cast<u16>(v.h);
+    part.x = static_cast<u16>(full.x + static_cast<u32>(pan_x) * k);
+    part.y = static_cast<u16>(full.y + static_cast<u32>(pan_y) * k);
+    part.w = static_cast<u16>(std::min(mk.w, full.w - pan_x));
+    part.h = static_cast<u16>(std::min(mk.h, full.h - pan_y));
     part.ox = part.oy = 0;
     part.aura_dx = 0;
-    g.gpu().dibujar(part, v.x, v.y, kf + 1);
+    g.gpu().dibujar(part, m.x, m.y, kf + 1);
+
+    if (!pm.on_map) return;
+    const int vx = pm.x - pan_x, vy = pm.y - pan_y;  // marker in view coordinates
+    if (vx <= 0 || vx >= mk.w || vy <= 0 || vy >= mk.h) return;
+    if (!mk.px.empty() && mk.px[static_cast<size_t>(vy) * mk.w + vx] == 0) return;
+    const int frame = static_cast<int>(e.ahora_ms / MARKER_MS % MARKER_FRAMES);
+    RegionAtlas mr = g.img(MARKER_IMAGE + frame);
+    if (!mr.valida()) return;
+    mr.ox = mr.oy = 0;
+    mr.aura_dx = 0;
+    g.gpu().dibujar(mr, m.x + vx - MARKER_OX[frame], m.y + vy - mr.h, kf + 2);
 }
 
 }  // namespace lin

@@ -32,6 +32,14 @@ if git -C l1j-jp diff --quiet -- src/jp/l1j/server/utils/L1DatabaseFactory.java;
         src/jp/l1j/server/utils/L1DatabaseFactory.java && jar uf l1jserver.jar -C "$tmp" jp/l1j/server/utils)
     rm -rf "$tmp"
 fi
+# Map items (40373..40390): send S_UseMap instead of "cannot use" (the packet class existed but was never sent).
+git -C l1j-jp apply --check ../map_use.patch 2>/dev/null && git -C l1j-jp apply ../map_use.patch
+if git -C l1j-jp diff --quiet -- src/jp/l1j/server/packets/client/C_UseItem.java; then :; else
+    tmp=$(mktemp -d)
+    (cd l1j-jp && javac -nowarn -encoding UTF-8 --release 8 -cp "l1jserver.jar:lib/*" -d "$tmp" \
+        src/jp/l1j/server/packets/client/C_UseItem.java && jar uf l1jserver.jar -C "$tmp" jp/l1j/server/packets/client)
+    rm -rf "$tmp"
+fi
 
 # MariaDB en un directorio de datos propio, en el puerto 3307 para no chocar con otra instalación
 if [ ! -d datos ]; then

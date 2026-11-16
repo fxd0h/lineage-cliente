@@ -18,6 +18,7 @@ struct EntradaFrame {
     bool ctrl = false;            // Ctrl (o Cmd) mantenido
     bool shift = false;           // Shift mantenido
     bool clic_derecho = false;
+    bool doble_derecho = false;   // right button double click this frame (WM_RBUTTONDBLCLK)
     bool derecho_presionado = false;
     bool clic_medio = false;      // botón del medio (rueda) soltado este frame
     bool medio_presionado = false;  // botón del medio mantenido
