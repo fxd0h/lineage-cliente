@@ -939,7 +939,6 @@ void dibujar_panel(App& a) {
     g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 0));
     g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 0));
     dibujar_teclas_f(a, X + 485, Y + 366);
-    dibujar_botones_panel(a, X, Y);
     g.gpu().dibujar(g.img(IMG_CHAT), X + 124, Y + 363, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 124 + 13, Y + 363 + 99, clave_orden(CAPA_UI, 2));
     {
@@ -948,6 +947,7 @@ void dibujar_panel(App& a) {
         const int fr = ((seg + 43200) % 86400) * ORBE_FRAMES / 86400;
         g.gpu().dibujar(g.img(IMG_ORBE_PRIMERA + static_cast<u32>(fr)), X + ORBE_X, Y + ORBE_Y, clave_orden(CAPA_UI, 2));
     }
+    dibujar_botones_panel(a, X, Y);  // after the chat backdrop (1042, 390 px wide), which reaches x=514
     // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
     const Slot yo = a.mundo.objetos.buscar(j.id);
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr

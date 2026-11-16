@@ -238,6 +238,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
     if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) a.ayuda_teclas = !a.ayuda_teclas;
+    boton_panel(a, 1585, x + 507, y + BY, "Mail");  // no mail window yet
     if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
     if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
     if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
