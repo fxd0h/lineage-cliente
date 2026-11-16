@@ -1749,7 +1749,7 @@ void frame_juego(App& a) {
     case 'A': a.ventana_estado = !a.ventana_estado; break;
     case 'S': a.ventana_hechizos = !a.ventana_hechizos; break;
     case 'Q': a.ventana_salida = !a.ventana_salida; break;
-    case 'C': a.ventana_social = !a.ventana_social; break;
+    case 'C': alternar_comunidad(a); break;
     case 'V': a.ventana_opciones = !a.ventana_opciones; break;
     case 'H': a.ayuda_teclas = !a.ayuda_teclas; break;
     case 'P':  // original: screenshot (BMP) to the Capture folder
@@ -1827,7 +1827,7 @@ void frame_juego(App& a) {
         dibujar_boton_pocion(a);
     }
     dibujar_mascotas(a);
-    dibujar_grupo(a);
+    if (a.cfg.ui_simple) dibujar_grupo(a);  // fork extra: the original has no always-on party list (S_Party opens a page)
     // Tienda, tablón y correo encima de las ventanas (nivel 30); el diálogo de cantidad, encima de todo.
     a.gpu.nivel_ventana(30);
     dibujar_tienda(a);

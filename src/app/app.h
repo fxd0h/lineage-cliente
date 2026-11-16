@@ -244,8 +244,10 @@ struct Pregunta {
     u32 numero = 0;
     u16 tipo = 0;
     std::string texto;
-    std::string respuesta;  // las que piden un texto (PREGUNTA_NOMBRE_CASA)
+    std::string respuesta;  // las que piden un texto (PREGUNTA_NOMBRE_CASA, PREGUNTA_ENTRADA)
+    std::string accion;     // PREGUNTA_ENTRADA: the Community-page action that asked for the text
 };
+constexpr u16 PREGUNTA_ENTRADA = 0xFFFF;  // client-side text prompt of a Community page action (no server number)
 constexpr u16 PREGUNTA_NOMBRE_CASA = 512;  // el mayordomo: "¿nombre de la casa?" (C_Attr con el texto)
 struct ItemIntercambio {
     u16 gfx = 0;
@@ -423,6 +425,7 @@ struct App {
     std::vector<Forma> formas;
     // NPC (npc_ui.cpp): diálogo con la página HTML, y tienda o almacén en la misma ventana.
     ObjId npc = 0;
+    bool npc_local = false;  // the page is a client-side one (option2, ...): no NPC, no distance close, actions stay local
     std::string npc_pagina, npc_datos;
     u32 npc_casa = 0;  // página "agsel" del tablón de subastas: la casa ("map" y "apply" la llevan)
     PaginaHtml npc_html;
@@ -647,6 +650,10 @@ void entrar_juego(App& a);                         // pantalla_personajes.cpp: c
 void enviar_chat(App& a, std::string_view linea);  // pantalla_juego.cpp: como escrita en el chat (comandos "/" incluidos)
 ObjId buscar_item(const App& a, std::string_view texto);    // inventario_ui.cpp: el primero cuyo nombre lo contenga
 u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: uno que sepa, por nombre
+void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
+void accion_comunidad(App& a, std::string_view accion);
+void accion_comunidad(App& a, std::string_view accion, std::string_view texto);  // ... once the typed name is known  // social_ui.cpp: `action=` of the option pages
+void abrir_pagina_local(App& a, std::string_view id);  // npc_ui.cpp: client-side HTML page in the NPC window (Ctrl+C: option2)
 void activar(App& a, std::string_view vinculo, bool es_enlace);  // npc_ui.cpp: un vínculo de la página del NPC
 void responder_pregunta(App& a, bool si);                   // social_ui.cpp: la primera pregunta pendiente
 void aceptar_cantidad(App& a, i32 valor);                   // cantidad_ui.cpp: el diálogo abierto, con ese número
@@ -770,7 +777,7 @@ void aceptar_cantidad_tienda(App& a);
 // Una ventana con un campo de texto tiene el teclado: los atajos (1–0, A, Enter del chat) no actúan.
 inline bool escribiendo_en_ventana(const App& a) {
     return a.ventana_forma || a.tablon.escribiendo || a.correo.escribiendo ||
-           (!a.preguntas.empty() && a.preguntas.front().tipo == PREGUNTA_NOMBRE_CASA);
+           (!a.preguntas.empty() && (a.preguntas.front().tipo == PREGUNTA_NOMBRE_CASA || a.preguntas.front().tipo == PREGUNTA_ENTRADA));
 }
 // Tablón de los pueblos (tablon_ui.cpp) y correo (correo_ui.cpp).
 bool es_tablon(GfxId gfx);

@@ -379,6 +379,9 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         if (!a.intercambio.abierto) return error("no hay un intercambio abierto");
         enviar(a, cmd::aceptar_intercambio(a.op));
         a.intercambio.ok = true;
+    } else if (cmd == "pagina") {
+        if (p.size() < 2) return error("uso: pagina <id>");
+        abrir_pagina_local(a, p[1]);
     } else if (cmd == "traza-html") {
         g_traza_html = p.size() < 2 || p[1] == "on";
     } else if (cmd == "forzar-hora") {

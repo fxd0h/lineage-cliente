@@ -42,6 +42,7 @@ int page_width(const App& a) {
     if (a.cfg.ui_simple) return ANCHO_PAGINA;
     return original_text(a) ? NPC_TEXT_W - HTML_INSET_L - HTML_INSET_R : NPC_TEXT_W;
 }
+constexpr ObjId LOCAL_NPC = 0xFFFFFFFFu;  // owner of the client-side pages
 constexpr int FILA_TIENDA = 34, FILAS_TIENDA = 6;
 constexpr int DISTANCIA_CIERRE = 6;  // al alejarse más, el diálogo se cierra
 constexpr u32 PRECIO_RETIRO = 30;    // adena por ítem retirado (C_Result del servidor)
@@ -68,6 +69,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
         std::fprintf(stderr, "[html %.*s] datos=\"%.*s\"\n%.*s\n", static_cast<int>(id.size()), id.data(), static_cast<int>(datos.size()),
                      datos.data(), static_cast<int>(html.size()), reinterpret_cast<const char*>(html.data()));
     a.npc = npc;
+    a.npc_local = false;
     a.npc_pagina = id;
     // Los datos que son un "$N" (el nombre del mayordomo en "agpay", por ejemplo) van traducidos.
     // (`datos` puede ser a.npc_datos: los vínculos locales vuelven a pasar los mismos.)
@@ -87,6 +89,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
 
 void cerrar(App& a) {
     a.npc = 0;
+    a.npc_local = false;
     a.tienda = TipoTienda::NINGUNA;
     a.tienda_filas.clear();
     a.tienda_marcada = a.tienda_flecha = -1;
@@ -134,8 +137,33 @@ void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
 }  // namespace
 
 // Un vínculo de la página: otra página local, el almacén o una acción para el servidor.
+void abrir_pagina_local(App& a, std::string_view id) {
+    const std::string pagina(id);  // `id` may point into a.npc_pagina
+    abrir_pagina(a, LOCAL_NPC, pagina, {});
+    a.npc_local = true;
+    a.npc_casa = 0;
+}
+
+// Ctrl+C / hands button (0x456a30): the page is option2p when the character is a prince (class 0), else option2; with
+// that page already open it closes the window.
+void alternar_comunidad(App& a) {
+    if (a.cfg.ui_simple) {
+        a.ventana_social = !a.ventana_social;
+        return;
+    }
+    const bool principe = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) && a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] == 0;
+    const std::string_view pagina = principe ? "option2p" : "option2";
+    if (a.npc_local && a.npc_pagina == pagina) cerrar(a);
+    else abrir_pagina_local(a, pagina);
+}
+
 void activar(App& a, std::string_view vinculo, bool es_enlace) {
     if (vinculo.empty()) return;
+    if (a.npc_local) {  // client-side pages: links open pages, actions are the client's own commands
+        if (es_enlace) abrir_pagina_local(a, vinculo);
+        else accion_comunidad(a, vinculo);
+        return;
+    }
     if (es_enlace) {
         abrir_pagina(a, a.npc, vinculo, a.npc_datos);
     } else if (vinculo == "buyspell") {
@@ -715,6 +743,7 @@ void original_npc_size(const App& a, int& w, int& h) {
 bool sobre_npc(const App& a) { return sobre_ventana(a, IdVentana::NPC); }
 
 void procesar_npc(App& a, u64 ahora) {
+    if (a.npc_local) return;
     if ((a.npc || a.tienda != TipoTienda::NINGUNA) && distancia_npc(a) > DISTANCIA_CIERRE) cerrar(a);
 }
 

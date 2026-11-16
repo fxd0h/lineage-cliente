@@ -266,7 +266,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
     if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
     if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
-    if (boton_panel(a, 1015, x + 580, y + BY, "Party, trade, clan (Ctrl+C)")) a.ventana_social = !a.ventana_social;
+    if (boton_panel(a, 1015, x + 580, y + BY, "Party, trade, clan (Ctrl+C)")) alternar_comunidad(a);
     if (boton_panel(a, 1009, x + 601, y + BY, "Options (Ctrl+V)")) a.ventana_opciones = !a.ventana_opciones;
     if (boton_panel(a, 1013, x + 618, y + BY, "Restart / Quit (Ctrl+Q)")) a.ventana_salida = !a.ventana_salida;
 }

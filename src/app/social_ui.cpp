@@ -45,9 +45,48 @@ void aviso(App& a, std::string_view t) { a.chat.agregar(t, rgba(255, 230, 120), 
 
 }  // namespace
 
+// Actions of the option2 / option2p pages (client dispatcher 0x40b8..0x40c8). Packets: party 0x4d, outparty 0xb, join 0x5e,
+// buddy 0x6d, banish (0x48) / ban (0x67) / addbuddy (0x38) take a typed name; invite, in the original, waits for a click on
+// the target (0x402490, message 0xb3) and sends 0x82 with the target id: here a typed name (open deviation U-D7).
+void accion_comunidad(App& a, std::string_view accion, std::string_view texto) {
+    if (accion == "invite") {
+        const ObjId id = buscar_por_nombre(a, texto);
+        if (id) enviar(a, cmd::invitar_grupo(a.op, id));
+    } else if (accion == "banish") {
+        enviar(a, cmd::echar_del_grupo(a.op, texto));
+    } else if (accion == "ban") {
+        enviar(a, cmd::echar_del_clan(a.op, texto));
+    } else if (accion == "addbuddy" || accion == "delbuddy") {
+        enviar(a, cmd::amigo(a.op, accion == "addbuddy", texto));
+    }
+}
+
+void accion_comunidad(App& a, std::string_view accion) {
+    if (accion == "party") enviar(a, cmd::ver_grupo(a.op));
+    else if (accion == "outparty") enviar(a, cmd::dejar_grupo(a.op));
+    else if (accion == "join") enviar(a, cmd::entrar_clan(a.op));
+    else if (accion == "leave") enviar(a, cmd::dejar_clan(a.op));
+    else if (accion == "pledge") enviar(a, cmd::ver_clan(a.op));
+    else if (accion == "buddy" || accion == "refreshbuddy") enviar(a, cmd::amigos(a.op));
+    else if (accion == "invite" || accion == "banish" || accion == "ban" || accion == "addbuddy" || accion == "delbuddy") {
+        Pregunta p;
+        p.tipo = PREGUNTA_ENTRADA;
+        p.accion = std::string(accion);
+        p.texto = accion == "invite" ? "Name of the character to invite:" : "Name:";
+        a.preguntas.push_back(std::move(p));
+    }
+    // war, surrender, cease, alliance*, title, emblem, checkbmp, pledgefocus*: open (audit U-D7)
+}
+
 void responder_pregunta(App& a, bool si) {
     if (a.preguntas.empty()) return;
     const Pregunta& p = a.preguntas.front();
+    if (p.tipo == PREGUNTA_ENTRADA) {
+        const std::string accion = p.accion, texto = p.respuesta;
+        a.preguntas.erase(a.preguntas.begin());
+        if (si && !texto.empty()) accion_comunidad(a, accion, texto);
+        return;
+    }
     if (p.tipo == PREGUNTA_NOMBRE_CASA) {  // se responde con el texto (o no se responde: el servidor no lo espera)
         if (si && !p.respuesta.empty()) enviar(a, cmd::responder_texto(a.op, p.numero, p.tipo, p.respuesta));
     } else {
@@ -290,7 +329,7 @@ void dibujar_pregunta(App& a) {
         i = fin == std::string::npos ? t.size() : fin + 1;
     }
     Pregunta& p = a.preguntas.front();
-    const bool con_texto = p.tipo == PREGUNTA_NOMBRE_CASA;
+    const bool con_texto = p.tipo == PREGUNTA_NOMBRE_CASA || p.tipo == PREGUNTA_ENTRADA;
     for (int k = 0; k < (con_texto ? 1 : 2); ++k)
         g.texto({lineas[k], n[k]}, static_cast<float>(r.x + 10), static_cast<float>(r.y + 28 + k * 15),
                 clave_orden(CAPA_UI_TEXTO, 10), rgba(255, 255, 254));
