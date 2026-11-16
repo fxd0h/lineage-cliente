@@ -729,12 +729,18 @@ bool intento_portal(App& a, int nx, int ny, int dir, bool teclado, u64 ahora) {
     return true;
 }
 
-// Una mascota (o invocación) de otro jugador no se ataca con un clic: solo con Ctrl. Las propias
-// (a.mascotas, S_PetCtrlMenu) siguen como cualquier otro objeto.
+// La mascota o invocación propia (a.mascotas, S_PetCtrlMenu): un clic le habla (su menú de órdenes), no
+// la ataca. Con Ctrl sí se la ataca.
+bool mascota_propia(const App& a, Slot s) {
+    if (s == SIN_SLOT || !a.mundo.objetos.col<O_MASCOTA>()[s]) return false;
+    const ObjId id = a.mundo.objetos.ids()[s];
+    return std::any_of(a.mascotas.begin(), a.mascotas.end(), [id](const Mascota& m) { return m.id == id; });
+}
+
+// Una mascota (o invocación) de otro jugador no se ataca con un clic: solo con Ctrl.
 bool mascota_sin_ctrl(const App& a, Slot s) {
     if (s == SIN_SLOT || !a.mundo.objetos.col<O_MASCOTA>()[s] || a.entrada.ctrl) return false;
-    const ObjId id = a.mundo.objetos.ids()[s];
-    return std::none_of(a.mascotas.begin(), a.mascotas.end(), [id](const Mascota& m) { return m.id == id; });
+    return !mascota_propia(a, s);
 }
 
 // Objetivo bajo el puntero según su tipo de gfx: un ítem se recoge, un monstruo se ataca, a un
@@ -747,7 +753,7 @@ void elegir_objetivo_bajo_puntero(App& a) {
     Slot b = a.objetivo ? o.buscar(a.objetivo) : SIN_SLOT;
     u8 tipo = b != SIN_SLOT ? tipo_objeto(a, b) : 0;
     // Un NPC (sin Ctrl): se camina hasta él y se le habla, aunque se suelte el botón.
-    a.hablar_objetivo = b != SIN_SLOT && (es_npc(a, b) || vendedor(a, a.objetivo)) && !e.ctrl;
+    a.hablar_objetivo = b != SIN_SLOT && (es_npc(a, b) || vendedor(a, a.objetivo) || mascota_propia(a, b)) && !e.ctrl;
     const bool forzar = e.ctrl || (a.modo_pk && tipo == TIPO_PERSONAJE);
     if (b != SIN_SLOT && tipo != TIPO_ITEM && tipo != TIPO_MONSTRUO && !a.hablar_objetivo && !forzar) a.objetivo = 0;
     if (mascota_sin_ctrl(a, b)) {  // la de otro jugador: solo con Ctrl
@@ -807,7 +813,8 @@ void mover_jugador(App& a, u64 ahora) {
     if (e.tecla_a && a.cfg.chat_con_enter && !a.escribiendo_chat && !a.cantidad.abierto && !escribiendo_en_ventana(a)) {
         ObjId t = a.objetivo && !a.hablar_objetivo ? a.objetivo : objeto_bajo_puntero(a);
         Slot b = t ? o.buscar(t) : SIN_SLOT;
-        if (b != SIN_SLOT && !mascota_sin_ctrl(a, b) && (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || (a.modo_pk && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
+        if (b != SIN_SLOT && !mascota_sin_ctrl(a, b) && !(mascota_propia(a, b) && !e.ctrl) &&
+            (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || (a.modo_pk && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
             a.objetivo = t;
             a.hablar_objetivo = false;
             a.ataque_sostenido = true;
@@ -1499,10 +1506,11 @@ void elegir_cursor(App& a) {
         return;
     }
     u8 tipo = tipo_objeto(a, s);
-    if ((tipo == TIPO_MONSTRUO && !mascota_sin_ctrl(a, s)) || (a.entrada.ctrl && tipo != TIPO_ITEM) ||
+    const bool propia = mascota_propia(a, s) && !a.entrada.ctrl;  // sin Ctrl, la propia le habla (no se ataca)
+    if ((tipo == TIPO_MONSTRUO && !mascota_sin_ctrl(a, s) && !propia) || (a.entrada.ctrl && tipo != TIPO_ITEM) ||
         (a.modo_pk && tipo == TIPO_PERSONAJE))
         a.cursor = Cursor::ESPADA;
-    else if (es_npc(a, s) && tipo != TIPO_PUERTA && !mascota_sin_ctrl(a, s))  // sin Ctrl, el clic le habla
+    else if ((es_npc(a, s) || propia) && tipo != TIPO_PUERTA && !mascota_sin_ctrl(a, s))  // sin Ctrl, el clic le habla
         a.cursor = Cursor::LABIOS;
 }
 
