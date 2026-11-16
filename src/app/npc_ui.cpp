@@ -71,6 +71,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
     a.npc = npc;
     a.npc_local = false;
     a.npc_pagina = id;
+    if (id.substr(0, 7) != "monlist") a.npc_poly = 0;  // any other page leaves the polymorph mode (0x6f1e60)
     // Los datos que son un "$N" (el nombre del mayordomo en "agpay", por ejemplo) van traducidos.
     // (`datos` puede ser a.npc_datos: los vínculos locales vuelven a pasar los mismos.)
     std::string traducidos;
@@ -90,6 +91,7 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
 void cerrar(App& a) {
     a.npc = 0;
     a.npc_local = false;
+    a.npc_poly = 0;
     a.tienda = TipoTienda::NINGUNA;
     a.tienda_filas.clear();
     a.tienda_marcada = a.tienda_flecha = -1;
@@ -175,8 +177,29 @@ void alternar_comunidad(App& a) {
     else abrir_pagina_local(a, pagina);
 }
 
+// Polymorph page "monlist" (Text.pak; links monlist0..9 are sub-pages): an action is the monster name. The original default
+// action handler (0x40c855..0x40c97b) sends it, and closes the window, as C_NPCAction with the own id (Shape Change,
+// state 1) or as the item-use reply (scroll, state 2). "none" is the Release button; the original sends an empty name for it,
+// this server wants the word.
+void accion_polimorfia(App& a, std::string_view accion) {
+    const std::string nombre(accion);
+    if (a.npc_poly == 2) enviar(a, cmd::usar_item_texto(a.op, a.forma_item, nombre));
+    else enviar(a, cmd::accion_npc(a.op, a.mundo.jugador.id, nombre));
+    cerrar(a);
+}
+
+void abrir_polimorfia(App& a, ObjId pergamino) {
+    abrir_pagina_local(a, "monlist");
+    a.npc_poly = 2;
+    a.forma_item = pergamino;
+}
+
 void activar(App& a, std::string_view vinculo, bool es_enlace) {
     if (vinculo.empty()) return;
+    if (a.npc_poly && !es_enlace) {
+        accion_polimorfia(a, vinculo);
+        return;
+    }
     if (a.npc_local) {  // client-side pages: links open pages, actions are the client's own commands
         if (es_enlace) abrir_pagina_local(a, vinculo);
         else accion_comunidad(a, vinculo);
@@ -685,13 +708,17 @@ bool es_npc(const App& a, Slot s) {
 void eventos_npc(App& a, const Evento& e) {
     switch (e.tipo) {
     case Ev::HTML:
-        if (e.s[0] == "monlist") break;  // Shape Change: forma_ui.cpp
+        if (e.s[0] == "monlist" && a.cfg.ui_simple) break;  // Shape Change, simple UI: forma_ui.cpp
         if (e.s[0].empty()) {
             if (a.npc == e.id) cerrar(a);
             break;
         }
         abrir_pagina(a, e.id, e.s[0], e.s[1]);
         a.npc_casa = static_cast<u32>(e.v[HT_CASA]);
+        if (e.s[0] == "monlist" && e.id == a.mundo.jugador.id) {  // Shape Change: the reply is C_NPCAction with the own id
+            a.npc_poly = 1;
+            a.forma_item = 0;
+        }
         break;
     case Ev::TELETRANSPORTE:
         if (e.id == a.mundo.jugador.id) {

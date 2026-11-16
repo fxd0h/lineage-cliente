@@ -239,6 +239,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
+| Polymorph (scroll of polymorph / Shape Change) | no typed prompt: the page `monlist` of Text.pak ("Recent Polys", Release `none`, favourites `mon_fav1..3`, links `monlist0..9` = category sub-pages with `action="re orc"`-style monster names, back link `monlist`) opens in the NPC window: scroll use via 0x408fb7 -> 0x409cf0 (state [0x6f1e60]=2), S_ShowHTML "monlist" via 0x488885 (state 1); any action goes to the default handler 0x40c855..0x40c97b which sends the name and closes the window (0x4d1200): state 1 C_NPCAction with the own id, state 2 the item-use reply (0x77 "cdds") | `abrir_polimorfia` / `accion_polimorfia` (npc_ui.cpp, `npc_poly`); the old typed dialog with suggestions (forma_ui.cpp) is kept for `ui_simple=1` only | MATCH for page, links and reply; open: the original sends an empty name for `none` (this server needs the word), the byte [0x4ff208] / option [0x8ed570] that choose page vs typed prompt are not modelled (page always), the scroll is detected by the server's use type 16 instead of the exe's item type 0x27, `mon_fav1..3` are sent as names like the original default path (no favourites in the US exe) | npc_ui.cpp |
 | Window at ctor 0x42dc30 (frame 1284, 4x2 grids "Selling item" / "Buying item", price bars at (34,224)/(34,241), 696 mark, ornament 1285, OK 1291 / Cancel 1288) | it is the PRIVATE shop (callbacks 0x483410, adds items from the player inventory 0x701444, max 8 per grid), not the NPC shop; it is not drawn by the fork yet (U-D2) | previous fork code used it for NPC shop and warehouse | EXTRA (removed) | see section 18 for the NPC lists |
 | NPC scroll bar | up (226,47), track 1354 (226,55), down x=227 (0x43f3df, ctor 0x47cd80) | up (226,47), track 55, down x 227 | MATCH | - |
 | NPC bg/frame/ornament, close (226,15) | 0x43f25b | same | MATCH | - |
@@ -372,7 +373,7 @@ attribute reset.
 - **U-C11** Weight/food denominators 29 vs 240/225 (`[0x6f1da8]` >= 70083) — find its writer.
 - **U-C12** Map window internals (image table 0x6de444, mask, marker) were taken from fork comments and not re-verified.
 - **U-D1** Default screen position of the remaining framed windows (window manager 0x422650 / 0x4d0f30, saved layout).
-- **U-D2** Original windows for the board (S_Board), houses, private shop (window of ctor 0x42dc30, see section 12), polymorph prompt, teleport markers and
+- **U-D2** Original windows for the board (S_Board), houses, private shop (window of ctor 0x42dc30, see section 12), teleport markers and
   attribute reset — trace the server-opcode dispatch to the window global each one touches.
 - **U-D3** Exact party / alliance / buddy / pledge list assignment (0x497240 / 0x42fb40 / 0x419040 / 0x4b92f0).
 - **U-D4** Exact x of the Yes/No bar (0x41fe30 adds the view origin + 0x89).

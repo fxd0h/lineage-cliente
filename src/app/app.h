@@ -415,6 +415,7 @@ struct App {
     int arrastre_x0 = 0, arrastre_y0 = 0;
     // Polymorph (forma_ui.cpp): diálogo para escribir el monstruo.
     bool ventana_forma = false;
+    u8 npc_poly = 0;                  // original polymorph page "monlist" open: 1 = Shape Change, 2 = scroll (forma_item)
     ObjId forma_item = 0;             // pergamino usado; 0 = Shape Change (se responde con C_NPCAction)
     std::string forma_texto;
     // Sugerencias de polymorph: datos/formas.txt (nivel y nombre, por nivel; herramientas/generar_formas.py).
@@ -707,6 +708,7 @@ void dibujar_boton_pocion(App& a);  // después de dibujar_autobuffs
 bool cargar_formas(App& a);
 // Abre el diálogo: con el pergamino usado, o 0 para Shape Change.
 void abrir_forma(App& a, ObjId pergamino);
+void abrir_polimorfia(App& a, ObjId pergamino);  // original page (npc_ui.cpp)
 void eventos_forma(App& a, const Evento& e);
 // Antes del chat: el diálogo se queda con el teclado.
 void dibujar_forma(App& a);

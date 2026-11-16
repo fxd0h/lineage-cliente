@@ -125,7 +125,8 @@ void usar_item(App& a, ObjId item) {
         return;
     }
     if (s != SIN_SLOT && a.mundo.inventario.items.col<I_USO>()[s] == USO_POLYMORPH) {
-        abrir_forma(a, item);
+        if (a.cfg.ui_simple) abrir_forma(a, item);
+        else abrir_polimorfia(a, item);
         return;
     }
     // Pergamino de teleport: con marcadores guardados se elige el destino; si no, al azar.
