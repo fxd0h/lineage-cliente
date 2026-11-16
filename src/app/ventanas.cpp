@@ -21,6 +21,9 @@ static_assert(static_cast<int>(IdVentana::CANTIDAD) == 8, "App::orden_ventanas s
 // Doce filas de ALTO_GLIFO + 12 px, más el título y el margen: 352 px. Con 276 (y luego 300) la última quedaba afuera.
 constexpr int ANCHO_OPCIONES = 320, ALTO_OPCIONES = 300;  // 10 filas a la vista; el resto, con scroll
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
+// Original exit window (client draw at 0x4a1570, built at 0x4a1180): background 1058 at (7,7), frame 1059, ornaments
+// 1060 at (0,6), close button at (108,11), buttons Restart 1063 / Quit 1065 / Cancel 1067 (hover +1) at x 31, y 34/52/70.
+constexpr int EXIT_W = 130, EXIT_H = 112;
 constexpr int SEPARACION = 4, MARGEN = 7;
 constexpr int PASO_LUGAR = 8;  // px entre los lugares que se prueban para una ventana que se abre
 
@@ -78,7 +81,9 @@ Rect por_defecto(const App& a, IdVentana v) {
         }
         return {MARGEN, y, w, h};
     case IdVentana::OPCIONES: return {(a.gpu.ancho() - ANCHO_OPCIONES) / 2, y + 28, ANCHO_OPCIONES, ALTO_OPCIONES};
-    case IdVentana::SALIDA: return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
+    case IdVentana::SALIDA:
+        if (!a.cfg.ui_simple) return {(a.gpu.ancho() - EXIT_W) / 2, a.gpu.alto() / 3, EXIT_W, EXIT_H};
+        return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
     case IdVentana::SOCIAL: return rect_social(a);
     case IdVentana::INTERCAMBIO: return rect_intercambio(a);
     default: return {0, y, w, h};
@@ -506,6 +511,21 @@ void dibujar_salida(App& a) {
     if (!a.ventana_salida) return;
     arrastrar_ventana(a, IdVentana::SALIDA);
     Rect r = rect_ventana(a, IdVentana::SALIDA);
+    if (!a.cfg.ui_simple) {
+        if (draw_original_frame(a, r.x, r.y, 1058, 7, 7, 1059, 108, 11)) a.ventana_salida = false;
+        draw_original_overlay(a, r.x, r.y + 6, 1060);
+        // Restart goes back to town and Quit to the character list (the client's C_Restart / C_ChangeChar).
+        if (draw_original_button(a, r.x + 31, r.y + 34, 1063, 1064)) {
+            reiniciar(a);
+            a.ventana_salida = false;
+        } else if (draw_original_button(a, r.x + 31, r.y + 52, 1065, 1066)) {
+            enviar(a, cmd::cambiar_personaje(a.op));
+            a.ventana_salida = false;
+        } else if (draw_original_button(a, r.x + 31, r.y + 70, 1067, 1068)) {
+            a.ventana_salida = false;
+        }
+        return;
+    }
     if (recuadro(a, r, "Exit")) {
         a.ventana_salida = false;
         return;
