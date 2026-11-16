@@ -147,6 +147,12 @@ TEST_CASE("NPC: maquetación del HTML con el estilo del cliente original") {
     CHECK(p.elementos[0].w == ancho_texto_html("Go", 2));
 }
 
+TEST_CASE("NPC: <var img src=\"#N\"> is a variable id and draws nothing") {
+    PaginaHtml p;
+    maquetar_html("<may><var img src=\"#312\" tooltip=\"#312\" action=\"x\"></may>", {}, '\x01', "U", 200, medir, nullptr, p, true);
+    for (const ElementoHtml& el : p.elementos) CHECK(el.tipo != ElementoHtml::Tipo::IMAGEN);
+}
+
 TEST_CASE("NPC: todas las páginas en inglés se maquetan" * doctest::skip(carpeta_juego().empty())) {
     Recursos r;
     REQUIRE(r.abrir(carpeta_juego()));

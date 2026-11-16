@@ -289,8 +289,9 @@ void maquetar_html(std::string_view html, std::string_view datos, char separador
                 m.imagen(numero_src(atributo(tag, "src")), atributo(tag, "action"), atributo(tag, "link"), atributo(tag, "tooltip"));
             } else if (n == "var" && !cierre) {
                 if (tag.find("img") != std::string_view::npos) {
-                    cortar();
-                    m.imagen(numero_src(atributo(tag, "src")), atributo(tag, "action"), atributo(tag, "link"), {});
+                    // `<var img src="#2021">` (newer-client favourites of "monlist"): the number is a variable id, not a
+                    // picture. S3EP1U's var handler (0x4386a2) only knows ids 0x384..0x406 and leaves any other empty
+                    // (0x43a777), so the favourite slots draw nothing; the number must never be loaded as an image.
                 } else {
                     texto(dato(datos, separador, numero_src(atributo(tag, "src"))));
                 }

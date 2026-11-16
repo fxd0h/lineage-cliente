@@ -381,3 +381,12 @@ attribute reset.
 - **U-D5** 1480 window (0x4d43f0) versus pet window 1170; uses of 0x4208a0 (frame 1321) and 0x4b56c0 (1330).
 - **U-D6** Whether 0x44f5c0 (frame 997) is the pet inventory or the warehouse deposit side.
 - **U-E1** (NPC lists, open): (a) row highlight of chosen rows is a table blend 0x498d90 / 0x8f133c (low-byte table built at 0x4d1590, the high-byte half at +0x200 not found): the fork uses a translucent blue; (b) the border line geometry of the tooltip (eight 0x498720 calls) is approximated as a 2 px two-tone bevel (189 / 123); (c) the tooltip lacks the item property lines (S_ShopSellList attribute bytes are skipped by the decoder; rows' +0x14/+0x18 strings); (d) hit test of the row hover in 0x4be19e divides by 34 while rows are drawn every 36: the fork hits the drawn rows; (e) types 0xd / 0xe (repair, 0x4beb30) and the pet bag (0x0b) keep the fork flow (click on the row), their Buy / OK art follows the byte table only for 0xd; (f) deposit-pledge / deposit-elven checks (clan membership, message strings 0x2d8 / 0xd0 at 0x40a2ba) are left to the server; the "donate" action (type 0xa, 0x40a436) and retrieve-char (type 0xc) are not opened by the client; (g) `0x4bf690` mode word [0xa0] values other than 7 (0xbb8 for some NPC 0x8f states) hide the Adena label: not modelled; (h) the quantity wrap at the shop cap 1000 per row and the 1 000 000 / 10 000 000 price limits are from 0x4bd840 / 0x4bd8a0 (read, not run).
+
+## Polymorph page `monlist` follow-up
+
+- `<var img src="#2021..2023" tooltip=...>` (inside `<may>`) in the Text.pak `monlist` page are favourite-slot variables of a
+  newer client (S3EP1U has no `may` tag and its var handler 0x4386a2 only knows ids 0x384..0x406; any other id is left empty at
+  0x43a777). They were drawn as pictures 2021 (town map) and 2022/2023 (a 181x270 pet-status image). Now they draw nothing.
+  UNSETTLED: the newer client's real favourites rendering (`mon_fav1..3`) is not modelled; no favourites without server data.
+- The pet-status window in the report was not a pet window: it was picture 2022 from this page. `dibujar_mascotas` is only the
+  small pet list and is empty without pets.
