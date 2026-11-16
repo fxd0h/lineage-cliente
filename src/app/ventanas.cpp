@@ -220,6 +220,10 @@ void arrastrar_ventana(App& a, IdVentana v) {
 // La de las opciones; opaca para la ventana que se está dibujando si tapa a otra (se leería el
 // texto de la de abajo a través de su fondo).
 u8 opacidad_ventanas(const App& a) {
+    if (!a.cfg.ui_simple) {  // original: option [0x6e1008] = 31, 20, 13 or 7 (of 31), set by the Options page "alpha" action
+        static constexpr u8 PASOS[4] = {255, 165, 107, 58};
+        return PASOS[std::clamp(a.cfg.alpha_orig, 0, 3)];
+    }
     return a.ventana_sobre_otra ? 255 : static_cast<u8>(std::clamp(a.cfg.opacidad_ventanas, 60, 255));
 }
 
@@ -258,7 +262,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     // Original bottom strip (S3EP1U 0x459595..0x45980a): eight buttons at y=460 of the 640x480 screen; x is
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
-    if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) a.ayuda_teclas = !a.ayuda_teclas;
+    if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) alternar_ayuda(a);
     if (boton_panel(a, 1585, x + 507, y + BY, "Mail", false)) {
         if (a.correo.abierto) a.correo.abierto = a.correo.escribiendo = false;
         else comando_correo(a, "mail");
@@ -267,7 +271,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
     if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
     if (boton_panel(a, 1015, x + 580, y + BY, "Party, trade, clan (Ctrl+C)")) alternar_comunidad(a);
-    if (boton_panel(a, 1009, x + 601, y + BY, "Options (Ctrl+V)")) a.ventana_opciones = !a.ventana_opciones;
+    if (boton_panel(a, 1009, x + 601, y + BY, "Options (Ctrl+V)")) alternar_opciones(a);
     if (boton_panel(a, 1013, x + 618, y + BY, "Restart / Quit (Ctrl+Q)")) a.ventana_salida = !a.ventana_salida;
 }
 

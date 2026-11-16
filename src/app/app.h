@@ -653,6 +653,10 @@ u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: 
 void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
 void accion_comunidad(App& a, std::string_view accion);
 void accion_comunidad(App& a, std::string_view accion, std::string_view texto);  // ... once the typed name is known  // social_ui.cpp: `action=` of the option pages
+std::string datos_opciones(const App& a);  // social_ui.cpp: `<var src="#N">` values of the option pages
+bool accion_opciones(App& a, std::string_view accion);  // social_ui.cpp: option11/12/13 actions (true = handled)
+void alternar_opciones(App& a);  // Options button / Ctrl+V: option1 page (simple UI: the fork window)
+void alternar_ayuda(App& a);     // Help button / Ctrl+H: help page (simple UI: the key list)
 void abrir_pagina_local(App& a, std::string_view id);  // npc_ui.cpp: client-side HTML page in the NPC window (Ctrl+C: option2)
 void activar(App& a, std::string_view vinculo, bool es_enlace);  // npc_ui.cpp: un vínculo de la página del NPC
 void responder_pregunta(App& a, bool si);                   // social_ui.cpp: la primera pregunta pendiente

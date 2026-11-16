@@ -130,9 +130,9 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 |---|---|---|---|---|
 | F1 / F2 / F3 | select F-key page 0/1/2 (0x45b087 -> 0x4b2240) | key help / UI toggle / debug overlay | DIFFERENT | app.cpp: page select in original mode; move the dev keys behind a flag |
 | Esc | closes ALL pop-up windows (0x8f2f54..0x8f2f64), the palette and shop/trade (0x456c65) | closes the focused window only | DIFFERENT | pantalla_juego.cpp Esc handling |
-| Ctrl+V | opens HTML page "option1" in the NPC dialog (0x4569a0, 0x6daa34) | fork Options window | DIFFERENT | see section 9 |
+| Ctrl+V | opens HTML page "option1" in the NPC dialog (0x4569a0, 0x6daa34) | same (`alternar_opciones`); fork Options window only in the simple UI | MATCH | - |
 | Ctrl+C | HTML "option2p" when the char-list class byte (`[0x81b534]`, record +0x1e, set 0x470aed) is 0 (prince), else "option2"; page already open -> close (0x456a30) | same (`alternar_comunidad`); Social window only in the simple UI | MATCH | - |
-| Ctrl+H (Ctrl+Backspace) | HTML page "help" (0x458360, 0x6daa2c) | key-help overlay | DIFFERENT | load help-e.html in the NPC dialog |
+| Ctrl+H (Ctrl+Backspace) | HTML page "help" (0x458360, 0x6daa2c) | same (`alternar_ayuda`); key-help overlay only in the simple UI | MATCH | - |
 | Ctrl+X | toggles the local attack-mode byte `[0x703105]` (cursor 0xf, click rules); no packet (0x456e30) | sends chat "/pk" | DIFFERENT | pantalla_juego.cpp: local flag |
 | Ctrl+R | toggles the HP/MP pair window 1330 (`[0x8f0810]`, option `[0x6ddf90]`) (0x456d26) | not implemented (comment calls it "dragon-power panel") | MISSING | new small window from 0x4b56c0 |
 | Tab | same char as Ctrl+I: inventory (0x456cd4) | only mail/board focus | MISSING | app.cpp SDLK_TAB |
@@ -180,7 +180,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Right double click closes | WM_RBUTTONDBLCLK inside the inventory -> 0x4d1200 (0x44d2ce) | not present | MISSING | ventanas.cpp (other windows: U-B5) |
 | Default positions | inventory (450,0) (0x44cf6a); spellbook (433,0) (0x4aefcb); quit (250,100) (0x4a1485); mail list (0,0) (0x417d50); map (0,0) | inv/status/spells stacked leftward at y=36; quit centred y=H/3; mail centred, y=50 | DIFFERENT | ventanas.cpp `por_defecto` |
 | Inventory x clamp | snaps to x=450 if off-screen (0x44d8d2) | clamps with a 40 px margin | DIFFERENT | ventanas.cpp |
-| Background opacity | option `[0x6e1008]`: 31 = opaque, else alpha; 0 = no bg (0x44d9c3) | never below 160/255 | DIFFERENT | original_window.cpp |
+| Background opacity | option `[0x6e1008]`: 31 = opaque, else alpha; 0 = no bg (0x44d9c3); steps 31/20/13/7 from the `alpha` action (table 0x6e100c) | `opacidad_ventanas`: 255/165/107/58 by `cfg.alpha_orig`, default opaque | MATCH | - |
 | bg/frame/ornament layers | inv 996 (6,8)/997/998 (0,11); status (6,9)/983/984 (0,11); spells 933 (8,10)/934/935 (2,10); quit 1058/1059/1060; trade 1199/1201/1200; NPC 1355/1356/1101 | same | MATCH | - |
 | Bring to front on click | 0x4d0ed0 | `al_frente` | MATCH | - |
 
@@ -203,9 +203,9 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Options (Ctrl+V, button 1009) | HTML `option1-e.html` in NPC dialog 1356 (0x4569a0 -> 0x4568a0): System (option11), Graphics (option14), Volume, Community (option12), Action (option13), Help; values via `<var src="#N">`, Back img 331 | own 320x300 list window (`dibujar_opciones`) | DIFFERENT | ventanas.cpp/npc_ui.cpp: open option1 in the NPC dialog; map `action=` ids to cfg |
+| Options (Ctrl+V, button 1009) | toggle of HTML page `option1` (0x4569a0 -> 0x4568a0; open 0xed / close 0xee): System (option11), Graphics (option14), Volume (`action=volume`), Community (option12), Action (option13), Help; values via `<var src="#N">` (switch 0x438766..0x43a56e: flag set = string 567, clear = 568; accepttrade 573/574; chat size / transparency 893..896; combatMusic inverted), each toggle flips a byte and reopens the page (0x43c510 + vtable [0x54]) | `alternar_opciones` (npc_ui.cpp) opens option1 as a local page; `accion_opciones` / `datos_opciones` (social_ui.cpp) drive getall, bubbleon, dochat, dotradechat, dowhisper, showMargetMsg, randomParty, cPartyReject, combatMusic, shortcutscroll, tooltip, accepttrade, showhpmp (= `cfg.barra_personaje`), alpha (window opacity 255/165/107/58, `cfg.alpha_orig`), chatstate (`chat_tam`), telcon (elf 50+), infracon (elf/dark elf); persisted as `opciones_orig` / `alpha_orig`; the fork option window stays in the simple UI | MATCH for pages, links, values; see U-D8 | social_ui.cpp |
 | Community (Ctrl+C, hands button 1015) | `option2` / `option2p` -> optionpl/optionplp, optiona/optionap, optionpt, optionb (all in Text.pak, `link=` pages, back image 331); `action=` ids run client commands in dispatcher 0x40b8b0..0x40c8d0: party = packet 0x4d, outparty 0xb, join 0x5e, buddy/refreshbuddy 0x6d, banish 0x48 / ban 0x67 / addbuddy 0x38 / delbuddy ask a name in an input box (vtable [0x702dd8]+0x64), invite = click-on-target mode (0x402490, message 0xb3, then 0x82) | the pages open in the NPC window as local pages (`abrir_pagina_local`, npc_ui.cpp); `activar` -> `accion_comunidad` (social_ui.cpp) for party, outparty, join, leave, pledge, buddy; banish, ban, addbuddy, delbuddy, invite use the fork question box with a text field | MATCH for pages and links; DIFFERENT for the name prompts (see U-D7) | social_ui.cpp |
-| Help (Ctrl+H, button 1017) | page "help" | key list overlay `dibujar_ayuda_teclas` | DIFFERENT | npc_ui.cpp |
+| Help (Ctrl+H, button 1017) | toggle of HTML page `help` (0x458360, 0x6daa2c) and its ~120 sub-pages (helpgen..helpfont, helpmgc*, helplv*; only `link=` and back image 331, no actions) | `alternar_ayuda` opens `help` as a local page; key list overlay only in the simple UI (F1 too) | MATCH | - |
 | Game Tip / Help parchment window | 0x4badd0, img 808/811 (234x180) | absent | MISSING | optional |
 
 ## 10. Status window (ctor 0x4b46d0, draw 0x4b4a00)
@@ -343,8 +343,8 @@ attribute reset.
 - **U-A12** Exact Ctrl+T sizes (0x421330).
 - **U-A13** Blindness overlay, death/restart dialog, Ctrl+P message for GMs.
 - **U-A14** Original chat-input prefix parsing (`! & $ @ # %`), input history, whisper reply.
-- **U-B1** Content handling of the `option*`, `help` HTML `action=` ids and `<var>` strings, and what `[0x81b534]`
-  selects (option2 vs option2p).
+- **U-D8** Options pages (0x40b1de..0x40c660): `volume` opens the volume window `[0x8f028c]` (0x4221e0), not built (no-op); dochat / dotradechat / dowhisper also send packet `ccc` 0x19,sub,flag (0x406abb, 0x406bbb, 0x406cbb) that is not sent; bubbleon, getall, randomParty, cPartyReject, combatMusic, tooltip, accepttrade, showMargetMsg, telcon, infracon and shortcutscroll (wheel selects the F-key slot, 0x45aa70) only store their flag (their effects elsewhere are not wired); showhpmp drives the fork's own-character bar, not verified against 0x466e18. The Text.pak pages option11/option14 also list actions the US exe lacks (dropItemView, npcNameView, HPMPBarThicknessSet, mouseCursorChange, uitype, windowMode, fullScreenMode, win*) and vars 1032, 1037, 2026-2028: no handler/case in S3EP1U, kept as no-ops with empty values.
+- **U-B1** (settled: option*/help actions and vars decoded, see section 9 and U-D8)
 - **U-B2** Click decision tree (attack / talk / pick up / walk, own pet) in 0x468c20, 0x469d90, 0x4083b0, 0x4cd9b0,
   0x4cdd30. This settles whether the fork's "click own pet talks" rule is original.
 - **U-B3** Keyboard walking and PgUp/PgDn: imports are packed — unpack the IAT or trace under Wine.
@@ -352,7 +352,7 @@ attribute reset.
 - **U-B5** Whether every window shares the inventory's no-drag and right-double-click-close behaviour — check the slot
   +0x2c of vtables 0x4f5394, 0x4f5220, 0x4f27b0.
 - **U-B6** Double click and right click on an inventory item (use/other) — decode the inventory slot handler.
-- **U-B7** Default of the wheel-to-F-key option `[0x6da618]`.
+- **U-B7** (settled: default is 1, initial byte of 0x6da618; the wheel handler itself is still missing, see U-D8)
 - **U-B8** Esc side effect `[0x8f0e22]`.
 - **U-B9** Hold-to-walk repeat timing.
 - **U-B10** Sounds 0x11b7/0x11b8 (spell target), 0x120b, 0xb14, 0xd1, item sounds from map 0x700ab0; error beeps.

@@ -32,7 +32,7 @@ bool uses_original_frame(const App& a, IdVentana v) {
 bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame, int close_x, int close_y) {
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
-    g.gpu().dibujar(g.img(background), x + bg_x, y + bg_y, KEY_BACKGROUND, rgba(255, 255, 255, std::max<u8>(opacidad_ventanas(a), 160)));
+    g.gpu().dibujar(g.img(background), x + bg_x, y + bg_y, KEY_BACKGROUND, rgba(255, 255, 255, opacidad_ventanas(a)));
     g.gpu().dibujar(g.img(frame), x, y, KEY_FRAME);
     if (close_x < 0) close_x = CLOSE_X, close_y = CLOSE_Y;
     const bool over = ui::sobre(e, x + close_x - 2, y + close_y - 2, CLOSE_SIDE + 4, CLOSE_SIDE + 4);

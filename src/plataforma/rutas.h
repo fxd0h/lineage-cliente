@@ -19,7 +19,19 @@ struct Servidor {
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
 constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
 
+// Option flags of the original client's Options pages (option11/12/13, dispatcher 0x40b1de..0x40c660), one bit each.
+// Default mask = the initial bytes of the original's data: getall 0x4ff200, dochat 0x4ff202, dotradechat 0x4ff203,
+// dowhisper 0x4ff204, showMargetMsg 0x6da619, shortcutscroll 0x6da618, tooltip 0x6e50b8, accepttrade 0x6da629 are 1.
+enum OpcionOrig : unsigned {
+    OPC_GETALL, OPC_BUBBLE, OPC_DOCHAT, OPC_DOTRADECHAT, OPC_DOWHISPER, OPC_MARKETMSG, OPC_RANDOMPARTY, OPC_PARTYREJECT,
+    OPC_COMBATMUSIC, OPC_SHORTCUTSCROLL, OPC_TOOLTIP, OPC_ACCEPTTRADE, OPC_TELCON, OPC_INFRACON
+};
+constexpr int OPCIONES_ORIG_DEFECTO = (1 << OPC_GETALL) | (1 << OPC_DOCHAT) | (1 << OPC_DOTRADECHAT) | (1 << OPC_DOWHISPER) |
+                                      (1 << OPC_MARKETMSG) | (1 << OPC_SHORTCUTSCROLL) | (1 << OPC_TOOLTIP) | (1 << OPC_ACCEPTTRADE);
+
 struct Config {
+    int opciones_orig = OPCIONES_ORIG_DEFECTO;  // "opciones_orig=": OpcionOrig bit mask
+    int alpha_orig = 0;                         // "alpha_orig=": window transparency step 0..3 (0x7030e0; opaque, 20/31, 13/31, 7/31)
     std::string carpeta_hd;        // "hd=": HD UI pack directory (img_<id>.png, tbt_<id>.png); empty = off
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)

@@ -61,7 +61,83 @@ void accion_comunidad(App& a, std::string_view accion, std::string_view texto) {
     }
 }
 
+// `<var src="#N">` of option11/12/13 (html var switch 0x438766..0x43a56e): a flag shows string 567 when set, 568 when
+// clear (573 / 574 for accepttrade); the chat size and window transparency steps show 893..896 (client string table). The ids that only the
+// newer Text.pak pages use (1032, 1037, 2026..2028) have no case in the US client: they stay empty.
+std::string datos_opciones(const App& a) {
+    auto bit = [&](OpcionOrig o) { return (a.cfg.opciones_orig >> o & 1) != 0; };
+    auto msg = [&](int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); };  // the client string table
+    auto onoff = [&](bool v) { return msg(v ? 567 : 568); };
+    std::string v[1031];
+    v[1002] = onoff(bit(OPC_GETALL));
+    v[1003] = onoff(bit(OPC_BUBBLE));
+    v[1004] = onoff(bit(OPC_DOCHAT));
+    v[1005] = onoff(bit(OPC_DOWHISPER));
+    v[1007] = msg(893 + std::min<int>(a.chat_tam, 3));
+    v[1014] = onoff(bit(OPC_TOOLTIP));
+    v[1015] = onoff(bit(OPC_TELCON));
+    v[1016] = onoff(bit(OPC_INFRACON));
+    v[1019] = msg(bit(OPC_ACCEPTTRADE) ? 573 : 574);
+    v[1020] = onoff(bit(OPC_DOTRADECHAT));
+    v[1023] = onoff(a.cfg.barra_personaje);
+    v[1025] = msg(893 + std::clamp(a.cfg.alpha_orig, 0, 3));
+    v[1026] = onoff(bit(OPC_SHORTCUTSCROLL));
+    v[1027] = onoff(bit(OPC_MARKETMSG));
+    v[1028] = onoff(bit(OPC_RANDOMPARTY));
+    v[1029] = onoff(bit(OPC_PARTYREJECT));
+    v[1030] = onoff(!bit(OPC_COMBATMUSIC));  // the only inverted one (0x43a484: set -> $568)
+    std::string datos;
+    for (int i = 0; i <= 1030; ++i) {
+        if (i) datos += SEPARADOR_DATOS;
+        datos += v[i];
+    }
+    return datos;
+}
+
+// Option toggles of the original Options pages (dispatcher 0x40b1de..0x40c660). Each flips a byte of the client's option
+// block and reopens the page. Not reproduced (open deviations in the audit): the packets dochat / dotradechat /
+// dowhisper send (`ccc` 0x19, 0x406abb..0x406cc6) and `volume` (the volume window 0x8f028c).
+bool accion_opciones(App& a, std::string_view accion) {
+    struct Fila { std::string_view nombre; OpcionOrig bit; };
+    static constexpr Fila FILAS[] = {
+        {"getall", OPC_GETALL}, {"bubbleon", OPC_BUBBLE}, {"dochat", OPC_DOCHAT}, {"dotradechat", OPC_DOTRADECHAT},
+        {"dowhisper", OPC_DOWHISPER}, {"showMargetMsg", OPC_MARKETMSG}, {"randomParty", OPC_RANDOMPARTY},
+        {"cPartyReject", OPC_PARTYREJECT}, {"combatMusic", OPC_COMBATMUSIC}, {"shortcutscroll", OPC_SHORTCUTSCROLL},
+        {"tooltip", OPC_TOOLTIP}, {"accepttrade", OPC_ACCEPTTRADE},
+    };
+    bool hecho = false;
+    for (const Fila& f : FILAS)
+        if (accion == f.nombre) a.cfg.opciones_orig ^= 1 << f.bit, hecho = true;
+    const int clase = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
+    const bool telcon = a.cfg.opciones_orig >> OPC_TELCON & 1;
+    if (hecho) {
+    } else if (accion == "showhpmp") {
+        a.cfg.barra_personaje = !a.cfg.barra_personaje, hecho = true;
+    } else if (accion == "alpha") {
+        a.cfg.alpha_orig = (a.cfg.alpha_orig + 1) % 4, hecho = true;
+    } else if (accion == "chatstate") {
+        a.chat_tam = static_cast<u8>((a.chat_tam + 1) % 4), hecho = true;
+    } else if (accion == "telcon") {  // elves of level 50+ toggle it; anyone else can only switch it off (0x40c566)
+        if (clase == 2 && a.mundo.jugador.nivel >= 50) a.cfg.opciones_orig ^= 1 << OPC_TELCON;
+        else if (telcon) a.cfg.opciones_orig &= ~(1 << OPC_TELCON);
+        else return true;
+        hecho = true;
+    } else if (accion == "infracon") {  // elves and dark elves toggle it; the others can only clear it when telcon is on (0x40c5dc)
+        if (clase == 2 || clase == 4) a.cfg.opciones_orig ^= 1 << OPC_INFRACON;
+        else if (telcon) a.cfg.opciones_orig &= ~(1 << OPC_INFRACON);
+        else return true;
+        hecho = true;
+    } else if (accion == "volume") {
+        return true;
+    }
+    if (!hecho) return false;
+    guardar_config(a.cfg);
+    abrir_pagina_local(a, a.npc_pagina);  // every toggle clears and reopens its own page (0x43c510 + vtable[0x54])
+    return true;
+}
+
 void accion_comunidad(App& a, std::string_view accion) {
+    if (accion_opciones(a, accion)) return;
     if (accion == "party") enviar(a, cmd::ver_grupo(a.op));
     else if (accion == "outparty") enviar(a, cmd::dejar_grupo(a.op));
     else if (accion == "join") enviar(a, cmd::entrar_clan(a.op));

@@ -139,9 +139,27 @@ void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
 // Un vínculo de la página: otra página local, el almacén o una acción para el servidor.
 void abrir_pagina_local(App& a, std::string_view id) {
     const std::string pagina(id);  // `id` may point into a.npc_pagina
-    abrir_pagina(a, LOCAL_NPC, pagina, {});
+    abrir_pagina(a, LOCAL_NPC, pagina, datos_opciones(a));
     a.npc_local = true;
     a.npc_casa = 0;
+}
+
+namespace {
+// Original Options / Help button (0x4569a0 / 0x458360): the page, toggled when it is already open (0xee closes it).
+void alternar_pagina(App& a, std::string_view pagina) {
+    if (a.npc_local && a.npc_pagina == pagina) cerrar(a);
+    else abrir_pagina_local(a, pagina);
+}
+}  // namespace
+
+void alternar_opciones(App& a) {
+    if (a.cfg.ui_simple) a.ventana_opciones = !a.ventana_opciones;
+    else alternar_pagina(a, "option1");
+}
+
+void alternar_ayuda(App& a) {
+    if (a.cfg.ui_simple) a.ayuda_teclas = !a.ayuda_teclas;
+    else alternar_pagina(a, "help");
 }
 
 // Ctrl+C / hands button (0x456a30): the page is option2p when the character is a prince (class 0), else option2; with

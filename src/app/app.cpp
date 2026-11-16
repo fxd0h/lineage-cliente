@@ -194,7 +194,7 @@ void leer_entrada(App& a) {
                 texto_antes = e.ntexto;
                 break;
             case SDLK_F1:
-                if (!ev.key.repeat) a.ayuda_teclas = !a.ayuda_teclas;
+                if (!ev.key.repeat && a.cfg.ui_simple) a.ayuda_teclas = !a.ayuda_teclas;  // original: F1 is not the fork key list
                 break;
             case SDLK_F3:  // con Shift, el contador de fps
                 if (ev.key.repeat) break;  // mantenida, alternaría y escribiría settings.ini en cada repetición
