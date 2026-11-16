@@ -72,6 +72,7 @@ struct Config {
     // Compensación de ataque: al atacar, mostrar el golpe (swing propio y flinch del objetivo) ya,
     // sin esperar el eco del servidor, para que con latencia alta el combate se sienta instantáneo.
     bool compensar_ataque = true;
+    std::string lista_sprites;     // "lista_sprites=": plaintext list.spz that adds to / overrides sprite_table.txt; empty = look in the game folder
 };
 
 // Valores por personaje dentro de una opción ("Nombre:valor;Otro:valor").

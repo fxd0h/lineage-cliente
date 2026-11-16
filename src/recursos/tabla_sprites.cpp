@@ -45,7 +45,7 @@ struct Cursor {
 // run 0..n-2. That is harmless for loops, but a death played as listed starts lying down, stands up
 // and falls again, ending on the next-to-last pose (1556 of 1709 death rows, e.g. Ogre 1020: 6,0..5).
 // Move that leading entry to the end so the fall runs 0..n-1 and holds the corpse pose.
-static void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
+void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
     if (r.cantidad < 3) return;
     FrameAccion* f = &frames[r.primer];
     for (u32 i = 1; i < r.cantidad; ++i)
@@ -62,6 +62,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     tipo_.clear();
     atributos_.clear();
     siguiente_.clear();
+    gfx_de_tabla_ = 0;
     const char* p = reinterpret_cast<const char*>(texto.data());
     const char* fin = p + texto.size();
     if (p < fin) ++p;  // el primer byte del archivo no es parte del registro 0
@@ -74,6 +75,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
         tipo_.push_back(0);
         atributos_.push_back(0);
         siguiente_.push_back(0);
+        bool con_filas = false;
         u8 velocidad = 24;       // "110 N": vale para las acciones siguientes del registro
         c.numero();              // cantidad de sub-sprites
         if (c.p < c.fin && *c.p == '=') {
@@ -142,10 +144,12 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                 if (v >= 0 && v < 256 && r.cantidad > 0) {
                     indice_.poner((static_cast<u64>(gfx) << 8) | static_cast<u64>(v), static_cast<u32>(rangos_.size()));
                     rangos_.push_back(r);
+                    con_filas = true;
                 }
             }
             }
         }
+        if (con_filas) ++gfx_de_tabla_;
         p = fin_reg + 1;
     }
     copiar_filas_faltantes();

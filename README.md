@@ -190,6 +190,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `vista` | `fija` (default): fixed 640×480 view, as in the original, scaled to the window; `amplia`: the view grows with the window and the zoom |
 | `escalado` | Filter used to scale the fixed view: `entero` (nearest), `xbr`, `fsr` (default), `crt`, `anime4k` (Shift+F5) |
 | `fuente_original` | `1` (default) ASCII text with the game's `font/eng.fnt`; `0` Departure Mono |
+| `lista_sprites` | Path of a plaintext `list.spz` (your own copy; never shipped). Its gfx replace or add to those of `datos/sprite_table.txt`. Empty = `list.spz` or `spritelist/list.spz` in the game folder, if present |
 | `hd` | Folder with an upscaled UI pack (`img_<id>.png`, `tbt_<id>.png`, 4× the original size); empty = off |
 | `camara_a_saltos` | `1` camera follows the walking frames, like the original (F4) |
 | `sombra_personajes` | Darken characters standing in a tree's shadow (Shift+F4) |

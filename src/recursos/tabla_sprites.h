@@ -14,6 +14,7 @@
 // una tabla hash (gfx, acción) -> rango.
 #pragma once
 #include <string>
+#include <string_view>
 #include <vector>
 #include "core/mapa_hash.h"
 
@@ -43,10 +44,26 @@ enum TipoGfx : u8 { TIPO_PERSONAJE = 5, TIPO_ITEM = 9, TIPO_MONSTRUO = 10 };
 // variante por arma: acción + código de arma (4 espada, 11 hacha, 20 arco...); morir no.
 enum Accion : u8 { ACC_CAMINAR = 0, ACC_ATACAR = 1, ACC_DANADO = 2, ACC_QUIETO = 3, ACC_MORIR = 8 };
 
+// Moves a death row's leading entry (the sprite file's last frame) to the end; see tabla_sprites.cpp.
+void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r);
+
+// Result of merging list.spz into the table.
+struct ResumenLista {
+    u32 nuevos = 0;        // gfx with actions that had no row in sprite_table.txt
+    u32 reemplazados = 0;  // gfx whose sprite_table.txt rows were replaced
+    u32 omitidos = 0;      // entries without any action (attribute-only), left alone
+};
+
 class TablaSprites {
 public:
     bool cargar(const std::vector<u8>& texto);
     bool cargar_archivo(const std::string& ruta);
+    // Merges a plaintext list.spz (see lista_sprites.cpp): its gfx replace or add to the loaded ones.
+    // Call after cargar(). Returns false when the text has no usable entry.
+    bool fusionar_lista(std::string_view texto, ResumenLista& resumen);
+    bool fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen);
+    // gfx with at least one action row in sprite_table.txt (before any merge).
+    u32 gfx_de_tabla() const { return gfx_de_tabla_; }
 
     const RangoAccion* accion(GfxId gfx, u8 accion) const;
     const FrameAccion& frame(u32 i) const { return frames_[i]; }
@@ -78,6 +95,7 @@ public:
 
 private:
     void copiar_filas_faltantes();
+    u32 gfx_de_tabla_ = 0;
     std::vector<FrameAccion> frames_;
     std::vector<RangoAccion> rangos_;
     MapaHash indice_;              // (gfx << 8 | accion) -> índice en rangos_

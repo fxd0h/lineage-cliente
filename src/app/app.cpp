@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -27,6 +28,27 @@ void SDLCALL al_elegir_carpeta(void*, const char* const* lista, int) {
     }
 }
 
+// list.spz (plaintext, user-supplied, never shipped): lista_sprites= in settings.ini, else
+// <game folder>/list.spz or <game folder>/spritelist/list.spz. Its gfx replace or add to the table's.
+static void cargar_lista_sprites(App& a) {
+    LIN_LOG("Sprite table: %u gfx from sprite_table.txt", a.sprites.gfx_de_tabla());
+    std::string ruta;
+    if (!a.cfg.lista_sprites.empty()) {
+        ruta = a.cfg.lista_sprites;
+        if (!std::filesystem::exists(ruta)) LIN_LOG("Sprite table: lista_sprites=%s does not exist", ruta.c_str());
+    } else {
+        for (const char* rel : {"list.spz", "spritelist/list.spz"})
+            if (std::filesystem::exists(a.cfg.carpeta_juego + rel)) { ruta = a.cfg.carpeta_juego + rel; break; }
+    }
+    if (ruta.empty()) return;
+    ResumenLista r;
+    if (a.sprites.fusionar_lista_archivo(ruta, r))
+        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u replaced, %u without actions skipped)", r.nuevos + r.reemplazados,
+                ruta.c_str(), r.nuevos, r.reemplazados, r.omitidos);
+    else
+        LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
+}
+
 bool cargar_recursos(App& a) {
     if (!a.rec.abrir(a.cfg.carpeta_juego)) {
         LIN_LOG("No se pudieron abrir los .pak en %s", a.cfg.carpeta_juego.c_str());
@@ -43,6 +65,7 @@ bool cargar_recursos(App& a) {
     std::string ruta = std::string(base ? base : "") + "datos/sprite_table.txt";
     if (!a.sprites.cargar_archivo(ruta) && !a.sprites.cargar_archivo("datos/sprite_table.txt"))
         LIN_LOG("Aviso: no se encontró datos/sprite_table.txt (los personajes no se animarán)");
+    cargar_lista_sprites(a);
     a.mundo.sprites = &a.sprites;
     if (!cargar_formas(a)) LIN_LOG("Aviso: no se encontró datos/formas.txt ni polymorph.tbl (sugerencias de polymorph)");
     if (!a.hechizos.cargar(a.rec)) LIN_LOG("Aviso: no se encontró spelldesc-e.tbl (nombres de los hechizos)");
