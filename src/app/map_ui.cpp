@@ -169,16 +169,22 @@ void dibujar_mapa_item(App& a) {
         pan_x = std::clamp(pm.x - mk.w / 2, 0, std::max(0, full.w - mk.w));
         pan_y = std::clamp(pm.y - mk.h / 2, 0, std::max(0, full.h - mk.h));
     }
-    // The visible part of the picture: a sub-rectangle of the atlas region.
-    RegionAtlas part = full;
-    const u32 k = full.escala_texel();
-    part.x = static_cast<u16>(full.x + static_cast<u32>(pan_x) * k);
-    part.y = static_cast<u16>(full.y + static_cast<u32>(pan_y) * k);
-    part.w = static_cast<u16>(std::min(mk.w, full.w - pan_x));
-    part.h = static_cast<u16>(std::min(mk.h, full.h - pan_y));
-    part.ox = part.oy = 0;
-    part.aura_dx = 0;
-    g.gpu().dibujar(part, m.x, m.y, kf + 1);
+    // The visible part of the picture through the mask (soft edges), rebuilt only when the view moves.
+    if (!mk.px.empty()) {
+        const RegionAtlas& part = g.img_mascara(MAP_IMAGE[idx], pan_x, pan_y, mk.px.data(), mk.w, mk.h);
+        if (!part.valida()) return;  // still building
+        g.gpu().dibujar(part, m.x, m.y, kf + 1);
+    } else {
+        RegionAtlas part = full;  // no mask file: a plain crop
+        const u32 k = full.escala_texel();
+        part.x = static_cast<u16>(full.x + static_cast<u32>(pan_x) * k);
+        part.y = static_cast<u16>(full.y + static_cast<u32>(pan_y) * k);
+        part.w = static_cast<u16>(std::min(mk.w, full.w - pan_x));
+        part.h = static_cast<u16>(std::min(mk.h, full.h - pan_y));
+        part.ox = part.oy = 0;
+        part.aura_dx = 0;
+        g.gpu().dibujar(part, m.x, m.y, kf + 1);
+    }
 
     if (!pm.on_map) return;
     const int vx = pm.x - pan_x, vy = pm.y - pan_y;  // marker in view coordinates

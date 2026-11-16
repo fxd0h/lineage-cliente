@@ -1,4 +1,5 @@
 #include "render/graficos.h"
+#include <algorithm>
 #include <cstdio>
 #include "render/icon_aura.h"
 #include "plataforma/archivo_mapeado.h"
@@ -89,6 +90,38 @@ const RegionAtlas& Graficos::img(u32 n) {
             b = rec_.sprite(nombre);
         }
         return !b.empty() && decodificar_img(b, tmp_) ? Carga::OK : Carga::FALLO;
+    });
+}
+
+const RegionAtlas& Graficos::img_mascara(u32 n, int px, int py, const u8* alfa, int mw, int mh) {
+    const u64 k = clave(T_MAPA, static_cast<u64>(n) | static_cast<u64>(px & 0xFFFF) << 16 | static_cast<u64>(py & 0xFFFF) << 32);
+    if (k != mapa_clave_) {  // the view moved or another picture: drop the previous crop
+        if (const u32* i = indice_.buscar(mapa_clave_)) olvidar(*i);
+        mapa_clave_ = k;
+    }
+    return cargar(k, [&] {
+        if (mapa_src_n_ != n) {
+            mapa_src_n_ = 0;
+            char nombre[32];
+            std::snprintf(nombre, sizeof nombre, "%ue.img", n);
+            Bytes b = rec_.sprite(nombre);
+            if (b.empty()) {
+                std::snprintf(nombre, sizeof nombre, "%u.img", n);
+                b = rec_.sprite(nombre);
+            }
+            if (b.empty() || !decodificar_img(b, mapa_src_)) return Carga::FALLO;
+            mapa_src_n_ = n;
+        }
+        const int cw = std::min<int>(mw, mapa_src_.ancho - px), ch = std::min<int>(mh, mapa_src_.alto - py);
+        if (px < 0 || py < 0 || cw <= 0 || ch <= 0) return Carga::FALLO;
+        tmp_.preparar(static_cast<u16>(cw), static_cast<u16>(ch));
+        for (int y = 0; y < ch; ++y)
+            for (int x = 0; x < cw; ++x) {
+                const u32 c = mapa_src_.px[static_cast<size_t>(y + py) * mapa_src_.ancho + x + px];
+                const u32 a = (c >> 24) * alfa[static_cast<size_t>(y) * mw + x] / 255;
+                tmp_.px[static_cast<size_t>(y) * cw + x] = (c & 0x00FFFFFFu) | a << 24;
+            }
+        return Carga::OK;
     });
 }
 

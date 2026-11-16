@@ -28,6 +28,10 @@ public:
 
     // Imagen de interfaz N: "Ne.img", "N.img" (con color transparente propio).
     const RegionAtlas& img(u32 n);
+    // World-map picture n (original decode, no HD) cropped at (px, py) to the first `mw` x `mh` pixels
+    // and multiplied by `alfa` (mw*mh bytes, the "0.alp" mask: soft edges). One cached region: it is
+    // rebuilt (reusing the buffers) only when n or the crop position change.
+    const RegionAtlas& img_mascara(u32 n, int px, int py, const u8* alfa, int mw, int mh);
     // Imagen N.png (fondos de pantalla, animaciones de la selección de personaje).
     const RegionAtlas& png(u32 n);
     // PNG fuera del juego (logo propio), con su alfa. Región vacía si no se pudo leer.
@@ -72,7 +76,7 @@ public:
     u32 tomar_decodificados() { u32 v = decodificados_; decodificados_ = 0; return v; }
 
 private:
-    enum Tipo : u64 { T_IMG = 1, T_PNG, T_TILE, T_SPR, T_GLIFO, T_ICONO, T_EMBLEMA, T_ARCHIVO };
+    enum Tipo : u64 { T_IMG = 1, T_PNG, T_TILE, T_SPR, T_GLIFO, T_ICONO, T_EMBLEMA, T_ARCHIVO, T_MAPA };
     static u64 clave(Tipo t, u64 v) { return (static_cast<u64>(t) << 56) | v; }
     enum class Carga { OK, FALLO, PENDIENTE };
     // Busca k; si no está, decodifica en tmp_ con `decodificar` (devuelve Carga) y lo sube al atlas.
@@ -103,6 +107,9 @@ private:
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;
     ImagenRGBA tmp_;
+    ImagenRGBA mapa_src_;  // img_mascara: the decoded picture, kept while the same one is asked
+    u32 mapa_src_n_ = 0;
+    u64 mapa_clave_ = 0;   // key of the cached masked crop (0 = none)
     HdPack hd_;
     bool hd_abierto_ = false;
     u32 escala_tmp_ = 1;  // texels per logical pixel of what tmp_ holds (HD_SCALE for HD pack images)
