@@ -10,7 +10,9 @@ config="${1:?usage: lanzar_prueba.sh <settings.ini> [log]}"
 log="${2:-/dev/null}"
 export LIN_CONFIG="$config" LIN_NO_FOCUS=1
 export SDL_VIDEODRIVER=x11 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
-setsid xvfb-run -a -s "-screen 0 1280x1024x24" "$raiz/build/debug/lineage" > "$log" 2>&1 < /dev/null &
+# Software rendering is CPU-heavy: keep it to 2 threads at the lowest priority so the user's machine stays usable.
+export LP_NUM_THREADS=2
+setsid nice -n 19 xvfb-run -a -s "-screen 0 1280x1024x24" "$raiz/build/debug/lineage" > "$log" 2>&1 < /dev/null &
 for _ in $(seq 50); do
     pid=$(pgrep -n -f "^$raiz/build/debug/lineage$" || true)
     [[ -n "$pid" && -S /tmp/lineage-control-$pid.sock ]] && { echo "$pid"; exit 0; }
