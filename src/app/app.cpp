@@ -43,7 +43,7 @@ static void cargar_lista_sprites(App& a) {
     if (ruta.empty()) return;
     ResumenLista r;
     if (a.sprites.fusionar_lista_archivo(ruta, r))
-        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u replaced, %u without actions skipped)", r.nuevos + r.reemplazados,
+        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already in sprite_table.txt kept, %u without actions skipped)", r.nuevos,
                 ruta.c_str(), r.nuevos, r.reemplazados, r.omitidos);
     else
         LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());

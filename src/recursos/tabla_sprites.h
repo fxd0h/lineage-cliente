@@ -50,7 +50,7 @@ void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion&
 // Result of merging list.spz into the table.
 struct ResumenLista {
     u32 nuevos = 0;        // gfx with actions that had no row in sprite_table.txt
-    u32 reemplazados = 0;  // gfx whose sprite_table.txt rows were replaced
+    u32 reemplazados = 0;  // gfx already in sprite_table.txt: kept, the list.spz rows are ignored
     u32 omitidos = 0;      // entries without any action (attribute-only), left alone
 };
 

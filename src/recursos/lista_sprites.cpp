@@ -176,10 +176,16 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen)
                 atributos_.resize(n, 0);
                 siguiente_.resize(n, 0);
             }
+            // Only fill gfx that sprite_table.txt lacks: list.spz comes from a much newer client, and its rows for
+            // gfx we already have can name frames or action ids our 3.63c Sprite.pak doesn't match.
             bool existia = false;
-            for (u64 a = 0; a < 256; ++a)
-                existia |= indice_.quitar((static_cast<u64>(e.gfx) << 8) | a);
-            ++(existia ? resumen.reemplazados : resumen.nuevos);
+            for (u64 a = 0; a < 256 && !existia; ++a) existia = indice_.buscar((static_cast<u64>(e.gfx) << 8) | a);
+            if (existia) {
+                ++resumen.reemplazados;  // kept from sprite_table.txt
+                p = sig;
+                continue;
+            }
+            ++resumen.nuevos;
             alias_[e.gfx] = e.archivos;
             sombra_[e.gfx] = e.sombra;
             tipo_[e.gfx] = e.tipo;

@@ -87,11 +87,10 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - **Plaintext sprite list** (`lista_sprites=<path>`, else `list.spz` / `spritelist/list.spz` in the game
   folder): `src/recursos/lista_sprites.cpp` parses the game's plaintext `list.spz` (`#gfx frames=alias
   name`, then `id.name(dir n,sub.frame:ticks[suffix] ...)` actions and `101/102/104/109/110` attributes)
-  and merges it over `sprite_table.txt` by gfx id (list.spz wins; the startup log counts the gfx from each
-  source). It covers newer gfx the old table lacks (e.g. 8913 young gilian). The file is third-party data:
+  and adds the gfx that `sprite_table.txt` lacks (gfx already in the table keep their rows: list.spz comes
+  from a much newer client whose rows may not match our 3.63c Sprite.pak; the startup log counts both). It covers newer gfx the old table lacks (e.g. 8913 young gilian). The file is third-party data:
   keep it out of the repo. Like the table, it lists each action's last frame first, so death rows get
-  the same rotation. Where it replaces a row, actions it does not define are dropped (knight extra
-  attacks 55/56 are 73/79 there).
+  the same rotation.
 
 ### Local server
 

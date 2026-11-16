@@ -92,7 +92,7 @@ TEST_CASE("list.spz: gfx 8913 (young gilian) walks with 8 frames" * doctest::ski
     CHECK(t.accion(8913, ACC_MORIR) != nullptr);
 }
 
-TEST_CASE("list.spz: common gfx resolve the same actions as sprite_table.txt" * doctest::skip(ruta_lista().empty())) {
+TEST_CASE("list.spz: gfx already in sprite_table.txt keep their rows" * doctest::skip(ruta_lista().empty())) {
     TablaSprites antes, despues;
     REQUIRE(cargar_tabla(antes));
     REQUIRE(cargar_tabla(despues));
@@ -104,30 +104,9 @@ TEST_CASE("list.spz: common gfx resolve the same actions as sprite_table.txt" * 
         for (u32 a = 0; a < 256; ++a) {
             const RangoAccion* x = antes.accion(gfx, static_cast<u8>(a));
             const RangoAccion* y = despues.accion(gfx, static_cast<u8>(a));
-            if (!x && !y) continue;
             CAPTURE(a);
-            // list.spz is newer than sprite_table.txt: an action may gain frames or timings. Such
-            // differences are printed (run with -s), never hidden; only a lost core action fails.
-            if (!y) {  // e.g. knight 55/56 (extra attacks) are numbered 73/79 in list.spz
-                CHECK_MESSAGE(a > ACC_MORIR, "gfx " << gfx << " core action " << a << " lost");
-                MESSAGE("gfx " << gfx << " action " << a << " lost");
-                continue;
-            }
-            if (!x) { MESSAGE("gfx " << gfx << " action " << a << " gained"); continue; }  // newer data
-            if (gfx == 1020 && a == ACC_MORIR) CHECK(iguales(antes, *x, despues, *y));
-            if (!iguales(antes, *x, despues, *y)) {
-                std::string d;
-                for (const auto& [t, rr] : {std::pair{&antes, x}, std::pair{&despues, y}}) {
-                    d += "\n   ";
-                    for (u32 i = 0; i < rr->cantidad; ++i) {
-                        const FrameAccion& f = t->frame(rr->primer + i);
-                        d += std::to_string(f.sub) + "." + std::to_string(f.frame) + ":" + std::to_string(f.duracion) +
-                             (f.impacto ? "!" : "") + (f.sonido >= 0 ? "<" + std::to_string(f.sonido) : "") + " ";
-                    }
-                    d += "dir=" + std::to_string(rr->direccional) + " v=" + std::to_string(rr->velocidad);
-                }
-                MESSAGE("gfx " << gfx << " action " << a << " differs:" << d);
-            }
+            REQUIRE((x == nullptr) == (y == nullptr));
+            if (x) CHECK(iguales(antes, *x, despues, *y));
         }
     }
 }
