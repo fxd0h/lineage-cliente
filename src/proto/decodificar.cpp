@@ -64,6 +64,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_SAB] = l.c();
     e.v[PJ_CAR] = l.c();
     e.v[PJ_INT] = l.c();
+    e.v[PJ_GM] = l.quedan(1) ? l.c() : 0;  // "is Administrator" byte (S_CharPacks): enables the GM hotkeys
     return true;
 }
 // S_CharCreateStatus: c motivo (2 ok, 6 ya existe, 9 nombre inválido, 21 reparto/cantidad)

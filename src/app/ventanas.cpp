@@ -428,6 +428,8 @@ void dibujar_ayuda_teclas(App& a) {
         {"Middle click", "Select bar slot / use it on target"},
         {"Ctrl+I / A / S", "Inventory / status / magic"},
         {"Ctrl+C / V / Q / H", "Social / options / restart-quit / this help"},
+        {"Ctrl+T / Ctrl+O / Ctrl+X", "Chat size (4 steps) / chat colours / PK attack mode (original UI)"},
+        {"Ctrl+Y / Ctrl+Z", "GM only: pick a target, send opcode 83 (Z repeats)"},
         {"Ctrl +/- / Ctrl 0", "Zoom in / out / auto"},
         {"Arrows, mouse", "Walk; click a monster to attack"},
         {"Ctrl+click", "Attack a player or NPC"},

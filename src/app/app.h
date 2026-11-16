@@ -31,7 +31,7 @@ enum class Pantalla { ELEGIR_CARPETA, LOGIN, PERSONAJES, CREAR, CARGANDO, JUEGO 
 
 struct PersonajeLista {
     std::string nombre, clan;
-    i32 v[13];  // índices PJ_* de eventos.h
+    i32 v[14];  // índices PJ_* de eventos.h
 };
 
 // Casillero de la barra de atajos. Un ítem se guarda por su id y su gfx: si el id ya no está (se
@@ -478,6 +478,13 @@ struct App {
     u32 inventario_desplazamiento = 0;  // filas
     u8 inventory_tab = 0;               // original UI: 0 consumables, 1 equipment, 2 scrolls and magic, 3 other
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
+    bool es_gm = false;                 // the chosen character was flagged administrator in the character list
+    u8 gm_apuntando = 0;                // GM Ctrl+Y (1) / Ctrl+Z (2): the next click in the world picks the target
+    ObjId gm_objetivo = 0;              // Ctrl+Z target being re-sent
+    u8 gm_repeticiones = 0;
+    u64 gm_proximo_ms = 0;
+    u8 chat_tam = 0;                    // original UI Ctrl+T: chat window size 0..3 (+3 rows per step)
+    bool paleta_chat = false;           // original UI Ctrl+O: chat colour palette
     ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     ObjId ultimo_clic_item = 0;         // para el doble clic
@@ -701,6 +708,7 @@ bool sobre_cantidad(const App& a);
 
 // Mascotas e invocaciones (mascotas_ui.cpp).
 void eventos_mascotas(App& a, const Evento& e);
+void procesar_gm_apuntado(App& a, u64 ahora);  // GM Ctrl+Y / Ctrl+Z: pick a target and send opcode 83
 void procesar_item_apuntado(App& a);  // click on the target of an aimed item (wand of polymorph)
 void procesar_mascotas(App& a);  // antes del movimiento: elegir el objetivo de una mascota
 void dibujar_mascotas(App& a);

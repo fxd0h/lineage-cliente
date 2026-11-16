@@ -224,6 +224,7 @@ title is shown as text.
 **F1** shows all the keys in the game. Window hotkeys follow the original client: Ctrl+I inventory, Ctrl+A status,
 Ctrl+S magic, Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, Ctrl+H help (simple UI: also Alt+I/C/S), Ctrl+P screenshot,
 Ctrl+1..8 = F5..F12 (shortcut boxes), Alt+F10 = F10.
+Original UI also: Ctrl+T chat size (4 steps), Ctrl+O chat colour palette, Ctrl+X attack mode (same as /pk), GM-only Ctrl+Y / Ctrl+Z (pick a target, send opcode 83; Z repeats).
 
 ### Interface and view
 

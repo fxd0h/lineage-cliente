@@ -123,7 +123,8 @@ void leer_entrada(App& a) {
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
             // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26). Upstream's Alt+I/C/S and A only
             // apply to the simple UI; the original UI keeps only the original keys.
-            case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: case SDLK_P: {
+            case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: case SDLK_P:
+            case SDLK_T: case SDLK_O: case SDLK_X: case SDLK_Y: case SDLK_Z: {
                 const SDL_Keymod m = ev.key.mod;
                 if ((m & SDL_KMOD_ALT) && !(m & SDL_KMOD_CTRL)) {
                     if (!a.cfg.ui_simple) break;

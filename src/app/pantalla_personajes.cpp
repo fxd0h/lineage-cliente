@@ -184,6 +184,11 @@ void eventos_personajes(App& a, const Evento& e) {
         a.mascotas.clear();  // las de esta sesión llegan con S_PetCtrlMenu (y los marcadores, con S_Bookmarks)
         a.marcadores.clear();
         a.mascota_eligiendo = 0;
+        a.es_gm = hay_elegido(a) && a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_GM] != 0;
+        a.gm_apuntando = 0;
+        a.gm_repeticiones = 0;
+        a.chat_tam = 0;
+        a.paleta_chat = false;
         cambiar_pantalla(a, Pantalla::JUEGO);
         break;
     default: break;

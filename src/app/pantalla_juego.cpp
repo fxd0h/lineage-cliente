@@ -1129,7 +1129,35 @@ AreaChat area_chat(const App& a) {
                 0, vi.panel_y, MARGEN_SIMPLE + ancho, vi.h - vi.panel_y};
     }
     const int X = vi.hx, Y = vi.hy;
-    return {X + CHAT_X, Y + CHAT_Y, CHAT_ANCHO, X + ENTRADA_X, Y + ENTRADA_Y, 330, X + 124, Y + 363, 390, 117};
+    const int extra = 3 * a.chat_tam * ALTO_GLIFO;  // Ctrl+T grows the log upwards, 3 rows per step
+    return {X + CHAT_X, Y + CHAT_Y - extra, CHAT_ANCHO, X + ENTRADA_X, Y + ENTRADA_Y, 330, X + 124, Y + 363 - extra, 390, 117 + extra};
+}
+
+// Original Ctrl+O (0x456dc3): 16 colour swatches (2 rows of 8, 17 px pitch) above the input box. A click types the
+// "\fX" colour code into the chat line (callback 0x434090); Esc closes it.
+void dibujar_paleta_chat(App& a) {
+    if (!a.paleta_chat || a.cfg.ui_simple) return;
+    constexpr char CODIGOS[16] = {'0', '9', '5', 'R', 'F', 'E', 'B', '4', '>', '7', '3', '=', '2', 'U', '1', 'Z'};
+    EntradaFrame& e = a.entrada;
+    const Vista vi = vista(a);
+    const int x0 = vi.hx + 237, y0 = vi.hy + 424 - 2 * 17 - 6;
+    if (e.escape) {
+        a.paleta_chat = false;
+        e.escape = false;
+        return;
+    }
+    const u64 k = clave_orden(CAPA_UI, 6);
+    a.gpu.rectangulo(x0, y0, 8 * 17 + 4, 2 * 17 + 4, k, rgba(20, 18, 15, 235));
+    for (int i = 0; i < 16; ++i) {
+        const int x = x0 + 4 + (i % 8) * 17, y = y0 + 3 + (i / 8) * 17;
+        a.gpu.rectangulo(x, y, 16, 16, k + 1, color_codigo(CODIGOS[i], rgba(255, 255, 255)));
+        if (e.clic && ui::sobre(e, x, y, 16, 16) && a.chat_entrada.size() + 3 <= MAX_ENTRADA_CHAT) {
+            a.chat_entrada += '\\';
+            a.chat_entrada += 'f';
+            a.chat_entrada += CODIGOS[i];
+            if (a.cfg.chat_con_enter) a.escribiendo_chat = true;
+        }
+    }
 }
 
 // Registro (las últimas filas, ajustadas al ancho) y caja de entrada, que siempre tiene el foco
@@ -1139,13 +1167,16 @@ void dibujar_chat(App& a) {
     EntradaFrame& e = a.entrada;
     const AreaChat ac = area_chat(a);
     u32 n = a.chat.cantidad();
-    int paso = (ui::sobre(e, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h) ? e.rueda : 0) + (e.pagina_arriba ? CHAT_FILAS : 0) -
-               (e.pagina_abajo ? CHAT_FILAS : 0);
+    const int filas = CHAT_FILAS + (a.cfg.ui_simple ? 0 : 3 * a.chat_tam);
+    int paso = (ui::sobre(e, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h) ? e.rueda : 0) + (e.pagina_arriba ? filas : 0) -
+               (e.pagina_abajo ? filas : 0);
     i64 d = static_cast<i64>(a.chat_desplazamiento) + paso;
     a.chat_desplazamiento = static_cast<u32>(std::clamp<i64>(d, 0, n > 0 ? n - 1 : 0));
 
     u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
-    int fila = CHAT_FILAS - 1;
+    if (!a.cfg.ui_simple && a.chat_tam > 0)  // backdrop for the rows added over the world
+        a.gpu.rectangulo(ac.x - 6, ac.y, ac.ancho + 12, 3 * a.chat_tam * ALTO_GLIFO, clave_orden(CAPA_UI, 0), rgba(0, 0, 0, 110));
+    int fila = filas - 1;
     for (u32 i = a.chat_desplazamiento; i < n && fila >= 0; ++i) {
         const LineaChat& l = a.chat.reciente(i);
         std::string_view t = a.chat.texto(l);
@@ -1161,6 +1192,7 @@ void dibujar_chat(App& a) {
             g.texto_sombra(partes[p], ac.x, ac.y + fila * ALTO_GLIFO, kt, l.color);
     }
     if (a.chat_desplazamiento > 0) g.texto_sombra("^", ac.x + ac.ancho - 6, ac.y, kt, rgba(255, 220, 120));
+    dibujar_paleta_chat(a);
 
     // Línea de entrada. Con "chat con Enter" está cerrada hasta apretar Enter (así las teclas son
     // acciones); Enter envía y la cierra, Esc la vacía y la cierra (y no llega a las ventanas).
@@ -1376,7 +1408,7 @@ void dibujar_fps(App& a) {
 // Cursor: círculo si un hechizo espera su objetivo; espada sobre un monstruo (o con Ctrl sobre otro
 // personaje o NPC, que es atacarlo); si no, la mano (también sobre la interfaz).
 void elegir_cursor(App& a) {
-    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
+    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando || a.gm_apuntando) {
         a.cursor = Cursor::OBJETIVO;
         return;
     }
@@ -1448,6 +1480,33 @@ void dibujar_captura(App& a) {
     }
 }
 
+// Original GM hotkeys Ctrl+Y / Ctrl+Z (0x409430 / 0x409380): "Select a target." (string 179), then the clicked
+// object's id goes out with opcode 83 (cd). Ctrl+Z re-sends it every 1.5 s, 20 more times (timer 0x409320).
+void procesar_gm_apuntado(App& a, u64 ahora) {
+    EntradaFrame& e = a.entrada;
+    if (a.gm_apuntando) {
+        if (!a.es_gm || e.clic_derecho || e.escape) {
+            a.gm_apuntando = 0;
+            e.escape = false;
+        } else if (e.pulsado && !sobre_alguna_ventana(a) && !sobre_barra(a)) {
+            a.clic_consumido = true;
+            const ObjId obj = objeto_bajo_puntero(a, true);
+            if (obj && a.mundo.objetos.buscar(obj) != SIN_SLOT) {
+                enviar(a, cmd::inventario_mascota(a.op, obj));
+                a.gm_objetivo = a.gm_apuntando == 2 ? obj : 0;
+                a.gm_repeticiones = 0;
+                a.gm_proximo_ms = ahora + 1500;
+            }
+            a.gm_apuntando = 0;  // a click on the ground cancels
+        }
+    }
+    if (a.gm_objetivo && ahora >= a.gm_proximo_ms) {
+        enviar(a, cmd::inventario_mascota(a.op, a.gm_objetivo));
+        a.gm_proximo_ms = ahora + 1500;
+        if (++a.gm_repeticiones >= 20) a.gm_objetivo = 0;
+    }
+}
+
 void frame_juego(App& a) {
     Graficos& g = *a.g;
     u64 ahora = a.entrada.ahora_ms;
@@ -1469,6 +1528,22 @@ void frame_juego(App& a) {
         a.gpu.pedir_captura("captura.bmp");
         a.chat.agregar("Screenshot saved: captura.bmp", rgba(255, 200, 120), CHAT_SISTEMA);
         break;
+    // Only the original UI has these (Ctrl+M builder list and Ctrl+R dragon-power panel are not implemented).
+    case 'X':  // attack mode (0x703105): click on other players to attack them, same as "/pk"
+        if (!a.cfg.ui_simple) comando_social(a, "/pk");
+        break;
+    case 'T':  // chat window size cycle (0x421330)
+        if (!a.cfg.ui_simple) a.chat_tam = static_cast<u8>((a.chat_tam + 1) % 4);
+        break;
+    case 'O':  // chat colour palette (0x456dc3)
+        if (!a.cfg.ui_simple) a.paleta_chat = !a.paleta_chat;
+        break;
+    case 'Y': case 'Z':  // GM only: pick a target, send opcode 83 (Ctrl+Z repeats)
+        if (!a.cfg.ui_simple && a.es_gm) {
+            a.gm_apuntando = a.entrada.atajo_ctrl == 'Y' ? 1 : 2;
+            a.chat.agregar("Select a target.", rgba(255, 230, 120), CHAT_SISTEMA);
+        }
+        break;
     default: break;
     }
 
@@ -1479,6 +1554,7 @@ void frame_juego(App& a) {
     actualizar_ventanas(a);
     procesar_hechizos(a, ahora);
     procesar_item_apuntado(a);
+    procesar_gm_apuntado(a, ahora);
     procesar_mascotas(a);
     procesar_barra(a);
     procesar_autobuffs(a);

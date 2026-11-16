@@ -36,7 +36,7 @@ struct Evento {
 static_assert(sizeof(Evento) <= 112, "Evento debe seguir siendo pequeño y POD");
 
 // Campos de PERSONAJE / PERSONAJE_NUEVO (lista de personajes).
-enum : int { PJ_CLASE, PJ_SEXO, PJ_LEGAL, PJ_HP, PJ_MP, PJ_CA, PJ_NIVEL, PJ_FUE, PJ_DES, PJ_CON, PJ_SAB, PJ_CAR, PJ_INT };
+enum : int { PJ_CLASE, PJ_SEXO, PJ_LEGAL, PJ_HP, PJ_MP, PJ_CA, PJ_NIVEL, PJ_FUE, PJ_DES, PJ_CON, PJ_SAB, PJ_CAR, PJ_INT, PJ_GM };
 // Campos de PONER_OBJETO.
 // OB_CANTIDAD: el campo "exp" de S_CharPack, que en los ítems del suelo (S_DropItem) es la cantidad.
 // OB_CLAN: id del clan (0 sin clan; para pedir su emblema).
