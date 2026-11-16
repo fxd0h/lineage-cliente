@@ -42,15 +42,15 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 |---|---|---|---|---|
 | Side panels 1028 / 1019 | 1028 at (0,368) (0x4b2bbd); 1019 at (485,366) (0x4b22bd) | same | MATCH | - |
 | Chat backdrop 1042/1044/1043, input bar 1039 | 0x416160: 1042/1044 x=115, 1043 x=121 | 1042 (115,358), 1044 (115,359), 1043 (121,371), 1039 (120,462) | MATCH | - |
-| Weight gauge | img 1035/1036/1037 (green <50 %, <83 %, else red) at (22,464), width cur*43/max, h 10 (0x4b2660, 0x4b26de); text `"%d%%"` at (43-2*len,466) | text only at (24,464) | MISSING | pantalla_juego.cpp `dibujar_panel`: draw the gauge clipped to 43 px; move the text |
-| Food gauge | img 1038, or 1495 when full, at (88,464), width cur*43/max (0x4b2800, 0x4b28bc); text at (109-2*len,466) | text only at (88,464) | MISSING | same as weight |
-| Alignment icon | img 1032 (<0) / 1033 (0..500) / 1034 (>500) at (70,446) from `[0x8f07e0]` (0x4b2970..0x4b2b4b); ref frame `hud_original_1.png` shows the icon | none | MISSING | `dibujar_panel`: draw 1032-1034 at (70,446) |
-| Alignment number position | `"%d"` at (109-2*len, 449) (0x4b2970) | (88,447) left-aligned | DIFFERENT | `dibujar_panel` |
-| HP / MP numbers | `"%d/%d"` at x=83-2*len, y=410 (HP) / 429 (MP); white 0x500528 with a 1 px 4-way outline in 0x5005bc (180,82,74) (0x4b13b8..0x4b1412, 0x4b15bc) | left-aligned at x=35, black drop shadow | DIFFERENT | `dibujar_panel`: centred-ish x, outline colour 0x5949 |
-| Level / EXP text | level `"%2d"` at (37,391); percent at (80,391) if level <40, else (72,391); format `%d.%02d%%` <40, `%d.%04d%%` >=40 (0x4b0c80, fmt 0x6e4d50/0x6e4d5c); plain white, no shadow; ref `hud_original_1.png` "52  24.8613%" | one string `"%d  %.2f%%"` at (35,~391), shadowed, always 2 decimals | DIFFERENT | `barra()` / `dibujar_panel`: two draws, 4 decimals at >=40 |
-| EXP/HP/MP bar fill | whole image clipped to pct*129/100, h 15/21/19; not drawn when width 0 or HP<=0 (0x4b0e0c `cmp eax,0x81`, 0x4b1231, 0x4b14ed). The "Lev/Hp/Mp" label is engraved in panel 1028 | always keeps the first 28 px of the bar image (`ROTULO_BARRA`), clips the rest | DIFFERENT | pantalla_juego.cpp `barra()`: drop `ROTULO_BARRA`; skip at w=0 |
-| HP bar image by status | `[0x8f0e4c]+0x21` bit 0x8 -> img 1358, bit 0x1 -> 1357, else 1030, at (3,402) (0x4b1247) | always 1030 | MISSING | `barra()`: pick 1357/1358 from the player status flags |
-| AC number | `"%d"` at (43-2*len, 449) (0x4b0c10) | (24,447) left-aligned | DIFFERENT | `dibujar_panel` |
+| Weight gauge | img 1035/1036/1037 (green <50 %, <83 %, else red) at (22,464), width cur*43/max, h 10 (0x4b2660, 0x4b26de); text `"%d%%"` at (43-2*len,466) | text only at (24,464) | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| Food gauge | img 1038, or 1495 when full, at (88,464), width cur*43/max (0x4b2800, 0x4b28bc); text at (109-2*len,466) | text only at (88,464) | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| Alignment icon | img 1032 (<0) / 1033 (0..500) / 1034 (>500) at (70,446) from `[0x8f07e0]` (0x4b2970..0x4b2b4b); ref frame `hud_original_1.png` shows the icon | none | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| Alignment number position | `"%d"` at (109-2*len, 449) (0x4b2970) | (88,447) left-aligned | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| HP / MP numbers | `"%d/%d"` at x=83-2*len, y=410 (HP) / 429 (MP); white 0x500528 with a 1 px 4-way outline in 0x5005bc (180,82,74) (0x4b13b8..0x4b1412, 0x4b15bc) | left-aligned at x=35, black drop shadow | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| Level / EXP text | level `"%2d"` at (37,391); percent at (80,391) if level <40, else (72,391); format `%d.%02d%%` <40, `%d.%04d%%` >=40 (0x4b0c80, fmt 0x6e4d50/0x6e4d5c); plain white, no shadow; ref `hud_original_1.png` "52  24.8613%" | one string `"%d  %.2f%%"` at (35,~391), shadowed, always 2 decimals | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| EXP/HP/MP bar fill | whole image clipped to pct*129/100, h 15/21/19; not drawn when width 0 or HP<=0 (0x4b0e0c `cmp eax,0x81`, 0x4b1231, 0x4b14ed). The "Lev/Hp/Mp" label is engraved in panel 1028 | always keeps the first 28 px of the bar image (`ROTULO_BARRA`), clips the rest | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| HP bar image by status | `[0x8f0e4c]+0x21` bit 0x8 -> img 1358, bit 0x1 -> 1357, else 1030, at (3,402) (0x4b1247) | always 1030 | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
+| AC number | `"%d"` at (43-2*len, 449) (0x4b0c10) | (24,447) left-aligned | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
 | F-key pages | 3 pages of 8 (0x4b2240 `idiv 3`); digit img 1025+page at (489,414); arrows 1021/1023 at (489,387)/(489,429), callback 0x456960 (page +-1, sound 0x7f) | one page; digit always 1025; arrows drawn but inert (comment at pantalla_juego.cpp:988 says "keeps one page") | MISSING | hechizos_ui.cpp: `[3][8]` slots + page var; click handler on 1021/1023; F1-F3 (see section 5) |
 | F-key selected-slot frame | img 1020 at (502+34c, 388+34r) on the last-clicked slot `[0x703100]` (0x4b24d0..0x4b2549); ref frame shows a white frame on F7 | none | MISSING | hechizos_ui.cpp `dibujar_teclas_f` |
 | F-key hover name | hovered filled slot: name at (500+34c, 400+34r), white, outline 0x5004f0, clamped to x 640 (0x4b2549..0x4b264a) | none | MISSING | `dibujar_teclas_f` |
@@ -213,7 +213,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
 | HP/MP/EXP gauge box (attributes page) | img 1263 at (69,46); EXP 1264 (69,46), HP 1265 (69,62), MP 1266 (69,77), clipped by % (0x4b3e8f, 0x4b4562, 0x4b3ff2) | not drawn | MISSING | original_window.cpp draw_attributes |
-| Level / EXP text | `"%d"` at (100,50); `"%02d.%02d%%"` at (115,50) (0x4b459b, 0x6e4dbc) | `"%d  (%.2f%%)"` at (70,44) | DIFFERENT | draw_attributes |
+| Level / EXP text | `"%d"` at (100,50); `"%02d.%02d%%"` at (115,50) (0x4b459b, 0x6e4dbc) | `"%d  (%.2f%%)"` at (70,44) | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
 | HP / MP text | `"%d/%d"` at (100,66) colour (246,189,246) / (100,80) colour (189,222,255) (0x4b4199) | `"%d / %d"` at (54,61)/(54,74), white | DIFFERENT | draw_attributes |
 | Weight / food | `" %d%%"` centred in x 107..150, y 94/107 | centred 109..156, y 92/105 | DIFFERENT | draw_attributes |
 | Bottom gauge 990-995 | 990 (76,233), 991 (83,232), marker 992 at (83+v,233) (0x4b3930) | not drawn | MISSING | meaning: U-C4 |

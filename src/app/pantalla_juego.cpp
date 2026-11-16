@@ -49,7 +49,6 @@ constexpr u32 IMG_ORBE_PRIMERA = 1213;
 constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
 constexpr int ZONA_ROTULO_Y = 346, ZONA_ROTULO_DER = 626;  // zone labels: name on the left, type right-aligned
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
-constexpr int ROTULO_BARRA = 28;  // ancho del rótulo "Lev"/"Hp"/"Mp" pintado al principio de cada barra
 constexpr int CHAT_X = 124 + 20, CHAT_Y = 363 + 32, CHAT_ANCHO = 342, CHAT_FILAS = 5;
 constexpr u64 DUR_COMBATE = 900;  // ms que dura un texto de combate flotante (sube y se desvanece)
 constexpr int ENTRADA_X = 124 + 30, ENTRADA_Y = 363 + 102;
@@ -959,15 +958,63 @@ void pick_up_nearby(App& a) {
 
 namespace {
 
-// Barra con imagen: el rótulo queda siempre y el resto se recorta según la proporción.
-void barra(Graficos& g, u32 img, int x, int y, float proporcion, std::string_view t) {
+// The original HUD number font (S3EP1U 0x431410, glyph table at 0x501410): 4x6 pixel glyphs, 3 bytes each (two rows
+// per byte, low nibble first, bit 0 = leftmost). Advance: '1' and '/' 4 px, '.' 2 px, everything else 5 px.
+constexpr u8 FUENTE_HUD[] = {0x96, 0x99, 0x69, 0x32, 0x22, 0x72, 0x96, 0x68, 0xf1, 0x96, 0x84, 0x69, 0x64, 0x56,
+                             0x4f, 0x1f, 0x87, 0x69, 0x16, 0x97, 0x69, 0x8f, 0x44, 0x22, 0x96, 0x96, 0x69, 0x96,
+                             0xe9, 0x68, 0x44, 0x22, 0x11, 0x00, 0x00, 0x10, 0x59, 0x24, 0x9a, 0x00, 0x0f, 0x00};
+
+int glifo_hud(char c) {
+    if (c >= '0' && c <= '9') return (c - '0') * 3;
+    switch (c) {
+        case '/': return 0x1e;
+        case '.': return 0x21;
+        case '%': return 0x24;
+        case '-': return 0x27;
+        default: return -1;
+    }
+}
+
+int avance_hud(char c) { return c == '1' || c == '/' ? 4 : c == '.' ? 2 : 5; }
+
+void texto_hud_pasada(Graficos& g, int x, int y, std::string_view t, u64 k, u32 color) {
+    for (const char c : t) {
+        if (const int o = glifo_hud(c); o >= 0) {
+            for (int fila = 0; fila < 6; ++fila) {
+                const u8 bits = (FUENTE_HUD[o + fila / 2] >> (fila % 2 ? 4 : 0)) & 15;
+                for (int col = 0; col < 4; ++col)
+                    if (bits >> col & 1) g.gpu().rectangulo(x + col, y + fila, 1, 1, k, color);
+            }
+        }
+        x += avance_hud(c);
+    }
+}
+
+// Number text of the bottom HUD: plain, no shadow. `contorno` (non-zero) adds the 1 px 4-way outline the HP/MP
+// numbers have (0x4b13b8, 0x4b15bc). `derecha` right-aligns like the original: x = right - 2 * length.
+void texto_hud(Graficos& g, int x, int y, std::string_view t, u32 contorno = 0) {
+    const u64 k = clave_orden(CAPA_UI_TEXTO, 0);
+    if (contorno) {
+        texto_hud_pasada(g, x - 1, y, t, k, contorno);
+        texto_hud_pasada(g, x + 1, y, t, k, contorno);
+        texto_hud_pasada(g, x, y - 1, t, k, contorno);
+        texto_hud_pasada(g, x, y + 1, t, k, contorno);
+    }
+    texto_hud_pasada(g, x, y, t, k, rgba(255, 255, 255));
+}
+
+int texto_hud_derecha(Graficos& g, int derecha, int y, std::string_view t, u32 contorno = 0) {
+    const int x = derecha - 2 * static_cast<int>(t.size());
+    texto_hud(g, x, y, t, contorno);
+    return x;
+}
+
+// Bar image clipped to `w` pixels (the engraved "Lev"/"Hp"/"Mp" label is part of panel 1028); nothing at 0.
+void barra(Graficos& g, u32 img, int x, int y, int w) {
     RegionAtlas r = g.img(img);
-    if (!r.valida()) return;
-    proporcion = std::clamp(proporcion, 0.0f, 1.0f);
-    int rotulo = std::min<int>(ROTULO_BARRA, r.w);
-    r.w = static_cast<u16>(rotulo + static_cast<int>((r.w - rotulo) * proporcion));
+    if (!r.valida() || w <= 0) return;
+    r.w = static_cast<u16>(std::min<int>(r.w, w));
     g.gpu().dibujar(r, x, y, clave_orden(CAPA_UI, 2));
-    g.texto_sombra(t, x + 32, y + (g.img(img).h - ALTO_GLIFO) / 2, clave_orden(CAPA_UI_TEXTO, 0), rgba(255, 255, 254));
 }
 
 void dibujar_panel(App& a) {
@@ -1017,27 +1064,60 @@ void dibujar_panel(App& a) {
                        static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0), rgba(235, 235, 235));
     }
     char t[48];
-    float pexp = porcentaje_exp(j.nivel, j.exp);
-    std::snprintf(t, sizeof t, "%d  %.2f%%", j.nivel, pexp);
-    barra(g, IMG_BARRA_EXP, X + 3, Y + 386, pexp / 100.0f, t);
-    std::snprintf(t, sizeof t, "%d/%d", j.hp, j.hp_max);
-    barra(g, IMG_BARRA_HP, X + 3, Y + 402, j.hp_max > 0 ? static_cast<float>(j.hp) / j.hp_max : 0.0f, t);
-    std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
-    barra(g, IMG_BARRA_MP, X + 3, Y + 423, j.mp_max > 0 ? static_cast<float>(j.mp) / j.mp_max : 0.0f, t);
-    // Cuatro casillas con ícono: CA, alineamiento, peso y comida.
-    u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
-    u32 c = rgba(255, 255, 254);
+    // Level and EXP (0x4b0c80): "%2d" at (37,391); "%d.%02d%%" at (80,391) below level 40, "%d.%04d%%" at (72,391) from 40.
+    {
+        const bool alto = j.nivel >= 40;
+        const i64 escala = alto ? 1000000 : 10000;
+        const i64 e = exp_escalada(j.nivel, j.exp, escala);  // percent * 100 (or * 10000)
+        const i64 entero = e / (alto ? 10000 : 100), fraccion = e % (alto ? 10000 : 100);
+        std::snprintf(t, sizeof t, "%2d", j.nivel);
+        texto_hud(g, X + 37, Y + 391, t);
+        std::snprintf(t, sizeof t, alto ? "%d.%04d%%" : "%d.%02d%%", static_cast<int>(entero), static_cast<int>(fraccion));
+        texto_hud(g, X + (alto ? 72 : 80), Y + 391, t);
+        barra(g, IMG_BARRA_EXP, X + 3, Y + 386, static_cast<int>(std::min<i64>(entero * 129 / 100, 129)));
+    }
+    // HP bar: image by status (poison 1357, frozen 1358, else 1030); not drawn at HP <= 0 (0x4b1180).
+    {
+        const u32 img = yo == SIN_SLOT ? IMG_BARRA_HP
+                        : (a.mundo.objetos.col<O_FLAGS>()[yo] & FLAG_CONGELADO) ? 1358u
+                        : (a.mundo.objetos.col<O_FLAGS>()[yo] & FLAG_VENENO)    ? 1357u
+                                                                                 : IMG_BARRA_HP;
+        if (j.hp > 0 && j.hp_max > 0) barra(g, img, X + 3, Y + 402, std::min(j.hp * 129 / j.hp_max, 129));
+        std::snprintf(t, sizeof t, "%d/%d", j.hp, j.hp_max);
+        texto_hud_derecha(g, X + 83, Y + 410, t, rgba(181, 82, 74));
+        if (j.mp > 0 && j.mp_max > 0) barra(g, IMG_BARRA_MP, X + 3, Y + 423, std::min(j.mp * 129 / j.mp_max, 129));
+        std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
+        texto_hud_derecha(g, X + 83, Y + 429, t, rgba(99, 132, 165));
+    }
+    // Four icon boxes (0x4b0c10 AC, 0x4b2970 alignment, 0x4b2660 weight, 0x4b2800 food): numbers right-aligned at
+    // x = 43 / 109 minus 2 px per character; weight/food also have a gauge clipped to 43 px.
     std::snprintf(t, sizeof t, "%d", j.ca);
-    g.texto(t, X + 24, Y + 447, kt, c);
-    // Alignment box (S3EP1U 0x4b2970): icon 1032 (< 0) / 1033 (0..500) / 1034 (> 500) at (70,446), then the value in white,
-    // centred on x = 109 (the original digit font starts at 109 - 2 * digits).
+    texto_hud_derecha(g, X + 43, Y + 449, t);
+    // Alignment icon 1032 (< 0) / 1033 (0..500) / 1034 (> 500) at (70,446).
     g.gpu().dibujar(g.img(j.legal < 0 ? 1032 : j.legal <= 500 ? 1033 : 1034), X + 70, Y + 446, clave_orden(CAPA_UI, 3));
-    const int n = std::snprintf(t, sizeof t, "%d", j.legal);
-    g.texto(t, X + 109 + n / 2 - ancho_texto(t, static_cast<size_t>(n)) / 2, Y + 447, kt, c);
-    std::snprintf(t, sizeof t, "%d%%", j.peso * 100 / 240);
-    g.texto(t, X + 24, Y + 464, kt, c);
-    std::snprintf(t, sizeof t, "%d%%", j.comida * 100 / 225);
-    g.texto(t, X + 88, Y + 464, kt, c);
+    std::snprintf(t, sizeof t, "%d", j.legal);
+    texto_hud_derecha(g, X + 109, Y + 449, t);
+    {
+        const int w = std::clamp(j.peso * 43 / 240, 0, 43);
+        const int pct = j.peso * 100 / 240;
+        RegionAtlas r = g.img(pct < 50 ? 1035 : pct < 83 ? 1036 : 1037);
+        if (r.valida() && w > 0) {
+            r.w = static_cast<u16>(std::min<int>(r.w, w));
+            g.gpu().dibujar(r, X + 22, Y + 464, clave_orden(CAPA_UI, 2));
+        }
+        std::snprintf(t, sizeof t, "%d%%", pct);
+        texto_hud_derecha(g, X + 43, Y + 466, t);
+    }
+    {
+        const int w = std::clamp(j.comida * 43 / 225, 0, 43);
+        RegionAtlas r = g.img(j.comida >= 225 ? 1495 : 1038);
+        if (r.valida() && w > 0) {
+            r.w = static_cast<u16>(std::min<int>(r.w, w));
+            g.gpu().dibujar(r, X + 88, Y + 464, clave_orden(CAPA_UI, 2));
+        }
+        std::snprintf(t, sizeof t, "%d%%", j.comida * 100 / 225);
+        texto_hud_derecha(g, X + 109, Y + 466, t);
+    }
 }
 
 // Barra de texto "[####------]" con la parte llena en `color`; devuelve el ancho dibujado.

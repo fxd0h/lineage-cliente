@@ -54,6 +54,12 @@ float porcentaje_exp(i32 nivel, i32 exp) {
     return p < 0 ? 0 : (p > 100 ? 100 : p);
 }
 
+i64 exp_escalada(i32 nivel, i32 exp, i64 escala) {
+    if (nivel < 1 || nivel >= NIVELES) return 0;
+    const i64 base = EXP_NIVEL[nivel - 1], sig = EXP_NIVEL[nivel];
+    return exp < base || sig <= base ? 0 : (exp - base) * escala / (sig - base);
+}
+
 double factor_intervalo(const EstadoJugador& j, Intervalo t) {
     double f = 1.0;
     if (j.haste == 1) f *= 0.75;

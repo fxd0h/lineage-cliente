@@ -57,6 +57,8 @@ if [ "$("$MARIADB" --socket="$AQUI/datos/mysql.sock" -uroot -N -e 'SELECT COUNT(
     echo "Importando la base de datos (tarda un poco)..."
     "$MARIADB" --socket="$AQUI/datos/mysql.sock" -uroot l1jdb_363 < l1j-jp/db/l1jdb_363.sql
 fi
+# The dump split CSV fields with escaped commas (armor sets, 15 NPCs); rebuild those rows.
+python3 reparar_csv.py | "$MARIADB" --socket="$AQUI/datos/mysql.sock" -uroot l1jdb_363
 "$MARIADB" --socket="$AQUI/datos/mysql.sock" -uroot l1jdb_363 < corregir_db.sql
 
 # El conector MySQL 5.1.25 que trae el servidor falla (NullPointerException) con MariaDB moderno.

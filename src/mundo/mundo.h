@@ -120,6 +120,8 @@ constexpr u32 MS_VUELO_CELDA = 40;
 
 // Porcentaje de experiencia dentro del nivel actual (tabla de ExpTable.java de L1J).
 float porcentaje_exp(i32 nivel, i32 exp);
+// Integer experience share like the original HUD (0x4b0c80): (exp - base) * escala / (next - base), 0 below the base.
+i64 exp_escalada(i32 nivel, i32 exp, i64 escala);
 
 // Paso normal de los personajes (spr_actions de L1J: 640 ms por celda); también el de los objetos
 // cuyo sprite no está en la tabla de sprites.
