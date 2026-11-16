@@ -344,6 +344,7 @@ struct App {
     bool jugador_tapado = false;  // un objeto del mapa tapa al propio personaje (se ve translúcido)
     ObjId objetivo = 0;
     u64 fin_ataque = 0;
+    u64 next_pickup = 0;  // F4 pickup cooldown
     u64 t_muerte = 0;  // cuándo se vio el aviso de muerte (0 = vivo)
     std::string chat_entrada;
     u32 chat_desplazamiento = 0;  // líneas hacia atrás desde la más reciente
@@ -513,6 +514,7 @@ void frame_login(App& a);
 void frame_personajes(App& a);
 void frame_crear(App& a);
 void frame_juego(App& a);
+void pick_up_nearby(App& a);  // F4 in the original UI
 // Modo no interactivo (LIN_RENDER): dibuja un mapa centrado en una celda y, tras unos frames,
 // guarda un PNG y sale. Sin red ni login. Reusa el dibujo de mapa de frame_juego.
 void dibujar_captura(App& a);

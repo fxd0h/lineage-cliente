@@ -234,7 +234,8 @@ Original UI also: Ctrl+T chat size (4 steps), Ctrl+O chat colour palette, Ctrl+X
   their data; deleting asks for confirmation).
 - **F3:** fps, CPU per frame (average, worst frame and decoding), allocations of the worst frame,
   instances, draw calls, objects and position.
-- **F4:** camera, "smooth" (default: follows the continuous position, with the character centered) or
+- **F4:** in the original UI, pick up an item lying next to you (as the original client). In the simple UI:
+  camera, "smooth" (default: follows the continuous position, with the character centered) or
   "stepped" (like the original: follows the walking frames, a ¼ cell at a time).
 - **Shift+F3:** frames per second and milliseconds per frame in the top right corner, on or off.
 - **Alt+Enter:** full screen or windowed. Windowed has no system border: the bar on top drags the window, and its

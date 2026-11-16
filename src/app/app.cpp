@@ -178,6 +178,10 @@ void leer_entrada(App& a) {
                 guardar_config(a.cfg);
                 break;
             case SDLK_F4:
+                if (!a.cfg.ui_simple && !(ev.key.mod & SDL_KMOD_SHIFT)) {  // original: pick up a nearby item
+                    if (a.pantalla == Pantalla::JUEGO) pick_up_nearby(a);
+                    break;
+                }
                 if (ev.key.repeat) break;
                 // Cámara a saltos (como el original) o suave; con Shift, personajes oscurecidos en
                 // la sombra o no.

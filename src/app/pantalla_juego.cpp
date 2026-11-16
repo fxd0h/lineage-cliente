@@ -921,6 +921,29 @@ void mover_jugador(App& a, u64 ahora) {
     }
 }
 
+}  // namespace
+
+// F4 (original client 0x4087c0): pick up the first ground item within 2 cells across and 1 down the map,
+// at most about once a second (the original waits 0x3da ms between pickups).
+void pick_up_nearby(App& a) {
+    TablaObjetos& o = a.mundo.objetos;
+    const Slot yo = o.buscar(a.mundo.jugador.id);
+    const u64 ahora = a.entrada.ahora_ms;
+    if (yo == SIN_SLOT || ahora < a.next_pickup) return;
+    const int px = o.col<O_X>()[yo], py = o.col<O_Y>()[yo];
+    for (Slot s = 0; s < o.tamano(); ++s) {
+        if (s == yo || a.sprites.tipo(o.col<O_GFX>()[s]) != TIPO_ITEM) continue;
+        const int x = o.col<O_X>()[s], y = o.col<O_Y>()[s];
+        if (std::abs(x - px) > 2 || std::abs(y - py) > 1) continue;
+        enviar(a, cmd::recoger(a.op, static_cast<u16>(x), static_cast<u16>(y), o.ids()[s],
+                               std::max<u32>(1, o.col<O_CANTIDAD>()[s])));
+        a.next_pickup = ahora + 0x3da;
+        return;
+    }
+}
+
+namespace {
+
 // Barra con imagen: el rótulo queda siempre y el resto se recorta según la proporción.
 void barra(Graficos& g, u32 img, int x, int y, float proporcion, std::string_view t) {
     RegionAtlas r = g.img(img);

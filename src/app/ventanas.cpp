@@ -427,7 +427,7 @@ void dibujar_ayuda_teclas(App& a) {
         {"F1", "This help"},
         {"F2", "Simple / original interface"},
         {"F3 / Shift+F3", "Debug overlay / FPS counter"},
-        {"F4 / Shift+F4", "Camera / shade in shadows"},
+        {"F4 / Shift+F4", "Pick up a nearby item (simple UI: camera) / shade in shadows"},
         {"F5-F12 / Ctrl+1..8", "Use the assigned spell or item (Alt+F10 = F10)"},
         {"Shift+F5", "Cycle scaling filter (integer/xBR/FSR/CRT)"},
         {"Ctrl+P / Shift+F12", "Screenshot (captura.bmp)"},
