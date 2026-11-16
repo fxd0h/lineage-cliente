@@ -19,6 +19,11 @@ namespace {
 constexpr int ANCHO_PREGUNTA = 300, ALTO_PREGUNTA = 92;
 constexpr int ANCHO_INTERCAMBIO = ui::VENTANA_ANCHO, ALTO_INTERCAMBIO = 300;
 constexpr int CELDA = 36, COLUMNAS = 6, FILAS = 3;
+// Original trade window (client ctor 0x42bf20, draw 0x42d280): background 1199 at (7,10), frame 1201, ornaments 1200 at
+// (2,12), close button at (174,18), OK 1202 at (53,282), Cancel 1204 at (100,282); two 4x3 grids of 34 px cells at x 27,
+// the one you offer at y 47 and the other side's at y 175.
+constexpr int TRADE_W = 200, TRADE_H = 308, TRADE_CELL = 34, TRADE_COLS = 4, TRADE_ROWS = 3, TRADE_X = 27;
+constexpr int TRADE_MINE_Y = 47, TRADE_OTHER_Y = 175;
 constexpr int ANCHO_SOCIAL = 220, ALTO_SOCIAL = 230;
 
 bool igual_sin_mayusculas(std::string_view a, std::string_view b) {
@@ -68,13 +73,18 @@ bool marco(App& a, Rect r, std::string_view titulo, bool con_cierre = true) {
 }
 
 // Grilla de ítems ofrecidos en el intercambio; devuelve el índice bajo el puntero o -1.
-int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0) {
+int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0, bool original = false) {
     Graficos& g = *a.g;
     int bajo = -1;
-    for (int c = 0; c < COLUMNAS * FILAS; ++c) {
-        const int x = x0 + (c % COLUMNAS) * CELDA, y = y0 + (c / COLUMNAS) * CELDA;
-        const bool encima = ui::sobre(a.entrada, x, y, CELDA - 2, CELDA - 2);
-        g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, clave_orden(CAPA_UI, 12), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
+    const int cols = original ? TRADE_COLS : COLUMNAS, cell = original ? TRADE_CELL : CELDA;
+    for (int c = 0; c < cols * (original ? TRADE_ROWS : FILAS); ++c) {
+        const int x = x0 + (c % cols) * cell, y = y0 + (c / cols) * cell;
+        const bool encima = ui::sobre(a.entrada, x, y, cell - 2, cell - 2);
+        if (original) {  // the frame image has the cell lines
+            if (encima) g.gpu().rectangulo(x, y, cell - 1, cell - 1, clave_orden(CAPA_UI, 14), rgba(120, 100, 40, 110));
+        } else {
+            g.gpu().rectangulo(x, y, cell - 2, cell - 2, clave_orden(CAPA_UI, 12), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
+        }
         if (c >= static_cast<int>(items.size())) continue;
         draw_item_icon(g.gpu(), g.icono(items[c].gfx), x + 1, y + 1, clave_orden(CAPA_UI, 13), items[c].bendicion);
         if (encima) bajo = c;
@@ -304,6 +314,33 @@ void dibujar_intercambio(App& a) {
     arrastrar_ventana(a, IdVentana::INTERCAMBIO);
     const Rect r = rect_ventana(a, IdVentana::INTERCAMBIO);
     char titulo[96];
+    if (!a.cfg.ui_simple) {
+        if (draw_original_frame(a, r.x, r.y, 1199, 7, 10, 1201, 174, 18)) enviar(a, cmd::cancelar_intercambio(a.op));
+        draw_original_overlay(a, r.x + 2, r.y + 12, 1200);
+        const int bajo_propio = grilla(a, a.intercambio.propio, r.x + TRADE_X + 1, r.y + TRADE_MINE_Y + 1, true);
+        const int bajo_otro = grilla(a, a.intercambio.otro, r.x + TRADE_X + 1, r.y + TRADE_OTHER_Y + 1, true);
+        const ItemIntercambio* it = bajo_propio >= 0 ? &a.intercambio.propio[bajo_propio]
+                                    : bajo_otro >= 0 ? &a.intercambio.otro[bajo_otro] : nullptr;
+        if (it) {
+            char buf[256];
+            const size_t m = expandir_desc(a.desc, it->nombre, buf, sizeof buf);
+            const int w = ancho_texto(buf, m);
+            g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
+            g.texto({buf, m}, static_cast<float>(e.mx + 14), static_cast<float>(e.my + 17), clave_orden(CAPA_UI_TEXTO, 30));
+        }
+        std::snprintf(titulo, sizeof titulo, "%s offers", a.intercambio.con.c_str());
+        g.texto_sombra(titulo, static_cast<float>(r.x + TRADE_X), static_cast<float>(r.y + TRADE_OTHER_Y - ALTO_GLIFO - 4),
+                       clave_orden(CAPA_UI_TEXTO, 14), rgba(255, 255, 254));
+        if (a.intercambio.ok) {
+            g.texto_sombra("Waiting...", static_cast<float>(r.x + 53), static_cast<float>(r.y + 284), clave_orden(CAPA_UI_TEXTO, 14),
+                           rgba(170, 230, 255));
+        } else if (draw_original_button(a, r.x + 53, r.y + 282, 1202, 1203)) {
+            enviar(a, cmd::aceptar_intercambio(a.op));
+            a.intercambio.ok = true;
+        }
+        if (draw_original_button(a, r.x + 100, r.y + 282, 1204, 1205)) enviar(a, cmd::cancelar_intercambio(a.op));
+        return;
+    }
     std::snprintf(titulo, sizeof titulo, "Trade with %s", a.intercambio.con.c_str());
     if (marco(a, r, titulo)) enviar(a, cmd::cancelar_intercambio(a.op));
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12);
@@ -388,6 +425,7 @@ void dibujar_social(App& a) {
 
 Rect rect_social(const App& a) { return {(a.gpu.ancho() - ANCHO_SOCIAL) / 2 - 140, ui::VENTANA_Y + 60, ANCHO_SOCIAL, ALTO_SOCIAL}; }
 Rect rect_intercambio(const App& a) {
+    if (!a.cfg.ui_simple) return {(a.gpu.ancho() - TRADE_W) / 2, ui::VENTANA_Y + 20, TRADE_W, TRADE_H};
     return {(a.gpu.ancho() - ANCHO_INTERCAMBIO) / 2, ui::VENTANA_Y + 20, ANCHO_INTERCAMBIO, ALTO_INTERCAMBIO};
 }
 
