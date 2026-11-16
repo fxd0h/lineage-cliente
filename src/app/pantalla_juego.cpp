@@ -2,6 +2,7 @@
 // personajes y NPCs animados con la tabla de sprites, movimiento propio con predicción, y la UI:
 // simple (texto, estilo ASCII; por defecto) o el panel inferior original, con chat y ventana de
 // estado en los dos casos (F2 alterna).
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include "app/app.h"
@@ -1249,6 +1250,49 @@ void dibujar_barra_chat(App& a, u32 total, int filas) {
     g.gpu().dibujar(g.img(976), X - 1, thumb_y(), kb);
 }
 
+// Original chat window mouse handler (S3EP1U 0x41f680, region 0x4f1740): a double click on a chat row takes the
+// word under the pointer (0x41f980: letters, digits and bytes >= 0x80; a click on a separator takes the word that
+// starts right after it). Left double click (WM_LBUTTONDBLCLK) appends "word " to the input line (0x445010);
+// right double click (WM_RBUTTONDBLCLK) replaces the line with "/exclude word" (prefix string 0x5004c0, 0x445090).
+// With the line closed (chat with Enter) it opens it with that text instead (callback 0x407e50). The log keeps no
+// sender: the word is simply taken from the row's text, as the original does.
+bool es_letra_chat(char c) { return std::isalnum(static_cast<unsigned char>(c)) || static_cast<unsigned char>(c) >= 0x80; }
+
+std::string_view palabra_en(std::string_view t, size_t col) {
+    size_t ini = col;
+    if (col < t.size() && es_letra_chat(t[col])) {
+        while (ini > 0 && es_letra_chat(t[ini - 1])) --ini;
+    } else {
+        ini = col + 1;
+    }
+    if (ini >= t.size()) return {};
+    size_t fin = ini;
+    while (fin < t.size() && es_letra_chat(t[fin])) ++fin;
+    return t.substr(ini, fin - ini);
+}
+
+// Byte of the row under pixel column px (glyphs are not fixed width here, so walk their widths).
+size_t byte_en_pixel(std::string_view t, int px) {
+    size_t i = 0;
+    while (i < t.size()) {
+        const size_t w = static_cast<u8>(t[i]) >= 0x81 && i + 1 < t.size() ? 2 : 1;
+        if (ancho_texto(t.data(), i + w) > px) break;
+        i += w;
+    }
+    return i;
+}
+
+void clic_doble_chat(App& a, std::string_view palabra, bool derecho) {
+    if (palabra.empty()) return;
+    const bool cerrada = a.cfg.chat_con_enter && !a.escribiendo_chat;
+    if (derecho || cerrada) a.chat_entrada.clear();
+    if (derecho) a.chat_entrada += "/exclude ";
+    a.chat_entrada.append(palabra);
+    if (!derecho) a.chat_entrada += ' ';
+    if (a.chat_entrada.size() > MAX_ENTRADA_CHAT) a.chat_entrada.resize(MAX_ENTRADA_CHAT);
+    if (a.cfg.chat_con_enter) a.escribiendo_chat = true;
+}
+
 // Registro (las últimas filas, ajustadas al ancho) y caja de entrada, que siempre tiene el foco
 // como en el original: se escribe y Enter envía; Esc borra; rueda o Re Pág/Av Pág desplazan.
 void dibujar_chat(App& a) {
@@ -1266,6 +1310,7 @@ void dibujar_chat(App& a) {
     u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
     if (!a.cfg.ui_simple && a.chat_tam > 0)  // backdrop for the rows added over the world
         a.gpu.rectangulo(ac.x - 6, ac.y, ac.ancho + 12, 3 * a.chat_tam * ALTO_GLIFO, clave_orden(CAPA_UI, 0), rgba(0, 0, 0, 110));
+    std::string_view visibles[CHAT_FILAS + 9] = {};  // text of each drawn row, for the double click
     int fila = filas - 1;
     for (u32 i = a.chat_desplazamiento; i < n && fila >= 0; ++i) {
         const LineaChat& l = a.chat.reciente(i);
@@ -1278,8 +1323,17 @@ void dibujar_chat(App& a) {
             t.remove_prefix(c);
             while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
         }
-        for (int p = k - 1; p >= 0 && fila >= 0; --p, --fila)
+        for (int p = k - 1; p >= 0 && fila >= 0; --p, --fila) {
             g.texto_sombra(partes[p], ac.x, ac.y + fila * ALTO_GLIFO, kt, l.color);
+            visibles[fila] = partes[p];
+        }
+    }
+    if ((e.doble_izquierdo || e.doble_derecho) && e.mx >= ac.x && e.mx < ac.x + ac.ancho && e.my >= ac.y - 4) {
+        const int r = std::max(0, e.my - ac.y) / ALTO_GLIFO;
+        if (r < filas) {
+            const std::string_view t = visibles[r];
+            clic_doble_chat(a, palabra_en(t, byte_en_pixel(t, e.mx - ac.x)), e.doble_derecho);
+        }
     }
     if (a.chat_desplazamiento > 0) g.texto_sombra("^", ac.x + ac.ancho - 6, ac.y, kt, rgba(255, 220, 120));
     dibujar_paleta_chat(a);
