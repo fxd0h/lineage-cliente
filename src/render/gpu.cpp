@@ -65,6 +65,8 @@ fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [
     }
     // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
     float4 c = (in.mezcla & 2) != 0 ? float4(in.color.rgb, t.a * in.color.a) : t * in.color;
+    // Bit 5 = grey: the texture's luminance times the tint (monochrome HUD icons).
+    if ((in.mezcla & 32) != 0) c.rgb = float3(dot(t.rgb, float3(0.299, 0.587, 0.114))) * in.color.rgb;
     if (c.a <= 0.0) discard_fragment();
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
     return float4(c.rgb * c.a, (in.mezcla & 9) != 0 ? 0.0 : c.a);

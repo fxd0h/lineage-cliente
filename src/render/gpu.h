@@ -36,7 +36,8 @@ static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader"
 // variant adds that flat color to the background.
 // PANTALLA: screen blend, dst' = src + dst * (1 - src) per channel (the original client's buff icons);
 // drawn in a second draw call after the normal ones of the same pass.
-enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8 };
+// GRIS (bit 5): the texture's luminance times the tint, for the original's monochrome bottom-strip icons.
+enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
 // Gpu::nivel_ventana lleva lo que se dibuja en CAPA_UI y CAPA_UI_TEXTO mientras se dibuja una

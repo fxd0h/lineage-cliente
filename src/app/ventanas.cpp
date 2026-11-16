@@ -221,16 +221,26 @@ bool tapa_a_otra(const App& a, IdVentana v) {
     return false;
 }
 
-// Botón con imagen N (normal) y N+1 (resaltado): ui::boton, con la ayuda arriba al pasar el puntero.
-static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda) {
+// Bottom-strip button. `n` is the pair's odd image (a dark grey-scale icon on a box); the original shows the even
+// image n + 1 at rest, but as a monochrome dark-brown icon, so it is drawn here by luminance times a sepia tint
+// (fitted against its screenshots, 1 px below the strip's top). Hovering shows the even image in colour. The mail
+// button (1585/1586) is plain art.
+static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
     Graficos& g = *a.g;
-    bool encima = ui::sobre(a.entrada, x, y, g.img(n).w, g.img(n).h);
+    const RegionAtlas reposo = g.img(mono ? n + 1 : n);
+    const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
+    const u64 k = clave_orden(CAPA_UI, 1);
+    const int dy = mono ? 1 : 0;
     if (encima) {
         int w = ancho_texto(ayuda.data(), ayuda.size());
         g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
         g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+        g.gpu().dibujar(g.img(n + 1), x, y + dy, k);
+    } else {
+        g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? rgba(255, 237, 208) : BLANCO,
+                           mono ? Mezcla::GRIS : Mezcla::NORMAL);
     }
-    return ui::boton(g, a.entrada, n, x, y);
+    return encima && a.entrada.clic;
 }
 
 void dibujar_botones_panel(App& a, int x, int y) {
@@ -238,7 +248,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
     if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) a.ayuda_teclas = !a.ayuda_teclas;
-    boton_panel(a, 1585, x + 507, y + BY, "Mail");  // no mail window yet
+    boton_panel(a, 1585, x + 507, y + BY, "Mail", false);  // no mail window yet
     if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
     if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
     if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;

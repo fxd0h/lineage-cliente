@@ -18,6 +18,8 @@ void main() {
     }
     // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
     vec4 c = (i_mezcla & 2u) != 0u ? vec4(i_color.rgb, t.a * i_color.a) : t * i_color;
+    // Bit 5 = grey: the texture's luminance times the tint (monochrome HUD icons).
+    if ((i_mezcla & 32u) != 0u) c.rgb = vec3(dot(t.rgb, vec3(0.299, 0.587, 0.114))) * i_color.rgb;
     if (c.a <= 0.0) discard;
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
     salida = vec4(c.rgb * c.a, (i_mezcla & 9u) != 0u ? 0.0 : c.a);

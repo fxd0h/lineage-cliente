@@ -347,6 +347,7 @@ struct App {
     u64 t_muerte = 0;  // cuándo se vio el aviso de muerte (0 = vivo)
     std::string chat_entrada;
     u32 chat_desplazamiento = 0;  // líneas hacia atrás desde la más reciente
+    int chat_barra_agarre = -1;   // original chat scrollbar: grab offset inside the thumb while dragging, -1 = idle
     bool ventana_estado = false;
     u8 pestana_estado = 0;  // 0 atributos, 1 equipo (equipo_ui.cpp)
     // Hechizos (Alt+S, F5–F12). Un hechizo con objetivo espera el clic en el objetivo

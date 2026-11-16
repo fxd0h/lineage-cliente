@@ -947,13 +947,14 @@ void dibujar_panel(App& a) {
     dibujar_teclas_f(a, X + 485, Y + 366);
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 120, Y + 462, clave_orden(CAPA_UI, 0));  // its left end hides under 1028
     {
-        // Chat scrollbar (caps 1052/1051, track 1047, thumb 1055), scroll button 1045 and the chat-mode "A" button 1041.
+        // F-key page strip (S3EP1U 0x4b2260): page-up button 1021 at (489,387), page digit 1025 + page at (489,414),
+        // page-down button 1023 at (489,429). The client keeps one page of F5-F12 boxes, so it always shows page 1.
         const u64 kb = clave_orden(CAPA_UI, 2);
-        g.gpu().dibujar(g.img(1052), X + 470, Y + 393, kb);
-        g.gpu().dibujar(g.img(1047), X + 470, Y + 401, kb);
-        g.gpu().dibujar(g.img(1051), X + 470, Y + 451, kb);
-        g.gpu().dibujar(g.img(1055), X + 469, Y + 436, kb);
-        g.gpu().dibujar(g.img(1045), X + 471, Y + 463, kb);
+        g.gpu().dibujar(g.img(1021), X + 489, Y + 387, kb);
+        g.gpu().dibujar(g.img(1025), X + 489, Y + 414, kb);
+        g.gpu().dibujar(g.img(1023), X + 489, Y + 429, kb);
+        // Chat-mode "A" button (globals 0x6f5cf8/0x6f5cf4 = 136, 464) and scroll button 1045 (0x4594d8: 470, 463).
+        g.gpu().dibujar(g.img(1045), X + 470, Y + 463, kb);
         g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
     }
     {
@@ -1175,6 +1176,44 @@ void dibujar_paleta_chat(App& a) {
     }
 }
 
+// Original chat scrollbar (S3EP1U 0x4599ea, ctor 0x47cd80): track 1047 at (470,401), up arrow 974 at (470,393),
+// down arrow 972 at (471,449), thumb 976 (15x16, x=469) riding the 51 px track. The thumb sits at the bottom
+// while the newest line shows; arrows step one line, the track and thumb drag, the wheel is handled in dibujar_chat.
+void dibujar_barra_chat(App& a, u32 total, int filas) {
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    const Vista vi = vista(a);
+    const int X = vi.hx + 470, Y = vi.hy;
+    constexpr int TRACK_Y = 401, TRACK_H = 51, THUMB_H = 16;
+    constexpr int LIBRE = TRACK_H - THUMB_H;
+    const u32 max = total > static_cast<u32>(filas) ? total - static_cast<u32>(filas) : 0;
+    a.chat_desplazamiento = std::min(a.chat_desplazamiento, max);
+    const bool sobre_sube = ui::sobre(e, X, Y + 393, 12, 10), sobre_baja = ui::sobre(e, X + 1, Y + 449, 11, 12);
+    if (e.pulsado && sobre_sube && a.chat_desplazamiento < max) ++a.chat_desplazamiento;
+    if (e.pulsado && sobre_baja && a.chat_desplazamiento > 0) --a.chat_desplazamiento;
+    auto thumb_y = [&] {
+        return Y + TRACK_Y + (max ? LIBRE - static_cast<int>(static_cast<i64>(LIBRE) * a.chat_desplazamiento / max) : LIBRE);
+    };
+    if (e.pulsado && max && ui::sobre(e, X - 1, Y + TRACK_Y, 15, TRACK_H)) {
+        const int ty = thumb_y();
+        a.chat_barra_agarre = ui::sobre(e, X - 1, ty, 15, THUMB_H) ? e.my - ty : THUMB_H / 2;
+        a.clic_consumido = true;
+    }
+    if (a.chat_barra_agarre >= 0) {
+        if (e.presionado && max) {
+            const int arriba = std::clamp(e.my - a.chat_barra_agarre - (Y + TRACK_Y), 0, LIBRE);
+            a.chat_desplazamiento = static_cast<u32>((static_cast<i64>(LIBRE - arriba) * max + LIBRE / 2) / LIBRE);
+        } else {
+            a.chat_barra_agarre = -1;
+        }
+    }
+    const u64 kb = clave_orden(CAPA_UI, 2);
+    g.gpu().dibujar(g.img(1047), X, Y + TRACK_Y, kb);
+    g.gpu().dibujar(g.img(sobre_sube && e.presionado ? 975 : 974), X, Y + 393, kb);
+    g.gpu().dibujar(g.img(sobre_baja && e.presionado ? 973 : 972), X + 1, Y + 449, kb);
+    g.gpu().dibujar(g.img(976), X - 1, thumb_y(), kb);
+}
+
 // Registro (las últimas filas, ajustadas al ancho) y caja de entrada, que siempre tiene el foco
 // como en el original: se escribe y Enter envía; Esc borra; rueda o Re Pág/Av Pág desplazan.
 void dibujar_chat(App& a) {
@@ -1186,8 +1225,9 @@ void dibujar_chat(App& a) {
     int paso = (ui::sobre(e, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h) ? e.rueda : 0) + (e.pagina_arriba ? filas : 0) -
                (e.pagina_abajo ? filas : 0);
     i64 d = static_cast<i64>(a.chat_desplazamiento) + paso;
-    a.chat_desplazamiento = static_cast<u32>(std::clamp<i64>(d, 0, n > 0 ? n - 1 : 0));
+    a.chat_desplazamiento = static_cast<u32>(std::clamp<i64>(d, 0, n > static_cast<u32>(filas) ? n - static_cast<u32>(filas) : 0));
 
+    if (!a.cfg.ui_simple) dibujar_barra_chat(a, n, filas);
     u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
     if (!a.cfg.ui_simple && a.chat_tam > 0)  // backdrop for the rows added over the world
         a.gpu.rectangulo(ac.x - 6, ac.y, ac.ancho + 12, 3 * a.chat_tam * ALTO_GLIFO, clave_orden(CAPA_UI, 0), rgba(0, 0, 0, 110));
