@@ -57,6 +57,11 @@ public:
     // Texto CP949 con la fuente original; devuelve el ancho en píxeles.
     // HD text: glyph as a field (recursos/fuente_hd.h), cached apart from the pixel glyph. Invalid region if blank.
     const RegionAtlas& glifo_hd(u32 g);
+    // True when text drawn with this order key goes through the HD pass (UI layers, HD enabled and available).
+    bool texto_hd_para(u64 clave_orden) const;
+    // HD field of a glyph given as a 1-bit mask (`filas` rows of `ancho` bits, bit 0 = leftmost, one byte per row);
+    // `id` must be unique per glyph. Used by the HUD digit font, which is not in the font files.
+    const RegionAtlas& glifo_hd_mascara(u32 id, int ancho, int filas, const u8* bits);
     int texto(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
     // Texto de las páginas HTML de la interfaz original: cara proporcional, sin sombra ni contorno.
     int texto_html(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
@@ -94,7 +99,6 @@ private:
     const JuegoTiles* juego_tiles(u32 n, bool& pendiente);
     const ArchivoSpr* archivo_spr(GfxId gfx, u16 sub, bool& pendiente);
 
-    bool texto_hd_para(u64 clave_orden) const;
     Gpu& gpu_;
     const Recursos& rec_;
     const FuenteBitmap& fuente_;

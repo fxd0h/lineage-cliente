@@ -36,3 +36,4 @@ runtime from the user's own game files and cached in the atlas like any glyph (n
 - `captura` (logical, pre-filter) forces pixel text for that frame; use `captura-final` to see HD text.
 - A translucent window above text hides it completely where it has any alpha (occluders are not blended).
 - World-layer text (names, damage numbers) is not HD yet.
+- The 4x6 HUD digit font (pantalla_juego.cpp) goes through `Graficos::glifo_hd_mascara`, outline passes included.

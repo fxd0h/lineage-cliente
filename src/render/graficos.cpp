@@ -277,6 +277,19 @@ const RegionAtlas& Graficos::glifo_hd(u32 g) {
     });
 }
 
+const RegionAtlas& Graficos::glifo_hd_mascara(u32 id, int ancho, int filas, const u8* bits) {
+    return cargar(clave(T_GLIFO, (1u << 29) | id), [&] {
+        ImagenRGBA m;
+        m.preparar(static_cast<u16>(ancho), static_cast<u16>(filas));
+        for (int y = 0; y < filas; ++y)
+            for (int x = 0; x < ancho; ++x)
+                if (bits[y] >> x & 1) m.px[static_cast<size_t>(y) * ancho + x] = 0xFFFFFFFFu;
+        if (!campo_de_mascara(m, tmp_)) return Carga::FALLO;
+        escala_tmp_ = HD_ESCALA;
+        return Carga::OK;
+    });
+}
+
 // Layers below the UI are drawn before the scaling filter, so only UI text can go through the HD pass.
 bool Graficos::texto_hd_para(u64 clave_orden) const { return (clave_orden >> 56) >= CAPA_UI && gpu_.texto_hd(); }
 

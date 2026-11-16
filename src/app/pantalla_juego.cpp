@@ -980,6 +980,14 @@ int avance_hud(char c) { return c == '1' || c == '/' ? 4 : c == '.' ? 2 : 5; }
 void texto_hud_pasada(Graficos& g, int x, int y, std::string_view t, u64 k, u32 color) {
     for (const char c : t) {
         if (const int o = glifo_hud(c); o >= 0) {
+            if (g.texto_hd_para(k)) {  // HD pass: the same 4x6 mask as a smooth field
+                u8 filas[6];
+                for (int fila = 0; fila < 6; ++fila) filas[fila] = (FUENTE_HUD[o + fila / 2] >> (fila % 2 ? 4 : 0)) & 15;
+                g.gpu().dibujar_en(g.glifo_hd_mascara(0x1000 + static_cast<u32>(o), 4, 6, filas), static_cast<float>(x),
+                                   static_cast<float>(y), k, color, Mezcla::TEXTO_HD);
+                x += avance_hud(c);
+                continue;
+            }
             for (int fila = 0; fila < 6; ++fila) {
                 const u8 bits = (FUENTE_HUD[o + fila / 2] >> (fila % 2 ? 4 : 0)) & 15;
                 for (int col = 0; col < 4; ++col)
