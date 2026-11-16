@@ -565,7 +565,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             // (S_PinkName). Los monstruos, según su nivel respecto del jugador (nivel_relativo).
             const bool personaje = !texto(a.mundo, o.col<O_NOMBRE>()[s]).empty() && texto(a.mundo, o.col<O_NOMBRE>()[s])[0] != '$';
             u32 color = rgba(200, 220, 255);
-            if (personaje) color = ahora < o.col<O_ROSA>()[s] ? rgba(255, 130, 200) : color_alineamiento(o.col<O_LEGAL>()[s]);
+            if (personaje) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
             else if (o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO) {
                 static const u32 COLORES[] = {rgba(240, 240, 240), rgba(120, 230, 120), rgba(255, 215, 80), rgba(255, 90, 80)};
                 color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
@@ -1029,8 +1029,11 @@ void dibujar_panel(App& a) {
     u32 c = rgba(255, 255, 254);
     std::snprintf(t, sizeof t, "%d", j.ca);
     g.texto(t, X + 24, Y + 447, kt, c);
-    std::snprintf(t, sizeof t, "%d", j.legal);
-    g.texto(t, X + 88, Y + 447, kt, c);
+    // Alignment box (S3EP1U 0x4b2970): icon 1032 (< 0) / 1033 (0..500) / 1034 (> 500) at (70,446), then the value in white,
+    // centred on x = 109 (the original digit font starts at 109 - 2 * digits).
+    g.gpu().dibujar(g.img(j.legal < 0 ? 1032 : j.legal <= 500 ? 1033 : 1034), X + 70, Y + 446, clave_orden(CAPA_UI, 3));
+    const int n = std::snprintf(t, sizeof t, "%d", j.legal);
+    g.texto(t, X + 109 + n / 2 - ancho_texto(t, static_cast<size_t>(n)) / 2, Y + 447, kt, c);
     std::snprintf(t, sizeof t, "%d%%", j.peso * 100 / 240);
     g.texto(t, X + 24, Y + 464, kt, c);
     std::snprintf(t, sizeof t, "%d%%", j.comida * 100 / 225);

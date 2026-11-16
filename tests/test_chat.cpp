@@ -253,15 +253,16 @@ TEST_CASE("Chat: códigos de color y miles") {
     CHECK(std::string(con_miles(1234567, b, sizeof b)) == "1.234.567");
 }
 
-TEST_CASE("Chat: color del nombre según el alineamiento") {
-    auto c = [](u8 r, u8 g, u8 b) { return static_cast<u32>(r | (g << 8) | (b << 16)) | 0xFF000000u; };
-    CHECK(color_alineamiento(0) == c(240, 240, 240));
-    CHECK(color_alineamiento(8000) == c(150, 215, 255));
-    CHECK(color_alineamiento(16000) == c(70, 120, 255));
-    CHECK(color_alineamiento(32767) == c(70, 120, 255));
-    CHECK(color_alineamiento(-8000) == c(255, 170, 195));
-    CHECK(color_alineamiento(-16000) == c(255, 60, 50));
-    CHECK(color_alineamiento(-32768) == c(255, 60, 50));
-    CHECK(color_alineamiento(4000) == c(195, 228, 247));  // punto medio del primer tramo
-    CHECK(color_alineamiento(-4000) != color_alineamiento(4000));
+TEST_CASE("Chat: color del nombre según el alineamiento (0x4cc140)") {
+    CHECK(color_alineamiento(0) == rgb555(0x7fff));
+    CHECK(color_alineamiento(499) == rgb555(0x7fff));
+    CHECK(color_alineamiento(500) == rgb555((30 << 10) | (30 << 5) | 31));  // first lawful step
+    CHECK(color_alineamiento(500 + 255) == color_alineamiento(500));
+    CHECK(color_alineamiento(500 + 256) == rgb555((29 << 10) | (29 << 5) | 31));
+    CHECK(color_alineamiento(8180) == rgb555(0x001f));  // full blue
+    CHECK(color_alineamiento(32767) == rgb555(0x001f));
+    CHECK(color_alineamiento(-1) == rgb555(0x7c00 | (30 << 5) | 30));  // first chaotic step
+    CHECK(color_alineamiento(-64) == rgb555(0x7c00 | (29 << 5) | 29));
+    CHECK(color_alineamiento(-1920) == rgb555(0x7c00));  // full red
+    CHECK(color_alineamiento(-32768) == rgb555(0x7c00));
 }

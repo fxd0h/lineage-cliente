@@ -171,8 +171,17 @@ void draw_attributes(App& a, int x, int y) {
     boxed(84, 160, 28);
     num(magic_bonus(j.int_));  // 0x4aa700: from INT only
     boxed(84, 173, 28);
-    num(j.legal);  // the wide box on that row: alignment (word set by the lawful packets, drawn at 0x4b4647)
-    boxed(115, 173, 38);
+    // Alignment (S3EP1U 0x4b4cb2 / 0x4b3d44): the word image 987 chaotic (< 0) / 988 (0..499) / 989 lawful (0x4b8520) at
+    // (121,167) of the window, and the value in the wide box below it in the character's name colour (0x4cc140).
+    g.gpu().dibujar(g.img(j.legal < 0 ? 987 : j.legal < 500 ? 988 : 989), x + 115, y + 158, KEY_CONTROL);
+    num(j.legal);
+    {
+        const Slot yo = a.mundo.objetos.buscar(j.id);
+        const bool pink = yo != SIN_SLOT && a.entrada.ahora_ms < a.mundo.objetos.col<O_ROSA>()[yo];
+        const u32 name_color = pink ? rgb555(0x767d) : color_alineamiento(j.legal);
+        const int w = ancho_texto(t, std::strlen(t));
+        g.texto_sombra(t, static_cast<float>(x + 115 + (38 - w) / 2), static_cast<float>(y + 173 + (13 - ALTO_GLIFO) / 2 + 1), kt, name_color);
+    }
     num(escape_rating(cls, j.nivel, j.des));
     boxed(43, 222, 25);
     const i32 elements[] = {j.tierra, j.agua, j.fuego, j.viento};  // earth, water | fire, wind

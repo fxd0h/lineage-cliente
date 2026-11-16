@@ -85,16 +85,16 @@ u32 color_codigo(char c, u32 normal) {
     return es_codigo_color(c) ? rgb555(PALETA_F[c - 0x30]) : normal;
 }
 
+// Original name colour (S3EP1U 0x4cc140, RGB555 stored in the object): chaotic (< 0) fades from white to full red over
+// -64 per step, 0..499 stays white, lawful (>= 500) fades from white to full blue over 256 per step.
 u32 color_alineamiento(i32 legal) {
-    constexpr int MEDIO = 8000, TOPE = 16000;
-    struct Rgb { int r, g, b; };
-    constexpr Rgb BLANCO_{240, 240, 240}, CELESTE{150, 215, 255}, AZUL{70, 120, 255}, ROSA{255, 170, 195}, ROJO{255, 60, 50};
-    const int d = std::min(std::abs(legal), TOPE);
-    const Rgb a = d < MEDIO ? BLANCO_ : legal > 0 ? CELESTE : ROSA;
-    const Rgb b = d < MEDIO ? (legal > 0 ? CELESTE : ROSA) : legal > 0 ? AZUL : ROJO;
-    const int t = d < MEDIO ? d : d - MEDIO;  // de 0 a MEDIO dentro del tramo
-    auto mezcla = [&](int x, int y) { return static_cast<u8>(x + (y - x) * t / MEDIO); };
-    return color(mezcla(a.r, b.r), mezcla(a.g, b.g), mezcla(a.b, b.b));
+    if (legal < 0) {
+        const int d = 31 - std::min((-legal >> 6) + 1, 31);
+        return rgb555(static_cast<u16>(0x7c00 | (d << 5) | d));
+    }
+    if (legal < 500) return rgb555(0x7fff);
+    const int d = 31 - std::min(((legal - 500) >> 8) + 1, 31);
+    return rgb555(static_cast<u16>((d << 10) | (d << 5) | 0x1f));
 }
 
 const char* con_miles(u64 v, char* buf, size_t n) {

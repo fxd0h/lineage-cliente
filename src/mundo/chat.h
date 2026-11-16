@@ -60,8 +60,8 @@ size_t expandir_desc(const TablaTexto& desc, std::string_view t, char* destino, 
 inline bool es_codigo_color(char c) { return c >= 0x30 && c < 0x65; }
 u32 color_codigo(char c, u32 normal);
 
-// Color del nombre de un jugador según su alineamiento: blanco en 0, hacia celeste y azul (16000 o más)
-// o hacia rosa y rojo (-16000 o menos).
+// Color del nombre de un jugador según su alineamiento (0x4cc140 del original): blanco de 0 a 499, hacia azul
+// desde 500 y hacia rojo bajo 0. También colorea el número de alineamiento de la ventana de estado.
 u32 color_alineamiento(i32 legal);
 
 // Número con punto cada tres cifras (10.000), en buf.
