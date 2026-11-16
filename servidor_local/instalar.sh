@@ -79,4 +79,6 @@ sed_i \
     -e 's|<entry key="Password"></entry>|<entry key="Password">l1j</entry>|' \
     "$CFG"
 grep -q '127.0.0.1:3307' "$CFG" || { echo "No se pudo ajustar $CFG"; exit 1; }
+# Like the original game: monster drops fall to the ground instead of going straight to the inventory.
+sed_i -e 's|<entry key="AutoLoot">[0-9]</entry>|<entry key="AutoLoot">0</entry>|' l1j-jp/config/altsettings.properties.xml
 echo "Listo. Arrancar con ./arrancar.sh (las cuentas se crean solas al primer login)."

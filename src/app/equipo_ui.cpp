@@ -20,20 +20,21 @@ namespace {
 constexpr u32 IMG_EQUIPO = 981;  // 179×275
 
 struct Recuadro {
-    u8 uso;  // tipo de uso del ítem (ItemTable)
-    int x, y, w, h;
+    u8 uso;       // item use type (ItemTable)
+    int px, py;   // icon top-left from the window corner: table at 0x8f0818 (filled by 0x4b2f50), used by 0x4b3220
     const char* nombre;
 };
-// Tipos de uso: 1 arma, 2 armadura, 18 camiseta, 19 capa, 20 guantes, 21 botas, 22 casco, 24 collar,
-// 25 escudo, 37 cinturón, 40 aro.
+// Use types: 1 weapon, 2 armor, 18 T-shirt, 19 cloak (also 10), 20 gloves, 21 boots, 22 helm, 24 necklace,
+// 25 shield, 37 belt, 40 earring. The slot chosen per type is 0x4b30d0's classification.
 constexpr Recuadro RECUADROS[] = {
-    {22, 55, 36, 37, 33, "Helm"},     {40, 93, 45, 36, 33, "Earring"}, {19, 35, 80, 35, 33, "Cloak"},
-    {24, 70, 80, 35, 33, "Amulet"},   {18, 105, 80, 35, 33, "T-shirt"}, {2, 71, 122, 36, 33, "Armor"},
-    {20, 25, 116, 36, 33, "Gloves"},  {1, 25, 149, 36, 63, "Weapon"},   {25, 113, 116, 36, 33, "Shield"},
-    {37, 113, 149, 36, 32, "Belt"},   {21, 71, 180, 36, 33, "Boots"},
+    {22, 77, 46, "Helm"},     {40, 38, 52, "Earring"}, {19, 116, 89, "Cloak"},  {24, 116, 52, "Amulet"},
+    {18, 38, 89, "T-shirt"},  {2, 77, 89, "Armor"},    {20, 33, 189, "Gloves"}, {1, 33, 157, "Weapon"},
+    {25, 121, 125, "Shield"}, {37, 78, 131, "Belt"},   {21, 78, 189, "Boots"},
 };
 constexpr u8 USO_ANILLO = 23;
-constexpr int ANILLOS_X = 113, ANILLOS_Y = 184, LADO_ANILLO = 17;
+// The two ring slots (the first ring takes the first one).
+constexpr int ANILLO_POS[2][2] = {{33, 125}, {121, 157}};
+constexpr int LADO_ANILLO = 32;
 
 }  // namespace
 
@@ -42,7 +43,9 @@ void dibujar_equipo(App& a, int x0, int y0) {
     const EntradaFrame& e = a.entrada;
     const Inventario& inv = a.mundo.inventario;
     const TablaItems& t = inv.items;
-    const u64 kf = clave_orden(CAPA_UI, 3), ki = clave_orden(CAPA_UI, 5), kt = clave_orden(CAPA_UI_TEXTO, 5);
+    const bool framed_ui = uses_original_frame(a, IdVentana::ESTADO);
+    // In the original frame the icons go above background (10) and frame (11), below the ornament (15).
+    const u64 kf = clave_orden(CAPA_UI, 3), ki = clave_orden(CAPA_UI, framed_ui ? 14 : 5), kt = clave_orden(CAPA_UI_TEXTO, 5);
     // Qué hay equipado en cada parte.
     constexpr size_t N = std::size(RECUADROS);
     Slot en[N], anillos[4];
@@ -109,10 +112,12 @@ void dibujar_equipo(App& a, int x0, int y0) {
         const bool framed = uses_original_frame(a, IdVentana::ESTADO);
         const int x = x0 + (framed ? 6 : 34), y = y0 + (framed ? 9 : 24);
         if (!framed) g.gpu().dibujar(fondo, x, y, kf);
+        // Icons are placed in window coordinates (the image origin is 6,9 inside the original frame).
+        const int ox = x - 6, oy = y - 9;
         for (size_t i = 0; i < N; ++i)
-            if (en[i] != SIN_SLOT) poner(en[i], x + RECUADROS[i].x, y + RECUADROS[i].y, RECUADROS[i].w, RECUADROS[i].h);
-        for (int i = 0; i < nanillos; ++i)
-            poner(anillos[i], x + ANILLOS_X + i % 2 * (LADO_ANILLO + 2), y + ANILLOS_Y + i / 2 * (LADO_ANILLO + 2), LADO_ANILLO, LADO_ANILLO);
+            if (en[i] != SIN_SLOT) poner(en[i], ox + RECUADROS[i].px, oy + RECUADROS[i].py, 32, 32);
+        for (int i = 0; i < std::min(nanillos, 2); ++i)
+            poner(anillos[i], ox + ANILLO_POS[i][0], oy + ANILLO_POS[i][1], LADO_ANILLO, LADO_ANILLO);
         // La AC en su campo.
         std::snprintf(txt, sizeof txt, "%d", a.mundo.jugador.ca);
         g.texto(txt, static_cast<float>(x + 112 - ancho_texto(txt, std::strlen(txt)) / 2), static_cast<float>(y + 223), kt,

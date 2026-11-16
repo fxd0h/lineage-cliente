@@ -101,6 +101,29 @@ int magic_level(int cls, int level) {
     }
 }
 
+// Magic bonus from INT, as 0x4aa700 of the original client.
+int magic_bonus(int in) {
+    if (in <= 2) return -3;
+    if (in <= 5) return -2;
+    if (in <= 8) return -1;
+    if (in <= 11) return 0;
+    if (in <= 14) return 1;
+    if (in <= 17) return 2;
+    if (in <= 24) return in - 15;
+    if (in <= 35) return 10;
+    if (in <= 42) return 11;
+    if (in <= 49) return 12;
+    if (in <= 77) return 13;
+    return in - 25;
+}
+
+// Evasion rating as 0x4b0790: DEX/2 - 4 + level / class divisor (equipment/buff terms are not sent by the server).
+int escape_rating(int cls, int level, int dex) {
+    constexpr int DIV[] = {8, 4, 6, 10, 4, 7, 9};  // prince, knight, elf, wizard, dark elf, dragon knight, illusionist
+    const int d = (cls >= 0 && cls < 7) ? DIV[cls] : 8;
+    return dex / 2 - 4 + level / d;
+}
+
 // The attributes image (982): values in the boxes printed on it, coordinates measured on the image.
 void draw_attributes(App& a, int x, int y) {
     Graficos& g = *a.g;
@@ -135,8 +158,12 @@ void draw_attributes(App& a, int x, int y) {
     const int cls = (a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) ? a.pjs[a.pj_sel].v[PJ_CLASE] : -1;
     num(magic_level(cls, j.nivel));
     boxed(84, 160, 28);
-    num(j.sp);
+    num(magic_bonus(j.int_));  // 0x4aa700: from INT only
     boxed(84, 173, 28);
+    num(j.legal);  // the wide box on that row: alignment (word set by the lawful packets, drawn at 0x4b4647)
+    boxed(115, 173, 38);
+    num(escape_rating(cls, j.nivel, j.des));
+    boxed(43, 222, 25);
     const i32 elements[] = {j.tierra, j.agua, j.fuego, j.viento};  // earth, water | fire, wind
     for (int i = 0; i < 4; ++i) {
         num(elements[i]);
