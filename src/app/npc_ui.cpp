@@ -29,7 +29,7 @@ constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
 // 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 47 and 293 over the track 1354.
 constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
 constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_X = 21, NPC_TEXT_Y = 48, NPC_TEXT_W = 197, NPC_TEXT_H = 251;
-constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 12;  // scroll steps of a text line
+constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 13;  // scroll step = text line height (0x43c080 / 0x43c0b0 use 0x435370 = 13)
 
 // Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
 bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_original; }
@@ -284,7 +284,10 @@ void dibujar_pagina(App& a, int x0, int y0) {
     const int left = simple ? MARGEN : NPC_TEXT_X + (orig_text ? HTML_INSET_L : 0);
     const int top = simple ? ARRIBA : NPC_TEXT_Y + (orig_text ? HTML_INSET_T : 0);
     const int view_h = simple ? ALTO_PAGINA : NPC_TEXT_H - (orig_text ? HTML_INSET_T + HTML_INSET_B : 0);
-    const int max_desp = std::max(0, p.alto - view_h);
+    // Original page object (0x43c080 / 0x43c0b0): line up/down move the pixel offset [+0x74] by one text line, and the
+    // offset stops at content height [+0x78] minus one line, so the range is alto - 13 (not alto - view). The bar only
+    // exists here when the content overflows the view.
+    const int max_desp = simple ? std::max(0, p.alto - view_h) : (p.alto > view_h ? p.alto - NPC_LINE : 0);
     if (!simple) {  // the scroll bar works in text lines
         if (draw_original_frame(a, x0, y0, IMG_NPC_BG, 8, 11, IMG_NPC_FRAME, NPC_CLOSE_X, NPC_CLOSE_Y)) {
             cerrar(a);
@@ -294,11 +297,13 @@ void dibujar_pagina(App& a, int x0, int y0) {
         u32 line = static_cast<u32>(std::clamp(a.npc_desplazamiento, 0, max_desp) / NPC_LINE);
         const u32 prev = line;
         original_scrollbar(a, a.scroll.tienda, x0 + NPC_SCROLL_X, y0 + NPC_SCROLL_Y, NPC_SCROLL_H,
-                           static_cast<u32>((p.alto + NPC_LINE - 1) / NPC_LINE), static_cast<u32>(view_h / NPC_LINE), line, false,
+                           static_cast<u32>(max_desp / NPC_LINE + 1), 1, line, false,
                            IMG_NPC_TRACK, -2);
         if (line != prev) a.npc_desplazamiento = static_cast<int>(line) * NPC_LINE;
     }
-    if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * 30, 0, max_desp);
+    // The original page has no wheel handler (the 0x20a handlers belong to other controls); the fork lets the wheel
+    // do one line step per notch.
+    if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * NPC_LINE, 0, max_desp);
     a.npc_desplazamiento = std::clamp(a.npc_desplazamiento, 0, max_desp);
     const int ox = x0 + left, oy = y0 + top - a.npc_desplazamiento;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), ki = clave_orden(CAPA_UI, 13);
@@ -308,14 +313,21 @@ void dibujar_pagina(App& a, int x0, int y0) {
     int sobre_vinculo = -1;
     if (orig_text) {
         for (const ElementoHtml& el : p.elementos)
-            if (el.vinculo_len && ui::sobre(e, ox + el.x, oy + el.y - 1, el.w, el.h + 2)) sobre_vinculo = static_cast<int>(el.vinculo_ofs);
+            if (el.vinculo_len && e.my >= y0 + top && e.my < y0 + top + view_h && ui::sobre(e, ox + el.x, oy + el.y - 1, el.w, el.h + 2)) sobre_vinculo = static_cast<int>(el.vinculo_ofs);
     }
     for (const ElementoHtml& el : p.elementos) {
         const int x = ox + el.x, y = oy + el.y;
-        // Fuera de la vista (por la primera línea de texto: un botón un poco más alto que el resto
-        // de su línea no se pierde).
-        if (y < y0 + top - 2 || y + (orig_text ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO) > y0 + top + view_h + 2) continue;
-        const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2);
+        // Clip to the page rect (the original intersects the draw rect with the page rect, 0x4367e5..0x436816): an element
+        // outside is skipped, an image that straddles an edge is cropped, a text run must fit whole (no scissor in the GPU).
+        const int view_top = y0 + top, view_bottom = view_top + view_h;
+        const int text_h = orig_text ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO;
+        const int el_h = el.tipo == ElementoHtml::Tipo::IMAGEN ? el.h : text_h;
+        if (simple) {  // fork window: first-line test, a taller button is not lost
+            if (y < view_top - 2 || y + text_h > view_bottom + 2) continue;
+        } else if (y + el_h <= view_top || y >= view_bottom || (el.tipo == ElementoHtml::Tipo::TEXTO && (y < view_top || y + el_h > view_bottom))) {
+            continue;
+        }
+        const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2) && (simple || (e.my >= view_top && e.my < view_bottom));
         if (encima) bajo = &el;
         if (el.tipo == ElementoHtml::Tipo::IMAGEN) {
             // Buttons: N.img, and with the pointer over it N+1 only when it is the same size. N+1 is
@@ -323,7 +335,15 @@ void dibujar_pagina(App& a, int x0, int y0) {
             const RegionAtlas base = g.img(el.imagen);  // copy: loading N+1 may move the cache
             const RegionAtlas hover = encima ? g.img(el.imagen + 1) : base;
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
-            g.gpu().dibujar(use_hover ? hover : base, x, y, ki);
+            RegionAtlas r = use_hover ? hover : base;
+            const int cut_top = std::max(0, view_top - y), cut_bottom = simple ? 0 : std::max(0, y + el.h - view_bottom);
+            if (cut_top || cut_bottom) {  // crop the region (texel rect; w/h/oy are logical)
+                const int sc = static_cast<int>(r.escala_texel());
+                r.y = static_cast<u16>(r.y + cut_top * sc);
+                r.h = static_cast<u16>(std::max(0, r.h - cut_top - cut_bottom));
+                r.oy = static_cast<i16>(r.oy + cut_top);
+            }
+            g.gpu().dibujar(r, x, y, ki);
         } else {
             if (orig_text) {  // no underline: the client never sets the underline flag of the run style
                 const bool verde = el.vinculo_len && static_cast<int>(el.vinculo_ofs) == sobre_vinculo;
