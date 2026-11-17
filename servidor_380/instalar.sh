@@ -34,6 +34,10 @@ if [ ! -d l1jgo ]; then
     git clone -q "$REPO" l1jgo
     git -C l1jgo checkout -q "$COMMIT"
 fi
+# Server patches (idempotent): send the clan emblem id in the char packs so clients can download it.
+for p in emblem_id.patch; do
+    git -C l1jgo apply --check -R "../$p" 2>/dev/null || git -C l1jgo apply "../$p"
+done
 (cd l1jgo && GOTOOLCHAIN=go1.23.4 GOMAXPROCS=4 nice -n 19 "$GO" build -o bin/l1jgo ./cmd/l1jgo)
 
 if [ ! -d datos ]; then

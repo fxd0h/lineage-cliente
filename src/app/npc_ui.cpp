@@ -215,6 +215,9 @@ void activar(App& a, std::string_view vinculo, bool es_enlace) {
     }
     if (es_enlace) {
         abrir_pagina(a, a.npc, vinculo, a.npc_datos);
+    } else if (vinculo == "create") {  // bpledge2: the client asks for the name (string 83) and sends C_CreateClan itself
+        accion_comunidad(a, vinculo);
+        cerrar(a);
     } else if (vinculo == "buyspell") {
         enviar(a, cmd::pedir_magia(a.op, a.npc));
     } else if (vinculo == "fix") {  // herrero: la lista de armas dañadas (S_FixWeaponList)

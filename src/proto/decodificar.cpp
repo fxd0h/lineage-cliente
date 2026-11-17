@@ -538,21 +538,27 @@ bool mascota(Lector& l, Evento& e) {
         e.tipo = Ev::REINICIO;
         e.v[RE_TIPO] = sub;
         if (sub == 1) {
-            e.v[RE_HP] = l.h();
-            e.v[RE_MP] = l.h();
+            e.v[RE_HP] = l.vida();
+            e.v[RE_MP] = l.vida();
             e.v[RE_AC] = l.c();
             e.v[RE_MAX] = l.c();
             e.v[RE_NIVEL] = 1;
         } else if (sub == 2) {
             e.v[RE_NIVEL] = l.c();
             e.v[RE_MAX] = l.c();
-            e.v[RE_HP] = l.h();
-            e.v[RE_MP] = l.h();
+            e.v[RE_HP] = l.vida();
+            e.v[RE_MP] = l.vida();
             e.v[RE_AC] = l.h();
             for (int i = 0; i < 6; ++i) e.v[RE_FUE + i] = l.c();
         } else {
             e.v[RE_PUNTOS] = l.c();
         }
+        return true;
+    }
+    if (sub == 0x3c && l.perfil.texto_big5) {  // 3.80C S_CharSynAck emblem sync: d object, d emblem id
+        e.tipo = Ev::CLAN_EMBLEMA_OBJETO;
+        e.id = l.d();
+        e.v[0] = static_cast<i32>(l.d());
         return true;
     }
     if (sub != 0x0c) {
@@ -850,6 +856,10 @@ constexpr Decodificador TABLA[] = {
     fondos_castillo,  // DEPOSIT
     fondos_castillo,  // DRAWAL
     usar_mapa,      // USEMAP
+    mensaje,        // REDMESSAGE
+    ignorar,        // CLANNAME
+    ignorar,        // CLANATTENTION
+    ignorar,        // CHANGENAME
 };
 static_assert(sizeof(TABLA) / sizeof(TABLA[0]) == static_cast<size_t>(Srv::CANTIDAD));
 
@@ -869,7 +879,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
         // c 42, c 105, c 0, c 2, 104 × c (índices o 0xff), c 100, c 0, c n, c 0; y n × (h x, h y, s nombre,
         // h mapa, d id). Un evento por marcador, como S_Bookmarks.
         l.c();
-        for (int i = 0; i < 3 + 104 + 2; ++i) l.c();
+        for (int i = 0; i < 3 + l.perfil.marcadores_ranuras + 2; ++i) l.c();
         const int n = l.c();
         l.c();
         for (int i = 0; i < n && !l.error; ++i) {

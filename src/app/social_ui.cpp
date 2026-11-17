@@ -167,6 +167,8 @@ void confirmar_prompt(App& a, std::string_view texto) {
         enviar(a, cmd::guerra(a.op, cmd::GUERRA_RENDIRSE, texto));
     } else if (accion == "cease") {
         enviar(a, cmd::guerra(a.op, cmd::GUERRA_TERMINAR, texto));
+    } else if (accion == "create") {
+        enviar(a, cmd::crear_clan(a.op, texto));
     } else if (accion == "emblem") {  // 0x40d070 -> 0x4070c0
         subir_emblema(a, texto);
     } else if (accion == "checkbmp") {  // 0x40d010 -> 0x406fc0
@@ -315,6 +317,7 @@ void accion_comunidad(App& a, std::string_view accion) {
         if (!principe) return;
         abrir_prompt(a, cadena(a, accion == "war" ? 577 : accion == "surrender" ? 578 : 579), accion);
     }
+    else if (accion == "create") abrir_prompt(a, cadena(a, 83), accion);  // bpledge2: "What will be the name of your Blood Pledge?"
     else if (accion == "emblem") abrir_prompt(a, cadena(a, 576), accion);    // 0x40d030
     else if (accion == "checkbmp") abrir_prompt(a, cadena(a, 575), accion);  // 0x40cfd0
     // alliance*, pledgefocus*: not wired (audit U-D7)

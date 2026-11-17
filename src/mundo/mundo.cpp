@@ -409,6 +409,11 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (s != SIN_SLOT) o.col<O_TITULO>()[s] = guardar_texto(m, e.s[0]);
             break;
         }
+        case Ev::CLAN_EMBLEMA_OBJETO: {  // 3.80C emblem sync: the object's clan (emblem) id changed
+            Slot s = o.buscar(e.id);
+            if (s != SIN_SLOT) o.col<O_CLAN>()[s] = static_cast<u32>(e.v[0]);
+            break;
+        }
         case Ev::SP_MR: m.jugador.sp = e.v[0]; m.jugador.mr = e.v[1]; break;
         case Ev::DEFENSA: {
             EstadoJugador& j = m.jugador;

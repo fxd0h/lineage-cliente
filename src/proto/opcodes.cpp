@@ -72,11 +72,9 @@ constexpr ParCli JP363_CLI[] = {
 
 // L1J 3.80C de Taiwán: internal/net/packet/opcodes.go de L1JGO-Whale (commit 9a19405), por nombre.
 // Sin equivalente en esa tabla (quedan en 0 y no se mandan o no se reconocen): COMMONNEWS, TELEPORT,
-// BLUEMESSAGE, DELSKILL, PETCTRL y, del cliente, CLAN, PETMENU, USEPETITEM, SELECTTARGET,
+// BLUEMESSAGE, DELSKILL y, del cliente, PETMENU, USEPETITEM, SELECTTARGET,
 // SELECTLIST, RETURNTOLOGIN, BOARDNEXT, CHANGEWARTIME.
-// El servidor manda y el cliente aún no decodifica: S_CharSynAck (64), S_RedMessage (105),
-// S_ChangeName (46), S_ClanName (72), S_ClanAttention (200), S_ClanMatching (0). Ver
-// docs/analisis/OPCODES_PENDIENTES.md.
+// S_CharSynAck (64) shares PETCTRL's decoder (subtype in the first byte); S_ClanMatching (0) is still unmapped.
 constexpr ParSrv TW380_SRV[] = {
     {139, Srv::SERVERVERSION}, {233, Srv::LOGINRESULT},   {178, Srv::CHARAMOUNT},   {93, Srv::CHARLIST},
     {127, Srv::NEWCHARPACK},   {98, Srv::NEWCHARWRONG},   {6, Srv::DETELECHAROK},   {223, Srv::LOGINTOGAME},
@@ -101,6 +99,9 @@ constexpr ParSrv TW380_SRV[] = {
     {156, Srv::HOUSELIST},     {187, Srv::HOUSEMAP},      {84, Srv::WAR},           {69, Srv::CASTLEMASTER},
     {185, Srv::TAXRATE},       {4, Srv::DEPOSIT},         {141, Srv::DRAWAL},
     // USEMAP: the 3.80c Opcodes.java has no S_OPCODE_USEMAP, so the number is unknown here.
+    // 64 is S_CharReset / S_PetCtrlMenu / S_BookmarkLoad / S_EquipmentSlot / emblem sync (first byte = subtype).
+    {64, Srv::PETCTRL},        {105, Srv::REDMESSAGE},    {72, Srv::CLANNAME},      {200, Srv::CLANATTENTION},
+    {46, Srv::CHANGENAME},
     {231, Srv::MAPID},  // S_WarTime: el decodificador de S_MapID lo distingue por el largo
 };
 constexpr ParCli TW380_CLI[] = {
@@ -113,7 +114,7 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::CREATEPARTY, 43},    {Cli::PARTYLIST, 230},    {Cli::LEAVEPARTY, 33},    {Cli::BANPARTY, 255},
     {Cli::TRADE, 2},           {Cli::TRADEADDITEM, 37},  {Cli::TRADEADDOK, 71},    {Cli::TRADEADDCANCEL, 86},
     {Cli::CREATECLAN, 222},    {Cli::JOINCLAN, 194},     {Cli::LEAVECLAN, 61},     {Cli::BANCLAN, 69},
-    {Cli::TITLE, 90},          {Cli::PLEDGE, 68},        {Cli::WHO, 206},          {Cli::EMBLEM, 18},
+    {Cli::TITLE, 90},          {Cli::PLEDGE, 68},        {Cli::WHO, 206},          {Cli::EMBLEM, 18},         {Cli::CLAN, 72},
     {Cli::SKILLBUY, 145},      {Cli::SKILLBUYOK, 39},    {Cli::DOOR, 41},          {Cli::GIVEITEM, 45},
     {Cli::AMOUNT, 11},         {Cli::CHANGECHAR, 7},     {Cli::FIXWEAPONLIST, 118}, {Cli::BOOKMARK, 165},
     {Cli::BOOKMARKDELETE, 3},  {Cli::DELETEINVENTORYITEM, 138}, {Cli::EXITGHOST, 173}, {Cli::ENTERPORTAL, 219},
@@ -194,6 +195,7 @@ const char* NOMBRES[] = {
     "DOOR", "PARALYSIS", "POISON", "CURSEBLIND", "INPUTAMOUNT", "PETCTRL", "SELECTTARGET", "TRUETARGET",
     "BOOKMARKS", "SELECTLIST", "IDENTIFYDESC", "INVIS", "RESURRECTION", "STRUP", "DEXUP", "PINKNAME", "LIQUOR", "BLESSOFEVA", "ABILITY", "SOUND", "PRIVATESHOPLIST", "BOARD", "BOARDREAD", "MAIL",
     "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL", "USEMAP",
+    "REDMESSAGE", "CLANNAME", "CLANATTENTION", "CHANGENAME",
 };
 static_assert(sizeof(NOMBRES) / sizeof(NOMBRES[0]) == static_cast<size_t>(Srv::CANTIDAD));
 
@@ -211,7 +213,7 @@ void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u
 
 bool tabla_opcodes(std::string_view version, TablaOpcodes& t) {
     if (version == "jp363") cargar(t, JP363_SRV, JP363_CLI, 161, PerfilProtocolo{});
-    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4, .texto_big5 = true});
+    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4, .texto_big5 = true, .marcadores_ranuras = 127});
     else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1});
     else return false;
     return true;

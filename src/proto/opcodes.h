@@ -21,6 +21,7 @@ enum class Srv : u8 {
     DOOR, PARALYSIS, POISON, CURSEBLIND, INPUTAMOUNT, PETCTRL, SELECTTARGET, TRUETARGET,
     BOOKMARKS, SELECTLIST, IDENTIFYDESC, INVIS, RESURRECTION, STRUP, DEXUP, PINKNAME, LIQUOR, BLESSOFEVA, ABILITY, SOUND, PRIVATESHOPLIST, BOARD, BOARDREAD, MAIL,
     HOUSELIST, HOUSEMAP, WAR, CASTLEMASTER, TAXRATE, DEPOSIT, DRAWAL, USEMAP,
+    REDMESSAGE, CLANNAME, CLANATTENTION, CHANGENAME,
     CANTIDAD
 };
 
@@ -64,6 +65,7 @@ struct PerfilProtocolo {
     u8 bytes_golpe_ataque = 2;
     // Server text encoding: Big5 (Taiwan 3.80C) is converted to UTF-8 on decode; false = CP949 as sent.
     bool texto_big5 = false;
+    u8 marcadores_ranuras = 104;  // slot bytes of S_BookmarkLoad (127 in 3.80C)
 };
 
 struct TablaOpcodes {
