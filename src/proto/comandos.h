@@ -201,9 +201,15 @@ inline Escritor fondos_castillo(const TablaOpcodes& t, bool depositar, u32 perso
 // C_ChangeWarTime: sin datos; el servidor responde S_WarTime con la fecha del próximo asedio.
 inline Escritor fecha_asedio(const TablaOpcodes& t) { return Escritor(t, Cli::CHANGEWARTIME); }
 // Grupo. C_CreateParty: c 0 (reparto normal; 1 automático), d personaje invitado.
-inline Escritor invitar_grupo(const TablaOpcodes& t, u32 personaje) {
+inline Escritor invitar_grupo(const TablaOpcodes& t, u32 personaje, u8 tipo = 0) {
     Escritor e(t, Cli::CREATEPARTY);
-    e.c(0).d(personaje);
+    e.c(tipo).d(personaje);
+    return e;
+}
+// C_LoginToServerOK: c what (0 world chat, 2 whisper, 6 trade chat), c 1 receive / 0 refuse (the chat toggles of the Options page).
+inline Escritor opcion_chat(const TablaOpcodes& t, u8 que, bool recibir) {
+    Escritor e(t, Cli::LOGINTOSERVEROK);
+    e.c(que).c(recibir ? 1 : 0);
     return e;
 }
 inline Escritor ver_grupo(const TablaOpcodes& t) { return Escritor(t, Cli::PARTYLIST); }  // S_Party "party"

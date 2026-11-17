@@ -189,7 +189,7 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
             u32 linea = c.total;
             c.agregar({buf, n}, color_chat(tipo), tipo);
             // Globo sobre la cabeza: chat normal y grito de quien está a la vista.
-            if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO)) {
+            if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO || (c.globo_comercio && tipo == CHAT_COMERCIO))) {
                 GloboChat* destino = &c.globos[0];
                 for (GloboChat& g : c.globos) {
                     if (g.id == e.id) { destino = &g; break; }

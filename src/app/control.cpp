@@ -183,6 +183,7 @@ bool* ventana(App& a, std::string_view n) {
     if (n == "forma") return &a.ventana_forma;
     if (n == "social") return &a.ventana_social;
     if (n == "salida") return &a.ventana_salida;
+    if (n == "volumen") return &a.ventana_volumen;
     if (n == "teclas") return &a.ayuda_teclas;
     return nullptr;
 }

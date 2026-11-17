@@ -127,6 +127,7 @@ add_executable(lineage
     src/app/ventanas.cpp
     src/app/cursores.cpp
     src/app/social_ui.cpp
+    src/app/volume_ui.cpp
     src/app/sonido.cpp
     src/app/clima.cpp
     src/app/luz_ui.cpp

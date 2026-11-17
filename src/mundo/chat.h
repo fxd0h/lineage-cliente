@@ -36,6 +36,7 @@ struct GloboChat {
 
 struct Chat {
     LineaChat lineas[CAPACIDAD_CHAT];
+    bool globo_comercio = false;  // option showMargetMsg: trade chat also shows over the speaker's head
     u32 total = 0;  // líneas agregadas desde el inicio (el anillo guarda las últimas CAPACIDAD_CHAT)
     GloboChat globos[CANTIDAD_GLOBOS] = {};
 

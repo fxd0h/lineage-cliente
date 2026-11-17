@@ -71,7 +71,7 @@ struct FilaTienda {
     std::string nombre;  // con "$N" sin resolver
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -230,6 +230,16 @@ struct DialogoCantidad {
     std::string accion, titulo;
 };
 
+// The original's text input box (vtable [0x702dd8]+0x64, 0x4451d0): the chat edit line takes the next line typed (its prompt
+// goes to the chat log) and hands it to a callback instead of sending it as chat. Enter confirms, Esc cancels.
+struct PromptChat {
+    bool activo = false;
+    std::string accion;       // what the typed text is for (social_ui.cpp: confirmar_prompt)
+    i32 x = 0, y = 0;         // pickup: tile
+    ObjId id = 0;             // pickup: item
+    u32 maximo = 0;           // pickup: stack size
+};
+
 struct PosVentana {
     int x = 0, y = 0;
     bool movida = false;    // si no, va en su lugar de siempre
@@ -244,10 +254,8 @@ struct Pregunta {
     u32 numero = 0;
     u16 tipo = 0;
     std::string texto;
-    std::string respuesta;  // las que piden un texto (PREGUNTA_NOMBRE_CASA, PREGUNTA_ENTRADA)
-    std::string accion;     // PREGUNTA_ENTRADA: the Community-page action that asked for the text
+    std::string respuesta;  // las que piden un texto (PREGUNTA_NOMBRE_CASA)
 };
-constexpr u16 PREGUNTA_ENTRADA = 0xFFFF;  // client-side text prompt of a Community page action (no server number)
 constexpr u16 PREGUNTA_NOMBRE_CASA = 512;  // el mayordomo: "¿nombre de la casa?" (C_Attr con el texto)
 struct ItemIntercambio {
     u16 gfx = 0;
@@ -446,7 +454,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -484,7 +492,13 @@ struct App {
     i32 hp_anterior = 0;  // detectar daño recibido: caída de HP tras aplicar los eventos del frame
     // Render no interactivo a PNG (LIN_RENDER=id,x,y,salida.bmp): dibuja el mapa y sale. Ver app.cpp.
     struct { bool activo = false; MapId mapa = 0; int x = 0, y = 0; std::string salida; } render;
+    PromptChat chat_prompt;
+    bool invitando = false;            // invite party: the next click in the world picks the target (0x402490, message 0xb3)
     bool ventana_social = false;
+    bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
+    int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
+    int volumen_arrastre = -1;         // slider being dragged
+
     std::vector<Pregunta> preguntas;
     Intercambio intercambio;
     std::vector<u32> emblemas_pedidos;  // clanes cuyo emblema ya se pidió (C_Clan)
@@ -569,6 +583,8 @@ bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_
 void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image at the window position as is
 // A button made of two images (normal, pointer over); true when clicked.
 bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
+void dibujar_volumen(App& a);  // volume_ui.cpp
+Rect rect_volumen(const App& a);
 void draw_original_ornament(App& a, int x, int y, u32 ornament);
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
                         bool over_list, u32 track_image = 0, int track_dy = 0);
@@ -653,7 +669,10 @@ ObjId buscar_item(const App& a, std::string_view texto);    // inventario_ui.cpp
 u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: uno que sepa, por nombre
 void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
 void accion_comunidad(App& a, std::string_view accion);
-void accion_comunidad(App& a, std::string_view accion, std::string_view texto);  // ... once the typed name is known  // social_ui.cpp: `action=` of the option pages
+void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
+void cancelar_prompt(App& a);
+void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`
+void elegir_invitado(App& a);  // click in the world while `invitando`
 std::string datos_opciones(const App& a);  // social_ui.cpp: `<var src="#N">` values of the option pages
 bool accion_opciones(App& a, std::string_view accion);  // social_ui.cpp: option11/12/13 actions (true = handled)
 void alternar_opciones(App& a);  // Options button / Ctrl+V: option1 page (simple UI: the fork window)
@@ -783,7 +802,7 @@ void aceptar_cantidad_tienda(App& a);
 // Una ventana con un campo de texto tiene el teclado: los atajos (1–0, A, Enter del chat) no actúan.
 inline bool escribiendo_en_ventana(const App& a) {
     return a.ventana_forma || a.tablon.escribiendo || a.correo.escribiendo ||
-           (!a.preguntas.empty() && (a.preguntas.front().tipo == PREGUNTA_NOMBRE_CASA || a.preguntas.front().tipo == PREGUNTA_ENTRADA));
+           (!a.preguntas.empty() && (a.preguntas.front().tipo == PREGUNTA_NOMBRE_CASA));
 }
 // Tablón de los pueblos (tablon_ui.cpp) y correo (correo_ui.cpp).
 bool es_tablon(GfxId gfx);

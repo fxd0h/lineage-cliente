@@ -8,6 +8,7 @@
 //    comandos de chat que hacen lo mismo (/invite, /trade, /pledge...).
 //  - Nombres: el título arriba, el emblema del clan a la izquierda y el color según el alineamiento
 //    (ver dibujar_personajes).
+#include <charconv>
 #include <cstring>
 #include "app/app.h"
 #include "app/item_icon.h"
@@ -45,20 +46,104 @@ void aviso(App& a, std::string_view t) { a.chat.agregar(t, rgba(255, 230, 120), 
 
 }  // namespace
 
-// Actions of the option2 / option2p pages (client dispatcher 0x40b8..0x40c8). Packets: party 0x4d, outparty 0xb, join 0x5e,
-// buddy 0x6d, banish (0x48) / ban (0x67) / addbuddy (0x38) take a typed name; invite, in the original, waits for a click on
-// the target (0x402490, message 0xb3) and sends 0x82 with the target id: here a typed name (open deviation U-D7).
-void accion_comunidad(App& a, std::string_view accion, std::string_view texto) {
-    if (accion == "invite") {
-        const ObjId id = buscar_por_nombre(a, texto);
-        if (id) enviar(a, cmd::invitar_grupo(a.op, id));
+namespace {
+
+// Class byte of the selected character (char-list record +0x1e, [0x81b534]): 0 is the prince.
+int clase_personaje(const App& a) {
+    return a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
+}
+
+// Client string table line as a std::string (the table is the US string-e.tbl).
+std::string cadena(const App& a, int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); }
+
+// The original input box (0x4451d0): the prompt goes to the chat log and the chat line takes over until Enter / Esc.
+void abrir_prompt(App& a, std::string prompt, std::string_view accion) {
+    cancelar_prompt(a);
+    a.chat_prompt.activo = true;
+    a.chat_prompt.accion = std::string(accion);
+    aviso(a, prompt);
+    a.chat_entrada.clear();
+    a.escribiendo_chat = true;
+}
+
+// 'y' / 'Y' answers of the join / leave confirmations (0x405f60, 0x405fb0; the Japanese full-width forms are not typed here).
+bool dijo_si(std::string_view t) { return !t.empty() && (t[0] == 'y' || t[0] == 'Y'); }
+
+}  // namespace
+
+void cancelar_prompt(App& a) {
+    a.chat_prompt = {};
+}
+
+// Callback of the input box once Enter is pressed (the callbacks at 0x40d470, 0x40d4d0, 0x406600, 0x406550, 0x405f60,
+// 0x405fb0, 0x40d120, 0x40d180, 0x40d1e0, 0x40d3b0, 0x4086f0). The box always closes afterwards (0x41f1d0).
+void confirmar_prompt(App& a, std::string_view texto) {
+    const std::string accion = a.chat_prompt.accion;
+    const PromptChat p = a.chat_prompt;
+    cancelar_prompt(a);
+    if (accion == "recoger") {  // 0x4086f0: nothing typed = the whole stack; 0 or more than the stack = nothing
+        u32 n = p.maximo;
+        if (!texto.empty()) {
+            long v = 0;
+            std::from_chars(texto.data(), texto.data() + texto.size(), v);
+            n = v > 0 ? static_cast<u32>(v) : 0;
+        }
+        if (n > 0 && n <= p.maximo) enviar(a, cmd::recoger(a.op, static_cast<u16>(p.x), static_cast<u16>(p.y), p.id, n));
+        return;
+    }
+    if (accion == "join") {
+        if (dijo_si(texto)) enviar(a, cmd::entrar_clan(a.op));
+    } else if (accion == "leave") {
+        if (dijo_si(texto)) enviar(a, cmd::dejar_clan(a.op));
+    } else if (texto.empty()) {
+        return;
     } else if (accion == "banish") {
         enviar(a, cmd::echar_del_grupo(a.op, texto));
     } else if (accion == "ban") {
         enviar(a, cmd::echar_del_clan(a.op, texto));
     } else if (accion == "addbuddy" || accion == "delbuddy") {
         enviar(a, cmd::amigo(a.op, accion == "addbuddy", texto));
+    } else if (accion == "war") {
+        enviar(a, cmd::guerra(a.op, cmd::GUERRA_DECLARAR, texto));
+    } else if (accion == "surrender") {
+        enviar(a, cmd::guerra(a.op, cmd::GUERRA_RENDIRSE, texto));
+    } else if (accion == "cease") {
+        enviar(a, cmd::guerra(a.op, cmd::GUERRA_TERMINAR, texto));
+    } else if (accion == "title") {  // 0x406000: "<character> <title>"
+        const size_t sp = texto.find(' ');
+        if (sp == std::string_view::npos) return;
+        std::string_view titulo = texto.substr(sp + 1);
+        while (!titulo.empty() && titulo.front() == ' ') titulo.remove_prefix(1);
+        if (!titulo.empty()) enviar(a, cmd::poner_titulo(a.op, texto.substr(0, sp), titulo));
     }
+}
+
+// Pick up: a stack asks how many unless the "getall" option is on (0x408529 -> 0x408670, prompt string 0x79).
+void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad) {
+    if (cantidad <= 1 || (a.cfg.opciones_orig >> OPC_GETALL & 1)) {
+        enviar(a, cmd::recoger(a.op, static_cast<u16>(x), static_cast<u16>(y), id, std::max<u32>(1, cantidad)));
+        return;
+    }
+    if (a.chat_prompt.activo) return;
+    std::string t = cadena(a, 121);
+    if (const size_t k = t.find("%d"); k != std::string::npos) t.replace(k, 2, std::to_string(cantidad));
+    abrir_prompt(a, std::move(t), "recoger");
+    a.chat_prompt.x = x, a.chat_prompt.y = y, a.chat_prompt.id = id, a.chat_prompt.maximo = cantidad;
+}
+
+// Invite: a click on a character within 6 x 3 cells (0x469903: |dx| <= 2 * 3, |dy| <= 3) sends C_CreateParty with the
+// "random party" option as its type (0x4075b3) and writes string 0x3bb ("invited %0"); any click ends the mode.
+void elegir_invitado(App& a) {
+    a.invitando = false;
+    const ObjId id = objeto_bajo_puntero(a);
+    const TablaObjetos& o = a.mundo.objetos;
+    const Slot s = id ? o.buscar(id) : SIN_SLOT, yo = o.buscar(a.mundo.jugador.id);
+    if (s == SIN_SLOT || yo == SIN_SLOT) return;
+    if (std::abs(o.col<O_X>()[s] - o.col<O_X>()[yo]) > 6 || std::abs(o.col<O_Y>()[s] - o.col<O_Y>()[yo]) > 3) return;
+    std::string t = cadena(a, 955);
+    if (const size_t k = t.find("%0"); k != std::string::npos) t.replace(k, 2, texto(a.mundo, o.col<O_NOMBRE>()[s]));
+    aviso(a, t);
+    enviar(a, cmd::invitar_grupo(a.op, id, a.cfg.opciones_orig >> OPC_RANDOMPARTY & 1));
 }
 
 // `<var src="#N">` of option11/12/13 (html var switch 0x438766..0x43a56e): a flag shows string 567 when set, 568 when
@@ -95,8 +180,8 @@ std::string datos_opciones(const App& a) {
 }
 
 // Option toggles of the original Options pages (dispatcher 0x40b1de..0x40c660). Each flips a byte of the client's option
-// block and reopens the page. Not reproduced (open deviations in the audit): the packets dochat / dotradechat /
-// dowhisper send (`ccc` 0x19, 0x406abb..0x406cc6) and `volume` (the volume window 0x8f028c).
+// block and reopens the page. dochat / dotradechat / dowhisper also send `ccc` 0x19 (what, flag) with the new state
+// (0x4069f0, 0x406af0, 0x406bf0 -> 0x406abb..0x406cc6); `volume` opens the volume window ([0x8f028c], volume_ui.cpp).
 bool accion_opciones(App& a, std::string_view accion) {
     struct Fila { std::string_view nombre; OpcionOrig bit; };
     static constexpr Fila FILAS[] = {
@@ -108,6 +193,14 @@ bool accion_opciones(App& a, std::string_view accion) {
     bool hecho = false;
     for (const Fila& f : FILAS)
         if (accion == f.nombre) a.cfg.opciones_orig ^= 1 << f.bit, hecho = true;
+    // Chat toggles tell the server: 0 world chat, 6 trade chat, 2 whisper.
+    auto avisar = [&](std::string_view nombre, OpcionOrig bit, u8 que) {
+        if (accion == nombre && a.op.cable_de_cli[static_cast<int>(Cli::LOGINTOSERVEROK)] != 0)
+            enviar(a, cmd::opcion_chat(a.op, que, a.cfg.opciones_orig >> bit & 1));
+    };
+    avisar("dochat", OPC_DOCHAT, 0);
+    avisar("dotradechat", OPC_DOTRADECHAT, 6);
+    avisar("dowhisper", OPC_DOWHISPER, 2);
     const int clase = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
     const bool telcon = a.cfg.opciones_orig >> OPC_TELCON & 1;
     if (hecho) {
@@ -127,7 +220,8 @@ bool accion_opciones(App& a, std::string_view accion) {
         else if (telcon) a.cfg.opciones_orig &= ~(1 << OPC_INFRACON);
         else return true;
         hecho = true;
-    } else if (accion == "volume") {
+    } else if (accion == "volume") {  // 0x40b19d: shows the volume window
+        a.ventana_volumen = true;
         return true;
     }
     if (!hecho) return false;
@@ -138,31 +232,33 @@ bool accion_opciones(App& a, std::string_view accion) {
 
 void accion_comunidad(App& a, std::string_view accion) {
     if (accion_opciones(a, accion)) return;
+    const bool principe = clase_personaje(a) == 0;
     if (accion == "party") enviar(a, cmd::ver_grupo(a.op));
     else if (accion == "outparty") enviar(a, cmd::dejar_grupo(a.op));
-    else if (accion == "join") enviar(a, cmd::entrar_clan(a.op));
-    else if (accion == "leave") enviar(a, cmd::dejar_clan(a.op));
+    else if (accion == "join") {  // a prince confirms first (string 0x313); the others send it at once (0x40b950)
+        if (principe) abrir_prompt(a, cadena(a, 787), "join");
+        else enviar(a, cmd::entrar_clan(a.op));
+    } else if (accion == "leave") abrir_prompt(a, cadena(a, 484), "leave");  // string 0x1e4, then y / n (0x405fb0)
     else if (accion == "pledge") enviar(a, cmd::ver_clan(a.op));
     else if (accion == "buddy" || accion == "refreshbuddy") enviar(a, cmd::amigos(a.op));
-    else if (accion == "invite" || accion == "banish" || accion == "ban" || accion == "addbuddy" || accion == "delbuddy") {
-        Pregunta p;
-        p.tipo = PREGUNTA_ENTRADA;
-        p.accion = std::string(accion);
-        p.texto = accion == "invite" ? "Name of the character to invite:" : "Name:";
-        a.preguntas.push_back(std::move(p));
+    else if (accion == "invite") {  // click-on-target mode: message 0xb3, then the click (elegir_invitado)
+        aviso(a, cadena(a, 179));
+        a.invitando = true;
+    } else if (accion == "banish") abrir_prompt(a, cadena(a, 409), accion);
+    else if (accion == "ban") abrir_prompt(a, cadena(a, 107), accion);
+    else if (accion == "addbuddy") abrir_prompt(a, cadena(a, 588), accion);
+    else if (accion == "delbuddy") abrir_prompt(a, cadena(a, 589), accion);
+    else if (accion == "title") abrir_prompt(a, cadena(a, 586), accion);
+    else if (accion == "war" || accion == "surrender" || accion == "cease") {  // princes only (0x40bb46); war also needs the clan state
+        if (!principe) return;
+        abrir_prompt(a, cadena(a, accion == "war" ? 577 : accion == "surrender" ? 578 : 579), accion);
     }
-    // war, surrender, cease, alliance*, title, emblem, checkbmp, pledgefocus*: open (audit U-D7)
+    // emblem / checkbmp (upload a bitmap), alliance*, pledgefocus*: not wired (audit U-D7)
 }
 
 void responder_pregunta(App& a, bool si) {
     if (a.preguntas.empty()) return;
     const Pregunta& p = a.preguntas.front();
-    if (p.tipo == PREGUNTA_ENTRADA) {
-        const std::string accion = p.accion, texto = p.respuesta;
-        a.preguntas.erase(a.preguntas.begin());
-        if (si && !texto.empty()) accion_comunidad(a, accion, texto);
-        return;
-    }
     if (p.tipo == PREGUNTA_NOMBRE_CASA) {  // se responde con el texto (o no se responde: el servidor no lo espera)
         if (si && !p.respuesta.empty()) enviar(a, cmd::responder_texto(a.op, p.numero, p.tipo, p.respuesta));
     } else {
@@ -253,6 +349,17 @@ void eventos_social(App& a, const Evento& e) {
         u32 color = 0;
         size_t n = formatear_mensaje(a.mensajes, a.desc, m, buf, sizeof buf, color);
         p.texto.assign(buf, n);
+        if (p.tipo == 951 && (a.cfg.opciones_orig >> OPC_PARTYREJECT & 1)) {  // 0x4887e6: refuse invitations by itself
+            std::string t = cadena(a, 1005);
+            if (const size_t k = t.find("%0"); k != std::string::npos) t.replace(k, 2, e.s[0]);
+            aviso(a, t);
+            enviar(a, cmd::responder(a.op, p.numero, p.tipo, false));
+            break;
+        }
+        if (p.tipo == 252 && !(a.cfg.opciones_orig >> OPC_ACCEPTTRADE & 1)) {  // 0x48876d: refuses trade requests by itself
+            enviar(a, cmd::responder(a.op, p.numero, p.tipo, false));
+            break;
+        }
         a.preguntas.push_back(std::move(p));
         break;
     }
@@ -405,7 +512,7 @@ void dibujar_pregunta(App& a) {
         i = fin == std::string::npos ? t.size() : fin + 1;
     }
     Pregunta& p = a.preguntas.front();
-    const bool con_texto = p.tipo == PREGUNTA_NOMBRE_CASA || p.tipo == PREGUNTA_ENTRADA;
+    const bool con_texto = p.tipo == PREGUNTA_NOMBRE_CASA;
     for (int k = 0; k < (con_texto ? 1 : 2); ++k)
         g.texto({lineas[k], n[k]}, static_cast<float>(r.x + 10), static_cast<float>(r.y + 28 + k * 15),
                 clave_orden(CAPA_UI_TEXTO, 10), rgba(255, 255, 254));

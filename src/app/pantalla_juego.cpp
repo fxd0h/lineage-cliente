@@ -346,7 +346,7 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y) {
         t.remove_prefix(c);
         while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
     }
-    if (a.cfg.globos_comic) {  // sin relleno: contorno redondeado y cola; el texto queda con sombra
+    if (a.cfg.globos_comic || (a.cfg.opciones_orig >> OPC_BUBBLE & 1)) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
         int ancho = 0;
         for (int i = 0; i < n; ++i) ancho = std::max(ancho, ancho_texto(filas[i].data(), filas[i].size()));
         const int x0 = static_cast<int>(centro_x) - ancho / 2 - 6, w = ancho + 12;
@@ -783,6 +783,12 @@ void mover_jugador(App& a, u64 ahora) {
     // algo, eso queda como objetivo. Soltar lo abandona, salvo con la tecla A (ataque sostenido).
     bool clic_en_mundo = e.presionado && !a.clic_consumido && !sobre_panel && !sobre_alguna_ventana(a) &&
                          a.ventana_arrastrada < 0;
+    // Invite party (0x402490): the click only picks the target.
+    if (a.invitando && clic_en_mundo && e.pulsado) {
+        elegir_invitado(a);
+        a.clic_consumido = true;
+        return;
+    }
     // Shift+clic en el mundo: solo girar hacia ahí, sin caminar ni elegir objetivo (por ejemplo, para
     // quedar frente a otro personaje e intercambiar). Mantener el botón tampoco camina. Como un clic
     // nuevo, cancela lo que estuviera haciendo; inmóvil, a mitad de un paso o de un ataque no gira.
@@ -889,8 +895,7 @@ void mover_jugador(App& a, u64 ahora) {
         if (!a.hablar_objetivo && std::max(std::abs(dx), std::abs(dy)) <= (es_item ? 1 : alcance_ataque(o.col<O_ESTADO>()[s]))) {
             if (es_item) {
                 // Recoger (el servidor acepta hasta 3 celdas); se espera un poco antes de reintentar.
-                enviar(a, cmd::recoger(a.op, o.col<O_X>()[obj], o.col<O_Y>()[obj], a.objetivo,
-                                       std::max<u32>(1, o.col<O_CANTIDAD>()[obj])));
+                pedir_recoger(a, o.col<O_X>()[obj], o.col<O_Y>()[obj], a.objetivo, o.col<O_CANTIDAD>()[obj]);
                 a.fin_ataque = ahora + 400;
                 a.objetivo = 0;
             } else {
@@ -949,8 +954,7 @@ void pick_up_nearby(App& a) {
         if (s == yo || a.sprites.tipo(o.col<O_GFX>()[s]) != TIPO_ITEM) continue;
         const int x = o.col<O_X>()[s], y = o.col<O_Y>()[s];
         if (std::abs(x - px) > 2 || std::abs(y - py) > 1) continue;
-        enviar(a, cmd::recoger(a.op, static_cast<u16>(x), static_cast<u16>(y), o.ids()[s],
-                               std::max<u32>(1, o.col<O_CANTIDAD>()[s])));
+        pedir_recoger(a, x, y, o.ids()[s], o.col<O_CANTIDAD>()[s]);
         a.next_pickup = ahora + 0x3da;
         return;
     }
@@ -1438,7 +1442,9 @@ void dibujar_chat(App& a) {
     }
     const bool abierta = !con_enter || a.escribiendo_chat;
     if (a.cfg.ui_simple) g.texto(">", ac.entrada_x - 12, ac.entrada_y, kt, abierta ? rgba(214, 190, 140) : rgba(110, 100, 80));
-    if (abierta && e.escape && (con_enter || !a.chat_entrada.empty())) {  // sin nada que borrar, Esc sigue a las ventanas
+    if (a.chat_prompt.activo && !a.escribiendo_chat) a.escribiendo_chat = true;  // the input box takes the line (0x4451d0)
+    if (abierta && e.escape && (con_enter || !a.chat_entrada.empty() || a.chat_prompt.activo)) {  // sin nada que borrar, Esc sigue a las ventanas
+        if (a.chat_prompt.activo) cancelar_prompt(a);
         a.chat_entrada.clear();
         if (con_enter) a.escribiendo_chat = false;
         e.escape = false;
@@ -1446,7 +1452,8 @@ void dibujar_chat(App& a) {
     if (!abierta) {
         g.texto("Enter: chat", ac.entrada_x, ac.entrada_y, kt, rgba(110, 100, 80));
     } else if (ui::caja_texto(g, e, a.chat_entrada, ac.entrada_x, ac.entrada_y, ac.entrada_ancho, true, false, MAX_ENTRADA_CHAT)) {
-        if (!a.chat_entrada.empty()) enviar_chat(a, a.chat_entrada);
+        if (a.chat_prompt.activo) confirmar_prompt(a, a.chat_entrada);
+        else if (!a.chat_entrada.empty()) enviar_chat(a, a.chat_entrada);
         a.chat_entrada.clear();
         a.chat_desplazamiento = 0;
         if (con_enter) a.escribiendo_chat = false;
@@ -1561,6 +1568,7 @@ void dibujar_ventanas(App& a) {
         case IdVentana::SALIDA: dibujar_salida(a); break;
         case IdVentana::SOCIAL: dibujar_social(a); break;
         case IdVentana::INTERCAMBIO: dibujar_intercambio(a); break;
+        case IdVentana::VOLUMEN: dibujar_volumen(a); break;
         default: break;
         }
         e.mx = mx;
@@ -1764,8 +1772,8 @@ void frame_juego(App& a) {
         a.gpu.pedir_captura("captura.bmp");
         a.chat.agregar("Screenshot saved: captura.bmp", rgba(255, 200, 120), CHAT_SISTEMA);
         break;
-    // Only the original UI has these (Ctrl+M builder list and Ctrl+R dragon-power panel are not implemented).
-    case 'X':  // attack mode (0x703105): click on other players to attack them, same as "/pk"
+    // Only the original UI has these (Ctrl+R: see below; Ctrl+M has no handler in the US client's hotkey table).
+    case 'X':  // attack mode: flips the local byte [0x703105] (0x456e30), silently and without a packet
         if (!a.cfg.ui_simple) comando_social(a, "/pk");
         break;
     case 'T':  // chat window size cycle (0x421330)

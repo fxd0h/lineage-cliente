@@ -520,6 +520,12 @@ TEST_CASE("Social: preguntas, intercambio, título, emblema, página del clan y 
     CHECK(cmd::aceptar_intercambio(t).cuerpo()[0] == 110);
     CHECK(cmd::cancelar_intercambio(t).cuerpo()[0] == 167);
     CHECK(cmd::invitar_grupo(t, 1).cuerpo()[0] == 166);
+    {  // C_LoginToServerOK: c what, c flag (chat toggles of the Options page); invite type byte
+        Escritor oc = cmd::opcion_chat(t, 6, true);
+        CHECK(oc.cuerpo()[1] == 6);
+        CHECK(oc.cuerpo()[2] == 1);
+        CHECK(cmd::invitar_grupo(t, 1, 1).cuerpo()[1] == 1);
+    }
     CHECK(cmd::crear_clan(t, "X").cuerpo()[0] == 154);
     u8 emblema[BYTES_EMBLEMA] = {};
     Escritor em = cmd::subir_emblema(t, emblema);

@@ -15,9 +15,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 8, "App::orden_ventanas se inicializa con 0..7");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 9, "App::orden_ventanas se inicializa con 0..8");
 // Doce filas de ALTO_GLIFO + 12 px, más el título y el margen: 352 px. Con 276 (y luego 300) la última quedaba afuera.
 constexpr int ANCHO_OPCIONES = 320, ALTO_OPCIONES = 300;  // 10 filas a la vista; el resto, con scroll
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
@@ -86,6 +86,7 @@ Rect por_defecto(const App& a, IdVentana v) {
         return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
     case IdVentana::SOCIAL: return rect_social(a);
     case IdVentana::INTERCAMBIO: return rect_intercambio(a);
+    case IdVentana::VOLUMEN: return rect_volumen(a);
     default: return {0, y, w, h};
     }
 }
@@ -100,6 +101,7 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::SALIDA: return a.ventana_salida;
     case IdVentana::SOCIAL: return a.ventana_social;
     case IdVentana::INTERCAMBIO: return a.intercambio.abierto;
+    case IdVentana::VOLUMEN: return a.ventana_volumen;
     default: return false;
     }
 }
@@ -247,9 +249,11 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, boo
     const u64 k = clave_orden(CAPA_UI, 1);
     const int dy = mono ? 1 : 0;
     if (encima) {
-        int w = ancho_texto(ayuda.data(), ayuda.size());
-        g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-        g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+        if (a.cfg.opciones_orig >> OPC_TOOLTIP & 1) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
+            int w = ancho_texto(ayuda.data(), ayuda.size());
+            g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
+            g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+        }
         g.gpu().dibujar(g.img(n + 1), x, y + dy, k);
     } else {
         g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? rgba(255, 237, 208) : BLANCO,

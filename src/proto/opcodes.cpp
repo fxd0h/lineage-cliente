@@ -67,7 +67,7 @@ constexpr ParCli JP363_CLI[] = {
     {Cli::BOARD, 73},         {Cli::BOARDREAD, 59},     {Cli::BOARDNEXT, 221},    {Cli::BOARDWRITE, 14},
     {Cli::BOARDDELETE, 12},   {Cli::MAIL, 22},
     {Cli::WAR, 235},          {Cli::TAXRATE, 200},      {Cli::DEPOSIT, 35},       {Cli::DRAWAL, 192},
-    {Cli::CHANGEWARTIME, 4},
+    {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},
 };
 
 // L1J 3.80C de Taiwán: internal/net/packet/opcodes.go de L1JGO-Whale (commit 9a19405), por nombre.
@@ -178,6 +178,7 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::SHOPLIST, 17}, {Cli::BOARD, 24}, {Cli::BOARDREAD, 19}, {Cli::BOARDNEXT, 87},
     {Cli::BOARDWRITE, 84}, {Cli::BOARDDELETE, 60}, {Cli::MAIL, 127}, {Cli::WAR, 101},
     {Cli::TAXRATE, 110}, {Cli::DEPOSIT, 68}, {Cli::DRAWAL, 42}, {Cli::CHANGEWARTIME, 98},
+    {Cli::LOGINTOSERVEROK, 25},  // the client sends it as `ccc` 0x19 from the chat toggles (0x406abb, 0x406bbb, 0x406cbb)
 };
 
 const char* NOMBRES[] = {
