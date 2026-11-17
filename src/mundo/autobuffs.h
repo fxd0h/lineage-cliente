@@ -1,6 +1,7 @@
 // Auto-buffs (PLAN_JUGABILIDAD.md, punto 4): qué buff relanzar y cuándo. Sin estado de la app,
 // para los tests; la interfaz y el lanzado están en app/autobuffs_ui.cpp.
 #pragma once
+#include <algorithm>
 #include "mundo/inventario.h"
 #include "mundo/mundo.h"
 #include "recursos/hechizos.h"
@@ -42,6 +43,15 @@ const PocionAuto* pocion_auto(u32 id);
 u32 pocion_auto_de_item(const Inventario& inv, Slot s);
 // El primer ítem del inventario que es esa poción; 0 si no queda.
 ObjId buscar_pocion_auto(const Inventario& inv, u32 id);
+
+// Turno común de las acciones automáticas (auto-buffs y auto-poción): una por vez y con
+// ESPACIO_AUTO_MS entre ellas, aunque venzan varias juntas. La curación va primero (pantalla_juego).
+constexpr u64 ESPACIO_AUTO_MS = 1000;
+struct TurnoAuto {
+    u64 siguiente_ms = 0;
+    bool libre(u64 ahora) const { return ahora >= siguiente_ms; }
+    void usado(u64 cuando) { siguiente_ms = std::max(siguiente_ms, cuando + ESPACIO_AUTO_MS); }
+};
 
 struct CasilleroAuto {
     u32 hechizo = 0;  // 0 = vacío; desde POCION_AUTO, una poción

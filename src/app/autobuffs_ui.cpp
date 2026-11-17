@@ -3,7 +3,8 @@
 // defecto). Se llenan arrastrando un hechizo desde la ventana de magia o desde la barra; entre ellos
 // se arrastra para ordenar y clic derecho vacía. Es una macro del lado del cliente: manda el mismo
 // C_UseSkill que el jugador a mano, con la misma espera entre hechizos, y no corta lo que el
-// personaje está haciendo (espera a que se detenga). No se pausa en pueblos. Se guarda por personaje
+// personaje está haciendo (espera a que se detenga). No se pausa en pueblos. Con la auto-poción
+// comparten un turno (TurnoAuto): si vencen varios juntos, salen de a uno, con ESPACIO_AUTO_MS entre ellos. Se guarda por personaje
 // en settings.ini: "autobuffs=Nombre:1|43,42,0,0,0,0" (encendido y los hechizos).
 // También las pociones azul (maná), de sabiduría, de haste (común y mayor) y de brave, y la waffle
 // de elfo, arrastradas desde el inventario o la barra
@@ -138,6 +139,7 @@ void procesar_autobuffs(App& a) {
         CasilleroAuto& c = ab.c[ab.pidiendo];
         if (a.hechizo_lanzado_ms >= ab.pedido_ms) {
             c.lanzado_ms = a.hechizo_lanzado_ms;
+            ab.turno.usado(a.hechizo_lanzado_ms);  // salió más tarde de lo pedido: el espacio cuenta desde ahí
             ab.ultimo = ab.pidiendo;
             ab.pidiendo = -1;
         } else if (a.hechizo_pendiente != c.hechizo) {
@@ -148,7 +150,7 @@ void procesar_autobuffs(App& a) {
     if (ab.ultimo >= 0 && a.hechizo_lanzado_ms > ab.c[ab.ultimo].lanzado_ms) ab.ultimo = -1;
     for (CasilleroAuto& c : ab.c)
         if (c.hechizo && !c.efecto_visto && resta_efecto_de_hechizo(a.mundo.jugador, c.hechizo, ahora)) c.efecto_visto = true;
-    if (!ab.encendido || ab.pidiendo >= 0 || ahora < ab.desde_ms) return;
+    if (!ab.encendido || ab.pidiendo >= 0 || ahora < ab.desde_ms || !ab.turno.libre(ahora)) return;
     // Ocupado no se lanzan hechizos, pero las pociones sí: se elige solo entre ellas.
     CasilleroAuto libres[CASILLEROS_AUTO];
     const bool sin_hechizos = ocupado(a, ahora);
@@ -164,6 +166,7 @@ void procesar_autobuffs(App& a) {
         } else if (const ObjId item = buscar_pocion_auto(a.mundo.inventario, id)) {
             usar_item(a, item);
             ab.c[i].lanzado_ms = ahora;
+            ab.turno.usado(ahora);
         } else {
             ab.c[i].reintentar_ms = ahora + ESPERA_FALLO_MS;  // no queda: no buscar en cada frame
         }
@@ -173,6 +176,7 @@ void procesar_autobuffs(App& a) {
     if (a.hechizo_pendiente == id) {
         ab.pidiendo = i;
         ab.pedido_ms = ahora;
+        ab.turno.usado(ahora);
     } else {
         ab.c[i].reintentar_ms = ahora + ESPERA_FALLO_MS;  // no lo sabe: no insistir en cada frame
     }

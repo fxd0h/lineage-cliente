@@ -55,6 +55,7 @@ struct AutoBuffs {
     int x = 0, y = -1000;  // posición del último frame (la pone dibujar_barra)
     u64 desde_ms = 0;      // no lanza antes (al entrar: que lleguen los íconos de lo que sigue activo)
     bool apretado_interruptor = false;  // el botón se apretó sobre "Auto"
+    TurnoAuto turno;       // compartido con la auto-poción
 };
 
 // Tienda y almacén (npc_ui.cpp): una fila por ítem; `id` es el índice en la tienda (compra) o el id

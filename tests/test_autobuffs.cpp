@@ -151,3 +151,27 @@ TEST_CASE("S_SkillIconWisdomPotion: el tiempo viene dividido por 4") {
     CHECK(ev[0].v[IE_TIPO] == ICONO_SABIDURIA);
     CHECK(ev[0].v[IE_SEG] == 300);
 }
+
+TEST_CASE("TurnoAuto: varios vencidos a la vez salen de a uno, en orden y espaciados") {
+    EstadoJugador j = jugador();
+    CasilleroAuto c[CASILLEROS_AUTO] = {casillero(43), casillero(42), casillero(26)};
+    TurnoAuto turno;
+    std::vector<std::pair<int, u64>> salidos;
+    for (u64 t = 100000; t < 104000; t += 16) {  // frames de 16 ms
+        if (!turno.libre(t)) continue;
+        const int i = elegir_autobuff(j, c, CASILLEROS_AUTO, t);
+        if (i < 0) continue;
+        c[i].lanzado_ms = t;
+        c[i].efecto_visto = true;
+        poner(j, EA_HECHIZO, static_cast<u8>(c[i].hechizo), t + 60000);  // el efecto llega
+        turno.usado(t);
+        salidos.push_back({i, t});
+    }
+    REQUIRE(salidos.size() == 3);
+    for (size_t k = 0; k < salidos.size(); ++k) CHECK(salidos[k].first == static_cast<int>(k));
+    for (size_t k = 1; k < salidos.size(); ++k) CHECK(salidos[k].second - salidos[k - 1].second >= ESPACIO_AUTO_MS);
+    turno.usado(200000);  // un hechizo que salió tarde corre el turno; uno anterior no lo adelanta
+    turno.usado(150000);
+    CHECK_FALSE(turno.libre(200999));
+    CHECK(turno.libre(201000));
+}
