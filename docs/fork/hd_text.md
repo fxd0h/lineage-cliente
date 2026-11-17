@@ -11,9 +11,14 @@ separate pass **after** the scaling filter, at the real output resolution.
    region instead of the pixel glyph. Advances still come from the pixel metrics, so layout is byte-identical.
 2. `sprite.vert` skips TEXTO_HD instances in the normal passes (mode 0/1).
 3. `Gpu::pase_texto` runs after the scaling filter: on the swapchain (fixed view, viewport = letterbox rect), on the
-   offscreen window image for `captura-final`, or on the final texture (wide view). Two draws over the same sorted list
-   starting at the first text instance: *occluders* (every non-text, non-additive instance, depth only) and then the
-   text (`texto.frag`, depth test). A window drawn after a piece of text therefore still hides it.
+   offscreen window image for `captura-final`, or on the final texture (wide view). It works in two passes. Pass 1
+   draws the sorted list from the first text instance on, in one call, into two layer targets (RGBA8 = premultiplied
+   text colour, R8 = text coverage): text instances add to them, every other non-additive instance (window, panel,
+   icon) only *attenuates* them by its alpha (`texto.frag` outputs black with that alpha; the "over" blend then leaves
+   `dst * (1 - alpha)`). Pass 2 (`texto_comp.frag` on the `mundo.vert` quad) lays the layer over the destination:
+   `out = colour + dst * (1 - coverage)`. Text under an opaque window therefore vanishes and under a translucent one is
+   dimmed by the window's alpha, stacked windows multiply. Approximation: the window's own colour is not re-blended over
+   the text (error `(1-a)*c*a*(bg - window)`, negligible for dark windows).
 4. `texto.frag` thresholds the field at 0.5 with a screen-space smoothstep (`fwidth`), giving a one-pixel edge at any
    scale.
 
@@ -34,6 +39,6 @@ runtime from the user's own game files and cached in the atlas like any glyph (n
 
 - Shaders exist twice: `texto.frag` (SPIR-V) and `fs_texto` in the MSL source of `gpu.cpp` (macOS/Metal). Keep them in sync.
 - `captura` (logical, pre-filter) forces pixel text for that frame; use `captura-final` to see HD text.
-- A translucent window above text hides it completely where it has any alpha (occluders are not blended).
+- Additive / screen-blend instances above text are ignored by the layer (they do not brighten HD text).
 - World-layer text (names, damage numbers) is not HD yet.
 - The 4x6 HUD digit font (pantalla_juego.cpp) goes through `Graficos::glifo_hd_mascara`, outline passes included.

@@ -141,7 +141,7 @@ public:
     // (fs_texto in both) and is off while a logical capture is pending, so
     // `captura` still shows the text.
     void fijar_texto_hd(bool si) { texto_hd_ = si; }
-    bool texto_hd() const { return texto_hd_ && pipe_texto_[0] && ruta_captura_.empty(); }
+    bool texto_hd() const { return texto_hd_ && pipe_texto_ && pipe_comp_[0] && ruta_captura_.empty(); }
 
     // Ventana (píxeles) -> coordenadas lógicas.
     void a_logico(float wx, float wy, int& lx, int& ly) const;
@@ -191,12 +191,14 @@ private:
     SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors
     u32 n_pantalla_ = 0;                                    // screen-blend instances queued this frame
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
-    // HD text pass: [0] targets R8G8B8A8 textures, [1] the swapchain format. Occluders write depth only, so UI drawn
-    // after a piece of text (a window above it) hides it.
-    SDL_GPUGraphicsPipeline* pipe_texto_[2] = {};
-    SDL_GPUGraphicsPipeline* pipe_oclusor_[2] = {};
-    SDL_GPUTexture* profundidad_ = nullptr;
-    int prof_w_ = 0, prof_h_ = 0;
+    // HD text pass: instances sorted from the first text one are drawn into `capa_texto_` (colour + coverage) by
+    // pipe_texto_ (text adds, other non-additive instances attenuate by their alpha), then pipe_comp_ lays
+    // the layer over the destination: [0] for R8G8B8A8 textures, [1] for the swapchain format.
+    SDL_GPUGraphicsPipeline* pipe_texto_ = nullptr;
+    SDL_GPUGraphicsPipeline* pipe_comp_[2] = {};
+    SDL_GPUTexture* capa_texto_ = nullptr;  // RGBA8: premultiplied text colour
+    SDL_GPUTexture* capa_cob_ = nullptr;    // R8: text coverage
+    int capa_w_ = 0, capa_h_ = 0;
     bool texto_hd_ = false;
     u32 primer_texto_ = 0;  // index of the first TEXTO_HD instance in the sorted list (== n if none)
     void crear_pipelines_texto(SDL_GPUGraphicsPipelineCreateInfo pi, SDL_GPUShader* fs_texto);

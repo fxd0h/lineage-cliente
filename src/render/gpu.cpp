@@ -42,16 +42,13 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
     float2 e = esquinas[vid];
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
-    // Depth only matters in the HD text pass (later in the sorted list = nearer); the other passes have no depth buffer.
-    float z = 1.0 - float(iid + uint(u.relleno.x) + 1u) / 131074.0;
-    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, z, 1.0);
-    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 2 = HD text
-    // (bit 6), 3 = occluders of the HD text pass (everything that is neither text nor additive/screen).
+    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
+    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 2 = HD text layer
+    // (text, plus every non-additive instance as an attenuator of the text under it).
     const uint modo = uint(u.relleno.y + 0.5);
     const bool texto = (i.mezcla & 64u) != 0u;
     bool oculto;
-    if (modo == 2u) oculto = !texto;
-    else if (modo == 3u) oculto = texto || (i.mezcla & 9u) != 0u;
+    if (modo == 2u) oculto = !texto && (i.mezcla & 9u) != 0u;
     else oculto = texto || (((i.mezcla & 8u) != 0u) != (modo == 1u));
     if (oculto) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = mix(i.uv.xy, i.uv.zw, e);
@@ -81,16 +78,33 @@ fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [
     return float4(c.rgb * c.a, (in.mezcla & 9) != 0 ? 0.0 : c.a);
 }
 
-// HD text: the atlas holds glyph fields (0.5 = outline, see recursos/fuente_hd.h), thresholded with a
-// screen-space smoothstep so the edge is one display pixel wide at any scale. Twin of shaders/texto.frag.
-fragment float4 fs_texto(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
-                         texture2d_array<float> atlas_lin [[texture(1)]],
-                         sampler s [[sampler(0)]], sampler s_lin [[sampler(1)]]) {
-    float f = atlas_lin.sample(s_lin, in.uv, in.pagina).r;
-    float w = max(fwidth(f) * 0.7, 0.02);
-    float a = smoothstep(0.5 - w, 0.5 + w, f) * in.color.a;
-    if (a <= 0.0) discard_fragment();
-    return float4(in.color.rgb * a, a);
+// HD text layer: the atlas holds glyph fields (0.5 = outline, see recursos/fuente_hd.h), thresholded with a
+// screen-space smoothstep so the edge is one display pixel wide at any scale. Any other instance only attenuates the
+// layer (black, alpha = its alpha; the premultiplied "over" blend leaves dst * (1 - alpha)). Two targets: 0 = text
+// colour (premultiplied), 1 = coverage in R. Twin of shaders/texto.frag.
+struct SalidaTexto {
+    float4 color [[color(0)]];
+    float4 cobertura [[color(1)]];
+};
+fragment SalidaTexto fs_texto(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
+                              texture2d_array<float> atlas_lin [[texture(1)]],
+                              sampler s [[sampler(0)]], sampler s_lin [[sampler(1)]]) {
+    float4 tn = atlas.sample(s, in.uv, in.pagina);
+    float4 tl = atlas_lin.sample(s_lin, in.uv, in.pagina);
+    float w = max(fwidth(tl.r) * 0.7, 0.02);
+    SalidaTexto o;
+    if ((in.mezcla & 64u) != 0u) {
+        float a = smoothstep(0.5 - w, 0.5 + w, tl.r) * in.color.a;
+        if (a <= 0.0) discard_fragment();
+        o.color = float4(in.color.rgb * a, a);
+        o.cobertura = float4(a, 0.0, 0.0, a);
+    } else {
+        float a = ((in.mezcla & 4u) != 0u ? tl.a : tn.a) * in.color.a;
+        if (a <= 0.0) discard_fragment();
+        o.color = float4(0.0, 0.0, 0.0, a);
+        o.cobertura = float4(0.0, 0.0, 0.0, a);
+    }
+    return o;
 }
 
 // Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.
@@ -156,6 +170,14 @@ fragment float4 fs_mundo(MundoSalida in [[stage_in]], texture2d<float> escena [[
     if (p.w == 1.0) c = c * float3(1.0 / 16.0, 0.5, 1.0 / 16.0);
     else if (p.w == 2.0) c = c * ((2.0 * c.r + 7.0 * c.g + c.b) / 10.0);
     return float4(c, 1.0);
+}
+
+// HD text composite: colour layer (texture 0) and coverage layer (texture 1, R) over the destination with the
+// premultiplied "over" blend. Vertex stage vs_mundo. Twin of shaders/texto_comp.frag.
+fragment float4 fs_texto_comp(MundoSalida in [[stage_in]], texture2d<float> capa [[texture(0)]],
+                              texture2d<float> cob [[texture(1)]], sampler s [[sampler(0)]],
+                              sampler s2 [[sampler(1)]]) {
+    return float4(capa.sample(s, in.uv).rgb, cob.sample(s2, in.uv).r);
 }
 
 // Final-present scalers (twins of src/render/shaders/escalado_*.frag; vertex stage is vs_mundo).
@@ -405,6 +427,7 @@ bool Gpu::crear_pipeline() {
                 {"vs_sprite", spirv::sprite_vert, sizeof spirv::sprite_vert},
                 {"fs_sprite", spirv::sprite_frag, sizeof spirv::sprite_frag},
                 {"fs_texto", spirv::texto_frag, sizeof spirv::texto_frag},
+                {"fs_texto_comp", spirv::texto_comp_frag, sizeof spirv::texto_comp_frag},
                 {"vs_brillo", spirv::brillo_vert, sizeof spirv::brillo_vert},
                 {"fs_brillo", spirv::brillo_frag, sizeof spirv::brillo_frag},
                 {"vs_mundo", spirv::mundo_vert, sizeof spirv::mundo_vert},
@@ -552,6 +575,39 @@ bool Gpu::crear_pipeline() {
     SDL_ReleaseGPUShader(dev_, mvs);
     SDL_ReleaseGPUShader(dev_, mfs);
     if (!pipeline_mundo_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (mundo): %s", SDL_GetError());
+    // HD text composite (vs_mundo quad + fs_texto_comp): the text layer over a destination, premultiplied. [0] for the
+    // RGBA8 textures, [1] for the swapchain format.
+    {
+        SDL_GPUShaderCreateInfo cf = mf;
+        cf.entrypoint = "fs_texto_comp";
+        cf.num_uniform_buffers = 0;
+        cf.num_samplers = 2;
+        SDL_GPUShader* cvs = crear(mv);
+        SDL_GPUShader* cfs = crear(cf);
+        if (cvs && cfs) {
+            const SDL_GPUTextureFormat formatos[2] = {SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                                                       SDL_GetGPUSwapchainTextureFormat(dev_, ventana_)};
+            for (int k = 0; k < 2; ++k) {
+                SDL_GPUColorTargetDescription cc{};
+                cc.format = formatos[k];
+                cc.blend_state.enable_blend = true;
+                cc.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+                cc.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+                cc.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+                cc.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO;
+                cc.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+                cc.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+                SDL_GPUGraphicsPipelineCreateInfo cpi = mpi;
+                cpi.vertex_shader = cvs;
+                cpi.fragment_shader = cfs;
+                cpi.target_info.color_target_descriptions = &cc;
+                pipe_comp_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &cpi);
+                if (!pipe_comp_[k]) LIN_LOG("HD text composite pipeline: %s", SDL_GetError());
+            }
+        }
+        SDL_ReleaseGPUShader(dev_, cvs);
+        SDL_ReleaseGPUShader(dev_, cfs);
+    }
     // Final-present filters: vs_mundo (fullscreen quad) + one fragment shader each, no blending.
     for (int k = 1; k < static_cast<int>(Escalado::ANIME4K); ++k) {
         const char* nombres[N_ESCALADOS] = {"", "fs_escalado_xbr", "fs_escalado_fsr", "fs_escalado_crt", ""};
@@ -603,69 +659,53 @@ bool Gpu::crear_pipeline() {
 }
 
 void Gpu::crear_pipelines_texto(SDL_GPUGraphicsPipelineCreateInfo pi, SDL_GPUShader* fs_texto) {
-    const SDL_GPUTextureFormat formatos[2] = {SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-                                               SDL_GetGPUSwapchainTextureFormat(dev_, ventana_)};
-    pi.target_info.has_depth_stencil_target = true;
-    pi.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    pi.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
-    pi.depth_stencil_state.enable_depth_test = true;
-    for (int k = 0; k < 2; ++k) {
-        SDL_GPUColorTargetDescription ct = pi.target_info.color_target_descriptions[0];
-        ct.format = formatos[k];
-        pi.target_info.color_target_descriptions = &ct;
-        // Occluders: the sprite shader, depth only.
-        SDL_GPUColorTargetDescription co = ct;
-        co.blend_state.enable_color_write_mask = true;
-        co.blend_state.color_write_mask = 0;
-        SDL_GPUGraphicsPipelineCreateInfo po = pi;
-        po.target_info.color_target_descriptions = &co;
-        po.depth_stencil_state.enable_depth_write = true;
-        pipe_oclusor_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &po);
-        pi.fragment_shader = fs_texto;
-        pi.depth_stencil_state.enable_depth_write = false;
-        pipe_texto_[k] = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
-        if (!pipe_oclusor_[k] || !pipe_texto_[k]) {
-            LIN_LOG("HD text pipelines: %s", SDL_GetError());
-            if (k == 0) {  // without the RGBA ones there is no HD text at all
-                SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_oclusor_[0]);
-                SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_[0]);
-                pipe_oclusor_[0] = pipe_texto_[0] = nullptr;
-            }
-        }
-    }
+    // Layer pass, two targets with the sprite pipeline's premultiplied "over" blend: [0] RGBA8 = premultiplied text
+    // colour, [1] R8 = text coverage. An attenuating instance outputs (0, 0, 0, alpha), which the blend turns into
+    // dst * (1 - alpha) on both (a straight "over" with a black source cannot keep coverage in the alpha channel).
+    SDL_GPUColorTargetDescription cts[2] = {pi.target_info.color_target_descriptions[0],
+                                            pi.target_info.color_target_descriptions[0]};
+    cts[1].format = SDL_GPU_TEXTUREFORMAT_R8_UNORM;
+    pi.target_info.color_target_descriptions = cts;
+    pi.target_info.num_color_targets = 2;
+    pi.fragment_shader = fs_texto;
+    pipe_texto_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
+    if (!pipe_texto_) LIN_LOG("HD text pipeline: %s", SDL_GetError());
 }
 
 void Gpu::pase_texto(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* destino, int w, int h, int formato, const RectVista* rect) {
     const u32 n = static_cast<u32>(inst_ordenadas_.size());
-    if (!texto_hd_ || primer_texto_ >= n || !pipe_texto_[0] || !pipe_texto_[formato] || !pipe_oclusor_[formato] || w < 1 || h < 1)
-        return;
-    if (!profundidad_ || prof_w_ != w || prof_h_ != h) {
-        if (profundidad_) SDL_ReleaseGPUTexture(dev_, profundidad_);
+    if (!texto_hd_ || primer_texto_ >= n || !pipe_texto_ || !pipe_comp_[formato] || w < 1 || h < 1) return;
+    if (!capa_texto_ || !capa_cob_ || capa_w_ != w || capa_h_ != h) {
+        SDL_ReleaseGPUTexture(dev_, capa_texto_);
+        SDL_ReleaseGPUTexture(dev_, capa_cob_);
         SDL_GPUTextureCreateInfo td{};
         td.type = SDL_GPU_TEXTURETYPE_2D;
-        td.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-        td.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
+        td.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        td.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
         td.width = static_cast<Uint32>(w);
         td.height = static_cast<Uint32>(h);
         td.layer_count_or_depth = 1;
         td.num_levels = 1;
-        profundidad_ = SDL_CreateGPUTexture(dev_, &td);
-        prof_w_ = w;
-        prof_h_ = h;
-        if (!profundidad_) return;
+        capa_texto_ = SDL_CreateGPUTexture(dev_, &td);
+        td.format = SDL_GPU_TEXTUREFORMAT_R8_UNORM;
+        capa_cob_ = SDL_CreateGPUTexture(dev_, &td);
+        capa_w_ = w;
+        capa_h_ = h;
+        if (!capa_texto_ || !capa_cob_) return;
     }
-    SDL_GPUColorTargetInfo ct{};
-    ct.texture = destino;
-    ct.load_op = SDL_GPU_LOADOP_LOAD;
-    ct.store_op = SDL_GPU_STOREOP_STORE;
-    SDL_GPUDepthStencilTargetInfo dt{};
-    dt.texture = profundidad_;
-    dt.clear_depth = 1.0f;
-    dt.load_op = SDL_GPU_LOADOP_CLEAR;
-    dt.store_op = SDL_GPU_STOREOP_DONT_CARE;
-    dt.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
-    dt.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
-    SDL_GPURenderPass* p = SDL_BeginGPURenderPass(cmd, &ct, 1, &dt);
+    // Pass 1: the text layer. Everything sorted from the first text instance on goes through one draw: text adds its
+    // coverage, every other non-additive instance (a window, a panel) attenuates what is already in the layer by its
+    // alpha, so text under a translucent window is dimmed by that window and under an opaque one vanishes, as in the
+    // pixel path (where the window is blended over the text). Order = the sorted instance order.
+    SDL_GPUColorTargetInfo ct[2]{};
+    ct[0].texture = capa_texto_;
+    ct[1].texture = capa_cob_;
+    for (SDL_GPUColorTargetInfo& c : ct) {
+        c.clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
+        c.load_op = SDL_GPU_LOADOP_CLEAR;
+        c.store_op = SDL_GPU_STOREOP_STORE;
+    }
+    SDL_GPURenderPass* p = SDL_BeginGPURenderPass(cmd, ct, 2, nullptr);
     if (!p) return;
     if (rect) {
         SDL_GPUViewport vp{static_cast<float>(rect->x), static_cast<float>(rect->y), static_cast<float>(rect->w),
@@ -675,14 +715,22 @@ void Gpu::pase_texto(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* destino, int w, 
     SDL_BindGPUVertexStorageBuffers(p, 0, &instancias_gpu_, 1);
     const SDL_GPUTextureSamplerBinding tsb[2] = {{atlas_, muestreo_}, {atlas_, muestreo_lineal_}};
     SDL_BindGPUFragmentSamplers(p, 0, tsb, 2);
-    float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(primer_texto_), 3};
-    SDL_BindGPUGraphicsPipeline(p, pipe_oclusor_[formato]);
+    const float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(primer_texto_), 2};
+    SDL_BindGPUGraphicsPipeline(p, pipe_texto_);
     SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
     SDL_DrawGPUPrimitives(p, 6, n - primer_texto_, 0, 0);
-    SDL_BindGPUGraphicsPipeline(p, pipe_texto_[formato]);
-    uni[3] = 2;
-    SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
-    SDL_DrawGPUPrimitives(p, 6, n - primer_texto_, 0, 0);
+    SDL_EndGPURenderPass(p);
+    // Pass 2: the layer over the destination (premultiplied).
+    SDL_GPUColorTargetInfo cd{};
+    cd.texture = destino;
+    cd.load_op = SDL_GPU_LOADOP_LOAD;
+    cd.store_op = SDL_GPU_STOREOP_STORE;
+    p = SDL_BeginGPURenderPass(cmd, &cd, 1, nullptr);
+    if (!p) return;
+    SDL_BindGPUGraphicsPipeline(p, pipe_comp_[formato]);
+    const SDL_GPUTextureSamplerBinding csb[2] = {{capa_texto_, muestreo_}, {capa_cob_, muestreo_}};
+    SDL_BindGPUFragmentSamplers(p, 0, csb, 2);
+    SDL_DrawGPUPrimitives(p, 6, 1, 0, 0);
     llamadas_ += 2;
     SDL_EndGPURenderPass(p);
 }
@@ -700,11 +748,10 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_pantalla_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_brillo_);
-    for (int k = 0; k < 2; ++k) {
-        SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_[k]);
-        SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_oclusor_[k]);
-    }
-    SDL_ReleaseGPUTexture(dev_, profundidad_);
+    SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_);
+    for (SDL_GPUGraphicsPipeline* pc : pipe_comp_) SDL_ReleaseGPUGraphicsPipeline(dev_, pc);
+    SDL_ReleaseGPUTexture(dev_, capa_texto_);
+    SDL_ReleaseGPUTexture(dev_, capa_cob_);
     SDL_ReleaseGPUTexture(dev_, luz_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_luz_);
     SDL_ReleaseGPUTexture(dev_, copia_);
