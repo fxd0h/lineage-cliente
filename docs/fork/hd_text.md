@@ -32,7 +32,7 @@ runtime from the user's own game files and cached in the atlas like any glyph (n
 
 ## Limits
 
-- SPIR-V only (Linux/Vulkan). MULTIPLATFORM: the MSL twin of the text shaders is missing; macOS keeps pixel text.
+- Shaders exist twice: `texto.frag` (SPIR-V) and `fs_texto` in the MSL source of `gpu.cpp` (macOS/Metal). Keep them in sync.
 - `captura` (logical, pre-filter) forces pixel text for that frame; use `captura-final` to see HD text.
 - A translucent window above text hides it completely where it has any alpha (occluders are not blended).
 - World-layer text (names, damage numbers) is not HD yet.

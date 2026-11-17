@@ -42,9 +42,18 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
     float2 e = esquinas[vid];
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
-    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla).
-    if (((i.mezcla & 8) != 0) != (u.relleno.y > 0.5)) o.pos = float4(2.0, 2.0, 2.0, 1.0);
+    // Depth only matters in the HD text pass (later in the sorted list = nearer); the other passes have no depth buffer.
+    float z = 1.0 - float(iid + uint(u.relleno.x) + 1u) / 131074.0;
+    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, z, 1.0);
+    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 2 = HD text
+    // (bit 6), 3 = occluders of the HD text pass (everything that is neither text nor additive/screen).
+    const uint modo = uint(u.relleno.y + 0.5);
+    const bool texto = (i.mezcla & 64u) != 0u;
+    bool oculto;
+    if (modo == 2u) oculto = !texto;
+    else if (modo == 3u) oculto = texto || (i.mezcla & 9u) != 0u;
+    else oculto = texto || (((i.mezcla & 8u) != 0u) != (modo == 1u));
+    if (oculto) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = mix(i.uv.xy, i.uv.zw, e);
     o.color = unpack_unorm4x8_to_float(i.color);
     o.pagina = i.pagina;
@@ -70,6 +79,18 @@ fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [
     if (c.a <= 0.0) discard_fragment();
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
     return float4(c.rgb * c.a, (in.mezcla & 9) != 0 ? 0.0 : c.a);
+}
+
+// HD text: the atlas holds glyph fields (0.5 = outline, see recursos/fuente_hd.h), thresholded with a
+// screen-space smoothstep so the edge is one display pixel wide at any scale. Twin of shaders/texto.frag.
+fragment float4 fs_texto(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
+                         texture2d_array<float> atlas_lin [[texture(1)]],
+                         sampler s [[sampler(0)]], sampler s_lin [[sampler(1)]]) {
+    float f = atlas_lin.sample(s_lin, in.uv, in.pagina).r;
+    float w = max(fwidth(f) * 0.7, 0.02);
+    float a = smoothstep(0.5 - w, 0.5 + w, f) * in.color.a;
+    if (a <= 0.0) discard_fragment();
+    return float4(in.color.rgb * a, a);
 }
 
 // Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.
@@ -449,7 +470,7 @@ bool Gpu::crear_pipeline() {
     pi.target_info.color_target_descriptions = &ct;
     pi.target_info.num_color_targets = 1;
     pipeline_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
-    if (usar_spirv_) {
+    {
         SDL_GPUShaderCreateInfo tf = fs;
         tf.entrypoint = "fs_texto";
         if (SDL_GPUShader* ft = crear(tf)) {
@@ -457,13 +478,14 @@ bool Gpu::crear_pipeline() {
             SDL_ReleaseGPUShader(dev_, ft);
         }
     }
-    SDL_ReleaseGPUShader(dev_, v);
-    SDL_ReleaseGPUShader(dev_, f);
     if (!pipeline_) LIN_LOG("SDL_CreateGPUGraphicsPipeline: %s", SDL_GetError());
     // Screen blend: src + dst * (1 - src), per channel (src = the shader's premultiplied color).
     ct.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
     pipeline_pantalla_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
     if (!pipeline_pantalla_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (pantalla): %s", SDL_GetError());
+    // Released only now: `pi` still points at them for the screen-blend pipeline (Metal frees the function at once).
+    SDL_ReleaseGPUShader(dev_, v);
+    SDL_ReleaseGPUShader(dev_, f);
 
     SDL_GPUShaderCreateInfo bv = vs;
     bv.entrypoint = "vs_brillo";

@@ -137,11 +137,11 @@ public:
     // Saves the final image (after the scaling filter, at window-grid resolution) as BMP.
     void pedir_captura_final(const std::string& ruta_bmp) { ruta_final_ = ruta_bmp; }
     void fijar_escalado(Escalado e) { escalado_ = e; }
-    // HD text (settings.ini "texto_hd"): glyphs drawn after the scaling filter at output resolution. Needs the SPIR-V
-    // path (MULTIPLATFORM: no MSL twin of the text shaders yet) and is off while a logical capture is pending, so
+    // HD text (settings.ini "texto_hd"): glyphs drawn after the scaling filter at output resolution. Works on SPIR-V and MSL
+    // (fs_texto in both) and is off while a logical capture is pending, so
     // `captura` still shows the text.
     void fijar_texto_hd(bool si) { texto_hd_ = si; }
-    bool texto_hd() const { return texto_hd_ && usar_spirv_ && pipe_texto_[0] && ruta_captura_.empty(); }
+    bool texto_hd() const { return texto_hd_ && pipe_texto_[0] && ruta_captura_.empty(); }
 
     // Ventana (píxeles) -> coordenadas lógicas.
     void a_logico(float wx, float wy, int& lx, int& ly) const;

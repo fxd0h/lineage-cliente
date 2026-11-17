@@ -21,7 +21,9 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - **Renderer:** GLSL shaders in `src/render/shaders/*.vert|frag`, compiled to SPIR-V by
   `herramientas/compilar_shaders.sh` into `src/render/shaders_spirv.h` (requires `glslangValidator`;
   rerun after editing a shader). `Gpu::iniciar` requests `MSL | SPIRV` and picks SPIR-V on Vulkan.
-  Verified on Intel Iris Xe (Mesa ANV): `GPU: vulkan (SPIR-V)`.
+  Verified on Intel Iris Xe (Mesa ANV): `GPU: vulkan (SPIR-V)`. macOS/Metal uses the hand-written MSL twins in
+  `src/render/gpu.cpp` and `shaders_msl_anime4k.h` (every shader has one, HD text included); a new or changed GLSL
+  shader needs its MSL edit too. Verified on Apple M5 Pro: all `escalado` modes and `texto_hd` (`GPU: metal (MSL)`).
 - **Case-insensitive paths:** `ruta_real()` in `src/plataforma/archivo_mapeado.*` resolves game files
   ignoring case on Linux (cached directory listings, mutex-protected). No-op on macOS/Windows.
 - **Local server scripts:** `servidor_local/*.sh` work on Linux via `servidor_local/comun.sh`
