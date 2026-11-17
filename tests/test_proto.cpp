@@ -41,6 +41,26 @@ TEST_CASE("Decodificar: S_MoveCharPacket lleva la posición anterior") {
     CHECK(ev[0].v[1] == 201);
 }
 
+TEST_CASE("Decodificar: S_OwnCharAttrDef lee la CA como el original (byte >= 0x28 es negativo)") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    auto ca = [&](u8 byte) {
+        const u8 p[] = {15, byte, 1, 2, 3, 4};  // 15 = OWNCHARATTRDEF on the jp363 wire
+        Arena arena(1024);
+        std::vector<Evento> ev;
+        REQUIRE(decodificar({p, sizeof p}, t, arena, ev));
+        REQUIRE(ev.size() == 1);
+        REQUIRE(ev[0].tipo == Ev::DEFENSA);
+        return ev[0].v[DF_CA];
+    };
+    CHECK(ca(0xFA) == -6);
+    CHECK(ca(10) == 10);
+    CHECK(ca(0x27) == 39);
+    CHECK(ca(0x28) == 40 - 256);  // the original wraps 0x28..0x7f to -216..-129
+    CHECK(ca(0x7f) == 127 - 256);
+    CHECK(ca(0x80) == -128);
+}
+
 TEST_CASE("Decodificar: S_CharPacks y paquete truncado") {
     TablaOpcodes t;
     tabla_opcodes("jp363", t);

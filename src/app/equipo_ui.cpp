@@ -66,12 +66,17 @@ void dibujar_equipo(App& a, int x0, int y0) {
     }
 
     Slot bajo = SIN_SLOT;
+    int bajo_x = 0, bajo_y = 0;  // top-left of the hovered slot (the label sits relative to it)
     auto poner = [&](Slot s, int rx, int ry, int rw, int rh) {
         const int lado = std::min({32, rw, rh});
         const RegionAtlas& ic = g.icono(t.col<I_GFX>()[s]);
         draw_item_icon(g.gpu(), ic, rx + (rw - lado) / 2, ry + (rh - lado) / 2, static_cast<float>(lado),
                        static_cast<float>(lado), ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
-        if (ui::sobre(e, rx, ry, rw, rh)) bajo = s;
+        if (ui::sobre(e, rx, ry, rw, rh)) {
+            bajo = s;
+            bajo_x = rx;
+            bajo_y = ry;
+        }
     };
     char txt[160];
     const RegionAtlas& fondo = g.img(IMG_EQUIPO);
@@ -124,8 +129,17 @@ void dibujar_equipo(App& a, int x0, int y0) {
         g.texto(txt, static_cast<float>(ac_x), static_cast<float>(oy + 231), kt, rgba(255, 255, 255));
     }
 
-    // Con el puntero encima: el nombre y los atributos del ítem.
-    if (bajo != SIN_SLOT) {
+    // Original frame: the hovered slot ([+0xa4] set by the mouse-move handler 0x4b36c8) shows only the item name, white
+    // with a black outline, at (slot x - 32, slot y + 34) (second loop of 0x4b3220 via 0x4334f0). The name is not the
+    // attribute box of the simple UI.
+    if (bajo != SIN_SLOT && !(a.cfg.ui_simple || !fondo.valida())) {
+        const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), txt, sizeof txt);
+        std::string_view nom(txt, n);
+        if (const size_t p = nom.rfind(" ("); p != std::string_view::npos && nom.ends_with(")")) nom = nom.substr(0, p);
+        g.texto_contorno(nom, static_cast<float>(bajo_x - 32), static_cast<float>(bajo_y + 34), clave_orden(CAPA_UI_TEXTO, 6),
+                         rgba(255, 255, 255));
+    } else if (bajo != SIN_SLOT) {
+        // Simple UI: the item name and its attributes.
         char nombre[256], det[1024];
         const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), nombre, sizeof nombre);
         const size_t nd = describir_atributos(atributos_item(inv, bajo), det, sizeof det);

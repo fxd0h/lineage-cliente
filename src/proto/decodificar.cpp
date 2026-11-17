@@ -36,6 +36,10 @@ struct Lector : LectorBinario {
 
 using Decodificador = bool (*)(Lector&, Evento&);
 
+// Own-character AC as the original shows it (0x4b0c16, 0x4b4ce2, 0x4b3b09): the byte [0x8f07df] is sign-extended and then
+// anything >= 0x28 has 0x100 subtracted, so a wire byte 0x28..0x7f reads as -216..-129 instead of +40..+127.
+int ca_original(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
+
 bool ignorar(Lector&, Evento& e) { e.tipo = Ev::IGNORADO; return true; }
 
 // S_ServerVersion: c c d d d d d c c c d d h
@@ -84,7 +88,7 @@ bool estado(Lector& l, Evento& e) {
     e.v[EP_HPMAX] = l.vida();
     e.v[EP_MP] = l.vida();
     e.v[EP_MPMAX] = l.vida();
-    e.v[EP_CA] = static_cast<i8>(l.c());
+    e.v[EP_CA] = ca_original(l.c());
     l.d();
     e.v[EP_COMIDA] = l.c();
     e.v[EP_PESO] = l.c();
@@ -211,7 +215,8 @@ bool sp_mr(Lector& l, Evento& e) { e.tipo = Ev::SP_MR; e.v[0] = static_cast<i8>(
 // S_OwnCharAttrDef: c CA, c fuego, c agua, c viento, c tierra
 bool defensa(Lector& l, Evento& e) {
     e.tipo = Ev::DEFENSA;
-    for (int i = DF_CA; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
+    e.v[DF_CA] = ca_original(l.c());
+    for (int i = DF_FUEGO; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
     return true;
 }
 // S_OwnCharStatus2: c fue int sab des con car, c peso (0–240). Mismos índices que ESTADO_PROPIO.
