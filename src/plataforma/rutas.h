@@ -24,10 +24,11 @@ constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
 // dowhisper 0x4ff204, showMargetMsg 0x6da619, shortcutscroll 0x6da618, tooltip 0x6e50b8, accepttrade 0x6da629 are 1.
 enum OpcionOrig : unsigned {
     OPC_GETALL, OPC_BUBBLE, OPC_DOCHAT, OPC_DOTRADECHAT, OPC_DOWHISPER, OPC_MARKETMSG, OPC_RANDOMPARTY, OPC_PARTYREJECT,
-    OPC_COMBATMUSIC, OPC_SHORTCUTSCROLL, OPC_TOOLTIP, OPC_ACCEPTTRADE, OPC_TELCON, OPC_INFRACON
+    OPC_COMBATMUSIC, OPC_SHORTCUTSCROLL, OPC_TOOLTIP, OPC_ACCEPTTRADE, OPC_TELCON, OPC_INFRACON, OPC_FLOATHPMP
 };
 constexpr int OPCIONES_ORIG_DEFECTO = (1 << OPC_GETALL) | (1 << OPC_DOCHAT) | (1 << OPC_DOTRADECHAT) | (1 << OPC_DOWHISPER) |
-                                      (1 << OPC_MARKETMSG) | (1 << OPC_SHORTCUTSCROLL) | (1 << OPC_TOOLTIP) | (1 << OPC_ACCEPTTRADE);
+                                      (1 << OPC_MARKETMSG) | (1 << OPC_SHORTCUTSCROLL) | (1 << OPC_TOOLTIP) | (1 << OPC_ACCEPTTRADE) |
+                                      (1 << OPC_FLOATHPMP);
 
 struct Config {
     int opciones_orig = OPCIONES_ORIG_DEFECTO;  // "opciones_orig=": OpcionOrig bit mask

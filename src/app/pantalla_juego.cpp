@@ -1574,6 +1574,7 @@ void dibujar_ventanas(App& a) {
         case IdVentana::SOCIAL: dibujar_social(a); break;
         case IdVentana::INTERCAMBIO: dibujar_intercambio(a); break;
         case IdVentana::VOLUMEN: dibujar_volumen(a); break;
+        case IdVentana::HPMP: dibujar_hpmp_flotante(a); break;
         default: break;
         }
         e.mx = mx;
@@ -1786,6 +1787,9 @@ void frame_juego(App& a) {
         break;
     case 'O':  // chat colour palette (0x456dc3)
         if (!a.cfg.ui_simple) a.paleta_chat = !a.paleta_chat;
+        break;
+    case 'R':  // floating HP/MP window: flips the option byte [0x6ddf90] (0x456d26)
+        if (!a.cfg.ui_simple) a.cfg.opciones_orig ^= 1 << OPC_FLOATHPMP, guardar_config(a.cfg);
         break;
     case 'Y': case 'Z':  // GM only: pick a target, send opcode 83 (Ctrl+Z repeats)
         if (!a.cfg.ui_simple && a.es_gm) {

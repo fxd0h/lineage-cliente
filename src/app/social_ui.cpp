@@ -188,7 +188,7 @@ bool accion_opciones(App& a, std::string_view accion) {
         {"getall", OPC_GETALL}, {"bubbleon", OPC_BUBBLE}, {"dochat", OPC_DOCHAT}, {"dotradechat", OPC_DOTRADECHAT},
         {"dowhisper", OPC_DOWHISPER}, {"showMargetMsg", OPC_MARKETMSG}, {"randomParty", OPC_RANDOMPARTY},
         {"cPartyReject", OPC_PARTYREJECT}, {"combatMusic", OPC_COMBATMUSIC}, {"shortcutscroll", OPC_SHORTCUTSCROLL},
-        {"tooltip", OPC_TOOLTIP}, {"accepttrade", OPC_ACCEPTTRADE},
+        {"tooltip", OPC_TOOLTIP}, {"accepttrade", OPC_ACCEPTTRADE}, {"showfloathpmp", OPC_FLOATHPMP},
     };
     bool hecho = false;
     for (const Fila& f : FILAS)

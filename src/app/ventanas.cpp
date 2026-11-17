@@ -15,9 +15,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen", "hpmp"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 9, "App::orden_ventanas se inicializa con 0..8");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 10, "App::orden_ventanas se inicializa con 0..9");
 // Doce filas de ALTO_GLIFO + 12 px, más el título y el margen: 352 px. Con 276 (y luego 300) la última quedaba afuera.
 constexpr int ANCHO_OPCIONES = 320, ALTO_OPCIONES = 300;  // 10 filas a la vista; el resto, con scroll
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
@@ -87,6 +87,7 @@ Rect por_defecto(const App& a, IdVentana v) {
     case IdVentana::SOCIAL: return rect_social(a);
     case IdVentana::INTERCAMBIO: return rect_intercambio(a);
     case IdVentana::VOLUMEN: return rect_volumen(a);
+    case IdVentana::HPMP: return rect_hpmp_flotante(a);
     default: return {0, y, w, h};
     }
 }
@@ -102,6 +103,7 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::SOCIAL: return a.ventana_social;
     case IdVentana::INTERCAMBIO: return a.intercambio.abierto;
     case IdVentana::VOLUMEN: return a.ventana_volumen;
+    case IdVentana::HPMP: return hpmp_flotante_abierta(a);
     default: return false;
     }
 }
@@ -133,12 +135,12 @@ void al_frente(App& a, IdVentana v) {
 void colocar(App& a, IdVentana v) {
     PosVentana& p = a.pos_ventanas[indice(v)];
     p.colocada = false;
-    if (p.movida) return;
+    if (p.movida || v == IdVentana::HPMP) return;  // the floating HP/MP pair always starts at the top centre
     const Rect r = rect_ventana(a, v);
     auto libre = [&](const Rect& c) {
         for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
             const IdVentana o = static_cast<IdVentana>(i);
-            if (o != v && abierta(a, o) && solapan(c, rect_ventana(a, o))) return false;
+            if (o != v && o != IdVentana::HPMP && abierta(a, o) && solapan(c, rect_ventana(a, o))) return false;
         }
         return true;
     };
@@ -156,6 +158,8 @@ void colocar(App& a, IdVentana v) {
 }
 
 }  // namespace
+
+void guardar_posiciones_ventanas(App& a) { guardar_posiciones(a); }
 
 void actualizar_ventanas(App& a) {
     if (!a.ventanas_cargadas) cargar_posiciones(a);

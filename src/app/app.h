@@ -71,7 +71,7 @@ struct FilaTienda {
     std::string nombre;  // con "$N" sin resolver
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -457,7 +457,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -498,6 +498,7 @@ struct App {
     PromptChat chat_prompt;
     bool invitando = false;            // invite party: the next click in the world picks the target (0x402490, message 0xb3)
     bool ventana_social = false;
+    u8 hpmp_estilo = 0;                // floating HP/MP window style 0..2 ([0x8169b0], float_hpmp_ui.cpp)
     bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
     int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
     int volumen_arrastre = -1;         // slider being dragged
@@ -567,6 +568,7 @@ bool sobre_ventana(const App& a, IdVentana v);  // abierta, con el puntero encim
 bool sobre_alguna_ventana(const App& a);
 // Al dibujar cada ventana, antes que nada: arrastrarla por la barra de título.
 void arrastrar_ventana(App& a, IdVentana v);
+void guardar_posiciones_ventanas(App& a);  // after a custom drag
 // Una vez por frame, antes de procesar la entrada: las que se abren pasan adelante (y a un lugar
 // libre), y la que se toca con el clic también.
 void actualizar_ventanas(App& a);
@@ -588,6 +590,9 @@ void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image 
 bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
 void dibujar_volumen(App& a);  // volume_ui.cpp
 Rect rect_volumen(const App& a);
+void dibujar_hpmp_flotante(App& a);  // float_hpmp_ui.cpp
+Rect rect_hpmp_flotante(const App& a);
+bool hpmp_flotante_abierta(const App& a);
 void draw_original_ornament(App& a, int x, int y, u32 ornament);
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,
                         bool over_list, u32 track_image = 0, int track_dy = 0);
