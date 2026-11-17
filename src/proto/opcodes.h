@@ -38,6 +38,7 @@ enum class Cli : u8 {
     BOARD, BOARDREAD, BOARDNEXT, BOARDWRITE, BOARDDELETE, MAIL,
     WAR, TAXRATE, DEPOSIT, DRAWAL, CHANGEWARTIME,
     LOGINTOSERVEROK,  // C_LoginToServerOK (chat options): c type, c flag
+    RANK,             // C_Rank: c sub (1 rank, 2 alliance list, 3 alliance join, 4 alliance leave), c rank, s name
     CANTIDAD
 };
 

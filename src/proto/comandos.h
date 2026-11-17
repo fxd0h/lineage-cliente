@@ -186,6 +186,12 @@ inline Escritor guerra(const TablaOpcodes& t, TipoGuerra tipo, std::string_view 
     e.c(tipo).s(clan);
     return e;
 }
+// C_Rank sub 2 / 3 / 4: alliance list / join / leave (Whale reads c sub, c rank, s name).
+inline Escritor alianza(const TablaOpcodes& t, u8 sub, std::string_view clan = {}) {
+    Escritor e(t, Cli::RANK);
+    e.c(sub).c(0).s(clan);
+    return e;
+}
 // C_TaxRate: d personaje, c tasa (10–50).
 inline Escritor tasa_castillo(const TablaOpcodes& t, u32 personaje, u8 tasa) {
     Escritor e(t, Cli::TAXRATE);

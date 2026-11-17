@@ -67,7 +67,7 @@ constexpr ParCli JP363_CLI[] = {
     {Cli::BOARD, 73},         {Cli::BOARDREAD, 59},     {Cli::BOARDNEXT, 221},    {Cli::BOARDWRITE, 14},
     {Cli::BOARDDELETE, 12},   {Cli::MAIL, 22},
     {Cli::WAR, 235},          {Cli::TAXRATE, 200},      {Cli::DEPOSIT, 35},       {Cli::DRAWAL, 192},
-    {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},
+    {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},    {Cli::RANK, 78},
 };
 
 // L1J 3.80C de Taiwán: internal/net/packet/opcodes.go de L1JGO-Whale (commit 9a19405), por nombre.
@@ -122,7 +122,7 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::DELETEBUDDY, 202},   {Cli::CHATPARTY, 199},    {Cli::SHOP, 38},          {Cli::SHOPLIST, 47},
     {Cli::BOARD, 23},          {Cli::BOARDREAD, 114},    {Cli::BOARDWRITE, 141},   {Cli::BOARDDELETE, 153},
     {Cli::MAIL, 87},           {Cli::WAR, 227},          {Cli::TAXRATE, 19},       {Cli::DEPOSIT, 56},
-    {Cli::DRAWAL, 44},
+    {Cli::DRAWAL, 44},         {Cli::RANK, 63},
 };
 
 // L1J 3.0 English / US 2009 (S3EP1): encryptions/Opcodes.java de l1j-en/classic, por nombre. El
