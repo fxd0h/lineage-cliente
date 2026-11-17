@@ -98,14 +98,34 @@ emblem id (0 without emblem), so the fork also checks the own rank (0xb = no ple
 2. Live-test shop buy/sell confirmation, alliance (invite is a Whale stub), war/castle, pets.
 4. Sweep gfx ids used by the server against Justice and 3.81C.
 
-## Migration plan for `fx` (knight 92, +19 Demon/DK/Kurtz/Iron sets, Dragon Slayer...)
+## Character `fx` (migrated)
 
-Do not touch the old DB. On the new server, as a fresh character `fx`: `.class 1`, `.level 92` (spend the
-stat points through the `RaiseAttr` page or `.stat`), `.allskill`, `.gold <n>`, then `.item <id|name> <count>
-+<enchant>` per piece, one line each for the +19 sets (`.item 20011 1 19` style; ids from the old
-`etcitem/weapon/armor` tables, names in `data/yaml/armor_list.yaml`/`weapon_list.yaml`). Generate the list
-from the old DB read-only (SELECT on `character_items`, no writes) into a script the control socket
-(`decir ".item ..."`) replays. Verify each id exists in the Whale yaml first; missing ones need entries.
+`servidor_380/migrar_fx.py` (needs the old MariaDB running; it only SELECTs from `servidor_local`'s `l1jdb_363`, char
+268479040) creates in Whale's PostgreSQL the account `fx` / password `fx` (access 200) and the knight `fx` (male, class 61):
+level 92, exp 1570544826, STR 31 CON 20 DEX 31 CHA 12 INT 9 WIS 14, 42 bonus points spent, HP/MP 1967/109, lawful 938, title fx,
+map 4 (33437,32824), GM access 200, the 14 knight skills (1-8, 87-91, 108) and all 80 inventory items with enchant, equipped
+state and identified flag (+19 Iron/Demon/Death Knight/Kurtz sets, Dragon Slayer, 100004223 adena...). Item ids are the same
+official ids except: Greater Haste/Bravery/Mana potions 41477/41480/41481 -> 49302/49305/49306 and the Create Zombie spellbook
+47041 -> 40186; Royal Valor Necklace (21248) and Royal Earring (21249) are jp-only and were skipped. Re-running replaces the
+character. It was not logged in.
+
+## Pointing the client at the 3.80C server
+
+Do not edit the running client's file by hand while it is open; in `settings.ini` (`~/.local/share/Lineage/LineageCliente/`)
+add a server line and select it (or pick it in the login server menu):
+
+```
+servidor=Whale 3.80C|127.0.0.1|7001|tw380|fx
+servidor_elegido=Whale 3.80C
+juego=/path/Lineage Justice/
+juego_extra=/path/休閒天堂381/
+juego_extra=/path/servidor_380/l1jgo/吃檔/
+```
+
+Start the server first with `servidor_380/arrancar.sh` (Postgres 5433, server 127.0.0.1:7001; `instalar.sh` once). Log in as
+`fx` / `fx` and enter `fx`. The first line is `nombre|host|puerto|protocolo|cuenta`; the protocol must be `tw380`
+(S_MessageYN answers use the short form on it). `servidor_local` (jp363, port 2000) stays as it is; switch back by selecting
+its entry again. Optional: `lista_sprites=` pointing at `juego/spritelist/list.spz`, as for the main server.
 
 ## Operation
 
