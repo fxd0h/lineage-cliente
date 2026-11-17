@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include "app/app.h"
 #include "mundo/ataque.h"
 #include "i18n/textos.h"
@@ -460,6 +461,28 @@ bool iniciar_app(App& a) {
 }
 
 // Cierra el segundo de medición: promedios y máximos para el overlay F3 y --perf.
+// Ship rides (s3ep1): the original sends C_Ship from its ship scene clock, once per cycle of 180 s of wall-clock time
+// (0x4a6630 -> 0x4a6750..0x4a6bc8): on maps 6 / 83 / 446 at second 90 of the cycle, on maps 5 / 84 / 447 at second 0.
+// The destination map and a cell next to the dock are fixed (the original adds a 0-9 cell random jitter; the server
+// accepts +-20 cells of its own table).
+static void barco_llegada(App& a) {
+    if (a.pantalla != Pantalla::JUEGO) return;
+    struct Llegada { MapId desde; u16 destino, x, y; u32 segundo; };
+    static constexpr Llegada L[] = {
+        {5, 4, 32564, 32726, 0},      {6, 0, 32631, 32972, 90},      {83, 70, 32936, 33052, 90},
+        {84, 4, 33426, 33489, 0},     {446, 445, 32748, 32855, 90},  {447, 440, 32296, 33066, 0},
+    };
+    static i64 ultimo = 0;
+    const i64 t = static_cast<i64>(std::time(nullptr));
+    if (t == ultimo) return;
+    ultimo = t;
+    for (const Llegada& l : L)
+        if (a.mundo.mapa == l.desde && static_cast<u32>(t % 180) == l.segundo) {
+            enviar(a, cmd::barco(a.op, l.destino, l.x, l.y));
+            return;
+        }
+}
+
 static void cerrar_medicion(App& a) {
     a.fps = a.frames_fps * 1000.0f / static_cast<float>(a.entrada.ahora_ms - a.t_fps);
     a.ms_cpu = static_cast<float>(a.acum_cpu / a.frames_fps);
@@ -508,6 +531,7 @@ void bucle_app(App& a) {
         case Pantalla::CARGANDO:
         case Pantalla::JUEGO: frame_juego(a); break;
         }
+        barco_llegada(a);
         actualizar_sonido(a, a.entrada.ahora_ms);
         emblemas_guardar(a, a.entrada.ahora_ms, false);
         ++a.frames_en_pantalla;

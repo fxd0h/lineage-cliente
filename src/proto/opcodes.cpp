@@ -179,6 +179,8 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::SHOPLIST, 17}, {Cli::BOARD, 24}, {Cli::BOARDREAD, 19}, {Cli::BOARDNEXT, 87},
     {Cli::BOARDWRITE, 84}, {Cli::BOARDDELETE, 60}, {Cli::MAIL, 127}, {Cli::WAR, 101},
     {Cli::TAXRATE, 110}, {Cli::DEPOSIT, 68}, {Cli::DRAWAL, 42}, {Cli::CHANGEWARTIME, 98},
+    {Cli::SHIP, 33},
+    {Cli::RANK, 78},  // C_Rank: sub 1 rank, 2 / 3 / 4 alliance list / join / leave (0x4053b3..0x4053e3: `cc` 0x4e sub)
     {Cli::LOGINTOSERVEROK, 25},  // the client sends it as `ccc` 0x19 from the chat toggles (0x406abb, 0x406bbb, 0x406cbb)
 };
 

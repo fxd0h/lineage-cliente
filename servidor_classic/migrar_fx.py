@@ -45,8 +45,12 @@ sql = ["SET FOREIGN_KEY_CHECKS=0;", "START TRANSACTION;",
                                                   c['status'], c['class'], c['sex'], c['type'], c['heading'], c['loc_x'], c['loc_y'], c['map_id'], c['food'], c['lawful'], c['title'],
                                                   c['bonus_status'], c['elixir_status'], 1, c['high_level'], c['original_str'], c['original_con'], c['original_dex'], c['original_cha'], c['original_int'], c['original_wis']])))]
 skipped, remapped = [], []
+MANUAL = {41480: 40014}  # Greater Potion of Bravery ($7736, not in the US 2009 client) -> Potion of Bravery
 for it in items:
     iid = int(it['item_id'])
+    if iid in MANUAL:
+        remapped.append((iid, MANUAL[iid], it['nm'])); iid = MANUAL[iid]
+        names.setdefault(iid, 'Potion of Bravery')
     if iid not in names or (it['nm'] and names[iid].lower() != it['nm'].lower() and it['nm'].lower() in by_name):
         cand = by_name.get(it['nm'].lower(), [])
         if len(cand) >= 1:

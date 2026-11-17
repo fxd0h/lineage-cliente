@@ -186,10 +186,17 @@ inline Escritor guerra(const TablaOpcodes& t, TipoGuerra tipo, std::string_view 
     e.c(tipo).s(clan);
     return e;
 }
-// C_Rank sub 2 / 3 / 4: alliance list / join / leave (Whale reads c sub, c rank, s name).
+// C_Ship (s3ep1): h destination map, h x, h y. The original (0x4a6750..0x4a6bc8) sends it from the ship scene clock.
+inline Escritor barco(const TablaOpcodes& t, u16 mapa, u16 x, u16 y) {
+    Escritor e(t, Cli::SHIP);
+    e.h(mapa).h(x).h(y);
+    return e;
+}
+// C_Rank sub 2 / 3 / 4: alliance list / join / leave (Whale reads c sub, c rank, s name; s3ep1 only c sub).
 inline Escritor alianza(const TablaOpcodes& t, u8 sub, std::string_view clan = {}) {
     Escritor e(t, Cli::RANK);
-    e.c(sub).c(0).s(clan);
+    e.c(sub);
+    if (t.perfil.bytes_numero_pregunta) e.c(0).s(clan);  // the US 2009 client sends only `cc` (join = face to face)
     return e;
 }
 // C_TaxRate: d personaje, c tasa (10–50).

@@ -22,10 +22,10 @@
 | Spells, GM buffs | yes | yes | `.allbuff` exists (`L1AllBuff`, 29 buffs): effects/animations (SKILLSOUNDGFX, SKILLICONSHIELD, messages) play. Needs access 200 |
 | Polymorph | yes | yes | `.poly` OK (POLY packet) |
 | Clan create / emblem | yes | yes | Pledge Administrator `create` asks the name (string 83) and the server answers "Only a Prince or Princess..." for the knight (correct). Prince flow and emblem not driven |
-| Alliance | partial | patch | **Missing**: `C_Rank` only handles ranks 1-3, no alliance code in l1j-en, and the 2009 US client has no alliance UI. Not ported (decision: servidor_380/alliance.patch is for the 3.80 client) |
+| Alliance | partial | patch | OK (patch `0100-clan-alliance`, live-tested with two clients): the US client has it (`alliancelist` / `alliancejoin` / `allianceleave`, packet `0x4e` sub 2 / 3 / 4, format `cc`, no name: the server takes the lord you face). Up to 4 clans, lord of level 25+, table `clan_alliance`; invite = Y/N 223, S_War 6 / 7 + messages 1198-1204. The list answer is a system message (the list packet of the 2009 client is not identified) |
 | War, castles, pets, trade, mail | yes | partial | code present (`C_War`, `C_Trade*`, `C_Mail`); not live-driven in this pass |
 | Boards (Giran message board, Oren ranking board) | yes | n/a | window `tablon` opens (issue 16 not reproduced); ranking content not checked |
-| Boat rides (ship maps 5, 6, 83, 84, 446, 447) | yes | n/a | **Fork gap**: the fork never sends `C_Ship` (opcode 33) at arrival, so the ride never ends (the server side is consistent). See issue 5 |
+| Boat rides (ship maps 5, 6, 83, 84, 446, 447) | yes | n/a | OK: the original sends `C_Ship` (33, `chhh` map, x, y) from its ship clock (0x4a6630..0x4a6bc8: second 90 of a 180 s wall-clock cycle on maps 6 / 83 / 446, second 0 on 5 / 84 / 447); the fork does the same (`barco_llegada`). Live: map 6 -> Talking Island and map 5 -> Aden arrive at the right docks |
 
 ## Findings
 
@@ -49,7 +49,7 @@
 | 16 message / ranking boards | not reproducible | board windows open |
 | 15 BP storage | not reproducible | upstream cannot reproduce either; "retrieve without title" is intended |
 | 4 mob dies at screen edge | not reproducible | upstream cannot reproduce it either |
-| 5 Pirate Island boat | needs work (fork) | server data and `C_Ship` are consistent; the fork never sends C_Ship, needs the original arrival trigger (REA) |
+| 5 Pirate Island boat | fixed (fork) | `barco_llegada` sends C_Ship like the original; maps 446 / 447 use the same table (only 5 and 6 driven live) |
 | 20 Ship Grave Yard / Deep Sea connections | needs work | no detail in the issue |
 | 37 invisible mobs | needs work | not reproducible quickly |
 | 19 G-haste spellbook name | won't fix | name comes from client string `$1651` |
@@ -57,11 +57,17 @@
 | 46 dice dagger hit animation | won't fix (server) | `L1Attack` turns 0 damage into a miss; not a fork bug |
 | 53 death freeze (363 branch) | n/a | not the master/s3ep1 branch |
 | 11 fid weapon sprites | won't fix | missing sprites in the client data |
-| 2 spr_action merge, 8 L1Attack merge, 7 spawnlist update, 9 GM shop prices, 10 kennel, 12 gereng, 13 stray NPC, 14 HV/SI text, 17 lights, 21-25, 27-34, 36, 38, 40, 41, 44, 45, 48-52, 1 | needs work | balance / data / upstream housekeeping, not triaged individually |
+| 9 GM shop prices | fixed | `corregir_db.sql`: shops 81027 / 81028 / 81029 cost 1 adena |
+| 31 several rings / helmets equipped | mitigated upstream | `L1EquipmentSlot.setArmor` and `L1PcInventory.loadItems` already refuse the extra items; nothing more to do |
+| 14 HV/SI kick at 15 vs client text 13 | won't fix | the server is right (15), the text is in the client |
+| 7 spawnlist, 10 kennel, 12 Gereng, 13 stray NPCs (32549,33006), 36 bookmark in houses | needs upstream data | the maintainer plans a full spawnlist / NPC table update; 36 has no detail |
+| 50 NPC 80064 silent | needs work | no known html id for the message |
+| 1, 34, 49 | needs work | server logic, not reproduced |
+| 2, 8, 17, 21-25, 27-30, 32, 33, 38, 40, 41, 44, 45, 48, 51, 52 | needs work | balance / skill / upstream merge items, not triaged |
 
 ## Character migration
 
-`servidor_classic/migrar_fx.py` copies knight `fx` (objid 268479040) from `servidor_local/datos/mysql.sock` (SELECT only) into `l1jdb`: account fx/fx (old SHA1 hash; l1j-en rehashes on first login), access level GameMaster (200), level 92, stats, 14 skills, position Giran, and 78 of 82 items with enchant, equipped, identified, attribute enchant. Item ids matched by id+name, else by name (Greater Haste Potion 41477 -> 40018, Greater Mana Potion 41481 -> 90008). Skipped (no US equivalent): Create Zombie spellbook (47041), Greater Bravery potion (41480), Royal Valor Necklace (21248), Royal Earring (21249). Run `python3 -I servidor_classic/migrar_fx.py` with the DB up and the server stopped.
+`servidor_classic/migrar_fx.py` copies knight `fx` (objid 268479040) from `servidor_local/datos/mysql.sock` (SELECT only) into `l1jdb`: account fx/fx (old SHA1 hash; l1j-en rehashes on first login), access level GameMaster (200), level 92, stats, 14 skills, position Giran, and 78 of 82 items with enchant, equipped, identified, attribute enchant. Item ids matched by id+name, else by name (Greater Haste Potion 41477 -> 40018, Greater Mana Potion 41481 -> 90008). Skipped: Create Zombie (47041 is a JP skill-icon pseudo item; skill 41 and the spellbook 40186 exist in l1j-en and the US client), Royal Valor Necklace (21248) and Royal Earring (21249) (names `$13779` / `$13776` are not in the US string table and the items are stat-less dummies even in L1J-JP). Greater Potion of Bravery (41480, `$7736`) is not in the US client either: it is remapped to Potion of Bravery 40014 (`MANUAL` in the script; the 28 of fx were added with `fx_extra_items.sql`). Run `python3 -I servidor_classic/migrar_fx.py` with the DB up and the server stopped.
 
 ## settings.ini for the user's client
 

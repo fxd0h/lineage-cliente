@@ -173,6 +173,8 @@ void confirmar_prompt(App& a, std::string_view texto) {
         enviar(a, cmd::crear_clan(a.op, texto));
     } else if (accion == "alliancejoin") {
         enviar(a, cmd::alianza(a.op, 3, texto));
+    } else if (accion == "allianceleave") {
+        if (dijo_si(texto)) enviar(a, cmd::alianza(a.op, 4));
     } else if (accion == "emblem") {  // 0x40d070 -> 0x4070c0
         subir_emblema(a, texto);
     } else if (accion == "checkbmp") {  // 0x40d010 -> 0x406fc0
@@ -325,8 +327,13 @@ void accion_comunidad(App& a, std::string_view accion) {
     else if (accion == "emblem") abrir_prompt(a, cadena(a, 576), accion);    // 0x40d030
     else if (accion == "checkbmp") abrir_prompt(a, cadena(a, 575), accion);  // 0x40cfd0
     else if (accion == "alliancelist") enviar(a, cmd::alianza(a.op, 2));
-    else if (accion == "alliancejoin") abrir_prompt(a, cadena(a, 580), accion);
-    else if (accion == "allianceleave") enviar(a, cmd::alianza(a.op, 4));
+    else if (accion == "alliancejoin") {  // s3ep1 sends only `cc` 0x4e 3: the server takes the lord you face
+        if (a.op.perfil.bytes_numero_pregunta) abrir_prompt(a, cadena(a, 580), accion);
+        else enviar(a, cmd::alianza(a.op, 3));
+    } else if (accion == "allianceleave") {
+        if (a.op.perfil.bytes_numero_pregunta) enviar(a, cmd::alianza(a.op, 4));
+        else abrir_prompt(a, cadena(a, 1210), accion);  // asks first, y -> 0x4e 4 (0x401d86)
+    }
     // pledgefocus*: not wired (audit U-D7)
 }
 
