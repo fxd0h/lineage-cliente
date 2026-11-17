@@ -612,6 +612,10 @@ constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // size of fr
 bool uses_original_frame(const App& a, IdVentana v);
 void draw_original_status(App& a, int x, int y);  // status window: equipment and attributes tabs
 // close_x < 0: the close button of the inventory-sized windows. Returns true when the close button was clicked.
+// The hover box of the original lists and inventory (0x49a440 halves the pixels under it, 0x498720 draws the bevel).
+// Name colour of an item by its wire state (0 blessed, 1 normal, 2 cursed, 3 unidentified; table 0x8f0f34).
+u32 original_item_color(u8 state);
+void draw_original_hover_box(App& a, int x, int y, int w, int h);
 bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame, int close_x = -1, int close_y = -1);
 void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image at the window position as is
 // A button made of two images (normal, pointer over); true when clicked.

@@ -68,6 +68,15 @@ std::string_view atributos_item(const Inventario& inv, Slot s);
 // Los atributos de un ítem identificado en texto, una línea por atributo ("Damage 6/8", "AC 3",
 // "STR +1", "Usable by: Knight, Elf"...), separadas por '\n'. Devuelve el largo escrito.
 size_t describir_atributos(std::string_view bytes, char* salida, size_t capacidad);
+// Hover box text of the original inventory (0x446490 / 0x446520 / draw 0x44e45b): the name, wrapped to 23 columns
+// (a second line only when longer), then the attribute text wrapped to 22 columns ('\n' forces a break). The first
+// `nombre` lines are the name's.
+struct LineasTip {
+    static constexpr size_t MAX_LINEAS = 22, ANCHO = 32;
+    char texto[MAX_LINEAS][ANCHO]{};
+    u8 n = 0, nombre = 0;
+};
+void armar_tooltip_item(std::string_view nombre, std::string_view detalles, LineasTip& salida);
 // Equipado según el sufijo que agrega el servidor al nombre.
 bool item_equipado(std::string_view nombre);
 // Display order of the inventory grid (original client): worn items first, the rest keep the server

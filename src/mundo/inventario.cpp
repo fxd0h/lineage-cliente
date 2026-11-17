@@ -1,3 +1,4 @@
+#include <cstring>
 #include "mundo/inventario.h"
 #include <algorithm>
 #include <cstdarg>
@@ -51,6 +52,44 @@ struct Lineas {
 std::string_view atributos_item(const Inventario& inv, Slot s) {
     TextoRef r = inv.items.col<I_ATRIBUTOS>()[s];
     return {inv.textos.data() + r.ofs, r.len};
+}
+
+namespace {
+// Greedy wrap at spaces to `ancho` columns (a longer word is cut). Returns false when the output is full.
+void envolver(std::string_view t, size_t ancho, LineasTip& o, size_t max_lineas) {
+    while (!t.empty() && o.n < max_lineas) {
+        while (t.starts_with(' ')) t.remove_prefix(1);
+        if (t.empty()) break;
+        size_t corte = std::min(t.size(), ancho);
+        if (t.size() > ancho) {
+            const size_t sp = t.rfind(' ', ancho);
+            if (sp != std::string_view::npos && sp > 0) corte = sp;
+        }
+        std::memcpy(o.texto[o.n], t.data(), corte);
+        o.texto[o.n][corte] = 0;
+        ++o.n;
+        t.remove_prefix(corte);
+    }
+}
+}  // namespace
+
+void armar_tooltip_item(std::string_view nombre, std::string_view detalles, LineasTip& salida) {
+    salida.n = salida.nombre = 0;
+    if (nombre.size() <= 23) {
+        std::memcpy(salida.texto[0], nombre.data(), nombre.size());
+        salida.texto[0][nombre.size()] = 0;
+        salida.n = 1;
+    } else {
+        envolver(nombre, 23, salida, 2);  // the exe splits once; the rest of a very long name is cut
+    }
+    salida.nombre = salida.n;
+    while (!detalles.empty() && salida.n < LineasTip::MAX_LINEAS) {
+        const size_t fin = std::min(detalles.find('\n'), detalles.size());
+        const std::string_view linea = detalles.substr(0, fin);
+        if (linea.empty()) salida.texto[salida.n][0] = 0, ++salida.n;
+        else envolver(linea, 22, salida, LineasTip::MAX_LINEAS);
+        detalles.remove_prefix(std::min(fin + 1, detalles.size()));
+    }
 }
 
 size_t describir_atributos(std::string_view bytes, char* salida, size_t capacidad) {

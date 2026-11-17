@@ -488,17 +488,8 @@ void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char*
     int top = row_y + 32 > 300 ? row_y - 12 : row_y + 32;
     if (top > 157) top = std::max(10, top - 12 * (lines - 1) - 22);
     else top = std::min(top - 33, 330 - h);
-    const u64 kb = clave_orden(CAPA_UI_TEXTO, 28), kl = clave_orden(CAPA_UI_TEXTO, 29), kt = clave_orden(CAPA_UI_TEXTO, 30);
-    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 200));  // over the row texts below (the exe halves the pixels, text included)
-    const u32 light = rgba(189, 189, 189), dark = rgba(123, 123, 123);
-    g.gpu().rectangulo(x, top, w - 1, 1, kl, light);
-    g.gpu().rectangulo(x + 1, top + 1, w - 2, 1, kl, light);
-    g.gpu().rectangulo(x, top + 1, 1, h - 1, kl, light);
-    g.gpu().rectangulo(x + 1, top + 2, 1, h - 2, kl, light);
-    g.gpu().rectangulo(x + 1, top + h - 1, w - 1, 1, kl, dark);
-    g.gpu().rectangulo(x + 2, top + h - 2, w - 2, 1, kl, dark);
-    g.gpu().rectangulo(x + w - 1, top, 1, h - 1, kl, dark);
-    g.gpu().rectangulo(x + w - 2, top + 1, 1, h - 2, kl, dark);
+    draw_original_hover_box(a, x, top, w, h);
+    const u64 kt = clave_orden(CAPA_UI_TEXTO, 30);
     g.texto_sombra(line1, static_cast<float>(x + 5), static_cast<float>(top + 5), kt, color);
     int y = top + 17;
     if (line2[0]) g.texto_sombra(line2, static_cast<float>(x + 5), static_cast<float>(y), kt, color), y += 12;
@@ -881,5 +872,22 @@ void dibujar_npc(App& a) {
     if (a.tienda != TipoTienda::NINGUNA) dibujar_tienda(a, rv.x, rv.y);
     else dibujar_pagina(a, rv.x, rv.y);
 }
+
+void draw_original_hover_box(App& a, int x, int top, int w, int h) {
+    Graficos& g = *a.g;
+    const u64 kb = clave_orden(CAPA_UI_TEXTO, 28), kl = clave_orden(CAPA_UI_TEXTO, 29);
+    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 200));  // over the row texts below (the exe halves the pixels, text included)
+    const u32 light = rgba(189, 189, 189), dark = rgba(123, 123, 123);
+    g.gpu().rectangulo(x, top, w - 1, 1, kl, light);
+    g.gpu().rectangulo(x + 1, top + 1, w - 2, 1, kl, light);
+    g.gpu().rectangulo(x, top + 1, 1, h - 1, kl, light);
+    g.gpu().rectangulo(x + 1, top + 2, 1, h - 2, kl, light);
+    g.gpu().rectangulo(x + 1, top + h - 1, w - 1, 1, kl, dark);
+    g.gpu().rectangulo(x + 2, top + h - 2, w - 2, 1, kl, dark);
+    g.gpu().rectangulo(x + w - 1, top, 1, h - 1, kl, dark);
+    g.gpu().rectangulo(x + w - 2, top + 1, 1, h - 2, kl, dark);
+}
+
+u32 original_item_color(u8 state) { return state_color(state); }
 
 }  // namespace lin

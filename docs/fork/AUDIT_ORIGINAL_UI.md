@@ -196,6 +196,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Icon position | cell origin (21+34c, 42+34r) (0x445fd0) | +1 px | DIFFERENT | `draw_item_icon` |
 | Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 18+35i | DIFFERENT | 1 px |
 | Scroll bar | up 974 (161,48), track 971 (161,56), down 972 (162,235), thumb 976 | x=162 everywhere, up y=41, down 233 | DIFFERENT | Grid scroll constants |
+| Item hover text | grid draw 0x44e45b: hovered cell (index [0x4c], no delay). Item with the equipped flag ([+8], set by the select call 0x44f19b) and attribute lines ([+0x14], from the S_AddItem status bytes through 0x482630/0x446520): bevel box 142 px at the grid x (21), y = cell y + 32 (above, `-12 k - 52`, when below grid y + 161; clamped to grid y + 10 / + 330), name wrapped to 23 columns, attribute lines to 22, 12 px pitch, text at +5, all in the item colour (0x8f0f34[blessed/normal/cursed/unidentified]); any other item: name only with shadow under the cell, no attributes | same (`armar_tooltip_item`, `draw_original_hover_box`) | MATCH | inventario_ui.cpp |
 | Trash tooltip | none in draw 0x44d830 | "Drag an item here to delete it" | EXTRA | remove |
 | Tab strip 999+tab at (17,249); grid (21,42) 4x6 pitch 34; trash 1003/1004 at (163,252); no weight text | 0x44db21, 0x44e056, 0x44db9d | same | MATCH | - |
 

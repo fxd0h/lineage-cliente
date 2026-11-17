@@ -385,6 +385,24 @@ TEST_CASE("Inventario: atributos de un ítem identificado (getStatusBytes) en te
     CHECK(n < 8);
 }
 
+TEST_CASE("Inventario: lineas del tooltip original (nombre a 23 columnas, atributos a 22)") {
+    LineasTip t;
+    armar_tooltip_item("Dagger", "Damage 1 (small) / 1 (large)\nMaterial: iron\nWeight 12", t);
+    CHECK(t.nombre == 1);
+    CHECK(t.n == 5);  // the 28-column damage line wraps in two
+    CHECK(std::string_view(t.texto[0]) == "Dagger");
+    CHECK(std::string_view(t.texto[1]) == "Damage 1 (small) / 1");
+    CHECK(std::string_view(t.texto[2]) == "(large)");
+    CHECK(std::string_view(t.texto[4]) == "Weight 12");
+    armar_tooltip_item("+7 Blessed Sword of Destruction", {}, t);
+    CHECK(t.nombre == 2);
+    CHECK(t.n == 2);
+    CHECK(std::string_view(t.texto[0]) == "+7 Blessed Sword of");
+    CHECK(std::string_view(t.texto[1]) == "Destruction");
+    armar_tooltip_item("Ring", {}, t);
+    CHECK(t.n == 1);
+}
+
 TEST_CASE("Puertas y estructuras de castillo: acciones que se quedan en su último frame") {
     CHECK(accion_fija(TIPO_PUERTA, ACC_ABRIR));
     CHECK(accion_fija(TIPO_ESTRUCTURA, 35));  // torre destruida

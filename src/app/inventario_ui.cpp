@@ -251,32 +251,58 @@ void dibujar_inventario(App& a) {
         g.texto(AYUDA, tx, ty, clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
     }
 
-    // Nombre del ítem bajo el puntero (siempre blanco: el original solo marca bendito/maldito en el ícono) y, si está
-    // identificado, sus atributos debajo (daño, defensa, encantamiento, bonos...).
+    // Hover text of the original inventory (draw 0x44e45b). Only an equipped item that has attribute lines gets the
+    // bevelled box (name wrapped to 23 columns, attributes to 22, all in the item's colour); any other item shows just
+    // its name, with a shadow, under the cell. The fork's simple UI keeps its plain box.
     if (bajo >= 0 && !a.arrastrando) {
         const Slot s = slot_bajo;
         char buf[256], det[1024];
-        size_t n = expandir_desc(a.desc, nombre_item(inv, s), buf, sizeof buf);
-        size_t nd = describir_atributos(atributos_item(inv, s), det, sizeof det);
-        if (nd == 0 && !t.col<I_IDENTIFICADO>()[s]) nd = static_cast<size_t>(std::snprintf(det, sizeof det, "Unidentified"));
-        const u32 color = rgba(255, 255, 254);
-        int w = ancho_texto(buf, n), lineas = 0;
-        for (std::string_view resto(det, nd); !resto.empty(); ++lineas) {
-            const size_t fin = std::min(resto.find('\n'), resto.size());
-            w = std::max(w, ancho_texto(resto.data(), fin));
-            resto.remove_prefix(std::min(fin + 1, resto.size()));
-        }
-        const int alto_linea = ALTO_GLIFO + 3;
-        int tx = std::min(e.mx + 12, a.gpu.ancho() - w - 8);
-        int ty = std::min(e.my + 16, a.gpu.alto() - (lineas + 1) * alto_linea - 8);
-        // El fondo en la capa de textos (debajo de los suyos): si no, los textos de la ventana se ven a través.
-        g.gpu().rectangulo(tx - 4, ty - 3, w + 8, (lineas + 1) * alto_linea + 4, clave_orden(CAPA_UI_TEXTO, 29), rgba(0, 0, 0, 230));
-        g.texto({buf, n}, tx, ty, clave_orden(CAPA_UI_TEXTO, 30), color);
-        int y = ty + alto_linea;
-        for (std::string_view resto(det, nd); !resto.empty(); y += alto_linea) {
-            const size_t fin = std::min(resto.find('\n'), resto.size());
-            g.texto(resto.substr(0, fin), tx, y, clave_orden(CAPA_UI_TEXTO, 30), rgba(200, 190, 160));
-            resto.remove_prefix(std::min(fin + 1, resto.size()));
+        const size_t n = expandir_desc(a.desc, nombre_item(inv, s), buf, sizeof buf);
+        const size_t nd = describir_atributos(atributos_item(inv, s), det, sizeof det);
+        if (original) {
+            const bool equipado = item_equipado(nombre_item(inv, s));
+            const u32 color = original_item_color(t.col<I_IDENTIFICADO>()[s] ? (t.col<I_BENDICION>()[s] & 3) : 3);
+            LineasTip tip;
+            armar_tooltip_item({buf, n}, equipado ? std::string_view(det, nd) : std::string_view{}, tip);
+            const int fila = bajo / gr.cols - static_cast<int>(a.inventario_desplazamiento), col = bajo % gr.cols;
+            const int celda_x = x0 + gr.x + 1 + col * CELDA, celda_y = y0 + gr.y + 1 + fila * CELDA;
+            const u64 kb = clave_orden(CAPA_UI_TEXTO, 30);
+            if (tip.n == tip.nombre) {
+                // Name only: under the cell, kept inside the screen (0x44e3c6..0x44e407).
+                const int w = ancho_texto(tip.texto[0], std::strlen(tip.texto[0]));
+                const int tx = std::min(celda_x, a.gpu.ancho() - 4 - w);
+                const int ty = celda_y + 32 + 12 > a.gpu.alto() ? celda_y - 12 : celda_y + 32;
+                for (int i = 0; i < tip.n; ++i) g.texto_sombra(tip.texto[i], tx, ty + 12 * i, kb, color);
+            } else {
+                const int cnt = tip.n - tip.nombre, extra = tip.nombre == 2 ? 12 : 0;
+                const int h = 12 + extra + 12 * cnt + 10, gx = x0 + gr.x + 1, gy = y0 + gr.y + 1;
+                int top = celda_y + 32;
+                if (top > gy + 161) top = std::max(gy + 10, top - 12 * cnt - extra - 52);
+                else if (top + h > gy + 330) top = gy + 330 - h;
+                draw_original_hover_box(a, gx, top, 142, h);
+                for (int i = 0; i < tip.n; ++i) g.texto_sombra(tip.texto[i], gx + 5, top + 5 + 12 * i, kb, color);
+            }
+        } else {
+            size_t nd2 = nd;
+            if (nd2 == 0 && !t.col<I_IDENTIFICADO>()[s]) nd2 = static_cast<size_t>(std::snprintf(det, sizeof det, "Unidentified"));
+            const u32 color = rgba(255, 255, 254);
+            int w = ancho_texto(buf, n), lineas = 0;
+            for (std::string_view resto(det, nd2); !resto.empty(); ++lineas) {
+                const size_t fin = std::min(resto.find('\n'), resto.size());
+                w = std::max(w, ancho_texto(resto.data(), fin));
+                resto.remove_prefix(std::min(fin + 1, resto.size()));
+            }
+            const int alto_linea = ALTO_GLIFO + 3;
+            int tx = std::min(e.mx + 12, a.gpu.ancho() - w - 8);
+            int ty = std::min(e.my + 16, a.gpu.alto() - (lineas + 1) * alto_linea - 8);
+            g.gpu().rectangulo(tx - 4, ty - 3, w + 8, (lineas + 1) * alto_linea + 4, clave_orden(CAPA_UI_TEXTO, 29), rgba(0, 0, 0, 230));
+            g.texto({buf, n}, tx, ty, clave_orden(CAPA_UI_TEXTO, 30), color);
+            int y = ty + alto_linea;
+            for (std::string_view resto(det, nd2); !resto.empty(); y += alto_linea) {
+                const size_t fin = std::min(resto.find('\n'), resto.size());
+                g.texto(resto.substr(0, fin), tx, y, clave_orden(CAPA_UI_TEXTO, 30), rgba(200, 190, 160));
+                resto.remove_prefix(std::min(fin + 1, resto.size()));
+            }
         }
     }
 

@@ -298,7 +298,7 @@ const char* AYUDA[] = {
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
     "abrir|cerrar inventario|estado|hechizos|opciones|social|salida|teclas",
     "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
-    "clic <x> <y> [der|dder|dizq|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
+    "mover <x> <y> <frames> (puntero sin botón)   clic <x> <y> [der|dder|dizq|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
     "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
     "tecla <nombre> (ctrl+ alt+ shift+)   texto \"...\"   ctrl on|off   shift on|off",
@@ -551,6 +551,10 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         for (int i = 1; i <= PASOS; ++i)
             g.mouse.push_back({x1 + (x2 - x1) * i / PASOS, y1 + (y2 - y1) * i / PASOS, 0, true, false});
         g.mouse.push_back({x2, y2, 0, false, true});
+    } else if (cmd == "mover") {
+        if (p.size() < 4) return error("uso: mover <x> <y> <frames>");
+        const int x = std::atoi(p[1].c_str()), y = std::atoi(p[2].c_str());
+        for (int i = std::max(1, std::atoi(p[3].c_str())); i-- > 0;) g.mouse.push_back({x, y, 0, false, false});
     } else if (cmd == "mantener") {
         if (p.size() < 4) return error("uso: mantener <x> <y> <frames>");
         const int x = std::atoi(p[1].c_str()), y = std::atoi(p[2].c_str());
