@@ -3,7 +3,7 @@
 Lo que se averiguó de los datos del juego, del protocolo y del servidor, y lo que se decidió con
 eso, por tema. Es la referencia para no volver a descubrirlo: cada punto dice qué pasa, por qué se
 hizo así y dónde está en el código. El detalle cronológico y la verificación de cada cosa están en
-[ENTREGABLES.md](../ENTREGABLES.md); el protocolo, en [analisis/PROTOCOLO_RED.md](analisis/PROTOCOLO_RED.md).
+[ENTREGABLES.md](upstream/ENTREGABLES.md); el protocolo, en [analisis/PROTOCOLO_RED.md](analisis/PROTOCOLO_RED.md).
 
 Convenciones: "el original" es el cliente de Lineage de la instalación; "el servidor" es L1J-JP
 3.63c (`servidor_local/l1j-jp`), que es la fuente de verdad del protocolo. Las celdas son del mapa;
@@ -437,7 +437,7 @@ Visto al probar la barra de atajos, los auto-buffs y la auto-poción en los dos:
 
 - **Solo el servidor local**, con `mudo on` y `LIN_CONFIG` propio (reglas en [AGENTS.md](../AGENTS.md)).
 - **Control en vivo** (el cliente no tiene parámetros): comandos por un socket, tabla en el
-  [README](../README.md) y `herramientas/lin_ctl.py`.
+  [referencia del cliente](fork/REFERENCE.md) y `herramientas/lin_ctl.py`.
   - Se espera lo que importa (`esperar pantalla=`, `paquete=`, `html=`, `ventana=`, `chat=`) en
     lugar de contar frames: a 60 o 120 fps los frames no son tiempo, y un clic antes de tiempo
     arruinaba las pruebas viejas.

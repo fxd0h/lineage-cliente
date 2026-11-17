@@ -1,3 +1,9 @@
+> **Upstream history.** This is the README of [javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente) as it was
+> when this fork was kept in sync, preserved for reference. It describes the upstream state (simple interface
+> as default, JP 3.63c, macOS first, Windows missing) and is **not** maintained. The fork's front page is the
+> [root README](../../README.md); the up-to-date settings, controls and live-control reference is
+> [../fork/REFERENCE.md](../fork/REFERENCE.md).
+
 # Lineage Client (C++23 + SDL3)
 
 > **About this fork.** This is a fork of [javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente),
@@ -7,7 +13,7 @@
 > What the fork adds: a native Linux port (Vulkan/SPIR-V shaders, case-insensitive asset paths, Linux server
 > scripts), a look and feel closer to the original 2000–2008 client (original cursors, buff icons, overhead
 > bars, blessed-item outline, fixed 640×480 view scaled to any window with FSR/Anime4K/xBR/CRT filters),
-> and many rendering and gameplay fixes. Fork notes live in [docs/fork/](docs/fork/README.md). All credit
+> and many rendering and gameplay fixes. Fork notes live in [docs/fork/](../fork/README.md). All credit
 > for the original client goes to Javier; this fork stays under the same GPL-3.0 license. No game assets are
 > included — you need your own Lineage installation.
 
@@ -21,23 +27,23 @@ and sieges, the bulletin board and mail, and player shops are also in.
 Tested on **macOS** (Apple Silicon, upstream) and **Linux** (Ubuntu 24.04 / Vulkan, this fork). What is missing
 for Windows is marked in the code with `MULTIPLATAFORMA` and listed [below](#missing-for-windows).
 
-![The game, with the simple interface](docs/capturas/readme_game.png)
+![The game, with the simple interface](../capturas/readme_game.png)
 
 | Simple interface (default) | Original interface (F2) |
 |---|---|
-| ![Status and inventory windows](docs/capturas/readme_windows.png) | ![The original panel](docs/capturas/readme_game_original.png) |
-| ![Login, simple interface](docs/capturas/readme_login.png) | ![Login, original interface](docs/capturas/readme_login_original.png) |
+| ![Status and inventory windows](../capturas/readme_windows.png) | ![The original panel](../capturas/readme_game_original.png) |
+| ![Login, simple interface](../capturas/readme_login.png) | ![Login, original interface](../capturas/readme_login_original.png) |
 
 | Character selection | Character creation |
 |---|---|
-| ![Character selection](docs/capturas/readme_character_select.png) | ![Character creation](docs/capturas/readme_character_create.png) |
+| ![Character selection](../capturas/readme_character_select.png) | ![Character creation](../capturas/readme_character_create.png) |
 
 More documentation, mostly in Spanish, the working language of the project:
 
 - **[ENTREGABLES.md](ENTREGABLES.md):** detailed status and evidence for each deliverable.
-- **[docs/DESCUBRIMIENTOS.md](docs/DESCUBRIMIENTOS.md):** what was learned about formats, timing,
+- **[docs/DESCUBRIMIENTOS.md](../DESCUBRIMIENTOS.md):** what was learned about formats, timing,
   drawing and the servers, and the design decisions that followed.
-- **[AGENTS.md](AGENTS.md):** how to work on the project, for people and agents, also in parallel.
+- **[AGENTS.md](../../AGENTS.md):** how to work on the project, for people and agents, also in parallel.
 
 ## Requirements
 
@@ -91,7 +97,7 @@ Each server has `instalar.sh` (once), `arrancar.sh` and `detener.sh` in its own 
 | Folder | Server | Port | Protocol |
 |---|---|---|---|
 | `servidor_local/` | L1J-JP 3.63c (the reference for the tests) | 2000 | `jp363` |
-| `servidor_classic363/` | l1j-en/classic, 3.63 branch ([notes](servidor_classic363/README.md)) | 2001 | `jp363` |
+| `servidor_classic363/` | l1j-en/classic, 3.63 branch ([notes](../../servidor_classic363/README.md)) | 2001 | `jp363` |
 | `servidor_classic/` | l1j-en/classic (3.0 English / US 2009) | 2002 | `s3ep1` |
 | `servidor_380/` | L1JGO-Whale (3.80C) | 7001 | `tw380` |
 
@@ -147,7 +153,7 @@ Run it while the game is closed: the game saves `settings.ini` too and can overw
 
 | Interface tab | Servers tab |
 |---|---|
-| ![Settings editor, Interface tab](docs/capturas/readme_settings_editor.png) | ![Settings editor, Servers tab](docs/capturas/readme_settings_servers.png) |
+| ![Settings editor, Interface tab](../capturas/readme_settings_editor.png) | ![Settings editor, Servers tab](../capturas/readme_settings_servers.png) |
 
 ### Languages
 
@@ -158,11 +164,11 @@ startup; the editor switches as soon as you pick it.
 
 | Español | Português |
 |---|---|
-| ![Login in Spanish](docs/capturas/readme_login_es.png) | ![Login in Portuguese](docs/capturas/readme_login_pt.png) |
+| ![Login in Spanish](../capturas/readme_login_es.png) | ![Login in Portuguese](../capturas/readme_login_pt.png) |
 
 | Deutsch | Français |
 |---|---|
-| ![Login in German](docs/capturas/readme_login_de.png) | ![Login in French](docs/capturas/readme_login_fr.png) |
+| ![Login in German](../capturas/readme_login_de.png) | ![Login in French](../capturas/readme_login_fr.png) |
 
 - **What is translated so far:** login, character selection and creation, and the settings editor. The
   in-game windows are not migrated yet and keep their current text. Text sent by the server is shown as
@@ -479,7 +485,7 @@ Identifiers and comments in the code are in Spanish.
 
 | F1 help | French editor |
 |---|---|
-| ![F1 help window, fitted](docs/capturas/readme_fixed_help.png) | ![French settings editor, fitted](docs/capturas/readme_fixed_editor_fr.png) |
+| ![F1 help window, fitted](../capturas/readme_fixed_help.png) | ![French settings editor, fitted](../capturas/readme_fixed_editor_fr.png) |
 
 ## Missing for Windows
 
@@ -497,6 +503,6 @@ Identifiers and comments in the code are in Spanish.
 ## License
 
 The format code was written by reading l1j-client (GPLv3), and `datos/sprite_table.txt` comes from that project, so
-this client must be distributed as **GPLv3** ([LICENSE](LICENSE)). The interface font, Departure Mono, is under the SIL
+this client must be distributed as **GPLv3** ([LICENSE](../../LICENSE)). The interface font, Departure Mono, is under the SIL
 Open Font License 1.1 (`licencias/DepartureMono-OFL.txt`). Game resources are not included: they are read from the
 user's installation.

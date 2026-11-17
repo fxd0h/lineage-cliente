@@ -1,7 +1,21 @@
 # Fork documentation
 
 This fork of [javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente) (GPL-3.0)
-focuses on running Lineage 1 natively on Linux with a look and feel faithful to the original client.
+focuses on running Lineage 1 natively on Linux (and macOS) with a look and feel faithful to the original 2009 US
+client. The front page is the [root README](../../README.md).
+
+## Index
+
+| File | What it is |
+|---|---|
+| [REFERENCE.md](REFERENCE.md) | Settings keys, controls, live-control commands, languages |
+| [hd_text.md](hd_text.md) | HD text pass (`texto_hd`): pipeline, layers, MSL/SPIR-V |
+| [AUDIT_ORIGINAL_UI.md](AUDIT_ORIGINAL_UI.md) | Audit of the original UI (`ui_simple=0`) against the 2009 client, with binary addresses |
+| [UI_IMAGES.tsv](UI_IMAGES.tsv) | UI image id catalog (size, description, users, binary refs) |
+| [SERVER_L1JEN_EVALUATION.md](SERVER_L1JEN_EVALUATION.md) | l1j-en classic (US 2009, `s3ep1`, port 2002) evaluation and feature matrix |
+| [SERVER_380_EVALUATION.md](SERVER_380_EVALUATION.md) | L1JGO-Whale (TW 3.80C/3.81C, `tw380`, port 7001) evaluation |
+| [DATA_COVERAGE_381.md](DATA_COVERAGE_381.md) | 3.81C data coverage of Whale against the available game installs |
+| [../upstream/](../upstream/README.md) | Upstream's README and ENTREGABLES tracker (history, not maintained) |
 
 ## Conventions
 
@@ -9,9 +23,9 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
   **English**. Existing Spanish code is translated gradually, only when it is touched or refactored.
 - **Standard:** C++23 (`CMAKE_CXX_STANDARD 23`). The project builds without exceptions or RTTI, so use
   `std::expected` through `has_value()` / `*`, never `.value()`.
-- **Upstream docs** (`AGENTS.md`, `ENTREGABLES.md`, `docs/DESCUBRIMIENTOS.md`, `docs/analisis/`) are kept
-  as reference and not edited for fork-specific changes. Fork changes are documented here.
-- Still in force from upstream: test only against the local server, never commit game assets, no
+- **Upstream docs** (`docs/upstream/`, `docs/DESCUBRIMIENTOS.md`, `docs/analisis/`, Spanish) are kept
+  as reference and not edited for fork-specific changes. Fork changes are documented here and in `AGENTS.md`.
+- Still in force from upstream: test only against the local servers, never commit game assets, no
   allocations in the frame loop, zero warnings and all tests passing before every commit.
 
 - **UI image catalog:** [UI_IMAGES.tsv](UI_IMAGES.tsv) lists UI image ids with size, description, users and binary refs; grep it before viewing an image and fill/append the row when you view one.
@@ -100,7 +114,17 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
   keep it out of the repo. Like the table, it lists each action's last frame first, so death rows get
   the same rotation.
 
-### Local server
+### Local servers
+
+- Three servers with Linux/macOS installers: `servidor_classic/` (l1j-en US 2009, `s3ep1`, 2002, main), `servidor_380/`
+  (L1JGO-Whale TW 3.80C, `tw380`, 7001, pruned to data present in 3.81C, English item names, alliances, GM buff
+  fixes, `migrar_fx.py`), plus `servidor_classic363/` (l1j-en 3.63, 2001). See the evaluations above.
+- `servidor_classic` patches: shop buy limit, Decavia teleports, clan alliance, Giran Bugbear Race, l1j-en issue
+  fixes (18, 39, 42, Fire Wall safety zone), emblem id, `migrar_fx.py`.
+- Client: protocol profiles `jp363` / `tw380` / `s3ep1`, Big5 decoding for `tw380`, `juego_extra=` fallback game
+  folders, clan emblems, combat music, alliance (`C_Rank`) and ship arrival (`C_Ship`).
+
+#### servidor_local
 
 - Korean item, NPC and skill names in the L1J-JP database translated to English
   (`servidor_local/translate_names.py`, `name_fixes.tsv`, `name_translations.tsv`, applied from
@@ -124,13 +148,16 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - New-monster animations from `list.spz` (encrypted) are not decoded.
 - Windows port (DXIL shaders, Winsock, file mapping) not started.
 - No CI yet.
+- Remaining original-UI differences: [AUDIT_ORIGINAL_UI.md](AUDIT_ORIGINAL_UI.md).
 
 ## Playing locally
 
 ```sh
-(cd servidor_local && nohup setsid ./arrancar.sh > servidor.log 2>&1 < /dev/null &)
+servidor_classic/instalar.sh   # once
+(cd servidor_classic && nohup setsid ./arrancar.sh > servidor.log 2>&1 < /dev/null &)
 ./build/debug/lineage
 ```
 
 Accounts are created on first login. Settings live in `~/.local/share/Lineage/LineageCliente/settings.ini`
-(`juego=` must point to a full game installation, e.g. the L1Justice 3.63 client data).
+(`juego=` must point to a full game installation, e.g. the US 2009 client data; add
+`servidor=Classic|127.0.0.1|2002|s3ep1|` and `servidor_elegido=Classic`).
