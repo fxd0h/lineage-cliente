@@ -19,3 +19,8 @@ CREATE TABLE IF NOT EXISTS clan_alliance (clan_id INT NOT NULL PRIMARY KEY, alli
 
 -- #9: the GM shops of potions / scrolls / teleport scrolls cost 1 adena like all the other GM shops.
 UPDATE shop SET selling_price = 1, purchasing_price = 1 WHERE npc_id IN (81027, 81028, 81029);
+
+-- Maeno is the Bugbear Race Manager: the US/TW client data has page "maeno1" (the DB pointed at "perkin", which no client has).
+UPDATE npcaction SET normal_action = 'maeno1', caotic_action = 'maeno1' WHERE npcid = 70041 AND normal_action = 'perkin';
+-- Biyan: the page is "biyan" (there is no "biyan1").
+UPDATE npcaction SET normal_action = 'biyan', caotic_action = 'biyan' WHERE npcid = 70752 AND normal_action = 'biyan1';

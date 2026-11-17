@@ -82,3 +82,22 @@ lista_sprites=/home/fx/work/l1/juego/spritelist/list.spz
 ```
 
 Start with `(cd servidor_classic && nohup setsid ./arrancar.sh > server.log 2>&1 < /dev/null &)`, stop with `servidor_classic/detener.sh`. Log in as fx / fx.
+
+## Missing html pages (scan of l1j-en vs primary + extra data)
+
+Page ids come from the live `npcaction` table plus the string literals of `S_NPCTalkReturn` / `S_ShowHTML` in the Java sources
+(~1900 ids). The original client (S3EP1U 0x437440) loads only `<id>-<lang>.html` and, when it is missing, opens no window at all
+(0x43a9ca); the fork now does the same (it used to print "page X not found"). Ids missing from both data sets (the many
+`horosa`, `vbk`, `nober`... entries in the raw scan are only prefixes of numbered pages that exist):
+
+| id | NPC | status |
+|----|-----|--------|
+| perkin | Maeno 70041 | fixed: Maeno is the Bugbear Race Manager, page `maeno1` (corregir_db.sql) |
+| biyan1 | Biyan 70752 | fixed: page is `biyan` |
+| secil | Polly 70035 | no page anywhere (silent, like the original) |
+| polee | Secil 70042 | no page anywhere |
+| sabin | Sabin 70758 | no page anywhere |
+| lesta | Resta 70934 | no page anywhere |
+| candle, c_belt, nobelt, gunterde1, shadowevent2 | script-only literals | no page anywhere |
+
+The DB fixes need a server restart (npcaction is cached at start).

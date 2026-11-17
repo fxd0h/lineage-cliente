@@ -69,6 +69,9 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
     if (!a.rec.texto(nombre, html)) {
         nombre = std::string(id) + ".html";
         if (!a.rec.texto(nombre, html)) {
+            // The original (0x437440) builds "%s-%c.html" and, when the page is missing, returns without
+            // opening any window (0x43a9ca): the NPC stays silent. Only the invented text-mode UI keeps a notice.
+            if (!a.cfg.ui_simple) return;
             std::string aviso = "(page \"" + std::string(id) + "\" not found)";
             html.assign(aviso.begin(), aviso.end());
         }
