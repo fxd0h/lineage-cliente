@@ -42,7 +42,7 @@ struct Config {
     int zoom = 0;                  // escala en el juego (píxeles reales por píxel lógico); 0 = automática
     std::string escalado = "fsr";  // final-present filter: entero | xbr | fsr | crt | anime4k (Shift+F5)
     bool camara_a_saltos = false;  // la cámara sigue los frames de caminar, como el original (F4)
-    bool ui_simple = true;         // UI de texto (estilo ASCII) en el juego; false = panel original (F2)
+    bool ui_simple = false;         // UI de texto (estilo ASCII) en el juego; false = panel original (F2)
     bool mostrar_fps = false;      // fps y ms por frame en la esquina superior derecha (Shift+F3)
     bool pantalla_completa = false;  // juego: a pantalla completa (1) o en ventana sin borde (0, Alt+Enter)
     bool sombra_personajes = true; // los personajes parados en la sombra de un árbol se oscurecen (Shift+F4)
