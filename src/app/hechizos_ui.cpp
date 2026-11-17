@@ -306,6 +306,7 @@ int paso_hechizo_pendiente(App& a, Slot yo, u64 ahora) {
         enviar(a, cmd::usar_hechizo(a.op, id, obj != SIN_SLOT ? o.ids()[obj] : 0, obj != SIN_SLOT ? o.col<O_X>()[obj] : 0,
                                     obj != SIN_SLOT ? o.col<O_Y>()[obj] : 0));
     }
+    if (obj != SIN_SLOT && obj != yo) combate_musica(a, obj, a.entrada.ahora_ms);  // a spell at someone starts the combat music
     // Overweight: the server refuses (message 316) and sends no echo: no local animation, no pending buff.
     if (sobrecargado(a.mundo.jugador.peso)) return -2;
     a.buff_de_item = h.sobre_item != Hechizo::SIN_ITEM || h.sobre_arma_actual ? id : 0;

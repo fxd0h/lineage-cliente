@@ -85,6 +85,8 @@ void DefSonidos::cargar(std::string_view music_def, std::string_view envsound_de
     for (std::string_view f = m.siguiente(); !f.empty(); f = m.siguiente()) {
         if (f == "Login" && es_numero(m.mirar())) musica_login = static_cast<i16>(numero(m.siguiente()));
         else if (f == "Death" && es_numero(m.mirar())) musica_muerte = static_cast<i16>(numero(m.siguiente()));
+        else if (f == "Hunting" && es_numero(m.mirar())) musica_caza = static_cast<i16>(numero(m.siguiente()));
+        else if (f == "PlayrtKilling" && es_numero(m.mirar())) musica_pk = static_cast<i16>(numero(m.siguiente()));
         else if (f == "LOC") {
             ZonaMusica z;
             leer_rects(m, rects, z.primer_rect, z.n_rects);

@@ -156,9 +156,9 @@ const RegionAtlas& Graficos::emblema(u32 clan) {
     const u64 k = clave(T_EMBLEMA, clan);
     if (const RegionAtlas* r = buscar(k)) return *r;  // lo común: ya está en el atlas (una sola búsqueda)
     const u32* i = datos_emblema_.buscar(clan);
-    if (!i) return vacia;
+    if (!i && clan != CLAN_VISTA) return vacia;
     return cargar(k, [&] {
-        const u8* d = emblemas_.data() + *i;
+        const u8* d = clan == CLAN_VISTA ? emblema_vista_ : emblemas_.data() + *i;
         tmp_.preparar(ANCHO_EMBLEMA, ALTO_EMBLEMA);
         for (int k = 0; k < ANCHO_EMBLEMA * ALTO_EMBLEMA; ++k) {  // el negro puro es el fondo transparente
             const u16 c = static_cast<u16>(d[2 * k] | (d[2 * k + 1] << 8));
@@ -168,19 +168,111 @@ const RegionAtlas& Graficos::emblema(u32 clan) {
     });
 }
 
-void Graficos::poner_emblema(u32 clan, Bytes datos) {
+void Graficos::poner_emblema(u32 clan, Bytes datos, u32 ahora_ms) {
     if (datos.size() < BYTES_EMBLEMA) return;
-    const u32* i = datos_emblema_.buscar(clan);
-    const u32 ofs = i ? *i : static_cast<u32>(emblemas_.size());
-    if (!i) {
+    constexpr size_t MAX_EMBLEMAS = 512;
+    size_t casillero;
+    if (const u32* i = datos_emblema_.buscar(clan)) {
+        casillero = *i / BYTES_EMBLEMA;
+    } else if (emblema_clan_.size() < MAX_EMBLEMAS) {
+        casillero = emblema_clan_.size();
         emblemas_.resize(emblemas_.size() + BYTES_EMBLEMA);
-        datos_emblema_.poner(clan, ofs);
+        emblema_clan_.push_back(clan);
+        emblema_t_.push_back(ahora_ms);
+    } else {  // lleno: reemplaza al más viejo (0x424b17)
+        casillero = 0;
+        for (size_t k = 1; k < emblema_t_.size(); ++k)
+            if (emblema_t_[k] < emblema_t_[casillero]) casillero = k;
+        // El clan reemplazado ya no está: su región del atlas se libera y el índice lo olvida.
+        const u32 viejo = emblema_clan_[casillero];
+        datos_emblema_.quitar(viejo);
+        if (const u32* r = indice_.buscar(clave(T_EMBLEMA, viejo))) olvidar(*r);
+        emblema_clan_[casillero] = clan;
     }
-    std::memcpy(emblemas_.data() + ofs, datos.data(), BYTES_EMBLEMA);
+    emblema_t_[casillero] = ahora_ms;
+    datos_emblema_.poner(clan, static_cast<u32>(casillero * BYTES_EMBLEMA));
+    std::memcpy(emblemas_.data() + casillero * BYTES_EMBLEMA, datos.data(), BYTES_EMBLEMA);
+    emblemas_sucios_ = true;
     // Uno nuevo reemplaza al anterior: se sube con el próximo emblema(). El casillero viejo se libera
     // (si no, olvidar_pagina, con la misma clave, podría borrar del índice al nuevo). Su lugar en el
     // atlas queda sin usar hasta que se reemplace la página: el empaquetado por estantes no libera huecos.
     if (const u32* r = indice_.buscar(clave(T_EMBLEMA, clan))) olvidar(*r);
+}
+
+void Graficos::poner_emblema_vista(Bytes datos) {
+    if (datos.size() < BYTES_EMBLEMA) return;
+    std::memcpy(emblema_vista_, datos.data(), BYTES_EMBLEMA);
+    if (const u32* r = indice_.buscar(clave(T_EMBLEMA, CLAN_VISTA))) olvidar(*r);
+}
+
+void Graficos::emblemas_vaciar() {
+    for (u32 clan : emblema_clan_) {
+        datos_emblema_.quitar(clan);
+        if (const u32* r = indice_.buscar(clave(T_EMBLEMA, clan))) olvidar(*r);
+    }
+    emblema_clan_.clear();
+    emblema_t_.clear();
+    emblemas_.clear();
+    emblemas_sucios_ = false;
+}
+
+void Graficos::emblemas_cargar(const std::string& ruta) {
+    emblemas_vaciar();
+    std::FILE* f = std::fopen(ruta.c_str(), "rb");
+    if (!f) return;
+    u32 cab[2] = {};
+    std::vector<u32> tabla;
+    std::vector<u8> datos;
+    bool ok = std::fread(cab, 4, 2, f) == 2 && cab[0] == 0x200 && cab[1] > 0 && cab[1] <= 0x200;
+    if (ok) {
+        tabla.resize(size_t{cab[1]} * 3);
+        datos.resize(size_t{cab[1]} * BYTES_EMBLEMA);
+        ok = std::fread(tabla.data(), 4, tabla.size(), f) == tabla.size() &&
+             std::fread(datos.data(), 1, datos.size(), f) == datos.size();
+    }
+    std::fclose(f);
+    if (!ok) return;  // corrupto: se empieza de cero, como el original (0x42476a)
+    std::vector<bool> usado(cab[1]);
+    for (u32 k = 0; k < cab[1]; ++k) {
+        const u32 ofs = tabla[k * 3 + 1];
+        if (ofs % BYTES_EMBLEMA || ofs / BYTES_EMBLEMA >= cab[1] || usado[ofs / BYTES_EMBLEMA]) return;  // casilleros únicos
+        usado[ofs / BYTES_EMBLEMA] = true;
+    }
+    emblemas_ = std::move(datos);
+    emblema_clan_.assign(cab[1], 0);
+    emblema_t_.assign(cab[1], 0);
+    for (u32 k = 0; k < cab[1]; ++k) {
+        const u32 clan = tabla[k * 3], ofs = tabla[k * 3 + 1];
+        emblema_clan_[ofs / BYTES_EMBLEMA] = clan;
+        emblema_t_[ofs / BYTES_EMBLEMA] = tabla[k * 3 + 2];
+        datos_emblema_.poner(clan, ofs);
+    }
+}
+
+bool Graficos::emblemas_guardar(const std::string& ruta) {
+    emblemas_sucios_ = false;
+    const u32 n = static_cast<u32>(emblema_clan_.size());
+    if (n == 0) return true;
+    std::vector<u32> orden(n);
+    for (u32 k = 0; k < n; ++k) orden[k] = k;
+    std::sort(orden.begin(), orden.end(), [&](u32 a, u32 b) { return emblema_clan_[a] < emblema_clan_[b]; });
+    const std::string tmp = ruta + ".tmp";
+    std::FILE* f = std::fopen(tmp.c_str(), "wb");
+    if (!f) return false;
+    const u32 cab[2] = {0x200, n};
+    bool ok = std::fwrite(cab, 4, 2, f) == 2;
+    for (u32 k : orden) {
+        const u32 e[3] = {emblema_clan_[k], k * BYTES_EMBLEMA, emblema_t_[k]};
+        ok = ok && std::fwrite(e, 4, 3, f) == 3;
+    }
+    ok = ok && std::fwrite(emblemas_.data(), 1, emblemas_.size(), f) == emblemas_.size();
+    ok = std::fclose(f) == 0 && ok;
+    if (!ok || std::rename(tmp.c_str(), ruta.c_str()) != 0) {
+        std::remove(tmp.c_str());
+        emblemas_sucios_ = true;
+        return false;
+    }
+    return true;
 }
 
 const RegionAtlas& Graficos::png(u32 n) {

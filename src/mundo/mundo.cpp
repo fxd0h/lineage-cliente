@@ -173,6 +173,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_VEL>()[s] = static_cast<u8>(e.v[OB_VEL]);
             o.col<O_CANTIDAD>()[s] = static_cast<u32>(e.v[OB_CANTIDAD]);
             o.col<O_CLAN>()[s] = static_cast<u32>(e.v[OB_CLAN]);
+            if (e.id == m.jugador.id) m.jugador.rango_clan = e.v[OB_RANGO];
             o.col<O_LEGAL>()[s] = static_cast<i16>(e.v[OB_LEGAL]);
             o.col<O_DURMOV>()[s] = duracion_paso(m, static_cast<GfxId>(e.v[OB_GFX]), static_cast<u8>(e.v[OB_ESTADO]),
                                                  static_cast<u8>(e.v[OB_VEL]));

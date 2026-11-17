@@ -299,6 +299,14 @@ struct App {
     const AmbienteZona* ambiente = nullptr;
     u64 proximo_ambiente[8] = {};
     u64 t_zona_sonido = 0;
+    // Combat music (0x4c53a0 sets the time, the 500 ms tick 0x468113 ends it 15 s later).
+    u64 t_combate = 0;
+    i32 pista_combate = -1;
+    u64 t_emblema_subido = 0;     // last emblem upload (the original allows one per 59876 ms)
+    std::string emblemas_ruta;    // cache file in use (Emblem.dat in the settings folder)
+    u64 t_emblema_sucio = 0;
+    std::vector<u8> emblema_vista;  // checkbmp preview (RGB555, 384 bytes) while t_vista_emblema is in the future
+    u64 t_vista_emblema = 0;
 
     TablaOpcodes op{};
     HiloRed red;
@@ -705,6 +713,9 @@ void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or
 void accion_comunidad(App& a, std::string_view accion);
 void cambiar_pagina_f(App& a, int delta);  // hechizos_ui.cpp
 void rueda_teclas_f(App& a);                // wheel (shortcutscroll) and middle button on the selected F-key box
+void combate_musica(App& a, Slot objetivo, u64 ahora);  // sonido.cpp: combat started (attack, cast, being attacked)
+void emblemas_abrir(App& a);                            // social_ui.cpp: pick the emblem cache of this server
+void emblemas_guardar(App& a, u64 ahora, bool ya);      // social_ui.cpp: write it when it changed (ya = now)
 void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
 void cancelar_prompt(App& a);
 void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`

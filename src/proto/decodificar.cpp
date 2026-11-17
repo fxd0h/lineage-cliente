@@ -152,7 +152,7 @@ bool poner(Lector& l, Evento& e) {
         std::memcpy(p + dueno.size(), "'s", 2);
         e.s[1] = {p, dueno.size() + 2};
     }
-    l.c();
+    e.v[OB_RANGO] = l.c() >> 4;
     e.v[OB_HP] = l.c();
     l.c();
     e.v[OB_NIVEL] = l.c();  // S_NPCPack: el nivel; S_OtherCharPacks: 0

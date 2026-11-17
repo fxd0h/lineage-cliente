@@ -154,6 +154,7 @@ void eventos_personajes(App& a, const Evento& e) {
         a.tienda_pj.vista = 0;
         a.castillos = {};
         a.emblemas_pedidos.clear();
+        emblemas_abrir(a);  // the cache of this server (Emblem.dat)
         a.cantidad_pj = e.v[0];
         a.max_pj = e.v[1];
         a.pjs.clear();

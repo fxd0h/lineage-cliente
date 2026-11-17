@@ -331,6 +331,9 @@ void procesar_red(App& a) {
         if (e.tipo == Ev::MAPA && (a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO)) avisar_mapa(a, static_cast<MapId>(e.v[0]));
         // "Miss" sobre el personaje: un ataque que lo tiene de objetivo y no acierta (el daño recibido
         // se detecta por la caída de HP tras aplicar los eventos, abajo).
+        // Someone attacks the player: combat music (0x4c654f, attacker = the object).
+        if (e.tipo == Ev::ATAQUE && static_cast<ObjId>(e.v[AT_OBJETIVO]) == a.mundo.jugador.id && e.id != a.mundo.jugador.id)
+            combate_musica(a, a.mundo.objetos.buscar(e.id), a.entrada.ahora_ms);
         if (a.cfg.texto_dano && e.tipo == Ev::ATAQUE && static_cast<ObjId>(e.v[AT_OBJETIVO]) == a.mundo.jugador.id &&
             !e.v[AT_GOLPE])
             empujar_texto_combate(a, "Miss", 230, 230, 230);
@@ -477,6 +480,7 @@ void bucle_app(App& a) {
         case Pantalla::JUEGO: frame_juego(a); break;
         }
         actualizar_sonido(a, a.entrada.ahora_ms);
+        emblemas_guardar(a, a.entrada.ahora_ms, false);
         ++a.frames_en_pantalla;
         dibujar_barra_ventana(a);
         // CPU y allocations: todo menos presentar, que espera el vsync y llama al driver (el de
@@ -513,6 +517,7 @@ void cerrar_app(App& a) {
     }
     a.red.cerrar();
     a.audio.cerrar();
+    emblemas_guardar(a, a.entrada.ahora_ms, true);
     a.g.reset();
     destruir_cursores(a);
     a.gpu.cerrar();

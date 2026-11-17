@@ -275,9 +275,9 @@ void estado(App& a, Conexion& c) {
     const Slot s = a.mundo.objetos.buscar(j.id);
     const int x = s != SIN_SLOT ? a.mundo.objetos.col<O_X>()[s] : 0, y = s != SIN_SLOT ? a.mundo.objetos.col<O_Y>()[s] : 0;
     const std::string_view nombre = nombre_personaje(a);
-    std::snprintf(l, sizeof l, "personaje=%.*s mapa=%u x=%d y=%d nivel=%d hp=%d/%d mp=%d/%d muerto=%d estado=%d",
+    std::snprintf(l, sizeof l, "personaje=%.*s mapa=%u x=%d y=%d nivel=%d hp=%d/%d mp=%d/%d muerto=%d estado=%d musica=%d",
                   static_cast<int>(nombre.size()), nombre.data(), static_cast<unsigned>(a.mundo.mapa), x, y, j.nivel, j.hp,
-                  j.hp_max, j.mp, j.mp_max, j.muerto ? 1 : 0, s != SIN_SLOT ? a.mundo.objetos.col<O_ESTADO>()[s] : -1);
+                  j.hp_max, j.mp, j.mp_max, j.muerto ? 1 : 0, s != SIN_SLOT ? a.mundo.objetos.col<O_ESTADO>()[s] : -1, a.audio.musica_actual());
     responder(c, l);
     std::string asedios = "asedios=";
     for (int k = 1; k <= 8; ++k)

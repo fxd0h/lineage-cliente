@@ -58,6 +58,7 @@ constexpr u32 MAX_EFECTOS_ACTIVOS = 24;
 // paquetes parciales (HP, MP, EXP, alineamiento, SP/MR, defensa, atributos, peso, comida).
 struct EstadoJugador {
     ObjId id = 0;
+    i32 rango_clan = 0xb;  // clan rank from the own character pack (4 = prince, 0xb = none)
     i32 nivel = 0, exp = 0, fue = 0, int_ = 0, sab = 0, des = 0, con = 0, car = 0;
     i32 hp = 0, hp_max = 0, mp = 0, mp_max = 0, ca = 0, legal = 0;
     i32 comida = 0;  // 0–225 (225 = lleno)

@@ -52,7 +52,17 @@ public:
     const RegionAtlas& icono(u32 n);
     // Emblema de clan (S_Emblem: 16 × 12 píxeles RGB555); región vacía si todavía no llegó.
     const RegionAtlas& emblema(u32 clan);
-    void poner_emblema(u32 clan, Bytes datos);
+    void poner_emblema(u32 clan, Bytes datos, u32 ahora_ms);
+    // Emblem cache file as the original's Emblem.dat (0x424640 / 0x424870): u32 0x200 (capacity), u32 count,
+    // count x {u32 clan, u32 data offset, u32 time} sorted by clan, count x 384 bytes of RGB555. 512 clans at most;
+    // a full cache replaces the oldest one. Written only when something changed.
+    void emblemas_cargar(const std::string& ruta);
+    bool emblemas_guardar(const std::string& ruta);
+    // checkbmp preview: a 16 x 12 RGB555 image shown through emblema(CLAN_VISTA); never cached or saved.
+    static constexpr u32 CLAN_VISTA = 0xFFFFFFFFu;
+    void poner_emblema_vista(Bytes datos);
+    bool emblemas_sucios() const { return emblemas_sucios_; }
+    void emblemas_vaciar();
 
     // Texto CP949 con la fuente original; devuelve el ancho en píxeles.
     // HD text: glyph as a field (recursos/fuente_hd.h), cached apart from the pixel glyph. Invalid region if blank.
@@ -115,6 +125,9 @@ private:
     MapaHash indice_tiles_, indice_spr_;
     MapaHash datos_emblema_{64};  // clan -> desplazamiento en emblemas_
     std::vector<u8> emblemas_;    // los bytes RGB555 de S_Emblem de cada clan
+    std::vector<u32> emblema_clan_, emblema_t_;  // por casillero (desplazamiento / 384): clan y hora de entrada
+    bool emblemas_sucios_ = false;
+    u8 emblema_vista_[384] = {};
     std::vector<JuegoTiles> juegos_;
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;

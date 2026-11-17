@@ -373,6 +373,19 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y) {
     }
 }
 
+// A clan emblem (16 x 12) at (x, y); the first time a clan is seen it is requested from the server (C_Clan)
+// unless the emblem cache (Emblem.dat) already has it.
+void dibujar_emblema(App& a, u32 clan, float x, float y) {
+    Graficos& g = *a.g;
+    const RegionAtlas& em = g.emblema(clan);
+    if (em.valida()) {
+        g.gpu().dibujar_en(em, x, y, clave_orden(CAPA_EFECTOS, 0));
+    } else if (std::find(a.emblemas_pedidos.begin(), a.emblemas_pedidos.end(), clan) == a.emblemas_pedidos.end()) {
+        a.emblemas_pedidos.push_back(clan);
+        enviar(a, cmd::pedir_emblema(a.op, clan));
+    }
+}
+
 void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
     Graficos& g = *a.g;
     TablaObjetos& o = a.mundo.objetos;
@@ -584,15 +597,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (castillo_de(a, o.ids()[s]))
                 dibujar_corona(g, ex + 24 - w / 2 - (o.col<O_CLAN>()[s] ? 19 : 0) - 16, top - 12, clave_orden(CAPA_EFECTOS, 0));
             // Emblema del clan a la izquierda del nombre (se pide una vez por clan).
-            if (u32 clan = o.col<O_CLAN>()[s]) {
-                const RegionAtlas& em = g.emblema(clan);
-                if (em.valida()) {
-                    g.gpu().dibujar_en(em, ex + 24 - w / 2 - 19, top - 14, clave_orden(CAPA_EFECTOS, 0));
-                } else if (std::find(a.emblemas_pedidos.begin(), a.emblemas_pedidos.end(), clan) == a.emblemas_pedidos.end()) {
-                    a.emblemas_pedidos.push_back(clan);
-                    enviar(a, cmd::pedir_emblema(a.op, clan));
-                }
-            }
+            if (u32 clan = o.col<O_CLAN>()[s]) dibujar_emblema(a, clan, ex + 24 - w / 2 - 19, top - 14);
             top -= 14;
             // Título encima del nombre: el del NPC ("Merchant^...") o el del personaje (O_TITULO).
             std::string_view titulo = !titulo_npc.empty()                  ? titulo_npc
@@ -602,6 +607,17 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 dibujar_titulo(g, titulo, ex + 24, top - 14, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130));
                 top -= 14;
             }
+        }
+        // Without a name label the emblem floats above the head (0x462d60): tile anchor + (17, -52).
+        if (nombre.empty() && o.col<O_CLAN>()[s] && !(o.col<O_FLAGS>()[s] & FLAG_INVISIBLE)) {
+            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) : sy;
+            dibujar_emblema(a, o.col<O_CLAN>()[s], ex + 17, ay - 52);
+        }
+        // checkbmp: the checked bitmap floats above the character for 10 s (0x4669d1).
+        if (soy_yo && ahora < a.t_vista_emblema) {
+            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) : sy;
+            const RegionAtlas& em = g.emblema(Graficos::CLAN_VISTA);
+            if (em.valida()) g.gpu().dibujar_en(em, ex - 32, ay - 86, clave_orden(CAPA_EFECTOS, 0));
         }
         dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
     }
@@ -690,6 +706,7 @@ void atacar(App& a, Slot yo, Slot obj, u64 ahora) {
     int dir = direccion_de(o.col<O_X>()[obj] - o.col<O_X>()[yo], o.col<O_Y>()[obj] - o.col<O_Y>()[yo]);
     if (dir >= 0) o.col<O_DIR>()[yo] = static_cast<u8>(dir);
     enviar(a, cmd::atacar(a.op, o.ids()[obj], o.col<O_X>()[obj], o.col<O_Y>()[obj]));
+    combate_musica(a, obj, ahora);
     GfxId gfx = o.col<O_GFX>()[yo];
     // Compensación de ataque (opcional, en vivo): sin esperar el eco del servidor, mostrar ya el golpe
     // -el swing propio y el flinch del objetivo en el frame de impacto- para que con latencia alta el

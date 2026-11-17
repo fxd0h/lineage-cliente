@@ -330,6 +330,10 @@ void Audio::abrir_mp3(u64) {
 }
 
 void Audio::musica(i32 n, u32 intervalo_s, u64 ahora_ms) {
+    if (fundido_n_ != SIN_FUNDIDO) {  // un cambio directo cancela el fundido en curso
+        fundido_n_ = SIN_FUNDIDO;
+        if (stream_musica_) SDL_SetAudioStreamGain(stream_musica_, vol_musica_);
+    }
     if (n == musica_n_) return;
     musica_n_ = n;
     intervalo_s_ = intervalo_s;
@@ -339,8 +343,33 @@ void Audio::musica(i32 n, u32 intervalo_s, u64 ahora_ms) {
     abrir_mp3(ahora_ms);
 }
 
+void Audio::musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms) {
+    if (n == musica_n_) {  // lo que suena ya es el destino: se cancela cualquier fundido
+        musica(n, intervalo_s, ahora_ms);
+        return;
+    }
+    if (!dispositivo_ || musica_n_ < 0 || !mp3_) {  // nada suena: el cambio es directo
+        musica(n, intervalo_s, ahora_ms);
+        return;
+    }
+    if (fundido_n_ == n) return;
+    fundido_n_ = n;
+    fundido_intervalo_ = intervalo_s;
+    fundido_ini_ = ahora_ms;
+}
+
 void Audio::actualizar(u64 ahora_ms) {
     if (!dispositivo_) return;
+    if (fundido_n_ != SIN_FUNDIDO) {
+        constexpr u64 MS_FUNDIDO = 800;
+        const u64 dt = ahora_ms - fundido_ini_;
+        if (dt >= MS_FUNDIDO) {
+            const i32 n = fundido_n_;
+            musica(n, fundido_intervalo_, ahora_ms);  // restablece el volumen
+        } else {
+            SDL_SetAudioStreamGain(stream_musica_, vol_musica_ * (1.0f - static_cast<float>(dt) / MS_FUNDIDO));
+        }
+    }
     recoger_cargados(ahora_ms);
     // La música y el ambiente los alimentan sus callbacks; aquí, el fin del tema y su vuelta.
     if (mp3_ && mp3_termino_) {

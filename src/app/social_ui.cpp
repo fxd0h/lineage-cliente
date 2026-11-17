@@ -10,6 +10,8 @@
 //    (ver dibujar_personajes).
 #include <charconv>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include "app/app.h"
 #include "app/item_icon.h"
 
@@ -66,6 +68,62 @@ void abrir_prompt(App& a, std::string prompt, std::string_view accion) {
     a.escribiendo_chat = true;
 }
 
+
+// Clan emblem upload (action "emblem", 0x4070c0) and check (action "checkbmp", 0x406fc0). The file is a 16 x 12,
+// 24-bit, uncompressed BMP (12 or 40 byte info header); it becomes 384 bytes of RGB555 (0x4247a0: R >> 3 << 10 |
+// G >> 3 << 5 | B >> 3, top row first). A relative name is looked up in the game folder.
+bool leer_bmp_emblema(const App& a, std::string_view nombre, u8* out) {
+    namespace fs = std::filesystem;
+    fs::path ruta{std::string(nombre)};
+    if (ruta.is_relative() && fs::exists(fs::path(a.cfg.carpeta_juego) / ruta)) ruta = fs::path(a.cfg.carpeta_juego) / ruta;
+    std::ifstream f(ruta, std::ios::binary);
+    if (!f) return false;
+    const std::vector<char> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    auto u16le = [&](size_t o) { return o + 2 <= b.size() ? static_cast<u32>(static_cast<u8>(b[o]) | static_cast<u8>(b[o + 1]) << 8) : 0u; };
+    auto u32le = [&](size_t o) { return u16le(o) | u16le(o + 2) << 16; };
+    if (b.size() < 26 || b[0] != 'B' || b[1] != 'M') return false;
+    const u32 pixeles = u32le(10), cabecera = u32le(14);
+    u32 ancho, alto, planos, bits, compresion = 0;
+    if (cabecera == 12) {  // OS/2 core header: signed 16-bit sizes
+        ancho = u16le(18); alto = u16le(20); planos = u16le(22); bits = u16le(24);
+    } else if (cabecera == 40 && b.size() >= 54) {
+        ancho = u32le(18); alto = u32le(22); planos = u16le(26); bits = u16le(28); compresion = u32le(30);
+    } else {
+        return false;
+    }
+    if (ancho != 16 || alto != 12 || planos != 1 || bits != 24 || compresion != 0) return false;
+    if (size_t{pixeles} + 16 * 12 * 3 > b.size()) return false;
+    for (int y = 0; y < 12; ++y)
+        for (int x = 0; x < 16; ++x) {
+            const u8* p = reinterpret_cast<const u8*>(b.data()) + pixeles + static_cast<size_t>(11 - y) * 48 + static_cast<size_t>(x) * 3;
+            const u16 c = static_cast<u16>((p[2] >> 3) << 10 | (p[1] >> 3) << 5 | (p[0] >> 3));
+            out[(y * 16 + x) * 2] = static_cast<u8>(c);
+            out[(y * 16 + x) * 2 + 1] = static_cast<u8>(c >> 8);
+        }
+    return true;
+}
+
+void subir_emblema(App& a, std::string_view nombre) {
+    const u64 ahora = a.entrada.ahora_ms;
+    const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+    if (yo == SIN_SLOT) return aviso(a, cadena(a, 219));
+    if (a.mundo.objetos.col<O_CLAN>()[yo] == 0) return aviso(a, cadena(a, 220));          // not in a pledge
+    if (a.mundo.jugador.rango_clan != 0 && a.mundo.jugador.rango_clan != 4) return aviso(a, cadena(a, 785));  // not the prince
+    if (a.t_emblema_subido && ahora < a.t_emblema_subido + 59876) return aviso(a, cadena(a, 229));  // one per minute
+    u8 datos[BYTES_EMBLEMA];
+    if (!leer_bmp_emblema(a, nombre, datos)) return aviso(a, "Incorrect BMP File format");
+    enviar(a, cmd::subir_emblema(a.op, datos));
+    a.t_emblema_subido = ahora;
+    a.emblemas_pedidos.clear();  // the server answers with S_Emblem to everybody
+}
+
+void ver_emblema(App& a, std::string_view nombre) {
+    u8 datos[BYTES_EMBLEMA];
+    if (!leer_bmp_emblema(a, nombre, datos)) return aviso(a, "Incorrect BMP File format");
+    a.g->poner_emblema_vista({datos, BYTES_EMBLEMA});
+    a.t_vista_emblema = a.entrada.ahora_ms + 10000;  // shown above the character for 10 s (0x407068)
+}
+
 // 'y' / 'Y' answers of the join / leave confirmations (0x405f60, 0x405fb0; the Japanese full-width forms are not typed here).
 bool dijo_si(std::string_view t) { return !t.empty() && (t[0] == 'y' || t[0] == 'Y'); }
 
@@ -109,6 +167,10 @@ void confirmar_prompt(App& a, std::string_view texto) {
         enviar(a, cmd::guerra(a.op, cmd::GUERRA_RENDIRSE, texto));
     } else if (accion == "cease") {
         enviar(a, cmd::guerra(a.op, cmd::GUERRA_TERMINAR, texto));
+    } else if (accion == "emblem") {  // 0x40d070 -> 0x4070c0
+        subir_emblema(a, texto);
+    } else if (accion == "checkbmp") {  // 0x40d010 -> 0x406fc0
+        ver_emblema(a, texto);
     } else if (accion == "title") {  // 0x406000: "<character> <title>"
         const size_t sp = texto.find(' ');
         if (sp == std::string_view::npos) return;
@@ -253,7 +315,9 @@ void accion_comunidad(App& a, std::string_view accion) {
         if (!principe) return;
         abrir_prompt(a, cadena(a, accion == "war" ? 577 : accion == "surrender" ? 578 : 579), accion);
     }
-    // emblem / checkbmp (upload a bitmap), alliance*, pledgefocus*: not wired (audit U-D7)
+    else if (accion == "emblem") abrir_prompt(a, cadena(a, 576), accion);    // 0x40d030
+    else if (accion == "checkbmp") abrir_prompt(a, cadena(a, 575), accion);  // 0x40cfd0
+    // alliance*, pledgefocus*: not wired (audit U-D7)
 }
 
 void responder_pregunta(App& a, bool si) {
@@ -375,7 +439,7 @@ void eventos_social(App& a, const Evento& e) {
         (e.v[IN_LADO] == 0 ? a.intercambio.propio : a.intercambio.otro)
             .push_back({static_cast<u16>(e.v[IN_GFX]), static_cast<u8>(e.v[IN_BENDICION]), std::string(e.s[0])});
         break;
-    case Ev::EMBLEMA: a.g->poner_emblema(e.id, {reinterpret_cast<const u8*>(e.s[0].data()), e.s[0].size()}); break;
+    case Ev::EMBLEMA: a.g->poner_emblema(e.id, {reinterpret_cast<const u8*>(e.s[0].data()), e.s[0].size()}, static_cast<u32>(a.entrada.ahora_ms)); break;
     case Ev::INTERCAMBIO_FIN:
         aviso(a, e.v[IN_CANCELADO] ? "The trade was cancelled." : "The trade is complete.");
         a.intercambio = {};
@@ -470,17 +534,11 @@ bool comando_social(App& a, std::string_view linea) {
         std::string_view titulo = otro ? arg.substr(primero.size() + 1) : arg;
         enviar(a, cmd::poner_titulo(a.op, quien, titulo));
     } else if (igual_sin_mayusculas(orden, "emblem")) {
-        // El original lo carga de un archivo; aquí, uno de muestra: una cruz dorada sobre azul.
-        u8 datos[BYTES_EMBLEMA];
-        for (int y = 0; y < 12; ++y)
-            for (int x = 0; x < 16; ++x) {
-                bool cruz = (x >= 7 && x <= 8) || (y >= 5 && y <= 6);
-                u16 c = cruz ? static_cast<u16>((31 << 10) | (25 << 5) | 8) : static_cast<u16>((4 << 10) | (8 << 5) | 24);
-                datos[(y * 16 + x) * 2] = static_cast<u8>(c);
-                datos[(y * 16 + x) * 2 + 1] = static_cast<u8>(c >> 8);
-            }
-        enviar(a, cmd::subir_emblema(a.op, datos));
-        a.emblemas_pedidos.clear();  // se vuelven a pedir: el del propio clan cambió
+        if (arg.empty()) accion_comunidad(a, "emblem");
+        else subir_emblema(a, arg);
+    } else if (igual_sin_mayusculas(orden, "checkbmp")) {
+        if (arg.empty()) accion_comunidad(a, "checkbmp");
+        else ver_emblema(a, arg);
     } else if (igual_sin_mayusculas(orden, "who")) {
         enviar(a, cmd::quien(a.op, arg));
     } else {
@@ -651,4 +709,25 @@ Rect rect_intercambio(const App& a) {
     return {(a.gpu.ancho() - ANCHO_INTERCAMBIO) / 2, ui::VENTANA_Y + 20, ANCHO_INTERCAMBIO, ALTO_INTERCAMBIO};
 }
 
+// Emblem cache file (the original's Emblem.dat / Emblem<server>.dat) in the settings folder, one per server port.
+void emblemas_abrir(App& a) {
+    namespace fs = std::filesystem;
+    const u16 puerto = servidor_elegido(a.cfg).puerto;
+    const std::string nombre = puerto == 2000 ? "Emblem.dat" : "Emblem" + std::to_string(puerto) + ".dat";
+    const std::string ruta = (fs::path(ruta_configuracion()).parent_path() / nombre).string();
+    if (ruta == a.emblemas_ruta) return;
+    emblemas_guardar(a, a.entrada.ahora_ms, true);
+    a.emblemas_ruta = ruta;
+    a.g->emblemas_cargar(ruta);
+}
+
+void emblemas_guardar(App& a, u64 ahora, bool ya) {
+    if (!a.g || a.emblemas_ruta.empty() || !a.g->emblemas_sucios()) return;
+    if (!a.t_emblema_sucio) a.t_emblema_sucio = ahora;
+    if (!ya && ahora < a.t_emblema_sucio + 3000) return;  // batches of arrivals are written once
+    a.t_emblema_sucio = 0;
+    a.g->emblemas_guardar(a.emblemas_ruta);
+}
+
 }  // namespace lin
+

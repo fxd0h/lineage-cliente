@@ -42,6 +42,9 @@ public:
     // entre repeticiones.
     void musica(i32 n, u32 intervalo_s, u64 ahora_ms);
     i32 musica_actual() const { return musica_n_; }
+    // Same, but a track that is playing fades out first (the original's 0x479ed0 + timer 0x479dd0: volume -8/127
+    // every 50 ms, about 0.8 s) and the new one then starts at full volume. Repeating the call is harmless.
+    void musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms);
     // Un efecto, con `ganancia` de 0 a 1 (además del volumen de efectos).
     void efecto(u32 id, float ganancia, u64 ahora_ms);
     // Sonido de ambiente en bucle (-1 = ninguno).
@@ -105,6 +108,10 @@ private:
     void* mp3_ = nullptr;  // drmp3; se cambia con stream_musica_ bloqueado
     std::atomic<bool> mp3_termino_{false};  // lo marca el callback: el hilo principal lo cierra
     i32 musica_n_ = -1;
+    static constexpr i32 SIN_FUNDIDO = -2;
+    i32 fundido_n_ = SIN_FUNDIDO;  // tema al que se pasa al terminar el fundido
+    u32 fundido_intervalo_ = 0;
+    u64 fundido_ini_ = 0;
     u32 intervalo_s_ = 0;
     u64 reanudar_ms_ = 0;  // terminada: vuelve a empezar en este momento (0 = sonando)
     float pcm_[4096 * 2];

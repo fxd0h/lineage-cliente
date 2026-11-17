@@ -40,6 +40,29 @@ void aplicar_volumenes(App& a) {
     else a.audio.volumenes(a.cfg.volumen_musica, a.cfg.volumen_efectos);
 }
 
+namespace {
+constexpr u64 MS_COMBATE = 15000;  // 0x3a98: the combat music lasts this long after the last fight event
+
+bool combate_activado(const App& a) { return !(a.cfg.opciones_orig & (1 << OPC_COMBATMUSIC)); }  // bit set = off (0x7030f0)
+bool suena_pista_combate(const App& a) {
+    const i32 n = a.audio.musica_actual();
+    return n >= 0 && (n == a.sonidos.musica_caza || n == a.sonidos.musica_pk);
+}
+}  // namespace
+
+// 0x4c53a0: every fight event (the player attacks or casts at `objetivo`, or something attacks the player)
+// refreshes the combat clock. Against a character the PK track plays ("PlayrtKilling"), otherwise the
+// hunting one; if either already plays nothing restarts.
+void combate_musica(App& a, Slot objetivo, u64 ahora) {
+    a.t_combate = ahora;
+    if (!combate_activado(a) || a.pantalla != Pantalla::JUEGO || suena_pista_combate(a)) return;
+    const bool pj = objetivo != SIN_SLOT && tipo_objeto(a, objetivo) == TIPO_PERSONAJE;
+    const i32 pista = pj ? a.sonidos.musica_pk : a.sonidos.musica_caza;
+    if (pista < 0) return;
+    a.pista_combate = pista;
+    a.audio.musica(pista, 0, ahora);
+}
+
 void actualizar_sonido(App& a, u64 ahora) {
     if (a.pantalla == Pantalla::LOGIN || a.pantalla == Pantalla::PERSONAJES || a.pantalla == Pantalla::CREAR) {
         a.audio.musica(a.sonidos.musica_login, 0, ahora);
@@ -55,8 +78,14 @@ void actualizar_sonido(App& a, u64 ahora) {
             const i32 x = o.col<O_X>()[yo], y = o.col<O_Y>()[yo];
             if (o.col<O_ESTADO>()[yo] == ESTADO_MUERTO && a.sonidos.musica_muerte >= 0) {
                 a.audio.musica(a.sonidos.musica_muerte, 0, ahora);
+            } else if (a.t_combate && ahora < a.t_combate + MS_COMBATE && combate_activado(a) && suena_pista_combate(a)) {
+                // Fighting: the combat track stays until 15 s after the last event (or the option is cleared).
             } else if (const ZonaMusica* z = a.sonidos.musica_en(mapa, x, y)) {
-                a.audio.musica(z->musica, z->intervalo_s, ahora);
+                // Back to the zone music: a combat track fades out first (0x479ed0).
+                if (suena_pista_combate(a)) a.audio.musica_fundido(z->musica, z->intervalo_s, ahora);
+                else a.audio.musica(z->musica, z->intervalo_s, ahora);
+            } else if (suena_pista_combate(a)) {
+                a.audio.musica_fundido(-1, 0, ahora);
             } else {
                 a.audio.musica(-1, 0, ahora);
             }
