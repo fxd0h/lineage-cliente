@@ -46,7 +46,7 @@ ObjId buscar_pocion_auto(const Inventario& inv, u32 id);
 
 // Turno común de las acciones automáticas (auto-buffs y auto-poción): una por vez y con
 // ESPACIO_AUTO_MS entre ellas, aunque venzan varias juntas. La curación va primero (pantalla_juego).
-constexpr u64 ESPACIO_AUTO_MS = 1000;
+constexpr u64 ESPACIO_AUTO_MS = 200;
 struct TurnoAuto {
     u64 siguiente_ms = 0;
     bool libre(u64 ahora) const { return ahora >= siguiente_ms; }

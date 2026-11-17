@@ -172,6 +172,6 @@ TEST_CASE("TurnoAuto: varios vencidos a la vez salen de a uno, en orden y espaci
     for (size_t k = 1; k < salidos.size(); ++k) CHECK(salidos[k].second - salidos[k - 1].second >= ESPACIO_AUTO_MS);
     turno.usado(200000);  // un hechizo que salió tarde corre el turno; uno anterior no lo adelanta
     turno.usado(150000);
-    CHECK_FALSE(turno.libre(200999));
-    CHECK(turno.libre(201000));
+    CHECK_FALSE(turno.libre(200000 + ESPACIO_AUTO_MS - 1));
+    CHECK(turno.libre(200000 + ESPACIO_AUTO_MS));
 }
