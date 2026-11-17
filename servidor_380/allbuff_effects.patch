@@ -1,0 +1,50 @@
+diff --git a/internal/handler/gmcommand_character.go b/internal/handler/gmcommand_character.go
+index 99604b4..1a64929 100644
+--- a/internal/handler/gmcommand_character.go
++++ b/internal/handler/gmcommand_character.go
+@@ -43,7 +43,7 @@ func dispatchGMCharacter(sess *net.Session, player *world.PlayerInfo, cmd string
+ 			return true
+ 		}
+ 		count := 0
+-		for _, id := range []int32{2, 14, 26, 32, 42, 48, 55, 68, 79, 88, 89, 90, 98, 102, 104, 105, 106, 111, 114, 117, 129, 137, 147, 160, 163, 168, 169, 170, 171, 175, 176} {
++		for _, id := range []int32{2, 14, 26, 32, 42, 48, 55, 68, 79, 88, 89, 90, 102, 104, 105, 106, 111, 114, 117, 129, 137, 147, 160, 163, 168, 169, 170, 171, 175, 176} {
+ 			if gmApplyBuffDuration(target, id, 9999, deps) {
+ 				count++
+ 			}
+diff --git a/internal/system/skill_buff.go b/internal/system/skill_buff.go
+index 25c1253..2e864b4 100644
+--- a/internal/system/skill_buff.go
++++ b/internal/system/skill_buff.go
+@@ -422,6 +422,16 @@ func (s *SkillSystem) sendPlayerReappearToVisible(player *world.PlayerInfo) {
+ 	}
+ }
+ 
++// broadcastGMBuffEffect plays the skill's cast animation (S_SkillSoundGFX) on the target for everyone
++// nearby; the normal cast path does this, the GM path used to skip it.
++func (s *SkillSystem) broadcastGMBuffEffect(player *world.PlayerInfo, skill *data.SkillInfo) {
++	if skill.CastGfx <= 0 {
++		return
++	}
++	nearby := s.deps.World.GetNearbyPlayersInShow(player.X, player.Y, player.MapID, 0, player.ShowID)
++	handler.BroadcastToPlayers(nearby, handler.BuildSkillEffect(player.CharID, skill.CastGfx))
++}
++
+ // ApplyGMBuff GM 強制套用 buff（繞過已學/MP/材料驗證）。
+ func (s *SkillSystem) ApplyGMBuff(player *world.PlayerInfo, skillID int32) bool {
+ 	skill := s.deps.Skills.Get(skillID)
+@@ -434,6 +444,7 @@ func (s *SkillSystem) ApplyGMBuff(player *world.PlayerInfo, skillID int32) bool
+ 		dur = 300 // 預設 5 分鐘
+ 	}
+ 	s.sendBuffIcon(player, skillID, dur)
++	s.broadcastGMBuffEffect(player, skill)
+ 	handler.SendPlayerStatus(player.Session, player)
+ 	// 負重強化：套用時更新負重
+ 	if skillID == 14 || skillID == 218 {
+@@ -458,6 +469,7 @@ func (s *SkillSystem) ApplyGMBuffWithDuration(player *world.PlayerInfo, skillID
+ 		dur = 300 // 預設 5 分鐘
+ 	}
+ 	s.sendBuffIcon(player, skillID, dur)
++	s.broadcastGMBuffEffect(player, skill)
+ 	handler.SendPlayerStatus(player.Session, player)
+ 	// 負重強化：套用時更新負重
+ 	if skillID == 14 || skillID == 218 {

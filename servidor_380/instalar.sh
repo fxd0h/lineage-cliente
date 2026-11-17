@@ -38,8 +38,8 @@ fi
 git -C l1jgo remote set-url origin "$REPO"
 git -C l1jgo cat-file -e "$COMMIT^{commit}" 2>/dev/null || git -C l1jgo fetch -q origin
 git -C l1jgo checkout -q -f "$COMMIT"
-# Server patches (idempotent): emblem_id (clan emblem id in the char packs) and alliance (C_Rank invite/withdraw, persisted in character_alliance).
-for p in emblem_id.patch alliance.patch; do
+# Server patches (idempotent): emblem_id (clan emblem id in the char packs) and alliance (C_Rank invite/withdraw, persisted in character_alliance).  allbuff_effects (GM buffs play their cast animation; .allbuff drops Enchant Venom).
+for p in emblem_id.patch alliance.patch allbuff_effects.patch; do
     git -C l1jgo apply --check -R "../$p" 2>/dev/null || git -C l1jgo apply "../$p"
 done
 (cd l1jgo && GOTOOLCHAIN=go1.23.4 GOMAXPROCS=4 nice -n 19 "$GO" build -o bin/l1jgo ./cmd/l1jgo)
