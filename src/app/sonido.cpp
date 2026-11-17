@@ -31,7 +31,7 @@ void cargar_sonidos(App& a) {
     a.sonidos.cargar({reinterpret_cast<const char*>(a.texto_music_def.data()), a.texto_music_def.size()},
                      {reinterpret_cast<const char*>(a.texto_envsound_def.data()), a.texto_envsound_def.size()});
     if (a.sonidos.musica.empty()) LIN_LOG("Aviso: no se encontró music.def (música por zona)");
-    if (!a.audio.abrir(a.cfg.carpeta_juego)) LIN_LOG("Aviso: sin audio");
+    if (!a.audio.abrir(a.cfg.carpeta_juego, a.cfg.carpetas_extra)) LIN_LOG("Aviso: sin audio");
     aplicar_volumenes(a);
 }
 

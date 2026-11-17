@@ -1,5 +1,6 @@
 // Tests contra la instalación real del juego (LINEAGE_DIR). Se saltan si no está definida.
 #include <doctest/doctest.h>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include "comun.h"
@@ -415,4 +416,54 @@ TEST_CASE("Map 666: candelabrum flame tiles (type bit 0x10) are additive light t
     for (const TileObjetoMapa& t : s.tiles_objetos)
         if ((t.tile >> 8) == 3971 && til.aditivo(t.tile & 0xFF)) ++luces;
     CHECK(luces > 10);
+}
+
+// Fallback order of juego= / juego_extra=: runs without the game (loose files only).
+TEST_CASE("Recursos: juego_extra falls back in order, primary wins") {
+    namespace fs = std::filesystem;
+    const fs::path raiz = fs::temp_directory_path() / "lin_test_extra";
+    fs::remove_all(raiz);
+    auto poner = [&](const char* rel, const char* txt) {
+        fs::create_directories((raiz / rel).parent_path());
+        std::ofstream(raiz / rel, std::ios::binary) << txt;
+    };
+    poner("a/sprite/1-0.spr", "A1");
+    poner("b/sprite/1-0.spr", "B1");
+    poner("b/sprite/2-0.spr", "B2");
+    poner("c/Sprite/2-0.spr", "C2");  // directory case differs: resolved case-insensitively
+    poner("c/sprite/3-0.spr", "C3");
+    poner("b/map/9/aaaa.s32", "Bmap");
+    poner("c/map/9/aaaa.s32", "Cmap");
+    poner("c/map/9/bbbb.s32", "Cmap2");
+    poner("c/Tile/5.til", "Ctile");
+    const std::string a = (raiz / "a").string() + "/", b = (raiz / "b").string() + "/", c = (raiz / "c").string() + "/";
+    Recursos r;
+    r.abrir(a, {b, c});  // no paks: abrir reports failure but the loose files still resolve
+    REQUIRE(r.fuentes() == 3);
+    auto txt = [](Bytes v) { return std::string(v.begin(), v.end()); };
+    CHECK(txt(r.sprite("1-0.spr")) == "A1");      // primary first
+    CHECK(txt(r.sprite("2-0.spr")) == "B2");      // first extra before the second
+    CHECK(txt(r.sprite("3-0.spr")) == "C3");      // only in the last
+    CHECK(r.sprite("4-0.spr").empty());
+    CHECK(r.fuente_de_sprite("1-0.spr") == 0);
+    CHECK(r.fuente_de_sprite("2-0.spr") == 1);
+    CHECK(r.fuente_de_sprite("3-0.spr") == 2);
+    CHECK(r.fuente_de_sprite("4-0.spr") == -1);
+    CHECK(r.ruta_archivo("map/9/aaaa.s32") == b + "map/9/aaaa.s32");
+    CHECK(r.ruta_archivo("map/9/bbbb.s32") == c + "map/9/bbbb.s32");
+    CHECK(r.ruta_archivo("map/9/cccc.s32") == a + "map/9/cccc.s32");  // nowhere: the primary's path
+    CHECK(txt(r.tile("5.til")) == "Ctile");
+    CHECK(r.tile("6.til").empty());
+    fs::remove_all(raiz);
+}
+
+TEST_CASE("Recursos: text tables come from the primary only" * doctest::skip(carpeta_juego().empty())) {
+    Recursos solo, con;
+    REQUIRE(solo.abrir(carpeta_juego()));
+    const char* extra = std::getenv("LINEAGE_EXTRA");  // optional second install
+    con.abrir(carpeta_juego(), {extra ? extra : carpeta_juego()});
+    std::vector<u8> x, y;
+    REQUIRE(solo.texto("desc-e.tbl", x));
+    REQUIRE(con.texto("desc-e.tbl", y));
+    CHECK(x == y);
 }

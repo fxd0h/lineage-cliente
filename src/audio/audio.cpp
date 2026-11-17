@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <cstdio>
+#include <filesystem>
 #define DR_MP3_IMPLEMENTATION
 #define DR_MP3_NO_STDIO_DEFAULT_ALLOCATOR_WARNING
 #include "dr_mp3.h"
@@ -35,8 +36,20 @@ struct Audio::Wav {
 Audio::Audio() = default;
 Audio::~Audio() { cerrar(); }
 
-bool Audio::abrir(const std::string& carpeta_juego) {
+std::string Audio::ruta_sonido(const std::string& nombre) const {
+    std::error_code ec;
+    for (const std::string& c : carpetas_) {
+        const std::string r = ruta_real(c + nombre);
+        if (std::filesystem::exists(r, ec)) return r;
+    }
+    return ruta_real(carpeta_ + nombre);
+}
+
+bool Audio::abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras) {
     carpeta_ = carpeta_juego + "sound/";
+    carpetas_ = {carpeta_};
+    for (const std::string& e : extras)
+        if (!e.empty()) carpetas_.push_back(e + (e.back() == '/' ? "sound/" : "/sound/"));
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         std::fprintf(stderr, "audio: %s\n", SDL_GetError());
         return false;
@@ -135,7 +148,7 @@ void Audio::bucle_cargador() {
             auto* m = new drmp3;
             // Algunos archivos empiezan con mayúscula (Music1012.mp3): en macOS el sistema de archivos no
             // las distingue. En Linux, ruta_real las busca sin distinguir mayúsculas.
-            if (!drmp3_init_file(m, ruta_real(carpeta_ + nombre).c_str(), nullptr)) {
+            if (!drmp3_init_file(m, ruta_sonido(nombre).c_str(), nullptr)) {
                 delete m;
                 m = nullptr;
             }
@@ -149,7 +162,7 @@ void Audio::bucle_cargador() {
             Wav* w = new Wav;
             char ruta[64];
             std::snprintf(ruta, sizeof ruta, "%u.wav", id);
-            if (!SDL_LoadWAV(ruta_real(carpeta_ + ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
+            if (!SDL_LoadWAV(ruta_sonido(ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
             std::lock_guard<std::mutex> lk(mu_);
             wavs_listos_.emplace_back(id, w);
         }

@@ -70,6 +70,14 @@ TEST_CASE("parte_de_valor: páginas de la barra separadas por /") {
 
 TEST_CASE("paginas_barra: 3 por defecto, se recorta a 1-9 y vuelve igual") {
     CHECK(leer_config("").paginas_barra == 3);
+    {
+        const Config e = leer_config("juego=/a/\njuego_extra=/b/\njuego_extra=/c\n");
+        REQUIRE(e.carpetas_extra.size() == 2);
+        CHECK(e.carpetas_extra[0] == "/b/");
+        CHECK(e.carpetas_extra[1] == "/c");
+        CHECK(leer_config(escribir_config(e)).carpetas_extra == e.carpetas_extra);
+        CHECK(leer_config("").carpetas_extra.empty());
+    }
     CHECK(leer_config("paginas_barra=0\n").paginas_barra == 1);
     CHECK(leer_config("paginas_barra=40\n").paginas_barra == PAGINAS_BARRA_MAX);
     Config c = leer_config("");

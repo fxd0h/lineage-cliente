@@ -75,3 +75,35 @@ Hash samples compare raw bytes of ids present in both.
 3. Never take B text for names: its `desc-e.tbl` lacks 26% of the ids and drops the English roles.
 4. Collisions (same id, different bytes): sprites 5%, segments 6%, UI .img 11%, wav 7%. Keep A for the 2009 look (A is what the fork was matched against); the loader should let a per-category override prefer B only for map segments if A's segment is older and a spawn/portal falls on tiles missing in A. A sample of the 113 differing segments should be diffed before deciding.
 5. Real gaps (nothing in A or B): 41 maps (1006-1023, 7000, 7783, 7951-7957), 157 spawned NPC gfx + 259 polymorph gfx + 4 dolls + 21 effects, 1 inventory icon, 6 html pages. They need a newer client or the existing placeholder (magenta block); polymorph and 3 of 5 spawn gfx groups (pollution, orc, ghoul) are the priority.
+
+## Multi-folder loader and recount (juego_extra=)
+
+`settings.ini` accepts `juego_extra=<folder>` repeatedly, in lookup order. For anything `juego=` lacks the loader tries
+each extra: `SpriteNN.pak`/`Sprite.pak` then loose `sprite/`, `Tile.pak` then loose `Tile/`, `map/<n>/*.s32`,
+`sound/*.wav|mp3`, and `.html`/`.htm` pages from `Text.pak`. Text ids (`*.tbl`, `*.def`, spell texts) come only from the
+primary. Sprite lists of an extra (`list.spz`, `spritelist/list.spz`, any top-level `*.txt` with a list header such as the
+TW `TW13081901.txt`) are merged after the primary's, validated against the sprite files actually present (earlier sources
+win). Example (`servidor_380/l1jgo/吃檔/` = extra `.spr` + `TW13081901.txt`; 2233 gfx added to the table):
+
+```
+juego=/path/Lineage Justice/
+juego_extra=/path/休閒天堂381/
+juego_extra=/path/servidor_380/l1jgo/吃檔/
+```
+
+Recount with `servidor_380/gfx_sources.py report` (A = Justice, B = 3.81C, C = 吃檔; "in none" = absent from all three):
+
+| Category | needed | A | B | C | any | in none |
+|---|---|---|---|---|---|---|
+| NPC gfx (npc_list) | 1312 | 988 | 996 | 1 | 996 | 316 |
+| NPC gfx (spawned) | 765 | 608 | 608 | 0 | 608 | 157 |
+| Polymorph gfx | 353 | 48 | 94 | 5 | 94 | 259 |
+| Doll gfx | 15 | 11 | 11 | 0 | 11 | 4 |
+| Door gfx | 136 | 135 | 135 | 0 | 135 | 1 |
+| Item ground gfx | 1076 | 1035 | 1062 | 1 | 1063 | 13 |
+| Inventory icons | 1918 | 1802 | 1917 | 0 | 1917 | 1 |
+| Maps with spawns | 313 | 298 | 302 | 0 | 302 | 11 |
+
+(This yaml is the eddy7697 pin, hence 765 spawned gfx / 353 polymorphs against the earlier counts.) 吃檔 adds almost
+no files (67 `.spr`: 1 NPC, 5 polymorph, 1 ground gfx); its value is the sprite list. Sounds, html and the text tables
+were not recounted (the figures above in sections 4 and 5 still apply; html and sounds now fall back to B).

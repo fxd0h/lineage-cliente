@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <fstream>
 #include <filesystem>
 #include <atomic>
 #include <cstdio>
@@ -28,36 +30,63 @@ void SDLCALL al_elegir_carpeta(void*, const char* const* lista, int) {
     }
 }
 
-// list.spz (plaintext, user-supplied, never shipped): lista_sprites= in settings.ini, else
-// <game folder>/list.spz or <game folder>/spritelist/list.spz. Its gfx replace or add to the table's.
+// Sprite lists (plaintext, user-supplied, never shipped). The primary's: lista_sprites= in settings.ini, else
+// <game folder>/list.spz or <game folder>/spritelist/list.spz. Then each juego_extra= folder, in order:
+// list.spz, spritelist/list.spz and any top-level *.txt that starts with a list header ("12317 0 41211" or
+// "S21972 0 41210"; the TW client's TW13081901.txt). A gfx already known is kept, so earlier sources win.
+static bool tiene_cabecera_lista(const std::filesystem::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    std::string l;
+    if (!f || !std::getline(f, l)) return false;
+    unsigned a = 0, b = 0, c = 0;
+    return std::sscanf(l.c_str(), "S%u %u %u", &a, &b, &c) == 3 || std::sscanf(l.c_str(), "%u %u %u", &a, &b, &c) == 3;
+}
+
+static std::vector<std::string> listas_de_extra(const std::string& carpeta) {
+    namespace fs = std::filesystem;
+    std::vector<std::string> v;
+    std::error_code ec;
+    for (const char* rel : {"list.spz", "spritelist/list.spz"})
+        if (fs::exists(carpeta + rel, ec)) v.push_back(carpeta + rel);
+    std::vector<std::string> txt;
+    for (const auto& e : fs::directory_iterator(carpeta, ec))
+        if (e.is_regular_file(ec) && e.path().extension() == ".txt" && tiene_cabecera_lista(e.path())) txt.push_back(e.path().string());
+    std::sort(txt.begin(), txt.end());
+    v.insert(v.end(), txt.begin(), txt.end());
+    return v;
+}
+
 static void cargar_lista_sprites(App& a) {
     LIN_LOG("Sprite table: %u gfx from sprite_table.txt", a.sprites.gfx_de_tabla());
-    std::string ruta;
+    std::vector<std::string> rutas;
     if (!a.cfg.lista_sprites.empty()) {
-        ruta = a.cfg.lista_sprites;
-        if (!std::filesystem::exists(ruta)) LIN_LOG("Sprite table: lista_sprites=%s does not exist", ruta.c_str());
+        rutas.push_back(a.cfg.lista_sprites);
+        if (!std::filesystem::exists(rutas[0])) LIN_LOG("Sprite table: lista_sprites=%s does not exist", rutas[0].c_str());
     } else {
         for (const char* rel : {"list.spz", "spritelist/list.spz"})
-            if (std::filesystem::exists(a.cfg.carpeta_juego + rel)) { ruta = a.cfg.carpeta_juego + rel; break; }
+            if (std::filesystem::exists(a.cfg.carpeta_juego + rel)) { rutas.push_back(a.cfg.carpeta_juego + rel); break; }
     }
-    if (ruta.empty()) return;
-    ResumenLista r;
-    // list.spz comes from a newer client: check every row against the sprite files we actually have.
+    for (const std::string& e : a.cfg.carpetas_extra)
+        for (std::string& r : listas_de_extra(e)) rutas.push_back(std::move(r));
+    // A list may come from a newer client: check every row against the sprite files we actually have.
     const ContadorFrames contador = [&a](GfxId g, u16 sub) {
         char nombre[32];
         std::snprintf(nombre, sizeof nombre, "%u-%u.spr", g, sub);
         return contar_frames_spr(a.rec.sprite(nombre));
     };
-    if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
-        LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already in sprite_table.txt kept, %u without actions or files skipped; "
-                "%u with a missing/redirected file, %u with frames dropped)", r.nuevos, ruta.c_str(), r.nuevos, r.reemplazados,
-                r.omitidos, r.sin_archivo, r.recortados);
-    else
-        LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
+    for (const std::string& ruta : rutas) {
+        ResumenLista r;
+        if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
+            LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already known kept, %u without actions or files skipped; "
+                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos, ruta.c_str(), r.nuevos, r.reemplazados,
+                    r.omitidos, r.sin_archivo, r.recortados);
+        else
+            LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
+    }
 }
 
 bool cargar_recursos(App& a) {
-    if (!a.rec.abrir(a.cfg.carpeta_juego)) {
+    if (!a.rec.abrir(a.cfg.carpeta_juego, a.cfg.carpetas_extra)) {
         LIN_LOG("No se pudieron abrir los .pak en %s", a.cfg.carpeta_juego.c_str());
         return false;
     }

@@ -7,7 +7,10 @@
 // & 15, y si no está, en Sprite.pak (getHashIndex de l1j-client). Los SpriteNN tienen las
 // versiones más nuevas (p. ej. 814.png del login está en Sprite00 y no en Sprite.pak).
 #pragma once
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <string_view>
 #include <vector>
 #include "plataforma/archivo_mapeado.h"
@@ -35,26 +38,39 @@ private:
 
 u64 hash_nombre(std::string_view nombre);  // FNV-1a de 64 bits sobre el nombre en minúsculas
 
-// Todos los contenedores del juego.
+// Todos los contenedores del juego. The first source is the primary install (juego=); the following ones are
+// the juego_extra= folders, tried in order for anything the previous ones lack (sprites, tiles, loose
+// sprite/ and map/ files, html pages). Text tables (.tbl, .def, spells) come from the primary only.
 class Recursos {
 public:
-    bool abrir(const std::string& carpeta_juego);
+    bool abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras = {});
     const std::string& carpeta() const { return carpeta_; }
 
-    Bytes sprite(std::string_view nombre) const;  // SpriteNN.pak y luego Sprite.pak
-    Bytes tile(std::string_view nombre) const { return tile_.buscar(nombre); }
+    Bytes sprite(std::string_view nombre) const;  // SpriteNN.pak, Sprite.pak, loose sprite/ per source
+    Bytes tile(std::string_view nombre) const;    // Tile.pak, loose Tile/ per source
     // Text.pak: los archivos también van cifrados con DES; se devuelven ya descifrados.
     bool texto(std::string_view nombre, std::vector<u8>& salida) const;
+    // First source that has `relativa` (e.g. "map/4/7fff8000.s32", "sound/12.wav"); the primary's path if none.
+    std::string ruta_archivo(const std::string& relativa) const;
+    // Which source (0 = primary) served the last lookups is not tracked; this tells where a sprite name resolves.
+    int fuente_de_sprite(std::string_view nombre) const;
+    size_t fuentes() const { return fuentes_.size(); }
+    const std::string& carpeta_de(size_t i) const { return fuentes_[i]->carpeta; }
 
-    const Pak& pak_sprites_base() const { return sprite_base_; }
-    const Pak& pak_textos() const { return texto_; }
+    const Pak& pak_sprites_base() const { return fuentes_[0]->sprite_base; }
+    const Pak& pak_textos() const { return fuentes_[0]->texto; }
 
 private:
+    struct Fuente {
+        std::string carpeta;
+        Pak sprite_base, sprite_hash[16], tile, texto;
+        mutable std::mutex mu;  // loose-file cache (sprite() is called from several threads)
+        mutable std::unordered_map<std::string, ArchivoMapeado> sueltos;  // empty mapping = known missing
+    };
+    static Bytes suelto(const Fuente& f, std::string_view dir, std::string_view nombre);
+    static Bytes en_fuente(const Fuente& f, std::string_view nombre);
     std::string carpeta_;
-    Pak sprite_base_;
-    Pak sprite_hash_[16];
-    Pak tile_;
-    Pak texto_;
+    std::vector<std::unique_ptr<Fuente>> fuentes_;
 };
 
 }  // namespace lin

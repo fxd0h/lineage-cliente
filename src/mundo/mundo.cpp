@@ -510,7 +510,7 @@ static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) 
         ruta += seg;
         if (std::filesystem::exists(ruta)) return ruta;
     }
-    return rec.carpeta() + nombre_segmento(mapa, x, y);
+    return rec.ruta_archivo(nombre_segmento(mapa, x, y));
 }
 
 const SegmentoMapa* segmento_cargado(Mundo& m, const Recursos& rec, int x, int y) {

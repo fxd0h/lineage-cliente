@@ -48,6 +48,7 @@ Servidor leer_servidor(std::string_view v) {
 
 void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view valor) {
     if (clave == "juego") c.carpeta_juego = valor;
+    else if (clave == "juego_extra") { if (!valor.empty()) c.carpetas_extra.emplace_back(valor); }
     else if (clave == "hd") c.carpeta_hd = valor;
     else if (clave == "servidor") c.servidores.push_back(leer_servidor(valor));
     else if (clave == "servidor_elegido") ant.elegido = valor;
@@ -139,6 +140,8 @@ Config cargar_config_de(const std::string& ruta) {
     Config c = leer_archivo(ruta, ini) ? leer_config({reinterpret_cast<const char*>(ini.data()), ini.size()})
                                        : leer_config({});
     if (!c.carpeta_juego.empty() && c.carpeta_juego.back() != '/') c.carpeta_juego += '/';
+    for (std::string& e : c.carpetas_extra)
+        if (e.back() != '/') e += '/';
     return c;
 }
 
@@ -226,6 +229,7 @@ std::string escribir_config(const Config& c) {
         t += '\n';
     };
     linea("juego", c.carpeta_juego);
+    for (const std::string& e : c.carpetas_extra) linea("juego_extra", e);
     if (!c.carpeta_hd.empty()) linea("hd", c.carpeta_hd);
     // Servidores: nombre|host|puerto|protocolo|cuenta (la última usada en ese servidor).
     for (const Servidor& sv : c.servidores)

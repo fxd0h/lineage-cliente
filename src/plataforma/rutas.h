@@ -34,6 +34,7 @@ struct Config {
     int opciones_orig = OPCIONES_ORIG_DEFECTO;  // "opciones_orig=": OpcionOrig bit mask
     int alpha_orig = 0;                         // "alpha_orig=": window transparency step 0..3 (0x7030e0; opaque, 20/31, 13/31, 7/31)
     std::string carpeta_hd;        // "hd=": HD UI pack directory (img_<id>.png, tbt_<id>.png); empty = off
+    std::vector<std::string> carpetas_extra;  // "juego_extra=" (repeatable, ordered): fallback game folders for what juego= lacks
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)
     size_t servidor = 0;           // el elegido ("servidor_elegido=Nombre")

@@ -31,7 +31,7 @@ public:
     Audio& operator=(const Audio&) = delete;
 
     // `carpeta_juego` termina en "/"; los archivos están en <carpeta>sound/.
-    bool abrir(const std::string& carpeta_juego);
+    bool abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras = {});
     void cerrar();
     bool abierto() const { return dispositivo_ != 0; }
 
@@ -71,6 +71,8 @@ private:
     static void alimentar_ambiente(void* yo, SDL_AudioStream* s, int falta, int total);
 
     std::string carpeta_;
+    std::vector<std::string> carpetas_;  // <game>/sound/ then the juego_extra= ones, in lookup order
+    std::string ruta_sonido(const std::string& nombre) const;
     u32 dispositivo_ = 0;
     SDL_AudioStream* stream_musica_ = nullptr;
     SDL_AudioStream* stream_ambiente_ = nullptr;
