@@ -38,9 +38,12 @@ bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_origi
 // origin, and the draw (0x436680 -> 0x43cf90) then adds the widget's left edge (pane x + 10) again to every run x
 // (RECT(left + run.x, ...), 0x43d0a4). So the first glyph column sits at window x 10 + 13 = 23 and a line wraps at 10 + 200 = 210
 // (the clip region is widened by 9 on the right, 0x4366c8..0x4366db, so that overhang is visible). The vertical origin
-// is not re-derived here (HTML_INSET_T kept).
+// is the layout line y (51 = widget top 48 + inset 3) plus the widget top again (48) minus the OffsetRect dy of
+// -43 - scroll at 0x4367cc / 0x436804 = window y + 56 for the first line (NPC_TEXT_ORIGIN_DY below, 5 more than the
+// clip top). The clip rect itself is unchanged.
 constexpr int HTML_INSET_L = 3, HTML_INSET_T = 3, HTML_INSET_R = 7, HTML_INSET_B = 3;
 constexpr int NPC_WIDGET_L = 10, NPC_WIDGET_R = 207;
+constexpr int NPC_TEXT_ORIGIN_DY = 51 + 48 - 43 - (48 + HTML_INSET_T);  // 5: first line y 56 vs clip top 51
 constexpr int NPC_TEXT_X = NPC_WIDGET_L + NPC_WIDGET_L + HTML_INSET_L;                   // 23: first glyph column
 constexpr int NPC_TEXT_W = (NPC_WIDGET_R - HTML_INSET_R) - (NPC_WIDGET_L + HTML_INSET_L);  // 187: wrap width
 int page_width(const App& a) {
@@ -310,7 +313,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
     // do one line step per notch.
     if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * NPC_LINE, 0, max_desp);
     a.npc_desplazamiento = std::clamp(a.npc_desplazamiento, 0, max_desp);
-    const int ox = x0 + left, oy = y0 + top - a.npc_desplazamiento;
+    const int ox = x0 + left, oy = y0 + top + (orig_text ? NPC_TEXT_ORIGIN_DY : 0) - a.npc_desplazamiento;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), ki = clave_orden(CAPA_UI, 13);
     const ElementoHtml* bajo = nullptr;
     // Original client: every word of the link under the pointer turns green, not only the one pointed at (0x43d2a2
