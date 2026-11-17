@@ -49,7 +49,7 @@ size_t bytes_que_caben(const char* texto, size_t n, int ancho_max);
 void usar_fuente_original(bool si);
 // Texto de las páginas HTML de la interfaz original: cara proporcional (recursos/fuente_ttf.h). UTF-8 válido, o bytes
 // Latin-1 si no lo es. `glifos_de_texto_html` produce glifos GLIFO_HTML_BASE + cp.
-void glifos_de_texto_html(const char* texto, size_t n, std::vector<GlifoTexto>& salida);
-int ancho_texto_html(const char* texto, size_t n);
+void glifos_de_texto_html(const char* texto, size_t n, std::vector<GlifoTexto>& salida, bool negrita = false);
+int ancho_texto_html(const char* texto, size_t n, bool negrita = false);
 
 }  // namespace lin

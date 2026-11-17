@@ -8,6 +8,8 @@
 #include "recursos/fuente_hd.h"
 #include "recursos/fuente_html_datos.inc"
 #include "recursos/fuente_html_hd_datos.inc"
+#include "recursos/fuente_html_negrita_datos.inc"
+#include "recursos/fuente_html_negrita_hd_datos.inc"
 #include "recursos/fuente_ui_datos.inc"
 
 namespace lin {
@@ -78,12 +80,26 @@ const Ttf& ttf() {
 // bitmaps of Liberation Sans (Arial metrics, OFL) made by tools/generar_fuente_html.py, with hinted integer advances.
 constexpr int ALTO_CELDA_HTML = ALTO_LINEA_HTML_ORIGINAL;
 
-int indice_html(u32 cp) {
-    const unsigned short* fin = FUENTE_HTML_CP + FUENTE_HTML_N;
-    const unsigned short* it = std::lower_bound(FUENTE_HTML_CP, fin, cp);
-    if (it != fin && *it == cp) return static_cast<int>(it - FUENTE_HTML_CP);
+// Hinted pixel face of the HTML pages: regular, or bold (<b>: LOGFONT weight 700, 0x4359f0 / tag handler 0x437a2c).
+// Both tables cover the same code points in the same order.
+struct CaraHtml {
+    const unsigned short* cp;
+    const unsigned char* ancho;
+    const unsigned short (*filas)[ALTO_CELDA_HTML];
+    int n, pluma, ascenso;
+};
+constexpr CaraHtml CARA_REGULAR{FUENTE_HTML_CP, FUENTE_HTML_ANCHO, FUENTE_HTML_FILAS, FUENTE_HTML_N, FUENTE_HTML_PLUMA,
+                                FUENTE_HTML_ASCENSO};
+constexpr CaraHtml CARA_NEGRITA{FUENTE_HTML_B_CP, FUENTE_HTML_B_ANCHO, FUENTE_HTML_B_FILAS, FUENTE_HTML_B_N,
+                                FUENTE_HTML_B_PLUMA, FUENTE_HTML_B_ASCENSO};
+const CaraHtml& cara(bool negrita) { return negrita ? CARA_NEGRITA : CARA_REGULAR; }
+
+int indice_html(const CaraHtml& c, u32 cp) {
+    const unsigned short* fin = c.cp + c.n;
+    const unsigned short* it = std::lower_bound(c.cp, fin, cp);
+    if (it != fin && *it == cp) return static_cast<int>(it - c.cp);
     if (cp == '?') return 0;
-    return indice_html('?');
+    return indice_html(c, '?');
 }
 
 }  // namespace
@@ -121,17 +137,21 @@ bool rasterizar_ttf(u32 cp, ImagenRGBA& salida) {
     return true;
 }
 
-int ancho_html(u32 cp) { return FUENTE_HTML_ANCHO[indice_html(cp)]; }
+int ancho_html(u32 cp, bool negrita) {
+    const CaraHtml& c = cara(negrita);
+    return c.ancho[indice_html(c, cp)];
+}
 
-bool rasterizar_html(u32 cp, ImagenRGBA& salida) {
-    const int idx = indice_html(cp);
-    const int avance = std::max(1, static_cast<int>(FUENTE_HTML_ANCHO[idx]));
+bool rasterizar_html(u32 cp, ImagenRGBA& salida, bool negrita) {
+    const CaraHtml& c = cara(negrita);
+    const int idx = indice_html(c, cp);
+    const int avance = std::max(1, static_cast<int>(c.ancho[idx]));
     salida.preparar(static_cast<u16>(avance), ALTO_CELDA_HTML);
     for (int y = 0; y < ALTO_CELDA_HTML; ++y) {
-        const unsigned bits = FUENTE_HTML_FILAS[idx][y];
-        for (int c = 0; c < 16; ++c) {
-            const int x = c - FUENTE_HTML_PLUMA;
-            if (!(bits & (0x8000u >> c)) || x < 0 || x >= avance) continue;
+        const unsigned bits = c.filas[idx][y];
+        for (int col = 0; col < 16; ++col) {
+            const int x = col - c.pluma;
+            if (!(bits & (0x8000u >> col)) || x < 0 || x >= avance) continue;
             salida.px[static_cast<size_t>(y) * avance + x] = 0xFFFFFFFFu;  // opaque white (premultiplied)
         }
     }
@@ -140,15 +160,22 @@ bool rasterizar_html(u32 cp, ImagenRGBA& salida) {
 
 // HD variant of the HTML face: the real (unhinted) Liberation Sans outlines rasterized at HD_ESCALA times the 11 ppem
 // size, placed on the same pen position and baseline as the pixel glyph, so only the edges differ.
-bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida) {
-    static const stbtt_fontinfo* info = [] {
-        static stbtt_fontinfo f;
-        return stbtt_InitFont(&f, FUENTE_HTML_HD_DATOS, 0) ? &f : nullptr;
-    }();
+bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida, bool negrita) {
+    static const stbtt_fontinfo* infos[2] = {
+        [] {
+            static stbtt_fontinfo f;
+            return stbtt_InitFont(&f, FUENTE_HTML_HD_DATOS, 0) ? &f : nullptr;
+        }(),
+        [] {
+            static stbtt_fontinfo f;
+            return stbtt_InitFont(&f, FUENTE_HTML_B_HD_DATOS, 0) ? &f : nullptr;
+        }()};
+    const stbtt_fontinfo* info = infos[negrita ? 1 : 0];
     if (!info) return false;
-    const int fila = indice_html(cp);
-    const int avance = std::max(1, static_cast<int>(FUENTE_HTML_ANCHO[fila]));
-    u32 real = FUENTE_HTML_CP[fila];  // the code point actually drawn ('?' for unknown ones)
+    const CaraHtml& c = cara(negrita);
+    const int fila = indice_html(c, cp);
+    const int avance = std::max(1, static_cast<int>(c.ancho[fila]));
+    u32 real = c.cp[fila];  // the code point actually drawn ('?' for unknown ones)
     const int idx = stbtt_FindGlyphIndex(info, static_cast<int>(real));
     const float escala = stbtt_ScaleForMappingEmToPixels(info, 11.0f * HD_ESCALA);
     int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
@@ -158,8 +185,7 @@ bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida) {
     static thread_local std::vector<unsigned char> cob;
     cob.assign(static_cast<size_t>(w) * h, 0);
     stbtt_MakeGlyphBitmap(info, cob.data(), w, h, w, escala, escala, idx);
-    return campo_de_cobertura(cob.data(), w, h, x0, FUENTE_HTML_ASCENSO * HD_ESCALA + y0, avance, ALTO_CELDA_HTML,
-                              salida);
+    return campo_de_cobertura(cob.data(), w, h, x0, c.ascenso * HD_ESCALA + y0, avance, ALTO_CELDA_HTML, salida);
 }
 
 }  // namespace lin

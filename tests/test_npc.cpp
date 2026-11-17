@@ -147,6 +147,18 @@ TEST_CASE("NPC: maquetación del HTML con el estilo del cliente original") {
     CHECK(p.elementos[0].w == ancho_texto_html("Go", 2));
 }
 
+TEST_CASE("NPC: <b> draws the bold face with its own advances in the original UI only") {
+    PaginaHtml p;
+    maquetar_html("a <b>Bold</b> b", {}, '\x01', "U", 200, medir, nullptr, p, true);
+    REQUIRE(p.elementos.size() == 3);
+    CHECK_FALSE(p.elementos[0].negrita);
+    CHECK(p.elementos[1].negrita);
+    CHECK(p.elementos[1].w == ancho_texto_html("Bold", 4, true));
+    CHECK_FALSE(p.elementos[2].negrita);
+    maquetar_html("<b>Bold</b>", {}, '\x01', "U", 200, medir, nullptr, p, false);
+    CHECK_FALSE(p.elementos[0].negrita);
+}
+
 TEST_CASE("NPC: <var img src=\"#N\"> is a variable id and draws nothing") {
     PaginaHtml p;
     maquetar_html("<may><var img src=\"#312\" tooltip=\"#312\" action=\"x\"></may>", {}, '\x01', "U", 200, medir, nullptr, p, true);

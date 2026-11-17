@@ -109,3 +109,17 @@ TEST_CASE("cara HTML original: proporcional, alto de celda 13 y sin colisión co
     for (u32 px : img.px) tinta |= px != 0;
     CHECK(tinta);
 }
+
+TEST_CASE("cara HTML en negrita (<b>): avances propios, glifos aparte y misma celda") {
+    CHECK(ancho_html('M', true) > ancho_html('M'));
+    std::vector<GlifoTexto> g;
+    glifos_de_texto_html("Hi", 2, g, true);
+    REQUIRE(g.size() == 2);
+    CHECK(g[0].glifo == GLIFO_HTML_NEGRITA_BASE + 'H');
+    CHECK(g[0].ancho + g[1].ancho == ancho_texto_html("Hi", 2, true));
+    ImagenRGBA img, reg;
+    REQUIRE(rasterizar_html('a', img, true));
+    REQUIRE(rasterizar_html('a', reg));
+    CHECK(img.alto == ALTO_LINEA_HTML_ORIGINAL);
+    CHECK((img.ancho != reg.ancho || img.px != reg.px));  // its own bitmap
+}

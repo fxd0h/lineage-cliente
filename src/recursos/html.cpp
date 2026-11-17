@@ -81,6 +81,12 @@ public:
         vinculo_len_ = static_cast<u32>(v.size());
         es_enlace_ = es_enlace;
     }
+    // <b> in the original UI: bold flag of the style stack (tag handler 0x437a2c sets style byte +0x14, </b> pops it).
+    void negrita(bool abrir) {
+        if (!original_) return;
+        if (abrir) ++negritas_;
+        else if (negritas_ > 0) --negritas_;
+    }
     void espacio() { espacio_ = true; }
     void centrar(bool c) {
         if (x_ > 0) nueva_linea();
@@ -102,7 +108,7 @@ public:
         if (!p_.elementos.empty() && p_.elementos.size() > inicio_linea_) {
             ElementoHtml& u = p_.elementos.back();
             if (u.tipo == ElementoHtml::Tipo::TEXTO && u.color == col && u.vinculo_len == vinculo_len_ &&
-                u.vinculo_ofs == vinculo_ofs_ && u.texto_ofs + u.texto_len == p_.textos.size() && u.x + u.w == x_) {
+                u.vinculo_ofs == vinculo_ofs_ && u.negrita == (negritas_ > 0) && u.texto_ofs + u.texto_len == p_.textos.size() && u.x + u.w == x_) {
                 if (sp) p_.textos.push_back(' ');
                 p_.textos.append(t);
                 u.texto_len += static_cast<u32>(t.size()) + (sp ? 1 : 0);
@@ -118,6 +124,7 @@ public:
         e.w = static_cast<i16>(w);
         e.h = static_cast<i16>(alto_texto_);
         e.color = col;
+        e.negrita = negritas_ > 0;
         e.texto_ofs = guardar(t);
         e.texto_len = static_cast<u32>(t.size());
         poner_vinculo(e);
@@ -165,7 +172,7 @@ public:
 
 private:
     int medir_texto(std::string_view t) const {
-        return original_ ? ancho_texto_html(t.data(), t.size()) : ancho_texto(t.data(), t.size());
+        return original_ ? ancho_texto_html(t.data(), t.size(), negritas_ > 0) : ancho_texto(t.data(), t.size());
     }
     u32 guardar(std::string_view t) {
         u32 ofs = static_cast<u32>(p_.textos.size());
@@ -206,6 +213,7 @@ private:
     bool centrado_ = false, espacio_ = false, es_enlace_ = false;
     u32 colores_[16] = {};
     int n_colores_ = 1;
+    int negritas_ = 0;
     u32 vinculo_ofs_ = 0, vinculo_len_ = 0;
 };
 
@@ -272,6 +280,9 @@ void maquetar_html(std::string_view html, std::string_view datos, char separador
                     std::string_view fg = atributo(tag, "fg");
                     m.color(fg.empty() ? (original ? COLOR_TEXTO_HTML_ORIGINAL : COLOR_TEXTO_HTML) : rgba_hex(fg, original));
                 }
+            } else if (n == "b") {
+                cortar();
+                m.negrita(!cierre);
             } else if (n == "a") {
                 cortar();
                 if (cierre) {

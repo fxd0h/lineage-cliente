@@ -305,8 +305,8 @@ int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 c
     return ancho;
 }
 
-int Graficos::texto_html(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
-    glifos_de_texto_html(t.data(), t.size(), glifos_tmp_);
+int Graficos::texto_html(std::string_view t, float x, float y, u64 clave_orden, u32 color, bool negrita) {
+    glifos_de_texto_html(t.data(), t.size(), glifos_tmp_, negrita);
     const bool hd = texto_hd_para(clave_orden);
     int ancho = 0;
     for (const GlifoTexto& g : glifos_tmp_) {

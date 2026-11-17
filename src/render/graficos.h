@@ -64,7 +64,7 @@ public:
     const RegionAtlas& glifo_hd_mascara(u32 id, int ancho, int filas, const u8* bits);
     int texto(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
     // Texto de las páginas HTML de la interfaz original: cara proporcional, sin sombra ni contorno.
-    int texto_html(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
+    int texto_html(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO, bool negrita = false);
     // Texto con sombra negra de 1 px (como los nombres sobre los personajes).
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
 

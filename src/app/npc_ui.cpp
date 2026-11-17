@@ -355,7 +355,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
         } else {
             if (orig_text) {  // no underline: the client never sets the underline flag of the run style
                 const bool verde = el.vinculo_len && static_cast<int>(el.vinculo_ofs) == sobre_vinculo;
-                g.texto_html(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, verde ? COLOR_SOBRE_HTML_ORIGINAL : el.color);
+                g.texto_html(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, verde ? COLOR_SOBRE_HTML_ORIGINAL : el.color, el.negrita);
             } else {
                 g.texto(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, encima ? rgba(255, 255, 254) : el.color);
                 if (el.vinculo_len) g.gpu().rectangulo(x, y + ALTO_GLIFO, el.w, 1, ki, el.color);

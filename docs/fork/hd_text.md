@@ -26,9 +26,9 @@ runtime from the user's own game files and cached in the atlas like any glyph (n
   (sigma 0.42 px); the contour at level 0.44 is the glyph outline. This is an implicit-curve vectorization (the
   iso-contour of a smooth field, resolved by the GPU at any scale), not Bezier tracing. `NIVEL` is the corner knob:
   lower keeps squarer corners and stroke ends. Tests: `tests/test_fuente_hd.cpp`.
-- **HTML dialog face**: real unhinted Liberation Sans outlines (SIL OFL, `licencias/LiberationSans-OFL.txt`) rasterized
-  by stb_truetype at 8x the 11 ppem size, placed on the same pen/baseline as the hinted pixel glyph. Embedded subset:
-  `fuente_html_hd_datos.inc`, from `tools/generar_fuente_html_hd.py`.
+- **HTML dialog face**: real unhinted Liberation Sans outlines (Regular, and Bold for `<b>`; SIL OFL, `licencias/LiberationSans-OFL.txt`)
+  rasterized by stb_truetype at 8x the 11 ppem size, placed on the same pen/baseline as the hinted pixel glyph.
+  Embedded subsets: `fuente_html_hd_datos.inc` and `fuente_html_negrita_hd_datos.inc`, from `tools/generar_fuente_html_hd.py`.
 
 ## Limits
 

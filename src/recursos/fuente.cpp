@@ -24,6 +24,7 @@ bool FuenteBitmap::cargar(const std::string& carpeta) {
 }
 
 bool FuenteBitmap::rasterizar(u32 glifo, ImagenRGBA& salida) const {
+    if (glifo >= GLIFO_HTML_NEGRITA_BASE) return rasterizar_html(glifo - GLIFO_HTML_NEGRITA_BASE, salida, true);
     if (glifo >= GLIFO_HTML_BASE) return rasterizar_html(glifo - GLIFO_HTML_BASE, salida);
     if (glifo >= GLIFO_TTF_BASE) return rasterizar_ttf(glifo - GLIFO_TTF_BASE, salida);
     if (glifo < 95) {
@@ -47,6 +48,7 @@ bool FuenteBitmap::rasterizar(u32 glifo, ImagenRGBA& salida) const {
 }
 
 bool FuenteBitmap::rasterizar_hd(u32 glifo, ImagenRGBA& salida) const {
+    if (glifo >= GLIFO_HTML_NEGRITA_BASE) return rasterizar_html_hd(glifo - GLIFO_HTML_NEGRITA_BASE, salida, true);
     if (glifo >= GLIFO_HTML_BASE) return rasterizar_html_hd(glifo - GLIFO_HTML_BASE, salida);
     static thread_local ImagenRGBA mascara;  // reused cell
     if (!rasterizar(glifo, mascara)) return false;
@@ -104,26 +106,26 @@ void glifos_de_texto(const char* t, size_t n, std::vector<GlifoTexto>& salida) {
     }
 }
 
-void glifos_de_texto_html(const char* t, size_t n, std::vector<GlifoTexto>& salida) {
+void glifos_de_texto_html(const char* t, size_t n, std::vector<GlifoTexto>& salida, bool negrita) {
     salida.clear();
     const bool utf8 = es_utf8(t, n);
     for (size_t i = 0; i < n;) {
         u32 cp = static_cast<u8>(t[i]);
         size_t largo = 1;
         if (utf8) largo = largo_utf8(t, n, i, cp);
-        salida.push_back({GLIFO_HTML_BASE + cp, static_cast<u8>(ancho_html(cp))});
+        salida.push_back({(negrita ? GLIFO_HTML_NEGRITA_BASE : GLIFO_HTML_BASE) + cp, static_cast<u8>(ancho_html(cp, negrita))});
         i += largo;
     }
 }
 
-int ancho_texto_html(const char* t, size_t n) {
+int ancho_texto_html(const char* t, size_t n, bool negrita) {
     int w = 0;
     const bool utf8 = es_utf8(t, n);
     for (size_t i = 0; i < n;) {
         u32 cp = static_cast<u8>(t[i]);
         size_t largo = 1;
         if (utf8) largo = largo_utf8(t, n, i, cp);
-        w += ancho_html(cp);
+        w += ancho_html(cp, negrita);
         i += largo;
     }
     return w;

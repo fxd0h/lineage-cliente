@@ -5,7 +5,7 @@
 //    cliente, sin pasar por el servidor; también href en una página);
 //  - <img src="#N" action|link=".." tooltip=".."> (N.img; botones como comprar/vender);
 //  - <var src="#N">: el dato N que manda el servidor con la página; <username>: el personaje.
-// El resto (<body>, <html>, <b>, <pre>, <meta>...) se ignora. Este módulo solo maqueta (líneas,
+// <b> only changes the face in the original UI (`original`). El resto (<body>, <html>, <pre>, <meta>...) se ignora. Este módulo solo maqueta (líneas,
 // posiciones, colores y vínculos); dibujar y responder a los clics es de la aplicación.
 #pragma once
 #include <string>
@@ -18,7 +18,8 @@ namespace lin {
 struct ElementoHtml {
     enum class Tipo : u8 { TEXTO, IMAGEN };
     Tipo tipo = Tipo::TEXTO;
-    bool es_enlace = false;   // el vínculo es una página local (link); si no, una acción (action)
+    bool es_enlace = false;
+    bool negrita = false;     // inside <b> (original UI: bold face with its own advances)   // el vínculo es una página local (link); si no, una acción (action)
     i16 x = 0, y = 0, w = 0, h = 0;
     u32 color = 0;            // texto: RGBA
     u32 imagen = 0;           // imagen: N.img

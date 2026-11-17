@@ -13,12 +13,14 @@ constexpr u32 GLIFO_TTF_BASE = 0x100000;
 
 // Glifos de la cara de las páginas HTML (Arial en el cliente original): GLIFO_HTML_BASE + punto de código.
 constexpr u32 GLIFO_HTML_BASE = 0x200000;
+// The same face in bold (<b>): GLIFO_HTML_NEGRITA_BASE + code point (GDI Arial Bold stand-in, own advances).
+constexpr u32 GLIFO_HTML_NEGRITA_BASE = 0x300000;
 // Alto de línea de las páginas HTML en la interfaz original (tmHeight de la fuente de tamaño 13).
 constexpr int ALTO_LINEA_HTML_ORIGINAL = 13;
-int ancho_html(u32 codepunto);
-bool rasterizar_html(u32 codepunto, ImagenRGBA& salida);
+int ancho_html(u32 codepunto, bool negrita = false);
+bool rasterizar_html(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
 // HD field (recursos/fuente_hd.h) from the real outlines; false for glyphs without ink.
-bool rasterizar_html_hd(u32 codepunto, ImagenRGBA& salida);
+bool rasterizar_html_hd(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
 
 // Avance del carácter en píxeles (proporcional). Un carácter que la fuente no tiene se dibuja como '?'.
 int ancho_ttf(u32 codepunto);
