@@ -7,6 +7,7 @@
 //  - Los efectos activos (haste, escudos...) se listan arriba a la izquierda con lo que les queda.
 #include <charconv>
 #include <cstring>
+#include "mundo/ataque.h"
 #include "app/app.h"
 
 namespace lin {
@@ -305,6 +306,8 @@ int paso_hechizo_pendiente(App& a, Slot yo, u64 ahora) {
         enviar(a, cmd::usar_hechizo(a.op, id, obj != SIN_SLOT ? o.ids()[obj] : 0, obj != SIN_SLOT ? o.col<O_X>()[obj] : 0,
                                     obj != SIN_SLOT ? o.col<O_Y>()[obj] : 0));
     }
+    // Overweight: the server refuses (message 316) and sends no echo: no local animation, no pending buff.
+    if (sobrecargado(a.mundo.jugador.peso)) return -2;
     a.buff_de_item = h.sobre_item != Hechizo::SIN_ITEM || h.sobre_arma_actual ? id : 0;
     const bool sobre_si = obj == SIN_SLOT || obj == yo;
     a.buff_propio = !a.buff_de_item && !h.de_ataque && h.duracion_s > 0 && sobre_si ? id : 0;

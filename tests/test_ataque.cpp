@@ -19,3 +19,10 @@ TEST_CASE("sostener_ataque_al_soltar: solo con objetivo fijo atacable y puntero 
     CHECK_FALSE(sostener_ataque_al_soltar(true, false, true));  // NPC o ítem
     CHECK_FALSE(sostener_ataque_al_soltar(true, true, false));  // soltado dentro: se abandona
 }
+
+TEST_CASE("sobrecargado: threshold 197 on the 0..240 scale (server weight240 >= 197)") {
+    CHECK_FALSE(sobrecargado(0));
+    CHECK_FALSE(sobrecargado(196));
+    CHECK(sobrecargado(197));
+    CHECK(sobrecargado(240));
+}

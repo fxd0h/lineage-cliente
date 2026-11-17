@@ -695,7 +695,8 @@ void atacar(App& a, Slot yo, Slot obj, u64 ahora) {
     // -el swing propio y el flinch del objetivo en el frame de impacto- para que con latencia alta el
     // combate se sienta instantáneo. Puede "errar" en un fallo o fuera de rango; el servidor lo corrige
     // (mundo.cpp no reinicia un flinch ya en curso). Apagado: la animación espera el eco (como el stock).
-    if (a.cfg.compensar_ataque) {
+    // Overweight: the server refuses (message 110) and never echoes, so no local swing either.
+    if (a.cfg.compensar_ataque && !sobrecargado(a.mundo.jugador.peso)) {
         o.col<O_ACCION>()[yo] = ACC_ATACAR;
         o.col<O_TACCION>()[yo] = ahora;
         if (o.col<O_ESTADO>()[obj] != ESTADO_MUERTO) {

@@ -16,4 +16,11 @@ inline bool sostener_ataque_al_soltar(bool objetivo_fijo, bool atacable, bool re
     return objetivo_fijo && atacable && released_on_panel;
 }
 
+// Overweight: the stock client has no weight check (the weight byte at 0x8f07f3 is only read by the HUD
+// gauge, 0x4b2660/0x4b3d20/0x4b424b), so it still sends C_Attack / the spell packet. The server refuses at
+// weight240 >= 197 (message 110 / 316) and sends no echo, and the client animates only on the echo.
+// Our local prediction must therefore be skipped at the same threshold.
+inline constexpr int PESO_SOBRECARGA = 197;  // on the 0..240 scale
+inline bool sobrecargado(int peso240) { return peso240 >= PESO_SOBRECARGA; }
+
 }  // namespace lin
