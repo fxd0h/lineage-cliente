@@ -9,9 +9,7 @@ to play Lineage 1 natively on **Linux** (and macOS) with a look and feel faithfu
 No game assets are included: you need your own Lineage installation (the folder with `Sprite*.pak`, `Tile.pak`,
 `Text.pak`, `map/`, `font/`).
 
-| Original UI (earlier capture) | Against the l1j-en classic server (earlier capture) |
-|---|---|
-| ![Original panel](docs/capturas/readme_game_original.png) | ![World on l1j-en](docs/capturas/classic_mundo.png) |
+![Original 2009 UI with HD text, on the l1j-en classic server](docs/capturas/fork_2026-11-17.png)
 
 ## What the fork does
 
