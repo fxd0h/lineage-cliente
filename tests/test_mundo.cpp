@@ -366,6 +366,21 @@ TEST_CASE("Mundo: segmentos en el hilo de carga y liberación de los lejanos" * 
     CHECK(segmento_cargado(m, rec, x + 64 * 3, y) == nullptr);  // pedido de nuevo
 }
 
+TEST_CASE("Inventario: mover ítems a otra celda (orden a mano)") {
+    Inventario inv;
+    auto ids = [&] { return std::vector<ObjId>(inv.items.ids().begin(), inv.items.ids().end()); };
+    for (ObjId id = 1; id <= 5; ++id) inv.items.insertar(id);
+    const ObjId uno[] = {2};
+    mover_items(inv, uno, 4);  // hacia adelante: queda detrás del destino
+    CHECK(ids() == std::vector<ObjId>{1, 3, 4, 2, 5});
+    const ObjId varios[] = {5, 3};
+    mover_items(inv, varios, 1);  // hacia atrás, en el orden de la tabla: delante del destino
+    CHECK(ids() == std::vector<ObjId>{3, 5, 1, 4, 2});
+    mover_items(inv, varios, 5);  // el destino es parte de lo que se mueve: nada
+    CHECK(ids() == std::vector<ObjId>{3, 5, 1, 4, 2});
+    for (ObjId id = 1; id <= 5; ++id) CHECK(inv.items.ids()[inv.items.buscar(id)] == id);
+}
+
 TEST_CASE("Inventario: atributos de un ítem identificado (getStatusBytes) en texto") {
     char buf[512];
     // Arma: daño 6/8, hierro, peso 30, +3, dos manos, caballero, FUE +1.
