@@ -1,7 +1,8 @@
 // Mascotas e invocaciones.
 //  - S_PetCtrlMenu agrega o quita una de la lista: a la izquierda de la barra de atajos, con su
 //    vida (S_HpMeter).
-//    Clic en el nombre le habla (el servidor responde con su menú "anicom": atacar, defender,
+//    Clic en el nombre, o sobre su cuerpo, le habla (el servidor responde con su menú "anicom" o
+//    "moncom": atacar, defender,
 //    quedarse, juntar ítems, liberarla...) y "Bag" pide su inventario (C_PetMenu -> S_PetInventory,
 //    que se muestra en la ventana del NPC: un clic usa o equipa el ítem con C_UsePetItem).
 //  - "Attack" del menú hace que el servidor mande S_SelectTarget: el próximo clic sobre un
