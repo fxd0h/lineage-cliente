@@ -395,6 +395,7 @@ void dibujar_teclas_f(App& a, int x, int y) {
     a.teclas_f_x = x;
     a.teclas_f_y = y;
     const int bajo = tecla_f_bajo_puntero(a);
+    if (bajo >= 0 && e.pulsado && !a.cfg.ui_simple) a.tecla_f_sel = static_cast<u8>(bajo);  // 0x4b24d0: the last clicked box
     for (int k = 0; k < 8; ++k) {
         if (a.items_f[k].tipo == TipoAtajo::ITEM) {
             Atajo& b = a.items_f[k];
@@ -417,6 +418,25 @@ void dibujar_teclas_f(App& a, int x, int y) {
         if (h.icono) g.gpu().dibujar(g.icono(h.icono), cx, cy, clave_orden(CAPA_UI, 3), tinte);
         else dibujar_etiqueta_hechizo(a, h, cx, cy, clave_orden(CAPA_UI_TEXTO, 3), tinte);
         dibujar_espera_hechizo(a, cx, cy, 32, 32);
+    }
+    if (!a.cfg.ui_simple) {
+        // Original look: the selected box is framed by image 1020 (0x4b24d0..0x4b2549) and a filled box under the pointer
+        // shows its name, white with a black outline, at (-2,+11) of the box and kept inside the screen (0x4b2549..0x4b264a).
+        const int sx = x + TECLAS_X + (a.tecla_f_sel % 4) * TECLA, sy = y + TECLAS_Y - 1 + (a.tecla_f_sel / 4) * TECLA;
+        g.gpu().dibujar(g.img(1020), sx, sy, clave_orden(CAPA_UI, 8));
+        const bool hay = bajo >= 0 && (a.atajos[bajo] || a.items_f[bajo].tipo == TipoAtajo::ITEM);
+        if (hay && a.tecla_f_arrastrada < 0) {
+            char nombre[256];
+            std::string_view nom = a.hechizos[a.atajos[bajo]].nombre;
+            if (a.items_f[bajo].tipo == TipoAtajo::ITEM) {
+                const Slot s = item_de_tecla_f(a, a.items_f[bajo]);
+                nom = s != SIN_SLOT ? nombre_item(a.mundo.inventario, s) : std::string_view();
+                nom = std::string_view(nombre, expandir_desc(a.desc, nom, nombre, sizeof nombre));
+            }
+            const int w = ancho_texto(nom.data(), nom.size());
+            const int tx = std::min(x + TECLAS_X - 2 + (bajo % 4) * TECLA, a.gpu.ancho() - w);
+            g.texto_contorno(nom, static_cast<float>(tx), static_cast<float>(y + TECLAS_Y + 11 + (bajo / 4) * TECLA), clave_orden(CAPA_UI_TEXTO, 9), rgb555(0x7fff));
+        }
     }
     // Drag from a box: onto another box swaps, outside any window clears; a plain click uses it.
     auto lleno = [&](int k) { return a.atajos[k] || a.items_f[k].tipo == TipoAtajo::ITEM; };
@@ -813,6 +833,33 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         a.g->texto_sombra(t, static_cast<float>(a.entrada.mx + 14), static_cast<float>(a.entrada.my + 4),
                           clave_orden(CAPA_ARRASTRE, 1), rgba(255, 230, 120));
     }
+}
+
+}  // namespace lin
+
+namespace lin {
+
+// Mouse wheel over no window (0x45aa70): with the option `shortcutscroll` it moves the selected F-key box, a notch up one box back
+// (0 wraps to 7), down one forward (7 wraps to 0). The middle button (0x45ba6a) fires the selected box, again after 500 ms and then
+// every 180 ms while it is held (timer 0x45ab60). Original UI only.
+void rueda_teclas_f(App& a) {
+    EntradaFrame& e = a.entrada;
+    if (a.cfg.ui_simple || a.teclas_f_y < 0) return;
+    const bool libre = !sobre_alguna_ventana(a) && !a.arrastrando && a.tecla_f_arrastrada < 0;
+    if (libre && e.rueda != 0 && (a.cfg.opciones_orig >> OPC_SHORTCUTSCROLL & 1)) {
+        a.tecla_f_sel = static_cast<u8>(((a.tecla_f_sel - e.rueda) % 8 + 8) % 8);
+        e.rueda = 0;
+    }
+    if (e.medio_presionado && libre) {
+        if (!a.medio_antes) {
+            usar_tecla_f(a, a.tecla_f_sel);
+            a.medio_proximo_ms = e.ahora_ms + 500;
+        } else if (e.ahora_ms >= a.medio_proximo_ms) {
+            usar_tecla_f(a, a.tecla_f_sel);
+            a.medio_proximo_ms = e.ahora_ms + 180;
+        }
+    }
+    a.medio_antes = e.medio_presionado;
 }
 
 }  // namespace lin

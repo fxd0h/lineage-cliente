@@ -413,6 +413,9 @@ struct App {
     } tecla_mantenida;
     bool clic_consumido = false;      // el clic que eligió el objetivo no camina hasta soltarlo
     u16 atajos[8] = {};               // F5..F12: spell ids
+    u8 tecla_f_sel = 0;               // selected F-key box 0..7 ([0x703100]): last clicked, moved by the wheel (shortcutscroll), fired by the middle button
+    bool medio_antes = false;         // middle button state of the previous frame
+    u64 medio_proximo_ms = 0;         // next repeat of the selected F-key box while the middle button is held
     int tecla_f_arrastrada = -1;      // F box being dragged
     u16 atajos_pg[3][8] = {};         // the three F-key pages (a.atajos / items_f are the one on show, pag_f)
     Atajo items_pg[3][8];
@@ -701,6 +704,7 @@ u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: 
 void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
 void accion_comunidad(App& a, std::string_view accion);
 void cambiar_pagina_f(App& a, int delta);  // hechizos_ui.cpp
+void rueda_teclas_f(App& a);                // wheel (shortcutscroll) and middle button on the selected F-key box
 void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
 void cancelar_prompt(App& a);
 void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`

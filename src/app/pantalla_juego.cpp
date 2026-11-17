@@ -1401,6 +1401,7 @@ void dibujar_chat(App& a) {
     const AreaChat ac = area_chat(a);
     u32 n = a.chat.cantidad();
     const int filas = CHAT_FILAS + (a.cfg.ui_simple ? 0 : 3 * a.chat_tam);
+    if (!ui::sobre(e, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h)) rueda_teclas_f(a);
     int paso = (ui::sobre(e, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h) ? e.rueda : 0) + (e.pagina_arriba ? filas : 0) -
                (e.pagina_abajo ? filas : 0);
     i64 d = static_cast<i64>(a.chat_desplazamiento) + paso;
