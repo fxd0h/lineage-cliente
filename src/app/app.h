@@ -211,6 +211,7 @@ struct DialogoCantidad {
     bool abierto = false;
     bool dar = false;         // true: C_GiveItem del `item` a `objeto`; false: C_Amount a `objeto`
     bool borrar = false;      // true: C_DeleteInventoryItem del `item` (el basurero)
+    std::vector<ObjId> varios;  // con `borrar`: los ítems de la selección, enteros (si no está vacío, en vez de `item`)
     u8 tienda = 0;            // tienda de jugadores (tienda_ui.cpp): 1 comprar, 2 venderle, 3 precio al armar;
                               // CANTIDAD_FILA_NPC: cuántos de la fila `item` de la tienda o almacén de `objeto` (npc_ui.cpp)
     u8 castillo = 0;          // castillos_ui.cpp: CF_TASA + 1 impuesto, CF_DEPOSITAR + 1 poner, CF_RETIRAR + 1 sacar
@@ -466,6 +467,7 @@ struct App {
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
+    std::vector<ObjId> inventario_seleccion;  // marcados con Shift+clic: se arrastran juntos
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     ObjId ultimo_clic_item = 0;         // para el doble clic
     u64 t_ultimo_clic_item = 0;
@@ -561,6 +563,8 @@ void usar_item(App& a, ObjId item);
 void soltar_item(App& a, ObjId item);
 // Al basurero: pregunta cuántos (o confirma, si es uno) y lo elimina (cantidad_ui.cpp).
 void borrar_item(App& a, ObjId item);
+// Varios a la vez (la selección con Shift): una sola confirmación y la pila entera de cada uno.
+void borrar_items(App& a, std::span<const ObjId> items);
 
 // Hechizos (hechizos_ui.cpp).
 bool sobre_hechizos(const App& a);
@@ -671,6 +675,8 @@ const u8* stats_base_clase(int clase);
 int bonus_clase(int clase);
 // Dar un ítem del inventario a un NPC o una mascota; de una pila, pregunta cuántos.
 void dar_item(App& a, ObjId objetivo, ObjId item);
+// Varios a la vez: la pila entera de cada uno, sin preguntar.
+void dar_items(App& a, ObjId objetivo, std::span<const ObjId> items);
 void dibujar_cantidad(App& a);
 bool sobre_cantidad(const App& a);
 

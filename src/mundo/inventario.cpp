@@ -150,6 +150,23 @@ bool item_equipado(std::string_view n) {
     return n.find(" ($9)") != std::string_view::npos || n.find(" ($117)") != std::string_view::npos;
 }
 
+void mover_items(Inventario& inv, std::span<const ObjId> mover, ObjId destino) {
+    TablaItems& t = inv.items;
+    const Slot sd = t.buscar(destino);
+    if (sd == SIN_SLOT) return;
+    auto se_mueve = [&](Slot s) { return std::find(mover.begin(), mover.end(), t.ids()[s]) != mover.end(); };
+    if (se_mueve(sd)) return;
+    Slot primero = SIN_SLOT;
+    for (Slot s = 0; s < t.tamano() && primero == SIN_SLOT; ++s)
+        if (se_mueve(s)) primero = s;
+    if (primero == SIN_SLOT) return;
+    std::vector<Slot> quedan, movidos;
+    for (Slot s = 0; s < t.tamano(); ++s) (se_mueve(s) ? movidos : quedan).push_back(s);
+    auto pos = std::find(quedan.begin(), quedan.end(), sd) + (sd < primero ? 0 : 1);
+    quedan.insert(pos, movidos.begin(), movidos.end());
+    t.reordenar(quedan);
+}
+
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
     TablaItems& t = inv.items;
     for (const Evento& e : eventos) {
