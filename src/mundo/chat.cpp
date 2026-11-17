@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "mundo/chat.h"
+#include "recursos/fuente.h"
 #include "recursos/imagen.h"
 
 namespace lin {
@@ -26,6 +27,15 @@ struct Salida {
 // Cantidad de bytes de `t` que entran en `cap` sin cortar un carácter CP949 de 2 bytes.
 size_t recorte_cp949(std::string_view t, size_t cap) {
     size_t i = 0;
+    if (es_utf8(t.data(), t.size())) {  // Big5 text of the 3.80C server arrives as UTF-8: cut on character boundaries
+        while (i < t.size()) {
+            u32 cp = 0;
+            const size_t w = largo_utf8(t.data(), t.size(), i, cp);
+            if (i + w > cap) break;
+            i += w;
+        }
+        return i;
+    }
     while (i < t.size()) {
         size_t w = static_cast<u8>(t[i]) >= 0x81 && i + 1 < t.size() ? 2 : 1;
         if (i + w > cap) break;

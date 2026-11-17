@@ -65,6 +65,7 @@ struct PerfilProtocolo {
     u8 bytes_golpe_ataque = 2;
     // Server text encoding: Big5 (Taiwan 3.80C) is converted to UTF-8 on decode; false = CP949 as sent.
     bool texto_big5 = false;
+    u8 rango_principe = 4;        // own clan rank nibble of the prince (10 in 3.80C); 0xb = no pledge
     u8 marcadores_ranuras = 104;  // slot bytes of S_BookmarkLoad (127 in 3.80C)
 };
 

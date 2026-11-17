@@ -107,8 +107,10 @@ void subir_emblema(App& a, std::string_view nombre) {
     const u64 ahora = a.entrada.ahora_ms;
     const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
     if (yo == SIN_SLOT) return aviso(a, cadena(a, 219));
-    if (a.mundo.objetos.col<O_CLAN>()[yo] == 0) return aviso(a, cadena(a, 220));          // not in a pledge
-    if (a.mundo.jugador.rango_clan != 0 && a.mundo.jugador.rango_clan != 4) return aviso(a, cadena(a, 785));  // not the prince
+    const i32 rango = a.mundo.jugador.rango_clan;
+    // The clan id field is 0 without an emblem in 3.80C (it is the emblem id), so also look at the rank (0xb = none).
+    if (a.mundo.objetos.col<O_CLAN>()[yo] == 0 && rango == 0xb) return aviso(a, cadena(a, 220));  // not in a pledge
+    if (rango != 0 && rango != a.op.perfil.rango_principe) return aviso(a, cadena(a, 785));  // not the prince
     if (a.t_emblema_subido && ahora < a.t_emblema_subido + 59876) return aviso(a, cadena(a, 229));  // one per minute
     u8 datos[BYTES_EMBLEMA];
     if (!leer_bmp_emblema(a, nombre, datos)) return aviso(a, "Incorrect BMP File format");
