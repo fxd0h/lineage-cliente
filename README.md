@@ -92,7 +92,7 @@ Each server has `instalar.sh` (once), `arrancar.sh` and `detener.sh` in its own 
 |---|---|---|---|
 | `servidor_local/` | L1J-JP 3.63c (the reference for the tests) | 2000 | `jp363` |
 | `servidor_classic363/` | l1j-en/classic, 3.63 branch ([notes](servidor_classic363/README.md)) | 2001 | `jp363` |
-| `servidor_classic/` | l1j-en/classic (3.0 English / US 2009) | 2000 | `s3ep1` |
+| `servidor_classic/` | l1j-en/classic (3.0 English / US 2009) | 2002 | `s3ep1` |
 | `servidor_380/` | L1JGO-Whale (3.80C) | 7001 | `tw380` |
 
 ```sh
