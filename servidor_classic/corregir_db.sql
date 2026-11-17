@@ -1,0 +1,11 @@
+-- Idempotent database fixes for l1j-en/classic, applied by instalar.sh after the import.
+
+-- GM characters log in invisible and invulnerable (run_on_login). NPCs and mobs ignore invisible GMs
+-- (getRecognizePlayer(.., ignoreInvisGm)), so a GM test character sees a frozen world. Make both opt-in (.invis / .invul).
+UPDATE commands SET run_on_login = 0 WHERE name IN ('invis', 'invul');
+
+-- #43 Lastabad / Resistance Village teleport scrolls sent everyone to the same spot (map 400).
+-- "Teleport - Lastabad" -> Lastavard 1F landing used by the 1F scroll; Resistance Village scroll -> same
+-- spot as the Return scroll (40120).
+UPDATE etcitem SET locx = 32737, locy = 32900, mapid = 310 WHERE item_id = 40083;
+UPDATE etcitem SET locx = 32571, locy = 32673, mapid = 400 WHERE item_id = 40853;

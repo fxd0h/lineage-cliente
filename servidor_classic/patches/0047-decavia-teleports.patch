@@ -1,0 +1,83 @@
+From 39690bda0bcff8144a47b4ee4a7897240ef0fa4b Mon Sep 17 00:00:00 2001
+From: local <l@l>
+Date: Tue, 17 Nov 2026 05:38:49 -0300
+Subject: [PATCH] Decavia/Sharial hunting ground teleports (#47)
+
+---
+ data/xml/NpcActions/Teleporter.xml | 62 ++++++++++++++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/data/xml/NpcActions/Teleporter.xml b/data/xml/NpcActions/Teleporter.xml
+index 1113be58..8afeca30 100644
+--- a/data/xml/NpcActions/Teleporter.xml
++++ b/data/xml/NpcActions/Teleporter.xml
+@@ -1473,4 +1473,66 @@
+ 	<Action Name="teleport guide4_7" NpcId="50020,50024,50036,50039,50044,50046,50051,50054,50056,50066,50068,50072,50073,50079">
+ 		<Teleport X="32745" Y="32857" Map="60" Heading="5" Price="936"/>
+ 	</Action>
++	<!-- hunting-ground pages of NPC 80132 (missing upstream, issue #47) -->
++	<Action Name="teleport behemoth-dragon" NpcId="80132">
++		<Teleport X="33435" Y="32544" Map="4" Heading="5" Price="100"/>
++	</Action>
++	<Action Name="teleport behemoth-girdun" NpcId="80132">
++		<Teleport X="33320" Y="33060" Map="4" Heading="5" Price="220"/>
++	</Action>
++	<Action Name="teleport behemoth-mirr" NpcId="80132">
++		<Teleport X="33718" Y="32928" Map="4" Heading="5" Price="220"/>
++	</Action>
++	<Action Name="teleport behemoth-gypsy" NpcId="80132">
++		<Teleport X="33977" Y="32941" Map="4" Heading="5" Price="220"/>
++	</Action>
++	<Action Name="teleport behemoth-train" NpcId="80132">
++		<Teleport X="32983" Y="33505" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport behemoth-gludun" NpcId="80132">
++		<Teleport X="32700" Y="32924" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport behemoth-oasis" NpcId="80132">
++		<Teleport X="32861" Y="33253" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport behemoth-eva" NpcId="80132">
++		<Teleport X="33623" Y="33501" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport behemoth-under" NpcId="80132">
++		<Teleport X="32557" Y="33466" Map="4" Heading="5" Price="440"/>
++	</Action>
++	<Action Name="teleport behemoth-reed" NpcId="80132">
++		<Teleport X="32746" Y="32361" Map="4" Heading="5" Price="440"/>
++	</Action>
++	<!-- hunting-ground pages of NPC 80146 (missing upstream, issue #47) -->
++	<Action Name="teleport silveria-dragon" NpcId="80146">
++		<Teleport X="33435" Y="32544" Map="4" Heading="5" Price="220"/>
++	</Action>
++	<Action Name="teleport silveria-girdun" NpcId="80146">
++		<Teleport X="33320" Y="33060" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport silveria-mirr" NpcId="80146">
++		<Teleport X="33718" Y="32928" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport silveria-gypsy" NpcId="80146">
++		<Teleport X="33977" Y="32941" Map="4" Heading="5" Price="330"/>
++	</Action>
++	<Action Name="teleport silveria-train" NpcId="80146">
++		<Teleport X="32983" Y="33505" Map="4" Heading="5" Price="440"/>
++	</Action>
++	<Action Name="teleport silveria-gludun" NpcId="80146">
++		<Teleport X="32700" Y="32924" Map="4" Heading="5" Price="440"/>
++	</Action>
++	<Action Name="teleport silveria-oasis" NpcId="80146">
++		<Teleport X="32861" Y="33253" Map="4" Heading="5" Price="550"/>
++	</Action>
++	<Action Name="teleport silveria-eva" NpcId="80146">
++		<Teleport X="33623" Y="33501" Map="4" Heading="5" Price="550"/>
++	</Action>
++	<Action Name="teleport silveria-under" NpcId="80146">
++		<Teleport X="32557" Y="33466" Map="4" Heading="5" Price="550"/>
++	</Action>
++	<Action Name="teleport silveria-reed" NpcId="80146">
++		<Teleport X="32746" Y="32361" Map="4" Heading="5" Price="550"/>
++	</Action>
+ </NpcActionList>
+-- 
+2.43.0
+

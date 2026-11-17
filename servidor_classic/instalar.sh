@@ -32,6 +32,11 @@ if [ ! -d l1jen ]; then
     git clone "$REPO" l1jen
     git -C l1jen checkout -q "$COMMIT"
 fi
+# Source/data patches (patches/*.patch, git format-patch; each is skipped when already applied).
+for p in "$PWD"/patches/*.patch; do
+    [ -e "$p" ] || continue
+    if git -C l1jen apply --reverse --check "$p" 2>/dev/null; then :; else git -C l1jen apply "$p"; fi
+done
 # Compilar (l1jen.jar). El código es viejo pero compila con el openjdk actual (solo avisos).
 (cd l1jen && ant >/dev/null)
 
@@ -54,6 +59,9 @@ if [ "$("$MARIA/mariadb" --socket="$PWD/datos/my.sock" -uroot -N -e 'SELECT COUN
         "$MARIA/mariadb" --socket="$PWD/datos/my.sock" -uroot l1jdb < "l1jen/db/$f.sql"
     done
 fi
+
+# Idempotent database fixes.
+"$MARIA/mariadb" --socket="$PWD/datos/my.sock" -uroot l1jdb < corregir_db.sql
 
 # Config: la base de arriba (puerto 3309), usuario l1j. El conector 5.1.31 que trae anda con MariaDB.
 sed_i \
