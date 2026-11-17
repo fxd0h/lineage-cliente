@@ -68,6 +68,9 @@ struct PerfilProtocolo {
     bool texto_big5 = false;
     u8 rango_principe = 4;        // own clan rank nibble of the prince (10 in 3.80C); 0xb = no pledge
     u8 marcadores_ranuras = 104;  // slot bytes of S_BookmarkLoad (127 in 3.80C)
+    // L1JGO-Whale (tw380) reads the C_Attr answer as [h type][c answer] even though S_MessageYN carries the long
+    // form: with this set, `responder` sends the short reply (the long one made every answer read as "no").
+    bool respuesta_corta = false;
 };
 
 struct TablaOpcodes {

@@ -917,6 +917,13 @@ TEST_CASE("Decodificar y responder S_MessageYN: forma larga (jp363) y corta (s3e
     const u8 esp_corto[] = {s3.cli(Cli::ATTR), 0xb9, 0x03, 1};  // opcode + h tipo + c sí = 4 bytes justos
     REQUIRE(rc.cuerpo().size() == 4);
     CHECK(std::memcmp(rc.cuerpo().data(), esp_corto, sizeof esp_corto) == 0);
+    // tw380 (L1JGO-Whale) decodes the long question but answers short: [h tipo][c sí]
+    TablaOpcodes tw;
+    REQUIRE(tabla_opcodes("tw380", tw));
+    Escritor rt = cmd::responder(tw, 1337, 223, true);
+    const u8 esp_tw[] = {tw.cli(Cli::ATTR), 223, 0, 1};
+    REQUIRE(rt.cuerpo().size() == 4);
+    CHECK(std::memcmp(rt.cuerpo().data(), esp_tw, sizeof esp_tw) == 0);
 }
 
 TEST_CASE("3.0 English / US 2009 (s3ep1): tabla de opcodes y saludo") {

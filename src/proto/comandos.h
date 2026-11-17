@@ -168,7 +168,7 @@ inline Escritor responder(const TablaOpcodes& t, u32 numero, u16 tipo, bool si) 
     e.h(tipo);
     // Forma larga (3.63/3.80): repite número y tipo y responde en 2 bytes. Corta (US 2009, sin
     // número en el perfil): la respuesta en 1 byte, el tipo ya alcanza para elegir la pregunta.
-    if (t.perfil.bytes_numero_pregunta) e.d(numero).h(tipo).h(si ? 1 : 0);
+    if (t.perfil.bytes_numero_pregunta && !t.perfil.respuesta_corta) e.d(numero).h(tipo).h(si ? 1 : 0);
     else e.c(si ? 1 : 0);
     return e;
 }

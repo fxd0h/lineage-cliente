@@ -1,0 +1,364 @@
+diff --git a/cmd/l1jgo/main.go b/cmd/l1jgo/main.go
+index 7e3ee43..e20fa08 100644
+--- a/cmd/l1jgo/main.go
++++ b/cmd/l1jgo/main.go
+@@ -498,6 +498,13 @@ func run() error {
+ 		return fmt.Errorf("load clans: %w", err)
+ 	}
+ 	printStat("血盟", clanCount)
++	allianceMgr := handler.NewAllianceManager()
++	if rows, err := clanRepo.LoadAlliances(ctx); err != nil {
++		log.Warn("load alliances", zap.Error(err))
++	} else {
++		allianceMgr.LoadAlliances(rows)
++		printStat("聯盟", len(rows))
++	}
+ 
+ 	// 5e. Initialize item ObjectID counter from DB to avoid collisions
+ 	maxObjID, err := itemRepo.MaxObjID(ctx)
+@@ -590,7 +597,7 @@ func run() error {
+ 		InnRooms:         innRooms,
+ 		QuestData:        questData,
+ 		ClanMatching:     handler.NewClanMatchingManager(),
+-		Alliances:        handler.NewAllianceManager(),
++		Alliances:        allianceMgr,
+ 		TrapMgr:          trapMgr,
+ 		Castles:          castleTable,
+ 		WarGifts:         warGiftTable,
+diff --git a/internal/handler/alliance.go b/internal/handler/alliance.go
+index f689499..8fd0e05 100644
+--- a/internal/handler/alliance.go
++++ b/internal/handler/alliance.go
+@@ -1,10 +1,14 @@
+ package handler
+ 
+ import (
++	"context"
+ 	"fmt"
+ 
++	"go.uber.org/zap"
++
+ 	"github.com/l1jgo/server/internal/net"
+ 	"github.com/l1jgo/server/internal/net/packet"
++	"github.com/l1jgo/server/internal/persist"
+ 	"github.com/l1jgo/server/internal/world"
+ )
+ 
+@@ -17,8 +21,8 @@ const ChatAlliance = 15
+ 
+ // AllianceInfo 聯盟記憶體結構。
+ type AllianceInfo struct {
+-	OrderID  int32   // character_alliance.order_id
+-	ClanIDs  [4]int32 // 最多 4 個血盟 ID（0 表示空位）
++	OrderID int32    // character_alliance.order_id
++	ClanIDs [4]int32 // 最多 4 個血盟 ID（0 表示空位）
+ }
+ 
+ // ClanCount 回傳聯盟中的血盟數量。
+@@ -179,44 +183,246 @@ func handleAllianceQuery(sess *net.Session, player *world.PlayerInfo, deps *Deps
+ 	sess.Send(w.Bytes())
+ }
+ 
++// Alliance Y/N dialog ids (the client string table message numbers): 223 = "Lord of %0 Blood Pledge wants to
++// form an alliance. Do you accept?", 1210 = "Are you sure you want to withdraw from the alliance?".
++const (
++	allianceInviteYesNo = 223
++	allianceLeaveYesNo  = 1210
++	allianceMinLevel    = 25 // only lords of clans of level 25+ can apply (msg 1206)
++)
++
++// alliancePrince is the clan that formed the alliance (slot 0): only it can invite more clans.
++func (a *AllianceInfo) alliancePrince() int32 { return a.ClanIDs[0] }
++
++// notifyAlliance runs fn for every online member of the alliance's clans.
++func notifyAlliance(a *AllianceInfo, deps *Deps, fn func(m *world.PlayerInfo)) {
++	for _, id := range a.ClanIDs {
++		if id == 0 {
++			continue
++		}
++		c := deps.World.Clans.GetClan(id)
++		if c == nil {
++			continue
++		}
++		for charID := range c.Members {
++			if m := deps.World.GetByCharID(charID); m != nil {
++				fn(m)
++			}
++		}
++	}
++}
++
++func clanLeaderOK(p *world.PlayerInfo, deps *Deps) *world.ClanInfo {
++	if p.ClanID == 0 {
++		return nil
++	}
++	c := deps.World.Clans.GetClan(p.ClanID)
++	if c == nil || c.LeaderID != p.CharID {
++		return nil
++	}
++	return c
++}
++
++// saveAlliance persists (insert/update/delete) an alliance; a no-op without a database (tests).
++func saveAlliance(a *AllianceInfo, deps *Deps) {
++	if deps.ClanRepo == nil {
++		return
++	}
++	ctx := context.Background()
++	var err error
++	switch {
++	case a.ClanCount() < 2 && a.OrderID != 0:
++		err = deps.ClanRepo.DeleteAlliance(ctx, a.OrderID)
++	case a.OrderID == 0:
++		a.OrderID, err = deps.ClanRepo.InsertAlliance(ctx, a.ClanIDs)
++	default:
++		err = deps.ClanRepo.UpdateAlliance(ctx, a.OrderID, a.ClanIDs)
++	}
++	if err != nil && deps.Log != nil {
++		deps.Log.Warn("alliance save failed", zap.Error(err))
++	}
++}
++
+ // handleAllianceInvite 處理聯盟邀請（C_Rank data=3）。
+-// Java: C_Rank case 3 → FaceToFace → S_Message_YN(223)
+-func handleAllianceInvite(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
+-	if player.ClanID == 0 {
++// Java: C_Rank case 3 → FaceToFace (or the clan name in the packet) → S_Message_YN(223, clan name) to the other lord.
++// The inviter must be a lord of level 25+; if his clan already has an alliance he must be its prince (slot 0) and
++// it must have room (max 4 clans). The other lord must be a lord of level 25+ whose clan has no alliance.
++func handleAllianceInvite(sess *net.Session, player *world.PlayerInfo, targetName string, deps *Deps) {
++	if player.ClanID == 0 || deps.Alliances == nil {
+ 		return
+ 	}
+-	clan := deps.World.Clans.GetClan(player.ClanID)
+-	if clan == nil || clan.LeaderID != player.CharID {
+-		SendServerMessage(sess, 518) // "只有君主可以使用此功能"
++	clan := clanLeaderOK(player, deps)
++	if clan == nil {
++		SendServerMessage(sess, 518) // only the lord can use this
++		return
++	}
++	if player.Level < allianceMinLevel {
++		SendServerMessage(sess, 1206)
++		return
++	}
++	var target *world.PlayerInfo
++	if targetName != "" { // the client prompt (string 580) asks for a clan name; a character name also works
++		if c := deps.World.Clans.GetClanByName(targetName); c != nil {
++			target = deps.World.GetByCharID(c.LeaderID)
++		} else {
++			target = deps.World.GetByName(targetName)
++		}
++	}
++	if target == nil {
++		target = findFaceToFace(player, deps)
++	}
++	if target == nil {
++		SendServerMessage(sess, 93) // nobody there
++		return
++	}
++	tclan := clanLeaderOK(target, deps)
++	if tclan == nil || tclan.ClanID == clan.ClanID || target.Level < allianceMinLevel {
++		SendServerMessage(sess, 1199) // other lord is below 25, has no clan, or is already an alliance prince
++		return
++	}
++	if deps.War != nil && (deps.War.IsClanInWar(clan.ClanName) || deps.War.IsClanInWar(tclan.ClanName)) {
++		SendServerMessage(sess, 1234) // can't join an alliance during a siege
++		return
++	}
++	if mine := deps.Alliances.GetAllianceByClan(clan.ClanID); mine != nil {
++		if mine.alliancePrince() != clan.ClanID {
++			SendServerMessage(sess, 1206)
++			return
++		}
++		if mine.ClanCount() >= len(mine.ClanIDs) {
++			SendServerMessage(sess, 1201) // can't join the alliance: full
++			return
++		}
++	}
++	if deps.Alliances.GetAllianceByClan(tclan.ClanID) != nil {
++		SendServerMessage(sess, 1202) // already in an alliance
+ 		return
+ 	}
++	target.PendingYesNoType = allianceInviteYesNo
++	target.PendingYesNoData = player.CharID
++	sendYesNoDialog(target.Session, allianceInviteYesNo, clan.ClanName)
++	SendServerMessage(sess, 2062) // application sent, please wait
++}
+ 
+-	// 暫存 stub — 需要 FaceToFace 實作
+-	SendServerMessage(sess, 673) // "此功能尚未開放"
++// HandleAllianceInviteResponse handles the answer to the invite dialog (C_Attr 223); `inviterID` is the lord.
++func HandleAllianceInviteResponse(sess *net.Session, player *world.PlayerInfo, inviterID int32, accepted bool, deps *Deps) {
++	inviter := deps.World.GetByCharID(inviterID)
++	if inviter == nil || deps.Alliances == nil {
++		return
++	}
++	if !accepted {
++		SendServerMessage(inviter.Session, 1198) // the other party refused the alliance
++		return
++	}
++	iclan, tclan := clanLeaderOK(inviter, deps), clanLeaderOK(player, deps)
++	if iclan == nil || tclan == nil || iclan.ClanID == tclan.ClanID ||
++		deps.Alliances.GetAllianceByClan(tclan.ClanID) != nil {
++		SendServerMessage(inviter.Session, 1201)
++		return
++	}
++	a := deps.Alliances.GetAllianceByClan(iclan.ClanID)
++	if a == nil {
++		a = &AllianceInfo{ClanIDs: [4]int32{iclan.ClanID, tclan.ClanID}}
++		deps.Alliances.AddAlliance(a) // order id 0 until saved
++	} else if a.alliancePrince() != iclan.ClanID || a.ClanCount() >= len(a.ClanIDs) {
++		SendServerMessage(inviter.Session, 1201)
++		return
++	} else {
++		for i, id := range a.ClanIDs {
++			if id == 0 {
++				a.ClanIDs[i] = tclan.ClanID
++				break
++			}
++		}
++	}
++	oldID := a.OrderID
++	saveAlliance(a, deps)
++	if oldID == 0 { // re-key the new alliance under its database order id
++		deps.Alliances.reindex(a)
++	}
++	notifyAlliance(a, deps, func(m *world.PlayerInfo) {
++		m.Session.Send(BuildWarPacket(6, iclan.ClanName, tclan.ClanName)) // S_War 6: X and Y formed an alliance
++		SendServerMessageArgs(m.Session, 1200, tclan.ClanName)            // Y clan joined the alliance
++	})
+ }
+ 
+ // handleAllianceLeave 處理退出聯盟（C_Rank data=4）。
+-// Java: C_Rank case 4 → S_Message_YN(1210) 確認
++// Java: C_Rank case 4 → S_Message_YN(1210); on yes the clan leaves, the alliance ends when one clan is left.
+ func handleAllianceLeave(sess *net.Session, player *world.PlayerInfo, deps *Deps) {
+-	if player.ClanID == 0 {
++	if player.ClanID == 0 || deps.Alliances == nil {
+ 		return
+ 	}
+-	clan := deps.World.Clans.GetClan(player.ClanID)
+-	if clan == nil || clan.LeaderID != player.CharID {
+-		SendServerMessage(sess, 518) // "只有君主可以使用此功能"
++	clan := clanLeaderOK(player, deps)
++	if clan == nil {
++		SendServerMessage(sess, 518) // only the lord can use this
+ 		return
+ 	}
+-
+-	if deps.Alliances == nil {
++	if deps.Alliances.GetAllianceByClan(clan.ClanID) == nil {
++		SendServerMessage(sess, 1233) // no alliance
+ 		return
+ 	}
++	if deps.War != nil && deps.War.IsClanInWar(clan.ClanName) {
++		SendServerMessage(sess, 1203) // can't withdraw during a war
++		return
++	}
++	player.PendingYesNoType = allianceLeaveYesNo
++	player.PendingYesNoData = player.CharID
++	sendYesNoDialog(sess, allianceLeaveYesNo)
++}
+ 
+-	alliance := deps.Alliances.GetAllianceByClan(player.ClanID)
+-	if alliance == nil {
+-		SendServerMessage(sess, 1233) // "你的血盟沒有參加聯盟"
++// HandleAllianceLeaveResponse handles the answer to the withdraw dialog (C_Attr 1210).
++func HandleAllianceLeaveResponse(sess *net.Session, player *world.PlayerInfo, accepted bool, deps *Deps) {
++	if !accepted || deps.Alliances == nil {
++		return
++	}
++	clan := clanLeaderOK(player, deps)
++	if clan == nil {
++		return
++	}
++	a := deps.Alliances.GetAllianceByClan(clan.ClanID)
++	if a == nil {
+ 		return
+ 	}
++	if deps.War != nil && deps.War.IsClanInWar(clan.ClanName) {
++		SendServerMessage(sess, 1203)
++		return
++	}
++	// Tell everybody (including the leaving clan) before the slot is cleared.
++	notifyAlliance(a, deps, func(m *world.PlayerInfo) {
++		for _, id := range a.ClanIDs {
++			if other := deps.World.Clans.GetClan(id); other != nil && id != clan.ClanID {
++				m.Session.Send(BuildWarPacket(7, clan.ClanName, other.ClanName)) // S_War 7: alliance broken
++			}
++		}
++		SendServerMessageArgs(m.Session, 1204, clan.ClanName)
++	})
++	var rest []int32
++	for _, id := range a.ClanIDs {
++		if id != 0 && id != clan.ClanID {
++			rest = append(rest, id)
++		}
++	}
++	a.ClanIDs = [4]int32{}
++	copy(a.ClanIDs[:], rest) // keeps order, so the next clan becomes the prince if the prince left
++	saveAlliance(a, deps)
++	if a.ClanCount() < 2 {
++		deps.Alliances.RemoveAlliance(a.OrderID)
++	}
++}
++
++// LoadAlliances fills the manager from the database at startup.
++func (m *AllianceManager) LoadAlliances(rows []persist.AllianceRow) {
++	for _, r := range rows {
++		m.AddAlliance(&AllianceInfo{OrderID: r.OrderID, ClanIDs: r.ClanIDs})
++	}
++}
+ 
+-	// 暫存 stub — 需要 Y/N 確認流程
+-	SendServerMessage(sess, 673) // "此功能尚未開放"
++// reindex moves an alliance whose order id changed (first save) to its new key.
++func (m *AllianceManager) reindex(a *AllianceInfo) {
++	for k, v := range m.alliances {
++		if v == a {
++			delete(m.alliances, k)
++		}
++	}
++	m.alliances[a.OrderID] = a
+ }
+diff --git a/internal/handler/attr.go b/internal/handler/attr.go
+index 8252b82..afe7854 100644
+--- a/internal/handler/attr.go
++++ b/internal/handler/attr.go
+@@ -74,6 +74,12 @@ func HandleAttr(sess *net.Session, r *packet.Reader, deps *Deps) {
+ 			deps.War.HandleWarConsent(sess, player, mode, accepted)
+ 		}
+ 
++	case allianceInviteYesNo: // 223 alliance invite from another lord
++		HandleAllianceInviteResponse(sess, player, data, accepted, deps)
++
++	case allianceLeaveYesNo: // 1210 withdraw from the alliance
++		HandleAllianceLeaveResponse(sess, player, accepted, deps)
++
+ 	case 729: // Call Clan（Java: C_Attr case 729）
+ 		handleCallClanYesNo(sess, player, data, accepted, deps)
+ 
+@@ -112,9 +118,6 @@ func HandleAttr(sess *net.Session, r *packet.Reader, deps *Deps) {
+ 		}
+ 		player.TempID = 0
+ 
+-	case 223: // 聯盟邀請回應（Java: C_Attr case 223）— 暫存 stub
+-		// TODO: 處理聯盟邀請接受/拒絕
+-
+ 	case 321, 322: // 返生術(61) / 終極返生術(75) 復活同意
+ 		handleResurrectionResponse(sess, player, accepted, deps)
+ 	}
+diff --git a/internal/handler/clan.go b/internal/handler/clan.go
+index 2307abc..69b3b28 100644
+--- a/internal/handler/clan.go
++++ b/internal/handler/clan.go
+@@ -149,7 +149,7 @@ func HandleRankControl(sess *net.Session, r *packet.Reader, deps *Deps) {
+ 		handleAllianceQuery(sess, player, deps)
+ 	case 3:
+ 		// 聯盟邀請（Java: C_Rank case 3）
+-		handleAllianceInvite(sess, player, deps)
++		handleAllianceInvite(sess, player, targetName, deps)
+ 	case 4:
+ 		// 退出聯盟（Java: C_Rank case 4）
+ 		handleAllianceLeave(sess, player, deps)
