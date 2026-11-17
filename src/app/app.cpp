@@ -95,6 +95,10 @@ bool cargar_recursos(App& a) {
     if (!a.fuente.cargar(a.cfg.carpeta_juego)) LIN_LOG("Aviso: no se encontró font/eng.fnt");
     a.desc.cargar(a.rec, "desc-e.tbl");
     a.zonas.cargar(a.rec);
+    {
+        TablaTexto q;
+        if (q.cargar(a.rec, "itemquest.tbl")) cargar_item_quest(q, a.item_quest);
+    }
     a.intro.cargar(a.rec, "intro-e.tbl");
     if (!a.mensajes.cargar(a.rec, "string-e.tbl")) LIN_LOG("Aviso: no se encontró string-e.tbl (mensajes del servidor)");
     // datos/sprite_table.txt junto al ejecutable o en el directorio actual.

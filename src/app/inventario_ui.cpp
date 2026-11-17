@@ -24,19 +24,20 @@ constexpr int BASURA_W = 20, BASURA_H = 18;
 constexpr u64 MS_DOBLE_CLIC = 400;
 constexpr u32 IMG_INV_BACKGROUND = 996, IMG_INV_FRAME = 997, IMG_INV_ORNAMENT = 998, IMG_INV_TABS = 999;
 constexpr int TABS_X = 17, TABS_Y = 249, TAB_W = 35, TAB_H = 17, N_TABS = 4;
-constexpr const char* TAB_NAMES[N_TABS] = {"Potions and food", "Equipment", "Scrolls and magic", "Other"};
+constexpr const char* TAB_NAMES[N_TABS] = {"All", "Equipment", "Quest", "Miscellaneous"};
 
-// Original UI tab of an item, from its use type (S_AddItem; ItemTable on the server).
-int tab_of(u8 use) {
-    switch (use) {
-    case 1: case 2: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 37: case 40:
-    case 43: case 44: case 45: case 47: case 48: return 1;  // weapons, armor, accessories
-    case 58: case 59: case 60: case 61: case 62: case 63: case 64: case 65: case 66: case 67: case 68: case 69:
-        return 0;  // potions
-    case 5: case 6: case 7: case 8: case 14: case 16: case 17: case 26: case 27: case 28: case 29: case 30: case 39:
-    case 70: case 73: return 2;  // scrolls, wands, polymorph
-    default: return 3;
-    }
+// Original UI tab filters (0x44de10 all, 0x44dd90 equipment, 0x44de40 quest, 0x44df00 misc). Equipment is the
+// use type (byte at item+0x68, S_AddItem "uso") in {1,2,10,18..25,37,40}; quest items are the (gfx, desc-e.tbl
+// entry) pairs of itemquest.tbl whose name matches; misc is everything that is neither.
+bool es_equipo(u8 use) {
+    return use == 1 || use == 2 || use == 10 || (use >= 18 && use <= 25) || use == 37 || use == 40;
+}
+}  // namespace
+
+namespace {
+int tab_of(const App& a, u8 use, u16 gfx, std::string_view name) {
+    if (es_equipo(use)) return 1;
+    return item_de_mision(a.item_quest, a.desc, gfx, name) ? 2 : 3;
 }
 
 // El basurero del original (1003; 1004 resaltado, con un ítem encima); si no está, con rectángulos.
@@ -186,7 +187,7 @@ void dibujar_inventario(App& a) {
         Slot todos[MAX_ORDEN];
         const size_t n = orden_inventario(inv, todos, MAX_ORDEN);
         for (size_t i = 0; i < n; ++i)
-            if (tab_of(t.col<I_USO>()[todos[i]]) == a.inventory_tab) orden[n_orden++] = todos[i];
+            if (a.inventory_tab == 0 || tab_of(a, t.col<I_USO>()[todos[i]], t.col<I_GFX>()[todos[i]], nombre_item(inv, todos[i])) == a.inventory_tab) orden[n_orden++] = todos[i];
     } else {
         for (Slot i = 0; i < t.tamano() && n_orden < MAX_ORDEN; ++i) orden[n_orden++] = i;
     }

@@ -317,7 +317,7 @@ attribute reset.
 - **Spellbook tab strip placement and level grouping** (README: "inferred"): DIFFERENT (section 11).
 - **Buff icons marked "Inferred"** (hechizos_ui.cpp:668).
 - **Ctrl+X -> "/pk"** (settled: it is the same local flag, now silent) and the **"Ctrl+R dragon-power panel"** comment (settled: Ctrl+R is the floating HP/MP window, U-D9).
-- **Inventory tab grouping** (`tab_of`): guessed, and wrong.
+- **Inventory tab grouping** (`tab_of`): now the original filters (all / equipment by use type / quest via itemquest.tbl / misc).
 - **Chat colours** (chat.cpp): no source cited; wrong.
 - **Game-time orb:** placed by template matching, not traced in the binary (U-A9).
 - **Zone labels:** placed by screenshot only (U-A8).

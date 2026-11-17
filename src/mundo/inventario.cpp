@@ -204,4 +204,28 @@ void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
     }
 }
 
+void cargar_item_quest(const TablaTexto& tabla, std::vector<ItemMision>& salida) {
+    // "<gfx> <desc entry>" per line, with an optional ";comment" (the exe reads the same two numbers).
+    salida.clear();
+    for (size_t i = 0; i < tabla.cantidad(); ++i) {
+        const std::string l(tabla.linea(i));
+        unsigned g = 0, d = 0;
+        if (std::sscanf(l.c_str(), "%u %u", &g, &d) == 2) salida.push_back({static_cast<u16>(g), d});
+    }
+}
+
+bool item_de_mision(const std::vector<ItemMision>& quest, const TablaTexto& desc, u16 gfx, std::string_view name) {
+    // The server's name carries the count, enchantment and worn suffixes: "$N" or the plain name, then " (..)".
+    if (const size_t p = name.find(" ("); p != std::string_view::npos) name = name.substr(0, p);
+    while (!name.empty() && (name[0] == '+' || name[0] == '-')) {
+        const size_t sp = name.find(' ');
+        if (sp == std::string_view::npos) break;
+        name.remove_prefix(sp + 1);
+    }
+    const std::string_view full = desc.resolver(name);
+    for (const auto& q : quest)
+        if (q.gfx == gfx && (full == desc.linea(q.desc) || name == desc.linea(q.desc))) return true;
+    return false;
+}
+
 }  // namespace lin

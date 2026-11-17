@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include "comun.h"
 #include "mundo/mundo.h"
 #include "proto/comandos.h"
 #include "proto/decodificar.h"
@@ -1040,4 +1041,42 @@ TEST_CASE("Big5 a UTF-8: ASCII intacto, par Big5 convertido, byte suelto '?'") {
     CHECK(s == "ab\xE4\xBD\xA0\xE5\xA5\xBD");
     lin::big5_a_utf8(std::string_view("a\x80", 2), s);
     CHECK(s == "a?");
+}
+
+// Real S_InvList of the l1j-en classic server (s3ep1, cable 8), captured with `traza on`: count 1, then
+// d id, c uso, c 0, h gfx, c bless, d count, c identified, s name, c nattr (no catalyst, no fixed tail).
+// The potion has use type 0 ("normal"); the original UI therefore sorts it in "Miscellaneous", not equipment.
+TEST_CASE("s3ep1: S_InvList (bytes reales de l1j-en) y filtros de pestanas del inventario original") {
+    TablaOpcodes t;
+    REQUIRE(tabla_opcodes("s3ep1", t));
+    Arena arena(4096);
+    std::vector<Evento> ev;
+    const u8 inv[] = {8, 2,
+                      0x31, 0x1b, 0x0f, 0x00, 0x00, 0x00, 0x4f, 0x00, 0x01, 0x05, 0x00, 0x00, 0x00, 0x01, '$', '7', 0, 0,
+                      0x32, 0x1b, 0x0f, 0x00, 0x01, 0x00, 0x23, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, '$', '8', 0, 0};
+    REQUIRE(decodificar({inv, sizeof inv}, t, arena, ev));
+    REQUIRE(ev.size() == 3);
+    CHECK(ev[1].id == 0x0f1b31);
+    CHECK(ev[1].v[IT_USO] == 0);
+    CHECK(ev[1].v[IT_GFX] == 79);
+    CHECK(ev[1].v[IT_CANTIDAD] == 5);
+    CHECK(ev[2].v[IT_USO] == 1);  // dagger: weapon
+    CHECK(ev[2].v[IT_GFX] == 35);
+
+    const std::string dir = carpeta_juego();
+    if (dir.empty()) return;
+    Recursos rec;
+    REQUIRE(rec.abrir(dir));
+    TablaTexto q, desc;
+    REQUIRE(q.cargar(rec, "itemquest.tbl"));
+    REQUIRE(desc.cargar(rec, "desc-e.tbl"));
+    std::vector<ItemMision> quest;
+    cargar_item_quest(q, quest);
+    REQUIRE(quest.size() > 500);
+    CHECK(quest[1].gfx == 2265);  // "2265 499": Totem of Atuba
+    CHECK(quest[1].desc == 499);
+    CHECK(item_de_mision(quest, desc, 2265, "$499"));
+    CHECK(item_de_mision(quest, desc, 2265, "Totem of Atuba (2)"));
+    CHECK_FALSE(item_de_mision(quest, desc, 79, "Potion of Bravery (5)"));
+    CHECK_FALSE(item_de_mision(quest, desc, 2265, "$500"));
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include "core/tabla_soa.h"
 #include "proto/eventos.h"
+#include "recursos/textos.h"
 
 namespace lin {
 
@@ -60,6 +61,8 @@ struct Inventario {
     }
 };
 
+// itemquest.tbl entry: item gfx and the desc-e.tbl line holding its name (original UI "Quest" tab).
+struct ItemMision { u16 gfx; u32 desc; };
 std::string_view nombre_item(const Inventario& inv, Slot s);
 std::string_view atributos_item(const Inventario& inv, Slot s);
 // Los atributos de un ítem identificado en texto, una línea por atributo ("Damage 6/8", "AC 3",
@@ -73,5 +76,8 @@ bool item_equipado(std::string_view nombre);
 size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap);
 // Aplica los eventos de ítems (los demás se ignoran).
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos);
+
+void cargar_item_quest(const TablaTexto& tabla, std::vector<ItemMision>& salida);
+bool item_de_mision(const std::vector<ItemMision>& quest, const TablaTexto& desc, u16 gfx, std::string_view name);
 
 }  // namespace lin

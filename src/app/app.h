@@ -287,6 +287,7 @@ struct App {
     FuenteBitmap fuente;
     TablaSprites sprites;
     TablaZonas zonas;  // zone3-e.tbl: nombre de la zona en la que se está
+    std::vector<ItemMision> item_quest;  // itemquest.tbl: (gfx, desc-e.tbl entry), original UI "Quest" tab
     TablaTexto desc, intro, mensajes;  // mensajes = string-e.tbl (S_ServerMessage)
     TablaHechizos hechizos;
     Gpu gpu;
@@ -540,7 +541,7 @@ struct App {
     // Inventario (Alt+I).
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
-    u8 inventory_tab = 0;               // original UI: 0 consumables, 1 equipment, 2 scrolls and magic, 3 other
+    u8 inventory_tab = 0;               // original UI: 0 all, 1 equipment, 2 quest, 3 miscellaneous
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
     bool es_gm = false;                 // the chosen character was flagged administrator in the character list
     u8 gm_apuntando = 0;                // GM Ctrl+Y (1) / Ctrl+Z (2): the next click in the world picks the target
