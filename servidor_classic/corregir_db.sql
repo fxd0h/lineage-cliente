@@ -9,3 +9,7 @@ UPDATE commands SET run_on_login = 0 WHERE name IN ('invis', 'invul');
 -- spot as the Return scroll (40120).
 UPDATE etcitem SET locx = 32737, locy = 32900, mapid = 310 WHERE item_id = 40083;
 UPDATE etcitem SET locx = 32571, locy = 32673, mapid = 400 WHERE item_id = 40853;
+
+-- #35 Skill reuse timers: Fire Storm (and Lightning Storm) were 400/500 ms; the original is ~2.5 s.
+-- The other 380 skills with reuseDelay 0 still need an audit against the original values.
+UPDATE skills SET reuseDelay = 2500 WHERE skill_id IN (65, 70) AND reuseDelay < 2500;
