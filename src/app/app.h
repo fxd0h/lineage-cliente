@@ -69,6 +69,7 @@ struct FilaTienda {
     u8 bendicion = 0;
     u32 precio = 0, maximo = 0, elegido = 0;
     std::string nombre;  // con "$N" sin resolver
+    std::string atributos;  // S_ShopSellList status bytes (L1ItemInstance.getStatusBytes), for the tooltip property lines
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
 enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, CANTIDAD };

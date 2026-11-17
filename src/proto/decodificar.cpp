@@ -941,7 +941,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
                 it.v[IT_GFX] = l.h();
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
                 it.s[0] = l.s();
-                l.saltar(l.c());
+                it.s[1] = atributos_item(l);  // the status bytes: the tooltip's property lines
             } else if (e.origen == Srv::SHOWSHOPSELLLIST) {
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
             } else {

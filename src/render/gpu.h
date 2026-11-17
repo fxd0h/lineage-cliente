@@ -108,7 +108,7 @@ public:
     void dibujar_en(const RegionAtlas& r, float x, float y, u64 clave, u32 color = BLANCO, Mezcla mezcla = Mezcla::NORMAL);
     void dibujar_escalado(const RegionAtlas& r, float x, float y, float w, float h, u64 clave, u32 color = BLANCO,
                           Mezcla mezcla = Mezcla::NORMAL);
-    void rectangulo(int x, int y, int w, int h, u64 clave, u32 color);
+    void rectangulo(int x, int y, int w, int h, u64 clave, u32 color, Mezcla mezcla = Mezcla::NORMAL);
     // Este frame, lo que va por debajo de CAPA_EFECTOS (mundo, no interfaz) se multiplica por
     // `tinte`, por `brillo` (bw × bh celdas de celda × celda píxeles lógicos, 255 = sin cambio) y,
     // si se pasan, por el color de cada fila de la vista (`filas`, n_filas colores RGBA que cubren

@@ -417,6 +417,25 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         ev.v[MA_AGREGAR] = 1;
         ev.s[0] = p.size() > 2 ? std::string_view(p[2]) : std::string_view("Pet");
         eventos_mascotas(a, ev);
+    } else if (cmd == "debug-tienda") {  // debug: an NPC buy list of 3 items with property bytes, as S_ShopSellList would
+        Evento ev{};
+        ev.tipo = Ev::LISTA_TIENDA;
+        ev.id = a.mundo.jugador.id;
+        ev.v[LT_TIPO] = LISTA_COMPRA;
+        ev.v[LT_CANTIDAD] = 3;
+        eventos_npc(a, ev);
+        static const char ATRIBUTOS[] = "\x01\x06\x08\x0b\x00\x00\x03\xe8\x13\x05";
+        for (int i = 0; i < 3; ++i) {
+            Evento it{};
+            it.tipo = Ev::ITEM_TIENDA;
+            it.id = static_cast<ObjId>(i);
+            it.v[IT_GFX] = 20 + i;
+            it.v[TI_PRECIO] = 1000 * (i + 1);
+            it.s[0] = "Test sword";
+            it.s[1] = std::string_view(ATRIBUTOS, sizeof ATRIBUTOS - 1);
+            eventos_npc(a, it);
+        }
+        a.tienda_filas[1].elegido = 1;
     } else if (cmd == "debug-html") {  // debug: debug-html <pagina> <dato1> <dato2> ... as S_ShowHTML would
         Evento ev{};
         ev.tipo = Ev::HTML;

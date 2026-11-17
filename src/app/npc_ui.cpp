@@ -472,26 +472,39 @@ void step_amount(const App& a, FilaTienda& f, bool increase) {
 
 // The two-tone frame and the 50 % darkening of the list tooltip (0x4be41e..0x4be576): 142 px wide at the pane
 // x + 10 (the y thresholds are screen coordinates), name lines at +5 / +5 + 12 k.
-void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char* line2, u32 color) {
+// The hover box of the lists (0x49a440 halves the pixels under it, then eight 0x498720 lines: a light 2 px bevel (colour
+// [0x50050c] = 189) along the top and left, a dark one ([0x500514] = 123) along the bottom and right, each starting one pixel
+// further in than the previous). `details`: the property lines of the item (S_ShopSellList status bytes).
+void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char* line2, u32 color, std::string_view details = {}) {
     Graficos& g = *a.g;
-    const int lines = line2[0] ? 2 : 1;
+    char det[1024];
+    const size_t nd = describir_atributos(details, det, sizeof det);
+    int lines = line2[0] ? 2 : 1;
+    for (std::string_view rest(det, nd); !rest.empty(); ++lines) rest.remove_prefix(std::min(std::min(rest.find('\n'), rest.size()) + 1, rest.size()));
     const int h = 12 * lines + 10, w = 142, x = x0 + 34;
     int top = row_y + 32 > 300 ? row_y - 12 : row_y + 32;
     if (top > 157) top = std::max(10, top - 12 * (lines - 1) - 22);
     else top = std::min(top - 33, 330 - h);
-    const u64 kb = clave_orden(CAPA_UI, 30), kl = clave_orden(CAPA_UI, 31), kt = clave_orden(CAPA_UI_TEXTO, 30);
-    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 128));
+    const u64 kb = clave_orden(CAPA_UI_TEXTO, 28), kl = clave_orden(CAPA_UI_TEXTO, 29), kt = clave_orden(CAPA_UI_TEXTO, 30);
+    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 200));  // over the row texts below (the exe halves the pixels, text included)
     const u32 light = rgba(189, 189, 189), dark = rgba(123, 123, 123);
-    g.gpu().rectangulo(x, top, w, 1, kl, light);
+    g.gpu().rectangulo(x, top, w - 1, 1, kl, light);
     g.gpu().rectangulo(x + 1, top + 1, w - 2, 1, kl, light);
-    g.gpu().rectangulo(x, top, 1, h, kl, light);
-    g.gpu().rectangulo(x + 1, top + 1, 1, h - 2, kl, light);
-    g.gpu().rectangulo(x, top + h - 1, w, 1, kl, dark);
-    g.gpu().rectangulo(x + 1, top + h - 2, w - 2, 1, kl, dark);
-    g.gpu().rectangulo(x + w - 1, top, 1, h, kl, dark);
+    g.gpu().rectangulo(x, top + 1, 1, h - 1, kl, light);
+    g.gpu().rectangulo(x + 1, top + 2, 1, h - 2, kl, light);
+    g.gpu().rectangulo(x + 1, top + h - 1, w - 1, 1, kl, dark);
+    g.gpu().rectangulo(x + 2, top + h - 2, w - 2, 1, kl, dark);
+    g.gpu().rectangulo(x + w - 1, top, 1, h - 1, kl, dark);
     g.gpu().rectangulo(x + w - 2, top + 1, 1, h - 2, kl, dark);
     g.texto_sombra(line1, static_cast<float>(x + 5), static_cast<float>(top + 5), kt, color);
-    if (line2[0]) g.texto_sombra(line2, static_cast<float>(x + 5), static_cast<float>(top + 17), kt, color);
+    int y = top + 17;
+    if (line2[0]) g.texto_sombra(line2, static_cast<float>(x + 5), static_cast<float>(y), kt, color), y += 12;
+    for (std::string_view rest(det, nd); !rest.empty();) {
+        const size_t end = std::min(rest.find('\n'), rest.size());
+        g.texto_sombra(std::string(rest.substr(0, end)), static_cast<float>(x + 5), static_cast<float>(y), kt, rgba(255, 255, 254));
+        y += 12;
+        rest.remove_prefix(std::min(end + 1, rest.size()));
+    }
 }
 
 // A name as one or two lines: the second one starts at the last space that keeps the first within `width`.
@@ -543,7 +556,15 @@ void draw_list_original(App& a, int x0, int y0) {
     char tip1[160] = "", tip2[160] = "";
     u32 tip_color = state_color(1);
     int tip_y = 0;
+    std::string tip_details;
     const int first = static_cast<int>(a.tienda_desplazamiento);
+    // Hover row (mouse move handler 0x4be19e): the exe divides the pointer's y from the first row by 34 while drawing the rows 36
+    // apart, so the tooltip row drifts from the drawn one (kept); it needs the icon column (x 13..48 of the row).
+    int hover_idx = -1;
+    if (free_pointer && e.mx >= x0 + LIST_ROW_X && e.mx < x0 + LIST_ROW_X + 36 && e.my >= y0 + LIST_ROW_Y) {
+        const int k = (e.my - (y0 + LIST_ROW_Y)) / 34;
+        if (k < LIST_ROWS && first + k < n) hover_idx = first + k;
+    }
     for (int k = 0; k < LIST_ROWS; ++k) {
         const int idx = first + k;
         if (idx >= n) break;
@@ -557,7 +578,9 @@ void draw_list_original(App& a, int x0, int y0) {
         const bool over_row = ui::sobre(e, x0 + LIST_PANE_X, ry - 2, LIST_PANE_W, LIST_ROW_H) && free_pointer;
         const bool over_left = ui::sobre(e, left_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
         const bool over_right = ui::sobre(e, right_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
-        if (f.elegido) g.gpu().rectangulo(x0 + 24, ry - 2, 192, 34, km, rgba(120, 140, 255, 70));  // 0x498d90 with table 0x8f133c
+        // 0x498d90 with table 0x8f133c (built at 0x4d1649: blue -> (2 * blue + 31) / 3 per pixel, red and green untouched): a screen
+        // blend of (0,0,85) gives exactly that on the 8-bit channels.
+        if (f.elegido) g.gpu().rectangulo(x0 + 24, ry - 2, 192, 34, km, rgba(0, 0, 85), Mezcla::PANTALLA);
         if (idx == a.tienda_marcada) g.gpu().dibujar(g.img(IMG_ROW_MARK), rx - 2, ry - 2, km);
         draw_item_icon(g.gpu(), g.icono(f.gfx), rx, ry, ki, f.bendicion);
         char name[256];
@@ -601,8 +624,9 @@ void draw_list_original(App& a, int x0, int y0) {
         if (e.clic && (a.tienda_flecha == idx * 2 || a.tienda_flecha < 0) && over_left) step_amount(a, f, false);
         if (e.clic && (a.tienda_flecha == idx * 2 + 1 || a.tienda_flecha < 0) && over_right) step_amount(a, f, true);
         if (over_left || over_right) hover_arrow = true;
-        if (free_pointer && ui::sobre(e, rx, ry, LIST_ROW_H, LIST_ROW_H)) {
+        if (free_pointer && idx == hover_idx) {
             hover_row = idx;
+            tip_details = f.atributos;
             std::snprintf(tip1, sizeof tip1, "%s", l1);
             std::snprintf(tip2, sizeof tip2, "%s", l2);
             tip_color = color;
@@ -627,7 +651,7 @@ void draw_list_original(App& a, int x0, int y0) {
         std::snprintf(b3, sizeof b3, "%d/%d", n, a.tienda_tipo == 3 ? 150 : a.tienda_tipo == 5 ? 200 : 100);
         g.texto_sombra(b3, static_cast<float>(x0 + 193), static_cast<float>(y0 + 309), kt, state_color(0));
     }
-    if (hover_row >= 0 && !hover_arrow && tip1[0]) draw_list_tooltip(a, x0, tip_y, tip1, tip2, tip_color);
+    if (hover_row >= 0 && !hover_arrow && tip1[0]) draw_list_tooltip(a, x0, tip_y, tip1, tip2, tip_color, tip_details);
     // Buttons: pressed art while the button is held (0x47c2d0 buttons have no hover art).
     auto button = [&](int x, u32 image) {
         const RegionAtlas base = g.img(image);
@@ -798,11 +822,13 @@ void eventos_npc(App& a, const Evento& e) {
             f.maximo = a.tienda == TipoTienda::REPARAR ? static_cast<u32>(e.v[IT_CANTIDAD]) : a.mundo.inventario.items.col<I_CANTIDAD>()[s];
             f.bendicion = a.mundo.inventario.items.col<I_BENDICION>()[s];
             f.nombre = nombre_item(a.mundo.inventario, s);
+            f.atributos = atributos_item(a.mundo.inventario, s);
         } else {
             f.gfx = static_cast<u16>(e.v[IT_GFX]);
             f.maximo = a.tienda == TipoTienda::COMPRA ? 9999 : static_cast<u32>(e.v[IT_CANTIDAD]);
             f.bendicion = a.tienda == TipoTienda::COMPRA ? u8{1} : static_cast<u8>(e.v[IT_BENDICION]);  // the shop sends no state: normal
             f.nombre = e.s[0];
+            f.atributos = e.s[1];
             if (a.tienda == TipoTienda::MASCOTA && e.v[IT_IDENTIFICADO] >= 2) f.nombre += " (worn)";  // 2/3: equipado
         }
         a.tienda_filas.push_back(std::move(f));

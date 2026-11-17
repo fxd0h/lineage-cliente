@@ -843,11 +843,11 @@ void Gpu::dibujar_en(const RegionAtlas& r, float x, float y, u64 clave, u32 colo
     dibujar_escalado(r, x + r.ox, y + r.oy, r.w, r.h, clave, color, mezcla);
 }
 
-void Gpu::rectangulo(int x, int y, int w, int h, u64 clave, u32 color) {
+void Gpu::rectangulo(int x, int y, int w, int h, u64 clave, u32 color, Mezcla mezcla) {
     // Muestrea solo el centro del blanco de 2×2 para no tocar el margen del atlas.
     RegionAtlas c = blanco_;
     c.w = c.h = 1;
-    dibujar_escalado(c, static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h), clave, color);
+    dibujar_escalado(c, static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h), clave, color, mezcla);
 }
 
 // Radix sort LSD estable sobre los 5 bytes altos de la clave (los 3 bajos son siempre 0).
