@@ -111,3 +111,24 @@ from the old DB read-only (SELECT on `character_items`, no writes) into a script
 
 `servidor_380/arrancar.sh` / `detener.sh`, log `servidor_380/servidor.log`, Postgres on 127.0.0.1:5433,
 DB `l1jgo`. Neither the clone (`servidor_380/l1jgo/`) nor `datos/` is committed.
+
+## Pruned data (instalar.sh -> `prune_data.py apply servidor_380/prune_ids.tsv`)
+
+Applied to the pristine translated yaml, reproducible and reviewable (`prune_ids.tsv`: kind, id, reason; regenerate with
+`prune_data.py generate`, which needs the game folders and a decrypted 3.81C `desc-c.tbl`, see `dump_text.cpp`).
+The gfx test uses `gfx_sources.py` over Justice + the 3.81C install + the 吃檔 folder (`.spr`/`.tbt`/maps; see DATA_COVERAGE_381.md).
+
+| Removed | Count | Rule |
+|---|---|---|
+| NPC/monster ids (spawn_list, light_spawn_list, drop_list entries: 1507 yaml entries) | 366 | spawned NPC whose gfx exists in no source |
+| Polymorph entries | 259 | poly gfx in no source |
+| Dolls (and their items) | 4 | doll gfx in no source |
+| Items, `gfx` reason | 21 + 4 dolls | inventory icon / ground gfx in no source |
+| Items, `private` reason | ~750 | Whale's `translated` rows of `names_en.tsv` (id not in the official TW tables) whose Chinese name is also absent from the 3.81C `desc-c.tbl`: ids 300000+, 400000+, 600000+ (custom weapons/armor/scrolls), 47054-47xxx enchant stones, 70000-79999 etc. |
+
+Items are also dropped from every list that names them by `item_id` (drops, shops, recipes, `item_power.yaml`, dolls...).
+`item_vip.yaml` is already empty in this pin. `npc_list.yaml` definitions are kept (summons and quest spawns may still name
+them, and the client draws a placeholder); `item_power.yaml` is an official mechanic (enchant bonuses) and stays for the
+remaining items. Entries naming a removed id under another key (for example `result_item`) are not rewritten; the server
+started with no warnings. The old 3.81C-official test is name-based, so an official item whose Chinese name differs
+between Whale and `desc-c.tbl` can be pruned wrongly; review `prune_ids.tsv` rows with `private`.

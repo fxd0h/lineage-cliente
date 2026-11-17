@@ -61,4 +61,7 @@ sed -e 's#^dsn = .*#dsn = "postgres://postgres@127.0.0.1:5433/l1jgo?sslmode=disa
 # English names: restore the pristine yaml, then replace Chinese item names by client-side $N ids.
 git -C l1jgo checkout -q -- data/yaml
 python3 -I translate_names.py apply l1jgo/data/yaml names_en.tsv
+# Prune what no game data source can show and what the official 3.81C does not have (see prune_data.py,
+# prune_ids.tsv; regenerate the list with prune_data.py generate when the data folders change).
+python3 -I prune_data.py apply l1jgo/data/yaml prune_ids.tsv
 echo "Listo: ./arrancar.sh (puerto 7001)"
