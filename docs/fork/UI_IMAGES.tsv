@@ -1762,10 +1762,10 @@ img_1353	142	17				manifest
 img_1354	12	241	IMG_npc_track; IMG_list_track; track - NPC scroll bar	src/app/npc_ui.cpp, src/app/npc_ui.cpp:row_click	0x43f3df,0x47cd80	audit,code,commit,manifest
 img_1355	242	320	IMG_npc_bg	src/app/npc_ui.cpp		code,manifest
 img_1356	258	335	IMG_npc_frame; NPC dialog; frame	src/app/npc_ui.cpp, src/app/app.h:barra_scroll_ventana		code,commit,manifest
-img_1357	129	21				manifest
+img_1357	129	21	HP bar fill (normal)	pantalla_juego.cpp HUD	0x4b1180	manifest;viewed
 img_1357c	129	21				manifest
 img_1357h	129	21				manifest
-img_1358	129	21	HP bar image by status			audit,manifest
+img_1358	129	21	HP bar fill (poisoned/frozen variant)	pantalla_juego.cpp HUD	0x4b1180	audit,manifest;viewed
 img_1358c	129	21				manifest
 img_1358h	129	21				manifest
 img_1359	160	135	Calculator		0x41da00,0x4ff5a8	audit,manifest
@@ -2188,9 +2188,9 @@ img_2017	70	17				manifest
 img_2018	181	300				manifest
 img_2019	193	313				manifest
 img_2020	12	79				manifest
-img_2021	153	111				manifest
-img_2022	181	270				manifest
-img_2023	193	282				manifest
+img_2021	153	111	town map picture, labels Shop/Storage/Antharas and 1 2 3 ? (newer client; S3EP1U never draws it)	none		manifest;viewed
+img_2022	181	270	picture with NAME/LEVEL Exp/HP/MP/State/Hunger/[Equip]/[Command] (newer client)	none		manifest;viewed
+img_2023	193	282	same as img_2022, larger	none		manifest;viewed
 img_2024	31	13				manifest
 img_2025	32	14				manifest
 img_2026	31	13				manifest
