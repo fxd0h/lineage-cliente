@@ -1044,12 +1044,17 @@ void dibujar_panel(App& a) {
     dibujar_teclas_f(a, X + 485, Y + 366);
     g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 120, Y + 462, clave_orden(CAPA_UI, 0));  // its left end hides under 1028
     {
-        // F-key page strip (S3EP1U 0x4b2260): page-up button 1021 at (489,387), page digit 1025 + page at (489,414),
-        // page-down button 1023 at (489,429). The client keeps one page of F5-F12 boxes, so it always shows page 1.
+        // F-key page strip (S3EP1U 0x4b2260, callback 0x456960): page-up button 1021 at (489,387) shows the next of the 3
+        // pages, the digit 1025 + page at (489,414), page-down button 1023 at (489,429) shows the previous.
         const u64 kb = clave_orden(CAPA_UI, 2);
         g.gpu().dibujar(g.img(1021), X + 489, Y + 387, kb);
-        g.gpu().dibujar(g.img(1025), X + 489, Y + 414, kb);
+        g.gpu().dibujar(g.img(1025 + a.pag_f), X + 489, Y + 414, kb);
         g.gpu().dibujar(g.img(1023), X + 489, Y + 429, kb);
+        if (a.entrada.clic && !a.clic_consumido) {
+            const RegionAtlas arriba = g.img(1021), abajo = g.img(1023);
+            if (ui::sobre(a.entrada, X + 489, Y + 387, arriba.w, arriba.h)) cambiar_pagina_f(a, 1);
+            else if (ui::sobre(a.entrada, X + 489, Y + 429, abajo.w, abajo.h)) cambiar_pagina_f(a, -1);
+        }
         // Chat-mode "A" button (globals 0x6f5cf8/0x6f5cf4 = 136, 464) and scroll button 1045 (0x4594d8: 470, 463).
         g.gpu().dibujar(g.img(1045), X + 470, Y + 463, kb);
         g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
@@ -1774,7 +1779,7 @@ void frame_juego(App& a) {
         break;
     // Only the original UI has these (Ctrl+R: see below; Ctrl+M has no handler in the US client's hotkey table).
     case 'X':  // attack mode: flips the local byte [0x703105] (0x456e30), silently and without a packet
-        if (!a.cfg.ui_simple) comando_social(a, "/pk");
+        if (!a.cfg.ui_simple) a.modo_pk = !a.modo_pk;
         break;
     case 'T':  // chat window size cycle (0x421330)
         if (!a.cfg.ui_simple) a.chat_tam = static_cast<u8>((a.chat_tam + 1) % 4);

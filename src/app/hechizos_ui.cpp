@@ -37,36 +37,42 @@ void dibujar_etiqueta_hechizo(App& a, const Hechizo& h, int x, int y, u64 clave,
     }
 }
 
-// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0;Otro:...  A spell is its id; an item is "i<gfx>:<id>".
+// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0,...;Otro:...  A spell is its id; an item is "i<gfx>:<id>". 24 entries: the three
+// pages of eight boxes (the original keeps 3 F-key pages, 0x4b2240); a.atajos / a.items_f hold the page on show.
 void cargar_atajos(App& a) {
     a.atajos_de = nombre_personaje(a);
-    std::memset(a.atajos, 0, sizeof a.atajos);
-    for (Atajo& b : a.items_f) b = {};
+    std::memset(a.atajos_pg, 0, sizeof a.atajos_pg);
+    for (auto& pagina : a.items_pg) for (Atajo& b : pagina) b = {};
     std::string_view v = valor_de_personaje(a.cfg.atajos, a.atajos_de);
-    for (int i = 0; i < 8 && !v.empty(); ++i) {
+    for (int i = 0; i < 24 && !v.empty(); ++i) {
         const size_t coma = v.find(',');
         const std::string_view t = v.substr(0, coma);
         const char* fin = t.data() + t.size();
         if (!t.empty() && t[0] == 'i') {
-            Atajo& b = a.items_f[i];
+            Atajo& b = a.items_pg[i / 8][i % 8];
             auto r = std::from_chars(t.data() + 1, fin, b.gfx);
             if (r.ptr < fin && *r.ptr == ':' && std::from_chars(r.ptr + 1, fin, b.id).ec == std::errc{}) b.tipo = TipoAtajo::ITEM;
         } else {
             u16 id = 0;
             std::from_chars(t.data(), fin, id);
-            a.atajos[i] = id;
+            a.atajos_pg[i / 8][i % 8] = id;
         }
         v = coma == std::string_view::npos ? std::string_view{} : v.substr(coma + 1);
     }
+    a.pag_f = 0;
+    std::memcpy(a.atajos, a.atajos_pg[0], sizeof a.atajos);
+    std::copy(std::begin(a.items_pg[0]), std::end(a.items_pg[0]), a.items_f);
 }
 
 void guardar_atajos(App& a) {
+    std::memcpy(a.atajos_pg[a.pag_f], a.atajos, sizeof a.atajos);
+    std::copy(std::begin(a.items_f), std::end(a.items_f), a.items_pg[a.pag_f]);
     std::string v;
-    for (int i = 0; i < 8; ++i) {
-        const Atajo& b = a.items_f[i];
+    for (int i = 0; i < 24; ++i) {
+        const Atajo& b = a.items_pg[i / 8][i % 8];
         if (b.tipo == TipoAtajo::ITEM) v += 'i' + std::to_string(b.gfx) + ':' + std::to_string(b.id);
-        else v += std::to_string(a.atajos[i]);
-        if (i < 7) v += ',';
+        else v += std::to_string(a.atajos_pg[i / 8][i % 8]);
+        if (i < 23) v += ',';
     }
     poner_valor_de_personaje(a.cfg.atajos, a.atajos_de, v);
     guardar_config(a.cfg);
@@ -98,6 +104,15 @@ void usar_tecla_f(App& a, int k) {
 }
 
 }  // namespace
+
+// F-key page arrows (0x456960): the up arrow (1021) shows the next page, the down one (1023) the previous, of 3.
+void cambiar_pagina_f(App& a, int delta) {
+    std::memcpy(a.atajos_pg[a.pag_f], a.atajos, sizeof a.atajos);
+    std::copy(std::begin(a.items_f), std::end(a.items_f), a.items_pg[a.pag_f]);
+    a.pag_f = static_cast<u8>((a.pag_f + delta + 3) % 3);
+    std::memcpy(a.atajos, a.atajos_pg[a.pag_f], sizeof a.atajos);
+    std::copy(std::begin(a.items_pg[a.pag_f]), std::end(a.items_pg[a.pag_f]), a.items_f);
+}
 
 // Primer hechizo sabido cuyo nombre contenga `texto` (sin distinguir mayúsculas); 0 si no hay.
 u32 buscar_hechizo(const App& a, std::string_view texto) {

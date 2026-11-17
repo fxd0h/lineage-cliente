@@ -409,6 +409,9 @@ struct App {
     bool clic_consumido = false;      // el clic que eligió el objetivo no camina hasta soltarlo
     u16 atajos[8] = {};               // F5..F12: spell ids
     int tecla_f_arrastrada = -1;      // F box being dragged
+    u16 atajos_pg[3][8] = {};         // the three F-key pages (a.atajos / items_f are the one on show, pag_f)
+    Atajo items_pg[3][8];
+    u8 pag_f = 0;
     Atajo items_f[8];                 // F5..F12: item (when the box holds an item; its atajos[] entry is 0)
     std::string atajos_de;            // personaje cuyos atajos están cargados
     // Barra de atajos (Alt+1..Alt+0; barra_ui.cpp): hechizos o ítems arrastrados a sus casilleros.
@@ -669,6 +672,7 @@ ObjId buscar_item(const App& a, std::string_view texto);    // inventario_ui.cpp
 u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: uno que sepa, por nombre
 void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
 void accion_comunidad(App& a, std::string_view accion);
+void cambiar_pagina_f(App& a, int delta);  // hechizos_ui.cpp
 void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
 void cancelar_prompt(App& a);
 void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`
