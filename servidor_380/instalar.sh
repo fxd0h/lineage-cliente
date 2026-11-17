@@ -52,5 +52,5 @@ sed -e 's#^dsn = .*#dsn = "postgres://postgres@127.0.0.1:5433/l1jgo?sslmode=disa
     l1jgo/config/server.toml > l1jgo/local.toml
 # English names: restore the pristine yaml, then replace Chinese item names by client-side $N ids.
 git -C l1jgo checkout -q -- data/yaml
-python3 -I translate_names.py l1jgo/data/yaml ../servidor_local/l1j-jp/db/csv/tw ../servidor_local/name_fixes.tsv
+python3 -I translate_names.py apply l1jgo/data/yaml names_en.tsv
 echo "Listo: ./arrancar.sh (puerto 7001)"

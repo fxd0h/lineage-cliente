@@ -7,83 +7,123 @@ for the same item ids. A Whale entry is matched by id when the Chinese name or i
 an unambiguous Chinese name. Plain (non-$) ids fall back to the English name in name_fixes.tsv.
 Unmatched entries are left untouched and counted. Run on pristine yaml (instalar.sh restores it first).
 
-Usage: translate_names.py <whale data/yaml dir> <csv/tw dir> <name_fixes.tsv>
+names_en.tsv (kind, id, chinese, english, source) is the reviewable result: source `mapped` rows are
+regenerated, `translated` rows are hand/agent translations (US Lineage naming) and are kept. Rows with an
+empty english column still need a translation.
+
+Usage:
+  translate_names.py generate <whale data/yaml dir> <csv/tw dir> <name_fixes.tsv> <names_en.tsv>
+  translate_names.py apply    <whale data/yaml dir> <names_en.tsv>
 """
 import csv
 import re
 import sys
 
-yamldir, csvdir, fixes = sys.argv[1:4]
+
+mode = sys.argv[1]
 
 def rows(tbl):
     with open(f"{csvdir}/{tbl}.csv", encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
 
-english = {}  # (table, id) -> English plain name
-with open(fixes, encoding="utf-8") as f:
-    for r in csv.DictReader(f, delimiter="\t"):
-        if r["column"] == "name":
-            english[(r["table"], int(r["id"]))] = r["new"]
-
-def display(r, table):
+def display(r, table, english):
     ident = r["identified_name_id"]
     if ident.startswith("$"):
         return ident
-    return english.get((table, int(r["id"]))) or (ident or None)
+    return english.get((table, int(r["id"]))) or ident or None
 
-def translate_items(fname, itemkey, tables):
-    byid, byname = {}, {}
-    for t in tables:
-        for r in rows(t):
-            byid[int(r["id"])] = (t, r)
-            byname.setdefault(r["name"], []).append((t, r))
-    path = f"{yamldir}/{fname}.yaml"
-    lines = open(path, encoding="utf-8").read().split("\n")
-    out, i, done, miss = [], 0, 0, 0
-    cur_id = cur_gfx = None
-    blocks = []  # (name line index, id, name)
+def blocks_of(lines, idre):
+    """[(name line, id, name, gfx)] for each yaml entry."""
+    out = []
     for n, ln in enumerate(lines):
-        m = re.match(r"\s+- item_id: (\d+)", ln)
+        m = re.match(idre, ln)
         if m:
-            cur_id = int(m.group(1)); blocks.append([None, cur_id, None, None])
-        elif blocks and blocks[-1][0] is None and (m := re.match(r"(\s+name: )(.*)$", ln)):
-            blocks[-1][0], blocks[-1][2] = n, m.group(2).strip()
-        elif blocks and (m := re.match(r"\s+inv_gfx: (\d+)", ln)):
-            blocks[-1][3] = int(m.group(1))
-    for n, iid, name, gfx in blocks:
-        hit = byid.get(iid)
-        if hit and hit[1]["name"] != name and int(hit[1]["inv_gfx_id"]) != gfx:
-            hit = None
-        if not hit and len(byname.get(name, [])) >= 1:
-            c = byname[name]
-            if len({x[1]["identified_name_id"] for x in c}) == 1:
-                hit = c[0]
-        new = display(hit[1], hit[0]) if hit else None
-        if new:
-            lines[n] = re.sub(r"name: .*$", "name: " + ("'%s'" % new.replace("'", "''")), lines[n]); done += 1
-        else:
-            miss += 1
-    open(path, "w", encoding="utf-8").write("\n".join(lines))
-    print(f"{fname}: {done} translated, {miss} left")
+            out.append([None, int(m.group(1)), None, None])
+        elif out and out[-1][0] is None and (m := re.match(r"(\s+name: )(.*)$", ln)):
+            out[-1][0], out[-1][2] = n, m.group(2).strip().strip("'\"")
+        elif out and (m := re.match(r"\s+(?:inv_)?gfx(?:_id)?: (\d+)", ln)):
+            out[-1][3] = int(m.group(1))
+    return out
 
-translate_items("etcitem_list", "items", ["etc_items"])
-translate_items("weapon_list", "weapons", ["weapons"])
-translate_items("armor_list", "armors", ["armors"])
+CJK = re.compile("[\u3400-\u9fff]")
+FILES = [("etcitem_list", "item_id", ["etc_items"]), ("weapon_list", "item_id", ["weapons"]),
+         ("armor_list", "item_id", ["armors"]), ("npc_list", "npc_id", [])]
 
-# NPCs with an empty nameid: take it from the tw table (same id and gfx)
-npcs = {int(r["id"]): r for r in rows("npcs")}
-path = f"{yamldir}/npc_list.yaml"
-lines = open(path, encoding="utf-8").read().split("\n")
-cur = gfx = None; done = empty = 0
-for n, ln in enumerate(lines):
-    if (m := re.match(r"\s+- npc_id: (\d+)", ln)):
-        cur = int(m.group(1)); gfx = None
-    elif (m := re.match(r"\s+gfx_id: (\d+)", ln)):
-        gfx = int(m.group(1))
-    elif (m := re.match(r"(\s+nameid: )''\s*$", ln)):
-        empty += 1
-        r = npcs.get(cur)
-        if r and r["name_id"].startswith("$"):
-            lines[n] = m.group(1) + "'" + r["name_id"] + "'"; done += 1
-open(path, "w", encoding="utf-8").write("\n".join(lines))
-print(f"npc_list: {empty} empty nameid, {done} filled")
+if mode == "generate":
+    yamldir, csvdir, fixes, outtsv = sys.argv[2:6]
+    english = {}
+    with open(fixes, encoding="utf-8") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            if r["column"] == "name":
+                english[(r["table"], int(r["id"]))] = r["new"]
+    kept = {}
+    try:
+        with open(outtsv, encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f, delimiter="\t"):
+                if r["source"] == "translated" and r["english"]:
+                    kept[(r["kind"], r["chinese"])] = r["english"]
+    except FileNotFoundError:
+        pass
+    result = []
+    for fname, idre, tables in FILES:
+        lines = open(f"{yamldir}/{fname}.yaml", encoding="utf-8").read().split("\n")
+        byid, byname = {}, {}
+        for t in tables:
+            for r in rows(t):
+                byid[int(r["id"])] = (t, r)
+                byname.setdefault(r["name"], []).append((t, r))
+        kind = "npc" if fname == "npc_list" else "item"
+        for n, iid, name, gfx in blocks_of(lines, r"\s+- " + idre + r": (\d+)"):
+            if name is None or not CJK.search(name):
+                continue
+            if kind == "npc":
+                # only entries whose client name is empty need a name
+                nl = next((l for l in lines[n:n + 6] if "nameid:" in l), "")
+                if not re.search(r"nameid: ''", nl) or not CJK.search(name):
+                    continue
+                result.append((kind, iid, name, kept.get((kind, name), ""), "translated"))
+                continue
+            hit = byid.get(iid)
+            if hit and hit[1]["name"] != name and int(hit[1]["inv_gfx_id"]) != gfx:
+                hit = None
+            if not hit and name in byname and len({x[1]["identified_name_id"] for x in byname[name]}) == 1:
+                hit = byname[name][0]
+            new = display(hit[1], hit[0], english) if hit else None
+            if new and not CJK.search(new):
+                result.append((kind, iid, name, new, "mapped"))
+            else:
+                result.append((kind, iid, name, kept.get((kind, name), ""), "translated"))
+    with open(outtsv, "w", encoding="utf-8", newline="") as f:
+        f.write("kind\tid\tchinese\tenglish\tsource\n")
+        for r in result:
+            f.write("\t".join(map(str, r)) + "\n")
+    print(f"{len(result)} rows: mapped {sum(r[4]=='mapped' for r in result)}, "
+          f"translated {sum(r[4]=='translated' and bool(r[3]) for r in result)}, "
+          f"pending {sum(not r[3] for r in result)}")
+
+elif mode == "apply":
+    yamldir, tsv = sys.argv[2:4]
+    table = {}
+    with open(tsv, encoding="utf-8", newline="") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            if r["english"]:
+                table[(r["kind"], int(r["id"]))] = r["english"]
+    for fname, idre, _ in FILES:
+        path = f"{yamldir}/{fname}.yaml"
+        lines = open(path, encoding="utf-8").read().split("\n")
+        kind = "npc" if fname == "npc_list" else "item"
+        done = 0
+        for n, iid, name, gfx in blocks_of(lines, r"\s+- " + idre + r": (\d+)"):
+            eng = table.get((kind, iid))
+            if eng is None or name is None:
+                continue
+            q = "'" + eng.replace("'", "''") + "'"
+            if kind == "npc":
+                for k in range(n, min(n + 6, len(lines))):
+                    if re.match(r"\s+nameid: ''", lines[k]):
+                        lines[k] = re.sub(r"''", q, lines[k], count=1); done += 1
+                        break
+            else:
+                lines[n] = re.sub(r"name: .*$", "name: " + q, lines[n]); done += 1
+        open(path, "w", encoding="utf-8").write("\n".join(lines))
+        print(f"{fname}: {done} applied")
