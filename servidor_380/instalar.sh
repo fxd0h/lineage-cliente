@@ -64,4 +64,6 @@ python3 -I translate_names.py apply l1jgo/data/yaml names_en.tsv
 # Prune what no game data source can show and what the official 3.81C does not have (see prune_data.py,
 # prune_ids.tsv; regenerate the list with prune_data.py generate when the data folders change).
 python3 -I prune_data.py apply l1jgo/data/yaml prune_ids.tsv
+# Teleports Whale lacks (see teleports_extra.tsv).
+python3 -I add_teleports.py l1jgo/data/yaml/teleport_list.yaml teleports_extra.tsv
 echo "Listo: ./arrancar.sh (puerto 7001)"
