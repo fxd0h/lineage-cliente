@@ -2,15 +2,15 @@
 # Instala un servidor 3.80C local para probar el cliente: L1JGO-Whale (Go + PostgreSQL), macOS con
 # Homebrew o Linux (apt).
 #
-# - Baja el servidor (r0ptik/L1JGO-Whale, commit fijo) en servidor_380/l1jgo y lo compila
+# - Baja el servidor (eddy7697/L1JGO-Whale, commit fijo; fork of r0ptik's) en servidor_380/l1jgo y lo compila
 # - PostgreSQL con su propio directorio de datos (servidor_380/datos), en el puerto 5433 para no
 #   chocar con otra instalación; base l1jgo, usuario postgres sin clave (solo local)
 # - La configuración se genera en servidor_380/l1jgo/local.toml (la del repo no se toca)
 #
 set -euo pipefail
 cd "$(dirname "$0")"
-REPO=https://github.com/r0ptik/L1JGO-Whale.git
-COMMIT=9a19405
+REPO=https://github.com/eddy7697/L1JGO-Whale.git
+COMMIT=f95af7d
 
 # MULTIPLATFORM: Homebrew on macOS, apt on Linux (system go 1.22 downloads toolchain go1.23.4).
 if [ "$(uname)" = Darwin ]; then
@@ -32,8 +32,12 @@ fi
 
 if [ ! -d l1jgo ]; then
     git clone -q "$REPO" l1jgo
-    git -C l1jgo checkout -q "$COMMIT"
 fi
+# Pin the commit (also moves an older clone, e.g. r0ptik's 9a19405, to the current fork): drop our
+# local edits (patches and translated yaml are reapplied below) and check out the pin.
+git -C l1jgo remote set-url origin "$REPO"
+git -C l1jgo cat-file -e "$COMMIT^{commit}" 2>/dev/null || git -C l1jgo fetch -q origin
+git -C l1jgo checkout -q -f "$COMMIT"
 # Server patches (idempotent): send the clan emblem id in the char packs so clients can download it.
 for p in emblem_id.patch; do
     git -C l1jgo apply --check -R "../$p" 2>/dev/null || git -C l1jgo apply "../$p"

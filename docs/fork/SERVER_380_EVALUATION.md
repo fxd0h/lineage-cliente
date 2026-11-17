@@ -7,8 +7,7 @@ Phase 1: install and probe. Nothing migrated; `servidor_local` (jp363, port 2000
 - **Target:** the README says 3.80C, but `internal/net/packet/opcodes.go` is headed "Server Opcodes (V381)"
   and the commit log mentions yiwei (a 3.81C emulator) alignment. It is a 3.80C/3.81C TW server. Client
   opcodes work unchanged with the fork's `tw380` table.
-- **Pin:** `9a19405` (2026-05-27, v0.3.32 merge) is *ahead of* the default-branch HEAD `ac4b670`
-  (v0.3.31+). Keep the pin; there is nothing newer.
+- **Pin:** `f95af7d` of the newer fork `eddy7697/L1JGO-Whale` (master, 2026-10-15, 59 commits on top of r0ptik's `9a19405`: Java-parity fixes for loot, buffs, enchant, inn). `instalar.sh` moves an older clone to the pin; our patches apply unchanged; migrations (goose, schema 40) run at server start.
 - **Linux:** `servidor_380/instalar.sh` now works (apt `golang-go` + `postgresql-16`, user cluster on 5433,
   Go toolchain `go1.23.4` auto-downloaded because go.mod wants 1.23 and Ubuntu ships 1.22; server binds
   127.0.0.1:7001). `sudo` was passwordless here; on a box that prompts, run
