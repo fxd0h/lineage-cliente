@@ -57,7 +57,7 @@ public:
     // Texto CP949 con la fuente original; devuelve el ancho en píxeles.
     // HD text: glyph as a field (recursos/fuente_hd.h), cached apart from the pixel glyph. Invalid region if blank.
     const RegionAtlas& glifo_hd(u32 g);
-    // True when text drawn with this order key goes through the HD pass (UI layers, HD enabled and available).
+    // True when text drawn with this order key goes through the HD pass (CAPA_EFECTOS and above, HD enabled and available).
     bool texto_hd_para(u64 clave_orden) const;
     // HD field of a glyph given as a 1-bit mask (`filas` rows of `ancho` bits, bit 0 = leftmost, one byte per row);
     // `id` must be unique per glyph. Used by the HUD digit font, which is not in the font files.

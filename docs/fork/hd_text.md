@@ -6,8 +6,9 @@ separate pass **after** the scaling filter, at the real output resolution.
 
 ## Pipeline
 
-1. `Graficos::texto` / `texto_html` check `Gpu::texto_hd()` and that the draw key is in a UI layer (>= `CAPA_UI`;
-   world-layer text stays pixel). They queue each glyph with `Mezcla::TEXTO_HD` (instance mode bit 6) and a *field*
+1. `Graficos::texto` / `texto_html` check `Gpu::texto_hd()` and that the draw key is in `CAPA_EFECTOS` or above (>=
+   `CAPA_EFECTOS`: names over characters, damage numbers, chat bubbles, UI; these layers are drawn after the lighting
+   pass, so they are never lit or wave-distorted; text below it would stay pixel). They queue each glyph with `Mezcla::TEXTO_HD` (instance mode bit 6) and a *field*
    region instead of the pixel glyph. Advances still come from the pixel metrics, so layout is byte-identical.
 2. `sprite.vert` skips TEXTO_HD instances in the normal passes (mode 0/1).
 3. `Gpu::pase_texto` runs after the scaling filter: on the swapchain (fixed view, viewport = letterbox rect), on the
@@ -40,5 +41,4 @@ runtime from the user's own game files and cached in the atlas like any glyph (n
 - Shaders exist twice: `texto.frag` (SPIR-V) and `fs_texto` in the MSL source of `gpu.cpp` (macOS/Metal). Keep them in sync.
 - `captura` (logical, pre-filter) forces pixel text for that frame; use `captura-final` to see HD text.
 - Additive / screen-blend instances above text are ignored by the layer (they do not brighten HD text).
-- World-layer text (names, damage numbers) is not HD yet.
 - The 4x6 HUD digit font (pantalla_juego.cpp) goes through `Graficos::glifo_hd_mascara`, outline passes included.
