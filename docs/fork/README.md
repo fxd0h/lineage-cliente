@@ -14,6 +14,8 @@ focuses on running Lineage 1 natively on Linux with a look and feel faithful to 
 - Still in force from upstream: test only against the local server, never commit game assets, no
   allocations in the frame loop, zero warnings and all tests passing before every commit.
 
+- **UI image catalog:** [UI_IMAGES.tsv](UI_IMAGES.tsv) lists UI image ids with size, description, users and binary refs; grep it before viewing an image and fill/append the row when you view one.
+
 ## Changes so far
 
 ### Linux port

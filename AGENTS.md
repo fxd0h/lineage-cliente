@@ -112,6 +112,7 @@ A new file `src/app/<feature>_ui.cpp` (add it to `CMakeLists.txt`, alphabetical)
 
 - **Tests:** `cmake --build --preset debug && LINEAGE_DIR=... build/debug/lin_tests`. Before large
   changes, also the `debug-asan` preset.
+- **UI images:** grep `docs/fork/UI_IMAGES.tsv` (id, size, description, users, binary refs) before viewing an image; when you do view one, fill/append its row.
 - **Test instances must be invisible:** launch them ONLY with `herramientas/lanzar_prueba.sh <own.ini> [log]`
   (Xvfb + lavapipe; prints the pid). Never launch a visible window, never steal the user's focus, never
   `pkill` (the user may be playing): stop your instance with `kill <pid>`.
