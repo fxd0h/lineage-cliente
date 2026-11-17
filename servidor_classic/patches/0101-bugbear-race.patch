@@ -1,0 +1,1124 @@
+From 03ea61768725d4427dd35d39b6a745910fbbdf6d Mon Sep 17 00:00:00 2001
+From: local <l@l>
+Date: Tue, 17 Nov 2026 16:52:05 -0300
+Subject: [PATCH] Giran Bugbear Race ported from L1J-JP: race cycle, ticket
+ shops, ticket buy-back, race_tickets table
+
+---
+ src/l1j/server/server/GameServerThread.java   |   4 +
+ .../server/clientpackets/C_NPCAction.java     |  14 +
+ .../server/datatables/RaceTicketTable.java    | 158 ++++++
+ .../model/Instance/L1MerchantInstance.java    |  15 +-
+ .../server/server/model/L1BugBearRace.java    | 495 ++++++++++++++++++
+ src/l1j/server/server/model/L1Inventory.java  |  31 +-
+ .../server/server/model/L1PcInventory.java    |  15 +
+ .../server/model/shop/L1AssessedItem.java     |  18 +-
+ src/l1j/server/server/model/shop/L1Shop.java  |  16 +-
+ .../server/serverpackets/S_ShopSellList.java  |  13 +-
+ src/l1j/server/server/templates/L1Item.java   |  12 +-
+ .../server/server/templates/L1RaceTicket.java |  52 ++
+ .../server/server/templates/L1ShopItem.java   |  14 +-
+ 13 files changed, 847 insertions(+), 10 deletions(-)
+ create mode 100644 src/l1j/server/server/datatables/RaceTicketTable.java
+ create mode 100644 src/l1j/server/server/model/L1BugBearRace.java
+ create mode 100644 src/l1j/server/server/templates/L1RaceTicket.java
+
+diff --git a/src/l1j/server/server/GameServerThread.java b/src/l1j/server/server/GameServerThread.java
+index 753cb21c..f883f400 100644
+--- a/src/l1j/server/server/GameServerThread.java
++++ b/src/l1j/server/server/GameServerThread.java
+@@ -43,6 +43,8 @@ import l1j.server.server.datatables.CharacterTable;
+ import l1j.server.server.datatables.ChatLogTable;
+ import l1j.server.server.datatables.ClanTable;
+ import l1j.server.server.datatables.DoorTable;
++import l1j.server.server.datatables.RaceTicketTable;
++import l1j.server.server.model.L1BugBearRace;
+ import l1j.server.server.datatables.DropItemTable;
+ import l1j.server.server.datatables.DropTable;
+ import l1j.server.server.datatables.FurnitureSpawnTable;
+@@ -307,6 +309,8 @@ public class GameServerThread {
+ 		NpcChatTable.getInstance();
+ 		LightSpawnTable.getInstance();
+ 		MailTable.getInstance();
++		RaceTicketTable.getInstance();
++		L1BugBearRace.getInstance().start();
+ 		_log.info("Database tables loaded successfully!");
+ 	}
+ }
+\ No newline at end of file
+diff --git a/src/l1j/server/server/clientpackets/C_NPCAction.java b/src/l1j/server/server/clientpackets/C_NPCAction.java
+index 63f0bafa..31f19360 100644
+--- a/src/l1j/server/server/clientpackets/C_NPCAction.java
++++ b/src/l1j/server/server/clientpackets/C_NPCAction.java
+@@ -54,6 +54,7 @@ import l1j.server.server.datatables.PolyTable;
+ import l1j.server.server.datatables.SkillTable;
+ import l1j.server.server.datatables.TownTable;
+ import l1j.server.server.datatables.UBTable;
++import l1j.server.server.model.L1BugBearRace;
+ import l1j.server.server.model.L1CastleLocation;
+ import l1j.server.server.model.L1Character;
+ import l1j.server.server.model.L1Clan;
+@@ -3586,6 +3587,19 @@ public class C_NPCAction extends ClientBasePacket {
+ 			} else {
+ 				htmlid = "8event3";
+ 			}
++		} else if (npcid == 70035 || npcid == 70041 || npcid == 70042) { // Bugbear Race ticket sellers
++			if (s.equalsIgnoreCase("status")
++					&& L1BugBearRace.getInstance().getGameStatus() == L1BugBearRace.STATUS_READY) {
++				L1BugBearRace race = L1BugBearRace.getInstance();
++				htmldata = new String[15];
++				for (int i = 0; i < 5; i++) {
++					htmldata[i * 3] = NpcTable.getInstance().getTemplate(race.getRunner(i).getNpcId()).get_name();
++					int condition = race.getCondition(i);
++					htmldata[i * 3 + 1] = condition == 0 ? "$610" : (condition > 0 ? "$368" : "$370");
++					htmldata[i * 3 + 2] = String.valueOf(race.getWinningAverage(i));
++				}
++				htmlid = "maeno4";
++			}
+ 		} else if (npcid == 81246) {
+ 			int multiplier = Integer.parseInt(s);
+ 			
+diff --git a/src/l1j/server/server/datatables/RaceTicketTable.java b/src/l1j/server/server/datatables/RaceTicketTable.java
+new file mode 100644
+index 00000000..e54da30f
+--- /dev/null
++++ b/src/l1j/server/server/datatables/RaceTicketTable.java
+@@ -0,0 +1,158 @@
++package l1j.server.server.datatables;
++
++import java.sql.Connection;
++import java.sql.PreparedStatement;
++import java.sql.ResultSet;
++import java.sql.SQLException;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++import l1j.server.L1DatabaseFactory;
++import l1j.server.server.templates.L1RaceTicket;
++import l1j.server.server.utils.SQLUtil;
++
++/**
++ * Bugbear Race tickets (table race_tickets). A row with item_obj_id = 0 is the
++ * marker of a round; every ticket bought by a player has its item object id.
++ */
++public class RaceTicketTable {
++	private static Logger _log = LoggerFactory.getLogger(RaceTicketTable.class.getName());
++
++	private static RaceTicketTable _instance;
++
++	private final Map<Integer, L1RaceTicket> _tickets = new ConcurrentHashMap<Integer, L1RaceTicket>();
++
++	private int _maxRound;
++
++	public static synchronized RaceTicketTable getInstance() {
++		if (_instance == null) {
++			_instance = new RaceTicketTable();
++		}
++		return _instance;
++	}
++
++	private RaceTicketTable() {
++		load();
++	}
++
++	private void load() {
++		Connection con = null;
++		PreparedStatement pstm = null;
++		ResultSet rs = null;
++		try {
++			con = L1DatabaseFactory.getInstance().getConnection();
++			pstm = con.prepareStatement("SELECT item_obj_id, round, allotment_percentage, victory, runner_num FROM race_tickets");
++			rs = pstm.executeQuery();
++			while (rs.next()) {
++				L1RaceTicket ticket = new L1RaceTicket();
++				ticket.setItemObjId(rs.getInt(1));
++				ticket.setRound(rs.getInt(2));
++				ticket.setAllotmentPercentage(rs.getDouble(3));
++				ticket.setVictory(rs.getInt(4));
++				ticket.setRunnerNum(rs.getInt(5));
++				_maxRound = Math.max(_maxRound, ticket.getRound());
++				if (ticket.getItemObjId() != 0) {
++					_tickets.put(ticket.getItemObjId(), ticket);
++				}
++			}
++		} catch (SQLException e) {
++			_log.error(e.getLocalizedMessage(), e);
++		} finally {
++			SQLUtil.close(rs, pstm, con);
++		}
++	}
++
++	public void storeNewTicket(L1RaceTicket ticket) {
++		if (ticket.getItemObjId() != 0) {
++			_tickets.put(ticket.getItemObjId(), ticket);
++		}
++		Connection con = null;
++		PreparedStatement pstm = null;
++		try {
++			con = L1DatabaseFactory.getInstance().getConnection();
++			pstm = con.prepareStatement("INSERT INTO race_tickets SET item_obj_id=?, round=?, allotment_percentage=?, victory=?, runner_num=?");
++			pstm.setInt(1, ticket.getItemObjId());
++			pstm.setInt(2, ticket.getRound());
++			pstm.setDouble(3, ticket.getAllotmentPercentage());
++			pstm.setInt(4, ticket.getVictory());
++			pstm.setInt(5, ticket.getRunnerNum());
++			pstm.execute();
++		} catch (SQLException e) {
++			_log.error(e.getLocalizedMessage(), e);
++		} finally {
++			SQLUtil.close(pstm);
++			SQLUtil.close(con);
++		}
++	}
++
++	/** Called when the ticket item leaves the game (sold back, deleted). */
++	public void deleteTicket(int itemObjId) {
++		_tickets.remove(itemObjId);
++		Connection con = null;
++		PreparedStatement pstm = null;
++		try {
++			con = L1DatabaseFactory.getInstance().getConnection();
++			pstm = con.prepareStatement("DELETE FROM race_tickets WHERE item_obj_id=?");
++			pstm.setInt(1, itemObjId);
++			pstm.execute();
++		} catch (SQLException e) {
++			_log.error(e.getLocalizedMessage(), e);
++		} finally {
++			SQLUtil.close(pstm);
++			SQLUtil.close(con);
++		}
++	}
++
++	/** Drops the old round markers, keeping the current one. */
++	public void deleteOldRoundMarkers(int round) {
++		Connection con = null;
++		PreparedStatement pstm = null;
++		try {
++			con = L1DatabaseFactory.getInstance().getConnection();
++			pstm = con.prepareStatement("DELETE FROM race_tickets WHERE item_obj_id=0 AND round<>?");
++			pstm.setInt(1, round);
++			pstm.execute();
++		} catch (SQLException e) {
++			_log.error(e.getLocalizedMessage(), e);
++		} finally {
++			SQLUtil.close(pstm);
++			SQLUtil.close(con);
++		}
++	}
++
++	/** Marks every ticket of the winning runner of the round as a winner. */
++	public void updateTicket(int round, int runnerNum, double allotmentPercentage) {
++		for (L1RaceTicket ticket : _tickets.values()) {
++			if (ticket.getRound() == round && ticket.getRunnerNum() == runnerNum) {
++				ticket.setVictory(1);
++				ticket.setAllotmentPercentage(allotmentPercentage);
++			}
++		}
++		Connection con = null;
++		PreparedStatement pstm = null;
++		try {
++			con = L1DatabaseFactory.getInstance().getConnection();
++			pstm = con.prepareStatement("UPDATE race_tickets SET victory=1, allotment_percentage=? WHERE round=? AND runner_num=?");
++			pstm.setDouble(1, allotmentPercentage);
++			pstm.setInt(2, round);
++			pstm.setInt(3, runnerNum);
++			pstm.execute();
++		} catch (SQLException e) {
++			_log.error(e.getLocalizedMessage(), e);
++		} finally {
++			SQLUtil.close(pstm);
++			SQLUtil.close(con);
++		}
++	}
++
++	public L1RaceTicket getTemplate(int itemObjId) {
++		return _tickets.get(itemObjId);
++	}
++
++	public int getRoundNumOfMax() {
++		return _maxRound;
++	}
++}
+diff --git a/src/l1j/server/server/model/Instance/L1MerchantInstance.java b/src/l1j/server/server/model/Instance/L1MerchantInstance.java
+index e81d5d16..ec250fa1 100644
+--- a/src/l1j/server/server/model/Instance/L1MerchantInstance.java
++++ b/src/l1j/server/server/model/Instance/L1MerchantInstance.java
+@@ -24,6 +24,7 @@ import l1j.server.server.GeneralThreadPool;
+ import l1j.server.server.datatables.NPCTalkDataTable;
+ import l1j.server.server.datatables.TownTable;
+ import l1j.server.server.model.L1Attack;
++import l1j.server.server.model.L1BugBearRace;
+ import l1j.server.server.model.L1CastleLocation;
+ import l1j.server.server.model.L1Clan;
+ import l1j.server.server.model.L1NpcTalkData;
+@@ -117,7 +118,19 @@ public class L1MerchantInstance extends L1NpcInstance {
+ 		}
+ 
+ 		if (talking != null) {
+-			if (npcid == 70841) {
++			if (npcid == 70041) { // Maeno, Bugbear Race manager: the page follows the race state
++				switch (L1BugBearRace.getInstance().getGameStatus()) {
++				case L1BugBearRace.STATUS_READY:
++					htmlid = "maeno1";
++					break;
++				case L1BugBearRace.STATUS_PLAYING:
++					htmlid = "maeno3";
++					break;
++				default:
++					htmlid = "maeno5";
++					break;
++				}
++			} else if (npcid == 70841) {
+ 				if (player.isElf()) {
+ 					htmlid = "luudielE1";
+ 				} else if (player.isDarkelf()) {
+diff --git a/src/l1j/server/server/model/L1BugBearRace.java b/src/l1j/server/server/model/L1BugBearRace.java
+new file mode 100644
+index 00000000..47faf54c
+--- /dev/null
++++ b/src/l1j/server/server/model/L1BugBearRace.java
+@@ -0,0 +1,495 @@
++package l1j.server.server.model;
++
++import java.util.concurrent.ThreadLocalRandom;
++
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++import l1j.server.server.GeneralThreadPool;
++import l1j.server.server.datatables.DoorTable;
++import l1j.server.server.datatables.NpcTable;
++import l1j.server.server.datatables.RaceTicketTable;
++import l1j.server.server.datatables.ShopTable;
++import l1j.server.server.encryptions.IdFactory;
++import l1j.server.server.model.Instance.L1DoorInstance;
++import l1j.server.server.model.Instance.L1MerchantInstance;
++import l1j.server.server.model.Instance.L1NpcInstance;
++import l1j.server.server.model.Instance.L1PcInstance;
++import l1j.server.server.model.map.L1Map;
++import l1j.server.server.model.shop.L1Shop;
++import l1j.server.server.serverpackets.S_NPCPack;
++import l1j.server.server.serverpackets.S_NpcChatPacket;
++import l1j.server.server.templates.L1Npc;
++import l1j.server.server.templates.L1RaceTicket;
++import l1j.server.server.templates.L1ShopItem;
++
++/**
++ * Giran Bugbear Race, ported from L1J-JP. One race every ~11 minutes: the
++ * ticket sellers (Maeno 70041, Polly 70035, Secil 70042) sell one ticket per
++ * runner while the round is open, then five of the twenty runners (npc 91350+)
++ * race around the track; tickets of the winner are bought back by the sellers
++ * for price * allotment.
++ */
++public class L1BugBearRace {
++	private static final Logger _log = LoggerFactory.getLogger(L1BugBearRace.class.getName());
++
++	public static final int STATUS_NONE = 0;
++	public static final int STATUS_READY = 1;
++	public static final int STATUS_PLAYING = 2;
++	public static final int STATUS_END = 3;
++
++	public static final int TICKET_ITEM_ID = 40309;
++	public static final int TICKET_PRICE = 500;
++	public static final int FIRST_NPCID = 91350; // 20 runners
++	private static final int RUNNERS = 5;
++	private static final int[] SELLER_NPCIDS = { 70035, 70041, 70042 };
++	private static final int WAIT_TIME = 60; // seconds between races
++	private static final int READY_TIME = Integer.getInteger("l1j.race.ready", 9 * 60 - 10); // betting seconds
++	private static final int END_WAIT = 30;
++	private static final int MAX_RACE_SECONDS = 5 * 60;
++	private static final int MAP_ID = 4;
++
++	private final L1NpcInstance[] _runner = new L1NpcInstance[RUNNERS];
++	private final int[] _runnerStatus = new int[RUNNERS];
++	private final double[] _winningAverage = new double[RUNNERS];
++	private final double[] _allotmentPercentage = new double[RUNNERS];
++	private final int[] _condition = new int[RUNNERS];
++	private final int[] _betCount = new int[RUNNERS];
++	private volatile int _allBet;
++	private volatile int _round;
++	private volatile int _status = STATUS_NONE;
++
++	private L1MerchantInstance _maeno;
++	private L1MerchantInstance _polly;
++	private L1MerchantInstance _secil;
++
++	private static L1BugBearRace _instance;
++
++	public static synchronized L1BugBearRace getInstance() {
++		if (_instance == null) {
++			_instance = new L1BugBearRace();
++		}
++		return _instance;
++	}
++
++	private L1BugBearRace() {
++		_round = RaceTicketTable.getInstance().getRoundNumOfMax();
++	}
++
++	/** Starts the race cycle; call once the world (NPC spawns, doors, shops) is loaded. */
++	public void start() {
++		Thread t = new Thread(new Runnable() {
++			@Override
++			public void run() {
++				cycle();
++			}
++		}, "BugBearRace");
++		t.setDaemon(true);
++		t.start();
++	}
++
++	public int getRound() {
++		return _round;
++	}
++
++	public int getGameStatus() {
++		return _status;
++	}
++
++	public int getAllBet() {
++		return _allBet;
++	}
++
++	/** Adds a bet; 10 percent of the stake is kept by the house. */
++	public synchronized void addBet(int runnerIndex, int stake, int count) {
++		_allBet += (int) (stake * 0.9);
++		_betCount[runnerIndex] += count;
++	}
++
++	public L1NpcInstance getRunner(int num) {
++		return _runner[num];
++	}
++
++	/** Index (0..4) of the runner with the given 1-based runner number, or -1. */
++	public int indexOfRunnerNumber(int runnerNum) {
++		for (int i = 0; i < RUNNERS; i++) {
++			if (_runner[i] != null && _runner[i].getNpcId() - FIRST_NPCID + 1 == runnerNum) {
++				return i;
++			}
++		}
++		return -1;
++	}
++
++	public int getCondition(int num) {
++		return _condition[num];
++	}
++
++	public double getWinningAverage(int num) {
++		return _winningAverage[num];
++	}
++
++	private void findSellers() {
++		for (L1Object obj : L1World.getInstance().getObject()) {
++			if (obj instanceof L1MerchantInstance) {
++				L1MerchantInstance m = (L1MerchantInstance) obj;
++				switch (m.getNpcId()) {
++				case 70041:
++					_maeno = m;
++					break;
++				case 70035:
++					_polly = m;
++					break;
++				case 70042:
++					_secil = m;
++					break;
++				default:
++					break;
++				}
++			}
++		}
++	}
++
++	private void announce(String text) {
++		for (L1MerchantInstance m : new L1MerchantInstance[] { _maeno, _secil }) {
++			if (m != null) {
++				m.wideBroadcastPacket(new S_NpcChatPacket(m, text, 2));
++			}
++		}
++	}
++
++	private void cycle() {
++		try {
++			Thread.sleep(10 * 1000); // let the server finish starting
++			findSellers();
++			if (_maeno == null) {
++				_log.warn("Bugbear race: Maeno (70041) is not spawned, race disabled");
++				return;
++			}
++			while (true) {
++				runOneRace();
++				Thread.sleep(END_WAIT * 1000);
++			}
++		} catch (InterruptedException e) {
++			Thread.currentThread().interrupt();
++		} catch (Throwable e) {
++			_log.error("Bugbear race stopped: " + e.getLocalizedMessage(), e);
++		}
++	}
++
++	private void runOneRace() throws InterruptedException {
++		_status = STATUS_NONE;
++		announce("$376 10 $377");
++		Thread.sleep(WAIT_TIME * 1000L);
++
++		clearRunner();
++		_round++;
++		L1RaceTicket marker = new L1RaceTicket();
++		marker.setItemObjId(0);
++		marker.setRound(_round);
++		RaceTicketTable.getInstance().storeNewTicket(marker);
++		RaceTicketTable.getInstance().deleteOldRoundMarkers(_round);
++		setRandomRunner();
++		setRandomCondition();
++		setWinningAverage();
++		openShops();
++		_status = STATUS_READY;
++		_log.info("Bugbear race round " + _round + ": betting open");
++
++		for (int loop = 0; loop < READY_TIME - 1; loop++) {
++			if (loop % 60 == 0) {
++				announce("$376 " + (1 + (READY_TIME - loop) / 60) + " $377");
++			}
++			Thread.sleep(1000);
++		}
++		announce("$363"); // Ready!
++		Thread.sleep(1000);
++		for (int i = 10; i > 0; i--) {
++			announce(String.valueOf(i));
++			Thread.sleep(1000);
++		}
++		announce("$364"); // Go!
++		_status = STATUS_PLAYING;
++		closeShops();
++		for (L1DoorInstance door : DoorTable.getInstance().getDoorList()) {
++			if (isRaceDoor(door)) {
++				door.open();
++			}
++		}
++		for (int i = 0; i < RUNNERS; i++) {
++			new BugBearRunning(i).begin();
++		}
++		GeneralThreadPool.getInstance().scheduleAtFixedRate(new SpeedBuff(), 1000, 1000);
++		_log.info("Bugbear race round " + _round + ": started");
++		synchronized (this) {
++			for (int i = 0; i < RUNNERS; i++) {
++				if (_betCount[i] > 0) {
++					// +0.2 so that a lone bettor still profits
++					double p = (double) _allBet / _betCount[i] / TICKET_PRICE + 0.2;
++					_allotmentPercentage[i] = Math.floor(p * 100) / 100;
++				} else {
++					_allotmentPercentage[i] = 0.0;
++				}
++			}
++		}
++		for (int i = 0; i < RUNNERS; i++) {
++			Thread.sleep(1000);
++			announce(NpcTable.getInstance().getTemplate(_runner[i].getNpcId()).get_nameid()
++					+ " $402 " + _allotmentPercentage[i]);
++		}
++		for (int s = 0; s < MAX_RACE_SECONDS && _status == STATUS_PLAYING; s++) {
++			Thread.sleep(1000);
++		}
++		_status = STATUS_END;
++		_log.info("Bugbear race round " + _round + ": finished");
++	}
++
++	private static boolean isRaceDoor(L1DoorInstance door) {
++		return door.getDoorId() >= 808 && door.getDoorId() <= 812;
++	}
++
++	private void openShops() {
++		for (int npcId : SELLER_NPCIDS) {
++			L1Shop shop = ShopTable.getInstance().get(npcId);
++			if (shop == null) {
++				continue;
++			}
++			synchronized (shop.getSellingItems()) {
++				shop.getSellingItems().clear();
++				for (int i = 0; i < RUNNERS; i++) {
++					L1ShopItem item = new L1ShopItem(TICKET_ITEM_ID, TICKET_PRICE, 1);
++					item.setTicketName(_round, _runner[i].getNpcId() - FIRST_NPCID + 1);
++					shop.getSellingItems().add(item);
++				}
++			}
++		}
++	}
++
++	private void closeShops() {
++		for (int npcId : SELLER_NPCIDS) {
++			L1Shop shop = ShopTable.getInstance().get(npcId);
++			if (shop != null) {
++				shop.getSellingItems().clear();
++			}
++		}
++	}
++
++	private void setRandomRunner() {
++		ThreadLocalRandom rnd = ThreadLocalRandom.current();
++		for (int i = 0; i < RUNNERS; i++) {
++			int npcid = FIRST_NPCID + rnd.nextInt(20);
++			while (isDuplicate(npcid, i)) {
++				npcid = FIRST_NPCID + rnd.nextInt(20);
++			}
++			_runner[i] = spawnRunner(33522 - (i * 2), 32861 + (i * 2), npcid);
++		}
++	}
++
++	private boolean isDuplicate(int npcid, int n) {
++		for (int i = 0; i < n; i++) {
++			if (_runner[i] != null && _runner[i].getNpcId() == npcid) {
++				return true;
++			}
++		}
++		return false;
++	}
++
++	private void clearRunner() {
++		for (int i = 0; i < RUNNERS; i++) {
++			L1NpcInstance r = _runner[i];
++			if (r != null) {
++				L1Map map = r.getMap();
++				r.deleteMe();
++				if (map.isInMap(r.getX(), r.getY())) {
++					map.setPassable(r.getX(), r.getY(), true);
++				}
++			}
++			_runner[i] = null;
++			_runnerStatus[i] = 0;
++			_condition[i] = 0;
++			_winningAverage[i] = 0;
++			_allotmentPercentage[i] = 0.0;
++			_betCount[i] = 0;
++		}
++		_allBet = 0;
++		for (L1DoorInstance door : DoorTable.getInstance().getDoorList()) {
++			if (isRaceDoor(door)) {
++				door.close();
++			}
++		}
++	}
++
++	private L1NpcInstance spawnRunner(int x, int y, int npcid) {
++		L1Npc template = NpcTable.getInstance().getTemplate(npcid);
++		L1NpcInstance mob = new L1NpcInstance(template);
++		mob.setNameId("#" + (npcid - FIRST_NPCID + 1) + " " + mob.getNameId());
++		mob.setId(IdFactory.getInstance().nextId());
++		mob.setHeading(6);
++		mob.setX(x);
++		mob.setHomeX(x);
++		mob.setY(y);
++		mob.setHomeY(y);
++		mob.setMap((short) MAP_ID);
++		L1World.getInstance().storeObject(mob);
++		L1World.getInstance().addVisibleObject(mob);
++		S_NPCPack pack = new S_NPCPack(mob);
++		for (L1PcInstance pc : L1World.getInstance().getRecognizePlayer(mob)) {
++			pc.addKnownObject(mob);
++			mob.addKnownObject(pc);
++			pc.sendPackets(pack);
++		}
++		return mob;
++	}
++
++	/**
++	 * Checks the runner against the track legs and turns it at the corners;
++	 * returns true once it has crossed the finish line.
++	 */
++	private boolean checkPosition(int n) {
++		final int[] heading = { 6, 7, 0, 1, 2, 2 };
++		if (_status != STATUS_PLAYING) {
++			return false;
++		}
++		L1NpcInstance npc = _runner[n];
++		int x = npc.getX();
++		int y = npc.getY();
++		boolean next = false;
++		switch (_runnerStatus[n]) {
++		case 0:
++			next = x >= 33476 && x <= 33476 + 8 && y >= 32861 && y <= 32861 + 8;
++			break;
++		case 1:
++			next = x <= 33473 && x >= 33473 - 9 && y == 32858;
++			break;
++		case 2:
++			next = x <= 33473 && x >= 33473 - 9 && y == 32852;
++			break;
++		case 3:
++			next = x == 33478 && y <= 32847 && y >= 32847 - 9;
++			break;
++		case 4:
++			next = x == 33523 && y >= 32847 - 9 && y <= 32847;
++			break;
++		case 5:
++			if (x == 33527 && y >= 32847 - 8 && y <= 32847) {
++				npc.setHeading(heading[5]);
++				finish();
++				return true;
++			}
++			break;
++		default:
++			break;
++		}
++		if (next) {
++			_runnerStatus[n]++;
++			if (_runnerStatus[n] == 5) {
++				goal(n);
++			}
++		}
++		npc.setHeading(heading[_runnerStatus[n]]);
++		return false;
++	}
++
++	private synchronized void finish() {
++		int cnt = 0;
++		for (int s : _runnerStatus) {
++			if (s == 5) {
++				cnt++;
++			}
++		}
++		if (cnt == RUNNERS) {
++			_status = STATUS_END;
++		}
++	}
++
++	private synchronized void goal(int n) {
++		int cnt = 0;
++		for (int s : _runnerStatus) {
++			if (s == 5) {
++				cnt++;
++			}
++		}
++		if (cnt == 1) { // first across the line
++			String name = NpcTable.getInstance().getTemplate(_runner[n].getNpcId()).get_nameid();
++			announce("Round " + _round + " $366 " + name + " $367");
++			RaceTicketTable.getInstance().updateTicket(_round, _runner[n].getNpcId() - FIRST_NPCID + 1,
++					_allotmentPercentage[n]);
++		}
++	}
++
++	private class BugBearRunning implements Runnable {
++		private final int _n;
++		private final L1NpcInstance _bug;
++
++		BugBearRunning(int n) {
++			_n = n;
++			_bug = _runner[n];
++		}
++
++		void begin() {
++			GeneralThreadPool.getInstance().schedule(this, 0);
++		}
++
++		@Override
++		public void run() {
++			try {
++				if (_status != STATUS_PLAYING) {
++					return;
++				}
++				_bug.setDirectionMove(newHeading());
++				if (checkPosition(_n)) {
++					return;
++				}
++				int sleep = _bug.getPassispeed();
++				if (_bug.getBraveSpeed() == 1) {
++					sleep -= sleep * 0.25;
++				}
++				GeneralThreadPool.getInstance().schedule(this, Math.max(sleep, 50));
++			} catch (Throwable e) {
++				_log.error("Bugbear runner failed: " + e.getLocalizedMessage(), e);
++			}
++		}
++
++		private int newHeading() {
++			int x = _bug.getX();
++			int y = _bug.getY();
++			int heading = _bug.getHeading();
++			L1Map map = _bug.getMap();
++			for (int tries = 0; tries < 8 && !map.isPassable(x, y, heading); tries++) {
++				int right = (heading + 1) & 7;
++				if (map.isPassable(x, y, right)) {
++					return right;
++				}
++				heading = (heading + 7) & 7;
++			}
++			return heading;
++		}
++	}
++
++	/** Once a second each runner gets a burst of speed with a chance tied to its form. */
++	private class SpeedBuff implements Runnable {
++		@Override
++		public void run() {
++			if (_status != STATUS_PLAYING) {
++				throw new RuntimeException("race over"); // cancels the periodic task
++			}
++			ThreadLocalRandom rnd = ThreadLocalRandom.current();
++			for (int i = 0; i < RUNNERS; i++) {
++				double roll = (rnd.nextInt(10000) + 1) / 100D;
++				_runner[i].setBraveSpeed(roll <= _winningAverage[i] * (1 + 0.2 * _condition[i]) ? 1 : 0);
++			}
++		}
++	}
++
++	private void setRandomCondition() {
++		for (int i = 0; i < RUNNERS; i++) {
++			_condition[i] = -1 + ThreadLocalRandom.current().nextInt(3);
++		}
++	}
++
++	private void setWinningAverage() {
++		ThreadLocalRandom rnd = ThreadLocalRandom.current();
++		for (int i = 0; i < RUNNERS; i++) {
++			_winningAverage[i] = (rnd.nextInt(10000) + 1) / 100D;
++		}
++	}
++}
+diff --git a/src/l1j/server/server/model/L1Inventory.java b/src/l1j/server/server/model/L1Inventory.java
+index e30a3f33..d64863ca 100644
+--- a/src/l1j/server/server/model/L1Inventory.java
++++ b/src/l1j/server/server/model/L1Inventory.java
+@@ -33,10 +33,12 @@ import l1j.server.server.datatables.FurnitureSpawnTable;
+ import l1j.server.server.datatables.ItemTable;
+ import l1j.server.server.datatables.LetterTable;
+ import l1j.server.server.datatables.PetTable;
++import l1j.server.server.datatables.RaceTicketTable;
+ import l1j.server.server.encryptions.IdFactory;
+ import l1j.server.server.model.Instance.L1FurnitureInstance;
+ import l1j.server.server.model.Instance.L1ItemInstance;
+ import l1j.server.server.templates.L1Item;
++import l1j.server.server.templates.L1RaceTicket;
+ 
+ public class L1Inventory extends L1Object {
+ 	private static final long serialVersionUID = 1L;
+@@ -152,14 +154,28 @@ public class L1Inventory extends L1Object {
+ 			return null;
+ 		}
+ 		int itemId = item.getItem().getItemId();
++		boolean ticket = itemId == L1BugBearRace.TICKET_ITEM_ID;
+ 		if (item.isStackable()) {
+-			L1ItemInstance findItem = findItemId(itemId);
++			// Race tickets stack only with tickets of the same round and runner.
++			L1ItemInstance findItem = ticket
++					? findTicket(item.getItem().getIdentifiedNameId()) : findItemId(itemId);
+ 			if (findItem != null) {
+ 				findItem.setCount(findItem.getCount() + item.getCount());
+ 				updateItem(findItem);
+ 				return findItem;
+ 			}
+ 		}
++		String[] parts = ticket ? item.getItem().getIdentifiedNameId().split(" ") : null;
++		if (ticket) {
++			parts = parts[parts.length - 1].split("-");
++		}
++		if (ticket && parts.length == 2) { // a plain ticket (GM item) has no round
++			L1RaceTicket record = new L1RaceTicket();
++			record.setItemObjId(item.getId());
++			record.setRound(Integer.parseInt(parts[0]));
++			record.setRunnerNum(Integer.parseInt(parts[1]));
++			RaceTicketTable.getInstance().storeNewTicket(record);
++		}
+ 		item.setX(getX());
+ 		item.setY(getY());
+ 		item.setMap(getMapId());
+@@ -249,6 +265,16 @@ public class L1Inventory extends L1Object {
+ 		}
+ 	}
+ 
++	private L1ItemInstance findTicket(String nameId) {
++		for (L1ItemInstance i : _items) {
++			if (i.getItemId() == L1BugBearRace.TICKET_ITEM_ID
++					&& nameId.equals(i.getItem().getIdentifiedNameId())) {
++				return i;
++			}
++		}
++		return null;
++	}
++
+ 	public int removeItem(int objectId, int count) {
+ 		L1ItemInstance item = getItem(objectId);
+ 		return removeItem(item, count);
+@@ -286,6 +312,9 @@ public class L1Inventory extends L1Object {
+ 					}
+ 				}
+ 			}
++			if (itemId == L1BugBearRace.TICKET_ITEM_ID) {
++				RaceTicketTable.getInstance().deleteTicket(item.getId());
++			}
+ 			deleteItem(item);
+ 			L1World.getInstance().removeObject(item);
+ 		} else {
+diff --git a/src/l1j/server/server/model/L1PcInventory.java b/src/l1j/server/server/model/L1PcInventory.java
+index f412712b..0b8e0dfa 100644
+--- a/src/l1j/server/server/model/L1PcInventory.java
++++ b/src/l1j/server/server/model/L1PcInventory.java
+@@ -41,6 +41,8 @@ import l1j.server.server.serverpackets.S_PacketBox;
+ import l1j.server.server.serverpackets.S_ServerMessage;
+ import l1j.server.server.storage.CharactersItemStorage;
+ import l1j.server.server.templates.L1Item;
++import l1j.server.server.templates.L1RaceTicket;
++import l1j.server.server.datatables.RaceTicketTable;
+ 
+ public class L1PcInventory extends L1Inventory {
+ 
+@@ -167,6 +169,19 @@ public class L1PcInventory extends L1Inventory {
+ 						&& item.getItem().getType() == 2) {
+ 					item.setRemainingTime(item.getItem().getLightFuel());
+ 				}
++				if (item.getItemId() == L1BugBearRace.TICKET_ITEM_ID) {
++					// Restore the "<round>-<runner>" name of the ticket.
++					L1RaceTicket ticket = RaceTicketTable.getInstance().getTemplate(item.getId());
++					if (ticket != null) {
++						L1Item named = (L1Item) item.getItem().clone();
++						String name = named.getIdentifiedNameId() + " " + ticket.getRound() + "-"
++								+ ticket.getRunnerNum();
++						named.setName(name);
++						named.setUnidentifiedNameId(name);
++						named.setIdentifiedNameId(name);
++						item.setItem(named);
++					}
++				}
+ 				L1World.getInstance().storeObject(item);
+ 			}
+ 		} catch (Exception e) {
+diff --git a/src/l1j/server/server/model/shop/L1AssessedItem.java b/src/l1j/server/server/model/shop/L1AssessedItem.java
+index cbe0235b..f445af2f 100644
+--- a/src/l1j/server/server/model/shop/L1AssessedItem.java
++++ b/src/l1j/server/server/model/shop/L1AssessedItem.java
+@@ -18,13 +18,25 @@
+  */
+ package l1j.server.server.model.shop;
+ 
++import l1j.server.server.datatables.RaceTicketTable;
++import l1j.server.server.model.L1BugBearRace;
++import l1j.server.server.model.Instance.L1ItemInstance;
++import l1j.server.server.templates.L1RaceTicket;
++
+ public class L1AssessedItem {
+ 	private final int _targetId;
+ 	private final int _assessedPrice;
+ 
+-	L1AssessedItem(int targetId, int assessedPrice) {
+-		_targetId = targetId;
+-		_assessedPrice = assessedPrice;
++	L1AssessedItem(L1ItemInstance target, int assessedPrice) {
++		_targetId = target.getId();
++		if (target.getItemId() == L1BugBearRace.TICKET_ITEM_ID) {
++			// Race tickets are bought back at price * allotment, and only the winners.
++			L1RaceTicket ticket = RaceTicketTable.getInstance().getTemplate(_targetId);
++			_assessedPrice = ticket == null ? assessedPrice
++					: (int) (assessedPrice * ticket.getAllotmentPercentage() * ticket.getVictory());
++		} else {
++			_assessedPrice = assessedPrice;
++		}
+ 	}
+ 
+ 	public int getTargetId() {
+diff --git a/src/l1j/server/server/model/shop/L1Shop.java b/src/l1j/server/server/model/shop/L1Shop.java
+index 7d68004e..463a102c 100644
+--- a/src/l1j/server/server/model/shop/L1Shop.java
++++ b/src/l1j/server/server/model/shop/L1Shop.java
+@@ -31,6 +31,7 @@ import l1j.server.server.datatables.ItemTable;
+ import l1j.server.server.datatables.TownTable;
+ import l1j.server.server.log.LogShopBuy;
+ import l1j.server.server.log.LogShopSell;
++import l1j.server.server.model.L1BugBearRace;
+ import l1j.server.server.model.L1CastleLocation;
+ import l1j.server.server.model.L1PcInventory;
+ import l1j.server.server.model.L1TaxCalculator;
+@@ -101,7 +102,7 @@ public class L1Shop {
+ 		if (shopItem == null) {
+ 			return null;
+ 		}
+-		return new L1AssessedItem(item.getId(), getAssessedPrice(shopItem));
++		return new L1AssessedItem(item, getAssessedPrice(shopItem));
+ 	}
+ 
+ 	private int getAssessedPrice(L1ShopItem item) {
+@@ -117,7 +118,7 @@ public class L1Shop {
+ 					continue;
+ 				}
+ 
+-				result.add(new L1AssessedItem(targetItem.getId(),
++				result.add(new L1AssessedItem(targetItem,
+ 						getAssessedPrice(item)));
+ 			}
+ 		}
+@@ -257,6 +258,17 @@ public class L1Shop {
+ 			item.setCount(amount);
+ 			item.setIdentified(true);
+ 			item.setEnchantLevel(order.getItem().getEnchantLevel());
++			if (itemId == L1BugBearRace.TICKET_ITEM_ID) {
++				// The ticket keeps its "<round>-<runner>" name and counts as a bet.
++				item.setItem(order.getItem().getItem());
++				String[] parts = item.getItem().getIdentifiedNameId().split("-");
++				int runnerIndex = L1BugBearRace.getInstance()
++						.indexOfRunnerNumber(Integer.parseInt(parts[parts.length - 1]));
++				if (runnerIndex >= 0) {
++					L1BugBearRace.getInstance().addBet(runnerIndex,
++							(int) (amount * order.getItem().getPrice()), amount);
++				}
++			}
+ 			inv.storeItem(item);
+ 			if (_npcId == 70068 || _npcId == 70020) {
+ 				item.setIdentified(false);
+diff --git a/src/l1j/server/server/serverpackets/S_ShopSellList.java b/src/l1j/server/server/serverpackets/S_ShopSellList.java
+index dc12e859..77409997 100644
+--- a/src/l1j/server/server/serverpackets/S_ShopSellList.java
++++ b/src/l1j/server/server/serverpackets/S_ShopSellList.java
+@@ -25,6 +25,7 @@ import l1j.server.Config;
+ import l1j.server.server.datatables.ItemTable;
+ import l1j.server.server.datatables.ShopTable;
+ import l1j.server.server.encryptions.Opcodes;
++import l1j.server.server.model.L1BugBearRace;
+ import l1j.server.server.model.L1Object;
+ import l1j.server.server.model.L1TaxCalculator;
+ import l1j.server.server.model.L1World;
+@@ -113,7 +114,7 @@ public class S_ShopSellList extends ServerBasePacket {
+ 			if (shopItem.getPackCount() > 1) {
+ 				writeS(item.getName() + " (" + shopItem.getPackCount() + ")");
+ 			} else {
+-				writeS(item.getName());
++				writeS(shopName(item));
+ 			}
+ 			L1Item template = ItemTable.getInstance().getTemplate(
+ 					item.getItemId());
+@@ -131,6 +132,16 @@ public class S_ShopSellList extends ServerBasePacket {
+ 		writeH(0x07); // 0x00:kaimo 0x01:pearl 0x07:adena
+ 	}
+ 
++	/** Race tickets are listed as "<round>-<runner number> $<runner name>". */
++	private static String shopName(L1Item item) {
++		if (item.getItemId() != L1BugBearRace.TICKET_ITEM_ID) {
++			return item.getName();
++		}
++		String ticketId = item.getName().substring(item.getName().lastIndexOf(' ') + 1);
++		int runnerNum = Integer.parseInt(ticketId.substring(ticketId.indexOf('-') + 1));
++		return ticketId + " $" + (1212 + runnerNum);
++	}
++
+ 	@Override
+ 	public byte[] getContent() throws IOException {
+ 		return _bao.toByteArray();
+diff --git a/src/l1j/server/server/templates/L1Item.java b/src/l1j/server/server/templates/L1Item.java
+index ee635d83..a4979b8f 100644
+--- a/src/l1j/server/server/templates/L1Item.java
++++ b/src/l1j/server/server/templates/L1Item.java
+@@ -2,13 +2,23 @@ package l1j.server.server.templates;
+ 
+ import java.io.Serializable;
+ 
+-public abstract class L1Item implements Serializable {
++public abstract class L1Item implements Serializable, Cloneable {
+ 
+ 	private static final long serialVersionUID = 1L;
+ 
+ 	public L1Item() {
+ 	}
+ 
++	/** Shallow copy, used for per-instance item names (Bugbear Race tickets). */
++	@Override
++	public Object clone() {
++		try {
++			return super.clone();
++		} catch (CloneNotSupportedException e) {
++			throw new AssertionError(e);
++		}
++	}
++
+ 	private int _type2; // 0=L1EtcItem, 1=L1Weapon, 2=L1Armor
+ 
+ 	/**
+diff --git a/src/l1j/server/server/templates/L1RaceTicket.java b/src/l1j/server/server/templates/L1RaceTicket.java
+new file mode 100644
+index 00000000..8274b674
+--- /dev/null
++++ b/src/l1j/server/server/templates/L1RaceTicket.java
+@@ -0,0 +1,52 @@
++package l1j.server.server.templates;
++
++/**
++ * Bookkeeping row of one Bugbear Race ticket (table race_tickets).
++ */
++public class L1RaceTicket {
++	private int _itemObjId;
++	private int _round;
++	private double _allotmentPercentage;
++	private int _victory;
++	private int _runnerNum;
++
++	public int getItemObjId() {
++		return _itemObjId;
++	}
++
++	public void setItemObjId(int i) {
++		_itemObjId = i;
++	}
++
++	public double getAllotmentPercentage() {
++		return _allotmentPercentage;
++	}
++
++	public void setAllotmentPercentage(double allotmentPercentage) {
++		_allotmentPercentage = allotmentPercentage;
++	}
++
++	public int getRound() {
++		return _round;
++	}
++
++	public void setRound(int round) {
++		_round = round;
++	}
++
++	public int getVictory() {
++		return _victory;
++	}
++
++	public void setVictory(int victory) {
++		_victory = victory;
++	}
++
++	public int getRunnerNum() {
++		return _runnerNum;
++	}
++
++	public void setRunnerNum(int runnerNum) {
++		_runnerNum = runnerNum;
++	}
++}
+diff --git a/src/l1j/server/server/templates/L1ShopItem.java b/src/l1j/server/server/templates/L1ShopItem.java
+index 418d5a01..77926033 100644
+--- a/src/l1j/server/server/templates/L1ShopItem.java
++++ b/src/l1j/server/server/templates/L1ShopItem.java
+@@ -25,7 +25,7 @@ public class L1ShopItem {
+ 
+ 	private final int _itemId;
+ 
+-	private final L1Item _item;
++	private L1Item _item;
+ 
+ 	private final int _price;
+ 
+@@ -68,4 +68,16 @@ public class L1ShopItem {
+ 	public int getEnchantLevel() {
+ 		return _enchantLevel;
+ 	}
++
++	/**
++	 * Race ticket of a runner: a private copy of the ticket template named
++	 * "<ticket> <round>-<runner number>".
++	 */
++	public void setTicketName(int round, int runnerNum) {
++		_item = (L1Item) _item.clone();
++		String name = _item.getIdentifiedNameId() + " " + round + "-" + runnerNum;
++		_item.setName(name);
++		_item.setUnidentifiedNameId(name);
++		_item.setIdentifiedNameId(name);
++	}
+ }
+-- 
+2.43.0
+
