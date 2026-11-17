@@ -737,6 +737,10 @@ bool es_npc(const App& a, Slot s) {
 void eventos_npc(App& a, const Evento& e) {
     switch (e.tipo) {
     case Ev::HTML:
+        if (!a.cfg.ui_simple && es_pagina_lista(e.s[0])) {  // party / pledge / buddy: their own windows (0x497240, 0x4b92f0, 0x419040)
+            abrir_lista_orig(a, e.s[0], e.s[1]);
+            break;
+        }
         if (e.s[0] == "monlist" && a.cfg.ui_simple) break;  // Shape Change, simple UI: forma_ui.cpp
         if (e.s[0].empty()) {
             if (a.npc == e.id) cerrar(a);

@@ -71,7 +71,7 @@ struct FilaTienda {
     std::string nombre;  // con "$N" sin resolver
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -461,7 +461,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -502,6 +502,17 @@ struct App {
     PromptChat chat_prompt;
     bool invitando = false;            // invite party: the next click in the world picks the target (0x402490, message 0xb3)
     bool ventana_social = false;
+    // Original party / pledge / buddy list window (lista_ui.cpp; S_ShowHTML pages "party", "pledge", "buddy").
+    struct ListaOrig {
+        bool abierta = false;
+        u8 tipo = 0;  // 0 party, 1 pledge, 2 buddy
+        std::string titulo;
+        std::vector<std::pair<std::string, bool>> filas;  // name, online
+        u32 pos = 0;
+        ui::BarraScroll barra;
+    } lista;
+    bool ventana_mascota = true;       // original pet window (mascotas_ui.cpp), closed with its X until the next summon
+    size_t mascota_activa = 0;
     u8 hpmp_estilo = 0;                // floating HP/MP window style 0..2 ([0x8169b0], float_hpmp_ui.cpp)
     bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
     int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
@@ -596,6 +607,13 @@ void dibujar_volumen(App& a);  // volume_ui.cpp
 Rect rect_volumen(const App& a);
 void dibujar_hpmp_flotante(App& a);  // float_hpmp_ui.cpp
 Rect rect_hpmp_flotante(const App& a);
+void abrir_lista_orig(App& a, std::string_view pagina, std::string_view datos);  // lista_ui.cpp; false-less: only for the 3 pages
+bool es_pagina_lista(std::string_view pagina);
+void dibujar_lista_orig(App& a);
+Rect rect_lista_orig(const App& a);
+void dibujar_mascota_orig(App& a);  // mascotas_ui.cpp
+Rect rect_mascota_orig(const App& a);
+bool mascota_orig_abierta(const App& a);
 bool hpmp_flotante_abierta(const App& a);
 void draw_original_ornament(App& a, int x, int y, u32 ornament);
 void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u32 total, u32 visible, u32& pos,

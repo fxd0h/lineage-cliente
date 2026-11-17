@@ -131,6 +131,7 @@ add_executable(lineage
     src/app/volume_ui.cpp
     src/app/sonido.cpp
     src/app/clima.cpp
+    src/app/lista_ui.cpp
     src/app/luz_ui.cpp
     src/app/ventana_ui.cpp
     src/app/cantidad_ui.cpp

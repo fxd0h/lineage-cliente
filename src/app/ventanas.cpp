@@ -15,9 +15,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 11, "App::orden_ventanas se inicializa con 0..10");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 13, "App::orden_ventanas se inicializa con 0..12");
 // Doce filas de ALTO_GLIFO + 12 px, más el título y el margen: 352 px. Con 276 (y luego 300) la última quedaba afuera.
 constexpr int ANCHO_OPCIONES = 320, ALTO_OPCIONES = 300;  // 10 filas a la vista; el resto, con scroll
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
@@ -89,6 +89,8 @@ Rect por_defecto(const App& a, IdVentana v) {
     case IdVentana::VOLUMEN: return rect_volumen(a);
     case IdVentana::HPMP: return rect_hpmp_flotante(a);
     case IdVentana::TIENDA_PRIV: return rect_tienda_original(a);
+    case IdVentana::LISTA: return rect_lista_orig(a);
+    case IdVentana::MASCOTA: return rect_mascota_orig(a);
     default: return {0, y, w, h};
     }
 }
@@ -106,6 +108,8 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::VOLUMEN: return a.ventana_volumen;
     case IdVentana::HPMP: return hpmp_flotante_abierta(a);
     case IdVentana::TIENDA_PRIV: return tienda_original_abierta(a);
+    case IdVentana::LISTA: return a.lista.abierta && !a.cfg.ui_simple;
+    case IdVentana::MASCOTA: return mascota_orig_abierta(a);
     default: return false;
     }
 }

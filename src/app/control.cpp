@@ -410,6 +410,22 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         inventario(a, c);
     } else if (cmd == "html") {
         html(a, c);
+    } else if (cmd == "debug-mascota") {  // debug: mascota <id> <nombre> as S_PetCtrlMenu would
+        Evento ev{};
+        ev.tipo = Ev::MASCOTA;
+        ev.id = p.size() > 1 ? static_cast<ObjId>(std::atoi(p[1].c_str())) : 1;
+        ev.v[MA_AGREGAR] = 1;
+        ev.s[0] = p.size() > 2 ? std::string_view(p[2]) : std::string_view("Pet");
+        eventos_mascotas(a, ev);
+    } else if (cmd == "debug-html") {  // debug: debug-html <pagina> <dato1> <dato2> ... as S_ShowHTML would
+        Evento ev{};
+        ev.tipo = Ev::HTML;
+        ev.id = a.mundo.jugador.id;
+        ev.s[0] = p.size() > 1 ? std::string_view(p[1]) : std::string_view();
+        std::string datos;
+        for (size_t i = 2; i < p.size(); ++i) datos += (i > 2 ? std::string(1, SEPARADOR_DATOS) : std::string()) + p[i];
+        ev.s[1] = datos;
+        eventos_npc(a, ev);
     } else if (cmd == "ventanas") {
         std::string l = "abiertas=";
         for (const char* v : VENTANAS)
