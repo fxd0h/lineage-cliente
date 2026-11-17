@@ -71,7 +71,7 @@ struct FilaTienda {
     std::string nombre;  // con "$N" sin resolver
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -95,7 +95,11 @@ struct TiendaJugadores {
     std::vector<LineaTiendaVista> lineas;
     bool armando = false, abierta = false;  // la propia
     std::string titulo;
-    std::vector<cmd::LineaTienda> venta;
+    std::vector<cmd::LineaTienda> venta, compra;  // the own shop: "Selling item" / "Buying item" grids (original window)
+    std::vector<LineaTiendaVista> grilla[2];      // the shop being looked at: its sell (0) and buy (1) lists
+    std::string titulo2;                          // second title line (original window)
+    u8 rejilla = 0;                               // grid the next inventory click adds to
+    int foco = 0;                                 // title edit box with the keyboard
     // Scroll: la tienda que se mira (`lineas`) y la propia (`venta`).
     u32 desplaza_vista = 0, desplaza_venta = 0;
     ui::BarraScroll barra_vista, barra_venta;
@@ -457,7 +461,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -801,7 +805,10 @@ void dibujar_grupo(App& a);
 void dibujar_equipo(App& a, int x, int y);
 // Tienda de jugadores (tienda_ui.cpp).
 void eventos_tienda(App& a, const Evento& e);
-void dibujar_tienda(App& a);
+void dibujar_tienda(App& a);       // simple UI only
+void dibujar_tienda_original(App& a);  // original window, in the window stack
+Rect rect_tienda_original(const App& a);
+bool tienda_original_abierta(const App& a);
 bool sobre_tienda(const App& a);
 const Vendedor* vendedor(const App& a, ObjId id);
 void abrir_tienda_de(App& a, ObjId vendedor);           // al llegar junto al vendedor
@@ -810,7 +817,7 @@ bool clic_item_tienda(App& a, ObjId item);              // inventario: agregar a
 void aceptar_cantidad_tienda(App& a);
 // Una ventana con un campo de texto tiene el teclado: los atajos (1–0, A, Enter del chat) no actúan.
 inline bool escribiendo_en_ventana(const App& a) {
-    return a.ventana_forma || a.tablon.escribiendo || a.correo.escribiendo ||
+    return a.ventana_forma || a.tablon.escribiendo || (a.tienda_pj.armando && !a.cfg.ui_simple) || a.correo.escribiendo ||
            (!a.preguntas.empty() && (a.preguntas.front().tipo == PREGUNTA_NOMBRE_CASA));
 }
 // Tablón de los pueblos (tablon_ui.cpp) y correo (correo_ui.cpp).

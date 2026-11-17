@@ -1575,6 +1575,7 @@ void dibujar_ventanas(App& a) {
         case IdVentana::INTERCAMBIO: dibujar_intercambio(a); break;
         case IdVentana::VOLUMEN: dibujar_volumen(a); break;
         case IdVentana::HPMP: dibujar_hpmp_flotante(a); break;
+        case IdVentana::TIENDA_PRIV: dibujar_tienda_original(a); break;
         default: break;
         }
         e.mx = mx;

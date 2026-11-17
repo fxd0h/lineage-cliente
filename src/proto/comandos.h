@@ -324,11 +324,14 @@ inline Escritor grupo_chat(const TablaOpcodes& t, u8 tipo, std::string_view nomb
 struct LineaTienda {
     u32 item, precio, cantidad;
 };
-inline Escritor abrir_tienda(const TablaOpcodes& t, std::span<const LineaTienda> venta, std::string_view titulo) {
+inline Escritor abrir_tienda(const TablaOpcodes& t, std::span<const LineaTienda> venta, std::string_view titulo,
+                             std::span<const LineaTienda> compra = {}) {
     Escritor e(t, Cli::SHOP);
     e.c(0).h(static_cast<u16>(venta.size()));
     for (const LineaTienda& l : venta) e.d(l.item).d(l.precio).d(l.cantidad);
-    e.h(0).s(titulo);
+    e.h(static_cast<u16>(compra.size()));
+    for (const LineaTienda& l : compra) e.d(l.item).d(l.precio).d(l.cantidad);
+    e.s(titulo);
     return e;
 }
 inline Escritor cerrar_tienda(const TablaOpcodes& t) {
