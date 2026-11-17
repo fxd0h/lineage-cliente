@@ -57,12 +57,14 @@ void procesar_autopocion(App& a) {
     const EstadoJugador& j = a.mundo.jugador;
     const u64 ahora = a.entrada.ahora_ms;
     if (!p.op.encendida || j.muerto || j.hp <= 0 || j.hp_max <= 0 || ahora < p.proxima_ms) return;
+    if (!a.autobuffs.turno.libre(ahora)) return;  // otra acción automática acaba de salir
     if (j.hp * 100 >= p.op.umbral * j.hp_max) return;
     const PocionElegida e = elegir_pocion(a.mundo.inventario, j.hp, j.hp_max);
     if (!e.id) return;
     usar_item(a, e.id);
     p.bebida_ms = ahora;
     p.proxima_ms = ahora + e.demora_ms;
+    a.autobuffs.turno.usado(ahora);
 }
 
 void eventos_autopocion(App& a, const Evento& e) {

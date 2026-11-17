@@ -294,6 +294,8 @@ title is shown as text.
   condensed first, then ancient, then normal, and within each the colour that fits what is missing (clear for a
   big loss, orange for a medium one, red for a small one). "Pot<60%" next to HP shows it is on (red: no potions).
   The potion button right of the auto-buffs changes it quickly: Off -> 30 -> 60 -> 80 -> 90 % -> Off.
+- **Auto-buffs and auto potion share one turn:** when several are due at once they go one at a time, 200 ms apart
+  (`ESPACIO_AUTO_MS`), healing first and then the Auto slots left to right.
 
 ### Magic
 

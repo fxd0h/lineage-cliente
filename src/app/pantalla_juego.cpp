@@ -1405,8 +1405,8 @@ void frame_juego(App& a) {
     procesar_hechizos(a, ahora);
     procesar_mascotas(a);
     procesar_barra(a);
+    procesar_autopocion(a);  // antes que los auto-buffs: si les toca a los dos, primero curarse
     procesar_autobuffs(a);
-    procesar_autopocion(a);
     procesar_npc(a, ahora);
     elegir_cursor(a);
     mover_jugador(a, ahora);
