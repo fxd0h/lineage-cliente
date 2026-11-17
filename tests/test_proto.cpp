@@ -1025,3 +1025,12 @@ TEST_CASE("S_AddSkill de .addskill de un caballero: los 8 hechizos generales y l
     CHECK(b[1] == 11);
     CHECK(b[2] == 2);
 }
+
+#include "recursos/big5.h"
+TEST_CASE("Big5 a UTF-8: ASCII intacto, par Big5 convertido, byte suelto '?'") {
+    std::string s;
+    lin::big5_a_utf8(std::string_view("ab\xA7\x41\xA6\x6E", 6), s);  // ab + U+4F60 (ni) + U+597D (hao)
+    CHECK(s == "ab\xE4\xBD\xA0\xE5\xA5\xBD");
+    lin::big5_a_utf8(std::string_view("a\x80", 2), s);
+    CHECK(s == "a?");
+}

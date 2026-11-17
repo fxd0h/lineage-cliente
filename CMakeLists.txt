@@ -74,6 +74,7 @@ add_library(lin_recursos STATIC
     src/recursos/fuente_hd.cpp
     src/recursos/fuente_ttf.cpp
     src/recursos/cp949.cpp
+    src/recursos/big5.cpp
     src/recursos/textos.cpp
     src/recursos/zonas.cpp
     src/recursos/precarga.cpp

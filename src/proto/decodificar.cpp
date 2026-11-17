@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include "recursos/big5.h"
 
 namespace lin {
 
@@ -30,6 +32,11 @@ struct Lector : LectorBinario {
         std::string_view v(reinterpret_cast<const char*>(datos.data() + ini), pos - ini);
         if (pos < datos.size()) ++pos;
         else error = true;
+        if (perfil.texto_big5) {
+            static thread_local std::string utf8;
+            big5_a_utf8(v, utf8);
+            return arena->copiar(utf8);
+        }
         return arena->copiar(v);
     }
 };

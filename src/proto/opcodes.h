@@ -62,6 +62,8 @@ struct PerfilProtocolo {
     // de S_AttackPacket.java del jp363, que conserva ambas formas). Leer el ancho equivocado desalinea
     // la dirección y confunde un fallo con un acierto.
     u8 bytes_golpe_ataque = 2;
+    // Server text encoding: Big5 (Taiwan 3.80C) is converted to UTF-8 on decode; false = CP949 as sent.
+    bool texto_big5 = false;
 };
 
 struct TablaOpcodes {
