@@ -181,12 +181,27 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
         LIN_LOG("SDL_CreateGPUDevice: %s", SDL_GetError());
         return false;
     }
-    LIN_LOG("GPU: %s", SDL_GetGPUDeviceDriver(dev_));
+    {
+        // Qué placa y driver eligió SDL: con D3D12, "Microsoft Basic Render Driver" es WARP (por software).
+        const SDL_PropertiesID pr = SDL_GetGPUDeviceProperties(dev_);
+        LIN_LOG("GPU: %s, %s (driver %s %s)", SDL_GetGPUDeviceDriver(dev_),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_VERSION_STRING, ""));
+    }
     if (!SDL_ClaimWindowForGPUDevice(dev_, ventana_)) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
     }
-    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_VSYNC);
+    // LIN_VSYNC=0 presenta sin esperar el refresco (si el backend lo permite): para medir cuánto da la
+    // GPU sin el tope del monitor. Por omisión, con vsync.
+    SDL_GPUPresentMode modo = SDL_GPU_PRESENTMODE_VSYNC;
+    if (const char* v = std::getenv("LIN_VSYNC"); v && v[0] == '0') {
+        if (SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_IMMEDIATE)) modo = SDL_GPU_PRESENTMODE_IMMEDIATE;
+        else if (SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_MAILBOX)) modo = SDL_GPU_PRESENTMODE_MAILBOX;
+        LIN_LOG("LIN_VSYNC=0: presentación %s", modo == SDL_GPU_PRESENTMODE_VSYNC ? "con vsync (no hay otra)" : "sin vsync");
+    }
+    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, modo);
     if (!crear_pipeline()) return false;
 
     SDL_GPUTextureCreateInfo ti{};

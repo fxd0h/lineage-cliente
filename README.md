@@ -381,6 +381,9 @@ commands. The `release` build doesn't include it: a CMake step (`cmake/sin_contr
 - **Encoding:** text goes in CP949, like the game's.
 - **`LIN_CONFIG=/tmp/x.ini`** (development only): uses another `settings.ini`, so as not to overwrite the user's and
   to run several clients at once.
+- **`LIN_VSYNC=0`:** presents without waiting for the display refresh, to measure what the GPU gives without the
+  monitor's cap. The log's `GPU:` line names the adapter and driver (on D3D12, "Microsoft Basic Render Driver" is
+  WARP, software rendering).
 
 | Commands | What they do |
 |---|---|
