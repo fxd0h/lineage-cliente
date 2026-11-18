@@ -30,6 +30,13 @@ para probar rápido, no para las releases.
   el test de GPU dibuja con D3D12 (en runners sin GPU física; falta probarlo en una máquina real). También hizo falta:
   `DOCTEST_CONFIG_USE_STD_HEADERS` (MSVC no imprimía `std::string_view` en los CHECK) y, en
   `test_asignaciones.cpp`, admitir la reserva extra del proxy de iteradores de MSVC en Debug.
+- **Primera prueba en Windows real (2026-11-18): Windows 11 arm64 en una VM de UTM en un Mac.** Compila con
+  Visual Studio y el SDK de Windows, entra al juego y dibuja con D3D12. Dos particularidades de esa VM:
+  - UTM comparte las carpetas del Mac por **WebDAV** (la unidad `Z:`), que no abre archivos de más de ~50 MB
+    (error 223 en los `.pak`): copiar el juego a un disco local de la VM (README, "WebDAV").
+  - UTM no da aceleración 3D a Windows: D3D12 usa **WARP** (`Microsoft Basic Render Driver`, por software) y da
+    ~30 fps con 3 ms de CPU por frame. Sirve para probar el funcionamiento, no el rendimiento; eso queda para
+    una PC con GPU (la línea `GPU:` del log dice cuál se usa; `LIN_VSYNC=0` mide sin el tope del monitor).
 - **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
   `core/asignaciones.cpp`). Quedan avisos de `/W4` por resolver: C4244 (conversiones int → float, ~80) y
   C4458/C4456 (nombres que tapan a otros).
