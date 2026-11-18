@@ -53,7 +53,13 @@ bool ArchivoMapeado::abrir(const std::string& ruta) {
     HANDLE f = CreateFileW(utf16(ruta).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (f == INVALID_HANDLE_VALUE) {
-        LIN_LOG("No se pudo abrir %s (error de Windows %lu)", ruta.c_str(), GetLastError());
+        const DWORD e = GetLastError();
+        LIN_LOG("No se pudo abrir %s (error de Windows %lu)", ruta.c_str(), e);
+        // 223: ERROR_FILE_TOO_LARGE. Lo da el cliente WebDAV de Windows (unidad de red por WebDAV), que
+        // baja el archivo entero al abrirlo y por omisión no acepta más de ~50 MB.
+        if (e == ERROR_FILE_TOO_LARGE)
+            LIN_LOG("  La unidad parece WebDAV, con límite de tamaño por archivo: copiar el juego a un disco local "
+                    "o subir FileSizeLimitInBytes del servicio WebClient (ver README).");
         return false;
     }
     LARGE_INTEGER t;

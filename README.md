@@ -43,6 +43,12 @@ workload (ARM64 tools on arm64) and the Windows SDK, whose `dxc.exe` makes the D
 console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages listed in
 `.github/workflows/compilar.yml`.
 
+**Game folder on a WebDAV drive (Windows):** if the console shows `error de Windows 223` for the `.pak` files, the
+drive is mounted over WebDAV, whose client downloads the whole file on open and refuses files over ~50 MB.
+Copy the game to a local disk (recommended: WebDAV would download the ~2 GB `Sprite.pak` on every start), or raise
+the limit as administrator and restart the WebClient service:
+`reg add HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f`.
+
 ## Build and test
 
 ```sh
