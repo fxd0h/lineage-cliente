@@ -3,7 +3,7 @@
 //  - inventory (0x44d9a0): background 996 at (6,8), frame 997, category tabs 999+tab at (17,249),
 //    ornaments 998 at (0,11) over the items, trash can 1003/1004 at (163,252);
 //  - spellbook (0x4af3a0, see hechizos_ui.cpp): background 933 at (8,10), frame 934, ornaments 935 at (2,10);
-//  - status (0x4b4a00): background 1440 (equipment) or 982 (attributes) at (6,9), frame 1441 or 983,
+//  - status (0x4b4a00): background 1440 (equipment) or 982 (attributes) at (6,9), frame 1441 or 1518,
 //    tab strip 985/986 at (22,248), ornaments 984 at (0,11).
 // The scroll bar uses the track 971 with arrows 1206–1209 and thumb 1211; close is the 1062 button.
 #include <algorithm>
@@ -96,7 +96,8 @@ void original_scrollbar(App& a, ui::BarraScroll& st, int x, int y, int height, u
 
 namespace {
 
-constexpr u32 IMG_EQUIPMENT = 1440, IMG_EQUIPMENT_FRAME = 1441, IMG_ATTRIBUTES = 982, IMG_ATTRIBUTES_FRAME = 983;
+constexpr u32 IMG_EQUIPMENT = 1440, IMG_EQUIPMENT_FRAME = 1441, IMG_ATTRIBUTES = 982, IMG_ATTRIBUTES_FRAME = 983,
+                IMG_EQUIPMENT_FEMALE = 1516, IMG_ATTRIBUTES_FRAME_EXE = 1518;
 constexpr u32 IMG_STATUS_ORNAMENT = 984, IMG_STATUS_TABS = 985;  // 985 equipment selected, 986 attributes
 constexpr int STATUS_BG_X = 6, STATUS_BG_Y = 9, STATUS_TABS_X = 22, STATUS_TABS_Y = 248, STATUS_TAB_W = 35, STATUS_TAB_H = 18;
 
@@ -199,8 +200,14 @@ void draw_original_status(App& a, int x, int y) {
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     const bool equipment = a.pestana_estado == 1;
-    if (draw_original_frame(a, x, y, equipment ? IMG_EQUIPMENT : IMG_ATTRIBUTES, STATUS_BG_X, STATUS_BG_Y,
-                            equipment ? IMG_EQUIPMENT_FRAME : IMG_ATTRIBUTES_FRAME))
+    // 0x4b4a00: the equipment background is 1440 + 0x4c (1516) when the selected character's sex byte ([0x81b328],
+    // char-list entry +0x1f) is non-zero; the attributes frame is 1518 (0x5a1 + 0x4d). Where the install lacks 1516 /
+    // 1518 (U-C2) the 1440 / 983 pair stands in.
+    const bool female = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) && a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_SEXO] != 0;
+    const u32 eq_bg = female && g.img(IMG_EQUIPMENT_FEMALE).valida() ? IMG_EQUIPMENT_FEMALE : IMG_EQUIPMENT;
+    const u32 attr_frame = g.img(IMG_ATTRIBUTES_FRAME_EXE).valida() ? IMG_ATTRIBUTES_FRAME_EXE : IMG_ATTRIBUTES_FRAME;
+    if (draw_original_frame(a, x, y, equipment ? eq_bg : IMG_ATTRIBUTES, STATUS_BG_X, STATUS_BG_Y,
+                            equipment ? IMG_EQUIPMENT_FRAME : attr_frame))
         a.ventana_estado = false;
     draw_original_ornament(a, x, y, IMG_STATUS_ORNAMENT);
     // Tabs: equipment first, then attributes (one strip image per selected tab).

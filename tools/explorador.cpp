@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     Recursos rec;
     FuenteBitmap fuente;
     TablaSprites tabla;
-    if (!rec.abrir(cfg.carpeta_juego) || !fuente.cargar(cfg.carpeta_juego)) {
+    if (!rec.abrir(cfg.carpeta_juego, cfg.carpetas_extra) || !fuente.cargar(cfg.carpeta_juego)) {
         LIN_LOG("Carpeta del juego inválida: %s", cfg.carpeta_juego.c_str());
         return 1;
     }

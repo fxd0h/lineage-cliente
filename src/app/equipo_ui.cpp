@@ -67,11 +67,17 @@ void dibujar_equipo(App& a, int x0, int y0) {
 
     Slot bajo = SIN_SLOT;
     int bajo_x = 0, bajo_y = 0;  // top-left of the hovered slot (the label sits relative to it)
+    bool native = false;
     auto poner = [&](Slot s, int rx, int ry, int rw, int rh) {
-        const int lado = std::min({32, rw, rh});
         const RegionAtlas& ic = g.icono(t.col<I_GFX>()[s]);
-        draw_item_icon(g.gpu(), ic, rx + (rw - lado) / 2, ry + (rh - lado) / 2, static_cast<float>(lado),
-                       static_cast<float>(lado), ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        if (native) {
+            // 0x4b3220 -> 0x445fd0 draws the icon at its own size from the slot origin, like the inventory (no stretch).
+            draw_item_icon(g.gpu(), ic, rx, ry, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        } else {
+            const int lado = std::min({32, rw, rh});
+            draw_item_icon(g.gpu(), ic, rx + (rw - lado) / 2, ry + (rh - lado) / 2, static_cast<float>(lado),
+                           static_cast<float>(lado), ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        }
         if (ui::sobre(e, rx, ry, rw, rh)) {
             bajo = s;
             bajo_x = rx;
@@ -119,6 +125,7 @@ void dibujar_equipo(App& a, int x0, int y0) {
         if (!framed) g.gpu().dibujar(fondo, x, y, kf);
         // Icons are placed in window coordinates (the image origin is 6,9 inside the original frame).
         const int ox = x - 6, oy = y - 9;
+        native = framed;
         for (size_t i = 0; i < N; ++i)
             if (en[i] != SIN_SLOT) poner(en[i], ox + RECUADROS[i].px, oy + RECUADROS[i].py, 32, 32);
         for (int i = 0; i < std::min(nanillos, 2); ++i)

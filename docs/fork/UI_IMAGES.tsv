@@ -1192,7 +1192,7 @@ img_981h	179	275				manifest
 img_982	179	275	IMG_attributes	src/app/original_window.cpp:original_scrollbar		code,manifest
 img_982c	179	275				manifest
 img_982h	179	275				manifest
-img_983	190	288	IMG_attributes_frame	src/app/original_window.cpp:original_scrollbar		code,manifest
+img_983	190	288	IMG_attributes_frame; viewed: ornate frame with empty window; exe draws 1518 on the attributes tab instead (0x4b4c29), 983 kept as fallback	src/app/original_window.cpp:original_scrollbar		viewed
 img_984	189	250	IMG_status_ornament (985 equipment selected, 986 attributes)	src/app/original_window.cpp:original_scrollbar		code,manifest
 img_985	144	18	IMG_status_tabs (985 equipment selected, 986 attributes); strip - Tab strip 985/986 (22,248); STR..CHA boxes; magic level/bonus;...; tabs - Status equipment tab: bg 1440 at (6,9) + frame 1441 at (0,0); icons...	src/app/original_window.cpp:original_scrollbar		audit,code,manifest
 img_986	144	18	strip - Tab strip 985/986 (22,248); STR..CHA boxes; magic level/bonus;...; tabs - Status equipment tab: bg 1440 at (6,9) + frame 1441 at (0,0); icons...			audit,manifest
@@ -1851,7 +1851,7 @@ img_1436	58	13				manifest
 img_1437	58	13				manifest
 img_1438	58	13				manifest
 img_1439	58	13				manifest
-img_1440	179	275	IMG_equipment	src/app/original_window.cpp:original_scrollbar		code,manifest
+img_1440	179	275	IMG_equipment; viewed: dark panel, 3x4 grid of slot boxes (left column tall pairs) over a pale silhouette, "Armor Class" label + AC box at the bottom; slot table 0x8f0818 lands on its boxes	src/app/original_window.cpp:original_scrollbar	0x4b4a2b (1440 when [0x81b328]==0, else 1516)	viewed
 img_1441	190	288	IMG_equipment_frame; frame - Status equipment tab: bg 1440 at (6,9) + frame 1441 at (0,0); icons...	src/app/original_window.cpp:original_scrollbar		audit,code,manifest
 img_1442	126	15				manifest
 img_1443	126	15				manifest
@@ -6317,3 +6317,5 @@ img_9181	60	80				manifest
 img_9182	60	80				manifest
 img_9183	20	19				manifest
 img_9184	20	19				manifest
+img_1516			Equipment bg variant when [0x81b328] (char-list sex byte, entry +0x1f) != 0 (1440+0x4c); not present in juego= nor juego_extra= (blank)	src/app/original_window.cpp:draw_original_status	0x4b4a2b,0x4b4adf	exe-only
+img_1518			Attributes-tab frame (0x5a1+0x4d, 0x4b4c29); not present in juego= nor juego_extra= (blank)	src/app/original_window.cpp:draw_original_status	0x4b4c29	exe-only
