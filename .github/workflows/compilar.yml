@@ -54,7 +54,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Configurar
-        run: cmake --preset debug
+        run: cmake --preset debug -DLIN_AVISOS_ERROR=ON  # sin avisos en ninguna plataforma
 
       - name: Compilar
         run: cmake --build --preset debug

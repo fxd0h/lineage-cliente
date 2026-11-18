@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LIN_ASAN "Compilar con AddressSanitizer y UBSan" OFF)
 option(LIN_TESTS "Compilar los tests" ON)
+# Avisos como errores (solo nuestro código; las dependencias se agregan antes). El CI lo activa.
+option(LIN_AVISOS_ERROR "Tratar los avisos del compilador como errores" OFF)
 # Control en vivo para pruebas (src/app/control.cpp): ON en los presets de desarrollo, OFF en release.
 option(LIN_CONTROL "Compilar el control en vivo (socket de pruebas)" OFF)
 # Para todo el código: también decide LIN_CONFIG (otro settings.ini), que solo existe en desarrollo.
@@ -31,6 +33,13 @@ if(MSVC)
     add_compile_definitions(_HAS_EXCEPTIONS=0 _CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -Wno-unused-parameter -fno-exceptions -fno-rtti)
+endif()
+if(LIN_AVISOS_ERROR)
+    if(MSVC)
+        add_compile_options(/WX)
+    else()
+        add_compile_options(-Werror)
+    endif()
 endif()
 
 if(LIN_ASAN AND NOT MSVC)

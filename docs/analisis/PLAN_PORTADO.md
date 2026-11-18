@@ -42,8 +42,8 @@ para probar rápido, no para las releases.
     ~30 fps con 3 ms de CPU por frame. Sirve para probar el funcionamiento, no el rendimiento; eso queda para
     una PC con GPU (la línea `GPU:` del log dice cuál se usa; `LIN_VSYNC=0` mide sin el tope del monitor).
 - **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
-  `core/asignaciones.cpp`). Quedan avisos de `/W4` por resolver: C4244 (conversiones int → float, ~80) y
-  C4458/C4456 (nombres que tapan a otros).
+  `core/asignaciones.cpp`). Los 65 avisos de `/W4` están corregidos (casi todos C4244: coordenadas `int` en
+  `Graficos::texto`, que ahora acepta enteros) y el CI compila con `LIN_AVISOS_ERROR=ON` (`/WX`, `-Werror`).
 
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)
 

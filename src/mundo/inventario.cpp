@@ -35,7 +35,10 @@ struct Lineas {
     char* salida;
     size_t capacidad;
     size_t n = 0;
-    [[gnu::format(printf, 2, 3)]] void operator()(const char* fmt, ...) {
+#if defined(__GNUC__)
+    [[gnu::format(printf, 2, 3)]]  // MSVC no conoce el atributo (C5030)
+#endif
+    void operator()(const char* fmt, ...) {
         if (capacidad == 0 || n + 1 >= capacidad) return;
         if (n > 0) salida[n++] = '\n';
         va_list va;

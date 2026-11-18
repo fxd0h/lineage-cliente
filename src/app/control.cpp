@@ -561,34 +561,34 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.frame = a.frame + 2;  // se escribe al presentar
         return false;
     } else if (cmd == "esperar") {
-        if (std::string_view v = opcion(p, "pantalla"); !v.empty()) {
+        if (std::string_view v_pantalla = opcion(p, "pantalla"); !v_pantalla.empty()) {
             es.tipo = Espera::PANTALLA;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "paquete"); !v.empty()) {
+            es.texto = v_pantalla;
+        } else if (std::string_view v_paquete = opcion(p, "paquete"); !v_paquete.empty()) {
             es.tipo = Espera::PAQUETE;
-            es.texto = v;
+            es.texto = v_paquete;
             for (u32 i = std::max(c.paquetes_antes, g.n_recientes - std::min(g.n_recientes, Control::RECIENTES)); i < g.n_recientes; ++i)
                 es.visto |= es.texto == nombre_srv(g.recientes[i % Control::RECIENTES]);
-        } else if (std::string_view v = opcion(p, "html"); !v.empty()) {
+        } else if (std::string_view v_html = opcion(p, "html"); !v_html.empty()) {
             es.tipo = Espera::HTML;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "ventana"); !v.empty()) {
+            es.texto = v_html;
+        } else if (std::string_view v_ventana = opcion(p, "ventana"); !v_ventana.empty()) {
             es.tipo = Espera::VENTANA;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "dialogo"); !v.empty()) {
+            es.texto = v_ventana;
+        } else if (std::string_view v_dialogo = opcion(p, "dialogo"); !v_dialogo.empty()) {
             es.tipo = Espera::VENTANA;  // "pregunta" o "cantidad": son ventanas que se abren solas
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "chat"); !v.empty()) {
+            es.texto = v_dialogo;
+        } else if (std::string_view v_chat = opcion(p, "chat"); !v_chat.empty()) {
             es.tipo = Espera::CHAT;
-            es.texto = v;
+            es.texto = v_chat;
             es.chat_desde = c.chat_antes;
-        } else if (std::string_view v = opcion(p, "ms"); !v.empty()) {
+        } else if (std::string_view v_ms = opcion(p, "ms"); !v_ms.empty()) {
             es.tipo = Espera::MS;  // tiempo real (los frames dependen de los fps)
-            es.frame = ahora + std::strtoull(std::string(v).c_str(), nullptr, 10);
+            es.frame = ahora + std::strtoull(std::string(v_ms).c_str(), nullptr, 10);
             es.vence_ms = std::max(es.vence_ms, es.frame + 1000);
-        } else if (std::string_view v = opcion(p, "frames"); !v.empty()) {
+        } else if (std::string_view v_frames = opcion(p, "frames"); !v_frames.empty()) {
             es.tipo = Espera::FRAMES;
-            es.frame = a.frame + std::strtoull(std::string(v).c_str(), nullptr, 10);
+            es.frame = a.frame + std::strtoull(std::string(v_frames).c_str(), nullptr, 10);
         } else {
             return error("uso: esperar pantalla=|paquete=|html=|ventana=|dialogo=|chat=|frames=|ms= [plazo=ms]");
         }

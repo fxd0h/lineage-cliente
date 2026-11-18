@@ -411,7 +411,7 @@ void eventos_npc(App& a, const Evento& e) {
 
 bool sobre_npc(const App& a) { return sobre_ventana(a, IdVentana::NPC); }
 
-void procesar_npc(App& a, u64 ahora) {
+void procesar_npc(App& a, u64 /*ahora*/) {
     if ((a.npc || a.tienda != TipoTienda::NINGUNA) && distancia_npc(a) > DISTANCIA_CIERRE) cerrar(a);
 }
 
