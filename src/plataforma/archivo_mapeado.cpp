@@ -47,18 +47,26 @@ ArchivoMapeado& ArchivoMapeado::operator=(ArchivoMapeado&& o) noexcept {
 bool ArchivoMapeado::abrir(const std::string& ruta) {
     cerrar();
 #if defined(_WIN32)
-    HANDLE f = CreateFileW(utf16(ruta).c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                           FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (f == INVALID_HANDLE_VALUE) return false;
+    // Se comparte también la escritura y el borrado: en una unidad de red o una carpeta compartida
+    // otro proceso (el juego original, la sincronización) puede tener el archivo abierto, y con solo
+    // FILE_SHARE_READ Windows niega el acceso (ERROR_SHARING_VIOLATION).
+    HANDLE f = CreateFileW(utf16(ruta).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) {
+        LIN_LOG("No se pudo abrir %s (error de Windows %lu)", ruta.c_str(), GetLastError());
+        return false;
+    }
     LARGE_INTEGER t;
     if (!GetFileSizeEx(f, &t) || t.QuadPart == 0) {
         CloseHandle(f);
         return false;
     }
     HANDLE m = CreateFileMappingW(f, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!m) LIN_LOG("No se pudo mapear %s (error de Windows %lu)", ruta.c_str(), GetLastError());
     CloseHandle(f);  // el mapeo guarda su propia referencia al archivo
     if (!m) return false;
     void* p = MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0);
+    if (!p) LIN_LOG("No se pudo mapear %s (error de Windows %lu)", ruta.c_str(), GetLastError());
     CloseHandle(m);  // y la vista, la suya al mapeo
     if (!p) return false;
     datos_ = static_cast<const u8*>(p);

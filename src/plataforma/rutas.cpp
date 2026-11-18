@@ -270,7 +270,10 @@ bool carpeta_juego_valida(const std::string& carpeta) {
     // sí, y la instalación original mezcla "Sprite.pak", "Tile.pak", "map/". Habrá que buscar los
     // nombres sin distinguir mayúsculas en Linux.
     for (const char* f : {"Sprite.idx", "Sprite.pak", "Tile.idx", "Tile.pak", "Text.idx", "Text.pak"}) {
-        if (!SDL_GetPathInfo((carpeta + f).c_str(), nullptr)) return false;
+        if (!SDL_GetPathInfo((carpeta + f).c_str(), nullptr)) {
+            LIN_LOG("Carpeta del juego: no se encontró %s%s (%s)", carpeta.c_str(), f, SDL_GetError());
+            return false;
+        }
     }
     return true;
 }
