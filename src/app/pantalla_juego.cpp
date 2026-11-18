@@ -11,7 +11,6 @@ namespace lin {
 
 namespace {
 
-constexpr u64 MS_MANTENER_VIVO = 20000;
 // Ataque: el anti-acelerador del servidor también controla el intervalo entre C_Attack (con la
 // duración de la animación de ataque del sprite). Como al caminar, se usa un 5 % más
 // (intervalo_propio, con haste y brave).
@@ -690,12 +689,18 @@ bool intento_portal(App& a, int nx, int ny, int dir, bool teclado, u64 ahora) {
     return true;
 }
 
-// Una mascota (o invocación) de otro jugador no se ataca con un clic: solo con Ctrl. Las propias
-// (a.mascotas, S_PetCtrlMenu) siguen como cualquier otro objeto.
+// La mascota o invocación propia (a.mascotas, S_PetCtrlMenu): un clic le habla (su menú de órdenes), no
+// la ataca. Con Ctrl sí se la ataca.
+bool mascota_propia(const App& a, Slot s) {
+    if (s == SIN_SLOT || !a.mundo.objetos.col<O_MASCOTA>()[s]) return false;
+    const ObjId id = a.mundo.objetos.ids()[s];
+    return std::any_of(a.mascotas.begin(), a.mascotas.end(), [id](const Mascota& m) { return m.id == id; });
+}
+
+// Una mascota (o invocación) de otro jugador no se ataca con un clic: solo con Ctrl.
 bool mascota_sin_ctrl(const App& a, Slot s) {
     if (s == SIN_SLOT || !a.mundo.objetos.col<O_MASCOTA>()[s] || a.entrada.ctrl) return false;
-    const ObjId id = a.mundo.objetos.ids()[s];
-    return std::none_of(a.mascotas.begin(), a.mascotas.end(), [id](const Mascota& m) { return m.id == id; });
+    return !mascota_propia(a, s);
 }
 
 // Objetivo bajo el puntero según su tipo de gfx: un ítem se recoge, un monstruo se ataca, a un
@@ -708,7 +713,7 @@ void elegir_objetivo_bajo_puntero(App& a) {
     Slot b = a.objetivo ? o.buscar(a.objetivo) : SIN_SLOT;
     u8 tipo = b != SIN_SLOT ? tipo_objeto(a, b) : 0;
     // Un NPC (sin Ctrl): se camina hasta él y se le habla, aunque se suelte el botón.
-    a.hablar_objetivo = b != SIN_SLOT && (es_npc(a, b) || vendedor(a, a.objetivo)) && !e.ctrl;
+    a.hablar_objetivo = b != SIN_SLOT && (es_npc(a, b) || vendedor(a, a.objetivo) || mascota_propia(a, b)) && !e.ctrl;
     const bool forzar = e.ctrl || (a.modo_pk && tipo == TIPO_PERSONAJE);
     if (b != SIN_SLOT && tipo != TIPO_ITEM && tipo != TIPO_MONSTRUO && !a.hablar_objetivo && !forzar) a.objetivo = 0;
     if (mascota_sin_ctrl(a, b)) {  // la de otro jugador: solo con Ctrl
@@ -724,7 +729,7 @@ void mover_jugador(App& a, u64 ahora) {
     const Vista vi = vista(a);
     bool sobre_panel = (e.my >= vi.panel_y && e.mx >= vi.panel_x0 && e.mx < vi.panel_x1) || sobre_inventario(a) ||
                        sobre_hechizos(a) || sobre_barra(a) || sobre_forma(a) || sobre_cantidad(a) || sobre_tienda(a) || sobre_tablon(a) || sobre_correo(a) || sobre_casas(a) || sobre_mascotas(a) || sobre_destino(a) || sobre_npc(a) || a.arrastrando != 0 || a.arrastrando_hechizo != 0 ||
-                       a.arrastrando_atajo >= 0;
+                       a.arrastrando_atajo >= 0 || a.autobuffs.arrastrando >= 0;
     // Objetivo: lo que hay bajo el puntero al apretar el botón, y se mantiene mientras siga
     // apretado aunque la cámara se mueva y el puntero ya no esté encima (se camina hasta él y se
     // lo ataca). Apretado sobre el suelo se camina hacia el puntero, y si el puntero pasa sobre
@@ -759,7 +764,8 @@ void mover_jugador(App& a, u64 ahora) {
     if (e.tecla_a && a.cfg.chat_con_enter && !a.escribiendo_chat && !a.cantidad.abierto && !escribiendo_en_ventana(a)) {
         ObjId t = a.objetivo && !a.hablar_objetivo ? a.objetivo : objeto_bajo_puntero(a);
         Slot b = t ? o.buscar(t) : SIN_SLOT;
-        if (b != SIN_SLOT && !mascota_sin_ctrl(a, b) && (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || (a.modo_pk && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
+        if (b != SIN_SLOT && !mascota_sin_ctrl(a, b) && !(mascota_propia(a, b) && !e.ctrl) &&
+            (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || (a.modo_pk && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
             a.objetivo = t;
             a.hablar_objetivo = false;
             a.ataque_sostenido = true;
@@ -901,6 +907,8 @@ void dibujar_panel(App& a) {
     barra(g, IMG_BARRA_EXP, X + 3, Y + 386, pexp / 100.0f, t);
     std::snprintf(t, sizeof t, "%d/%d", j.hp, j.hp_max);
     barra(g, IMG_BARRA_HP, X + 3, Y + 402, j.hp_max > 0 ? static_cast<float>(j.hp) / j.hp_max : 0.0f, t);
+    dibujar_indicador_pocion(a, static_cast<float>(X + 3 + g.img(IMG_BARRA_HP).w - 44),
+                             static_cast<float>(Y + 402 + (g.img(IMG_BARRA_HP).h - ALTO_GLIFO) / 2), clave_orden(CAPA_UI_TEXTO, 1));
     std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
     barra(g, IMG_BARRA_MP, X + 3, Y + 423, j.mp_max > 0 ? static_cast<float>(j.mp) / j.mp_max : 0.0f, t);
     // Cuatro casillas con ícono: CA, alineamiento, peso y comida.
@@ -955,6 +963,7 @@ void dibujar_panel_simple(App& a) {
     x += barra_ascii(g, x, y, j.hp_max > 0 ? static_cast<float>(j.hp) / j.hp_max : 0.0f, rgba(230, 70, 60), k);
     std::snprintf(t, sizeof t, " %d/%d", j.hp, j.hp_max);
     x += g.texto(t, x, y, k, valor) + SEPARACION_SIMPLE;
+    if (int w = dibujar_indicador_pocion(a, x, y, k)) x += w + SEPARACION_SIMPLE;
     x += g.texto("MP ", x, y, k, rotulo);
     x += barra_ascii(g, x, y, j.mp_max > 0 ? static_cast<float>(j.mp) / j.mp_max : 0.0f, rgba(80, 130, 240), k);
     std::snprintf(t, sizeof t, " %d/%d", j.mp, j.mp_max);
@@ -1320,10 +1329,11 @@ void elegir_cursor(App& a) {
         return;
     }
     u8 tipo = tipo_objeto(a, s);
-    if ((tipo == TIPO_MONSTRUO && !mascota_sin_ctrl(a, s)) || (a.entrada.ctrl && tipo != TIPO_ITEM) ||
+    const bool propia = mascota_propia(a, s) && !a.entrada.ctrl;  // sin Ctrl, la propia le habla (no se ataca)
+    if ((tipo == TIPO_MONSTRUO && !mascota_sin_ctrl(a, s) && !propia) || (a.entrada.ctrl && tipo != TIPO_ITEM) ||
         (a.modo_pk && tipo == TIPO_PERSONAJE))
         a.cursor = Cursor::ESPADA;
-    else if (es_npc(a, s) && tipo != TIPO_PUERTA && !mascota_sin_ctrl(a, s))  // sin Ctrl, el clic le habla
+    else if ((es_npc(a, s) || propia) && tipo != TIPO_PUERTA && !mascota_sin_ctrl(a, s))  // sin Ctrl, el clic le habla
         a.cursor = Cursor::LABIOS;
 }
 
@@ -1395,6 +1405,8 @@ void frame_juego(App& a) {
     procesar_hechizos(a, ahora);
     procesar_mascotas(a);
     procesar_barra(a);
+    procesar_autopocion(a);  // antes que los auto-buffs: si les toca a los dos, primero curarse
+    procesar_autobuffs(a);
     procesar_npc(a, ahora);
     elegir_cursor(a);
     mover_jugador(a, ahora);
@@ -1409,10 +1421,6 @@ void frame_juego(App& a) {
     // (1/escala de píxel lógico), así la cámara se mueve suave y todo el mundo se desplaza junto.
     double ox = vi.cx - 24 - mundo_px(cam_x, cam_y);
     double oy = vi.cy - 12 - mundo_py(cam_x, cam_y);
-    if (ahora - a.t_mantener_vivo > MS_MANTENER_VIVO) {
-        enviar(a, cmd::mantener_vivo(a.op));
-        a.t_mantener_vivo = ahora;
-    }
 
     actualizar_segmentos(a.mundo, static_cast<int>(cam_x), static_cast<int>(cam_y), radio_segmentos(vi));
     dibujar_suelo(a, cam_x, cam_y, ox, oy);
@@ -1432,6 +1440,8 @@ void frame_juego(App& a) {
         dibujar_panel(a);
     }
     dibujar_barra(a, vi.panel_y - 36 - 6);
+    dibujar_autobuffs(a);
+    dibujar_boton_pocion(a);
     dibujar_mascotas(a);
     dibujar_grupo(a);
     // Tienda, tablón y correo encima de las ventanas (nivel 30); el diálogo de cantidad, encima de todo.

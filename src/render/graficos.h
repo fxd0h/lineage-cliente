@@ -6,6 +6,7 @@
 // imágenes de interfaz, los íconos y los glifos se leen en el momento (son pocos y van en las
 // pantallas fijas).
 #pragma once
+#include <deque>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -53,8 +54,12 @@ public:
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
 
     Gpu& gpu() { return gpu_; }
-    // Al comienzo de cada frame: lo que terminó de traer la precarga.
-    void nuevo_frame() { precarga_.actualizar(); }
+    // Al comienzo de cada frame: lo que terminó de traer la precarga, y olvidar la página del atlas que
+    // se vació al terminar el frame anterior (EmpaquetadoAtlas::fin_de_frame).
+    void nuevo_frame() {
+        precarga_.actualizar();
+        if (int p = gpu_.tomar_pagina_reemplazada(); p >= 0) olvidar_pagina(static_cast<u16>(p));
+    }
     u32 precargas_en_curso() const { return precarga_.en_curso(); }
     // Medición: tiempo de decodificación y gráficos nuevos desde la última llamada.
     double tomar_ms_decodificacion() { double v = ms_decodificacion_; ms_decodificacion_ = 0; return v; }
@@ -68,6 +73,7 @@ private:
     template <class F>
     const RegionAtlas& cargar(u64 k, F&& decodificar);
     const RegionAtlas& guardar(u64 k, bool ok);
+    void olvidar(u32 casillero);
     void olvidar_pagina(u16 pagina);
     const RegionAtlas* buscar(u64 k) const;
     // nullptr si no existe o si todavía no está en memoria (`pendiente`).
@@ -78,11 +84,15 @@ private:
     const Recursos& rec_;
     const FuenteBitmap& fuente_;
     MapaHash indice_{4096};
-    std::vector<RegionAtlas> regiones_;
+    // deque: crecer no mueve las regiones, así siguen valiendo las referencias que ya se devolvieron
+    // (un texto dibujado después de pedir un ícono puede agregar glifos en el mismo frame).
+    std::deque<RegionAtlas> regiones_;
     RegionAtlas pendiente_;  // región vacía que se devuelve mientras algo está pendiente (no se guarda)
     std::vector<u64> claves_;   // clave de cada región (para olvidarlas)
     std::vector<u32> libres_;   // regiones olvidadas, para reusar
     MapaHash indice_tiles_, indice_spr_;
+    MapaHash datos_emblema_{64};  // clan -> desplazamiento en emblemas_
+    std::vector<u8> emblemas_;    // los bytes RGB555 de S_Emblem de cada clan
     std::vector<JuegoTiles> juegos_;
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;

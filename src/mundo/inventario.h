@@ -62,6 +62,9 @@ std::string_view atributos_item(const Inventario& inv, Slot s);
 size_t describir_atributos(std::string_view bytes, char* salida, size_t capacidad);
 // Equipado según el sufijo que agrega el servidor al nombre.
 bool item_equipado(std::string_view nombre);
+// Mueve `mover` (en el orden en que están en la tabla) junto a `destino`: delante si `destino` está
+// antes que el primero de ellos, detrás si no. Así se ordena el inventario a mano.
+void mover_items(Inventario& inv, std::span<const ObjId> mover, ObjId destino);
 // Aplica los eventos de ítems (los demás se ignoran).
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos);
 

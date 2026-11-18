@@ -16,6 +16,9 @@ struct Servidor {
     std::string usuario;
 };
 
+constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
+constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
+
 struct Config {
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)
@@ -36,8 +39,18 @@ struct Config {
     // Atajos de hechizos F5–F12 por personaje: "Nombre:4,3,0,0,0,0,0,0;Otro:..." (skill ids, 0 = vacío).
     std::string atajos;
     // Barra de atajos Alt+1..Alt+0 por personaje: "Nombre:h4,i40308:268435461,0,...;Otro:..."
-    // (h = hechizo, i = ítem gfx:id, 0 = vacío).
+    // (h = hechizo, i = ítem gfx:id, 0 = vacío, * tras el elegido); las páginas, separadas por "/".
     std::string barra;
+    // Auto-buffs por personaje: "Nombre:1|43,42,0,0,0,0" (encendido y los hechizos de los 6 casilleros).
+    std::string autobuffs;
+    // Auto-buffs y auto-poción del todo: apagados, ni se dibujan ni hacen nada (ni sus opciones).
+    bool usar_autobuffs = true, usar_autopocion = true;
+    // Auto-poción por personaje: "Nombre:1,60" (encendida y umbral de HP en %). Ver autopocion_de.
+    std::string autopocion;
+    int paginas_barra = 3;  // páginas a la vista (1 a PAGINAS_BARRA_MAX); las de más se conservan
+    // Mantener 1–0 sobre un hechizo con objetivo que no es de ataque: pasado este tiempo, se lanza
+    // sobre uno mismo (y se repite mientras se mantenga). De MS_MANTENER_MIN a MS_MANTENER_MAX.
+    int ms_mantener_tecla = 300;
     // Ventanas del juego: posición de las que se movieron ("inventario:900,36;estado:...") y
     // opacidad del fondo (0–255).
     std::string ventanas;
@@ -62,7 +75,17 @@ std::string_view valor_de_personaje(std::string_view opcion, std::string_view pe
 void poner_valor_de_personaje(std::string& opcion, std::string_view personaje, std::string_view valor);
 // Quita las entradas de un personaje de una opción (el editor de ajustes las borra con esto).
 void quitar_valor_de_personaje(std::string& opcion, std::string_view personaje);
-// Personajes que tienen datos guardados (atajos o barra), sin repetir y en orden de aparición.
+// Auto-poción de un personaje: sin entrada, apagada con 60 %. El umbral va de 10 a 95, de a 5.
+constexpr int UMBRAL_POCION_DEFECTO = 60, UMBRAL_POCION_MIN = 10, UMBRAL_POCION_MAX = 95;
+struct OpcionPocion {
+    bool encendida = false;
+    int umbral = UMBRAL_POCION_DEFECTO;  // % de HP
+};
+OpcionPocion autopocion_de(const Config& c, std::string_view personaje);
+void poner_autopocion(Config& c, std::string_view personaje, OpcionPocion o);
+// Parte `n` (desde 0) de un valor separado por '/' (las páginas de la barra); vacía si no hay.
+std::string_view parte_de_valor(std::string_view valor, int n);
+// Personajes que tienen datos guardados (atajos, barra o auto-buffs), sin repetir y en orden de aparición.
 std::vector<std::string> personajes_con_datos(const Config& c);
 
 // Ruta del archivo de configuración del usuario (settings.ini).

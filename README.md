@@ -182,8 +182,13 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `globos_comic` | `1` speech and shouts in a rounded outline over the head (also in Options: "Speech balloons"), `0` plain text |
 | `compensar_ataque` | Show your swing at once, without waiting for the server's echo |
 | `logo` | PNG for the simple login screen, see below |
-| `atajos`, `barra` | F5–F12 spells and shortcut bar, per character |
+| `atajos`, `barra` | F5–F12 spells and shortcut bar, per character (bar pages separated by `/`) |
 | `ventanas` | Saved window positions |
+| `paginas_barra` | Shortcut bar pages, 1–9 (3 by default) |
+| `autobuffs` | Auto-buffs per character: on/off and the six spells (`Name:1\|43,42,0,0,0,0`) |
+| `ms_mantener_tecla` | Hold time before 1–0 casts a heal or buff on yourself, 150–1000 ms (300 by default) |
+| `usar_autobuffs`, `usar_autopocion` | `0` hides and turns off auto-buffs or auto potion completely (both `1` by default) |
+| `autopocion` | Auto potion per character: on/off and HP threshold in % (`Name:1,60`; off with 60 % by default) |
 
 **Custom login logo (simple interface):** `logo=my_logo.png`, a PNG with transparency of up to 2048×2048,
 as an absolute path or relative to the `settings.ini` folder. It is shrunk to fit 560×190 (best to supply
@@ -255,6 +260,10 @@ title is shown as text.
   - Shows the original icons (`N.tbt`), the name on hover, equipped items with an "E", and the weight.
   - Double-click uses an item: equips or removes weapons and armor, drinks potions.
   - Drag an item out of the window to drop it on the ground.
+  - **Sort** (bottom of the window) orders the items: equipped first, then by type and name. Dragging an item onto
+    another cell moves it there. The order is client-side only and resets on the next login.
+  - Shift+click marks several items (blue frame); a plain click clears the mark. Dragging a marked item takes all of
+    them: to the ground, the trash (one confirmation, whole stacks), a trade, an NPC or pet (whole stacks), or another cell.
   - **Item details:** hovering shows the name and, if identified, its attributes (damage or defense,
     material, weight, enchantment, classes that use it, attribute bonuses, MR, resistances...). Otherwise it
     says "Unidentified".
@@ -268,8 +277,25 @@ title is shown as text.
 - **1..0 (or Alt+1..Alt+0):** shortcut bar (bottom center). Drag a spell (from Alt+S) or an item (from Alt+I) onto
   a slot. Clicking it, or its number or Alt+number, uses it; right-click empties it; dragging between slots moves
   it. Middle-click on a slot selects it (gold frame), and the middle button on a character or monster uses the
-  selected spell there; held, it repeats each time the wait ends (for an item, every half second). Spell slots
+  selected spell there; held, it repeats each time the wait ends (for an item, every half second). With nothing under the pointer it works like the slot's key (a targeted spell waits for the click). A dot next to the page number means the selected slot is on another page. Spell slots
   (bar and F5–F12) show the wait until the next spell: a shrinking shade and the seconds left. Saved per character.
+  The bar has pages (3 by default; "Hotbar pages" in Options): the page selector on its right (up arrow, number, down arrow), or the mouse
+  wheel over the bar, changes the visible one, and keys, clicks and drags act on it. The selected slot keeps
+  working from any page. Holding 1–0 on a targeted spell that is not an attack (heals, buffs) casts it on
+  yourself after a moment (300 ms; "Hold 1-0 to self-cast" in Options) and repeats while held; a tap still waits
+  for the target click.
+- **Auto-buffs:** six green slots right of the bar. Drag a buff there (from Alt+S or from a bar slot; attacks
+  and spells without a duration are refused), reorder by dragging, right-click empties. With "Auto" (above them)
+  on, each one is cast again when its effect ends (or has less than 2 s left), left to right and one at a time,
+  only while you are not walking, attacking or casting something else. Off by default; saved per character.
+  It sends the same packet as casting by hand.
+- **Auto potion:** per character, in Options ("Auto potion", "Auto potion when") or in the settings tool. While HP
+  is below the threshold (60 % by default) it drinks a healing potion as soon as the previous one's delay is over:
+  condensed first, then ancient, then normal, and within each the colour that fits what is missing (clear for a
+  big loss, orange for a medium one, red for a small one). "Pot<60%" next to HP shows it is on (red: no potions).
+  The potion button right of the auto-buffs changes it quickly: Off -> 30 -> 60 -> 80 -> 90 % -> Off.
+- **Auto-buffs and auto potion share one turn:** when several are due at once they go one at a time, 200 ms apart
+  (`ESPACIO_AUTO_MS`), healing first and then the Auto slots left to right.
 
 ### Magic
 
@@ -357,6 +383,8 @@ commands. The `release` build doesn't include it: a CMake step (`cmake/sin_contr
 | `esperar pantalla=\|paquete=\|html=\|ventana=\|dialogo=\|chat=\|frames=\|ms= [plazo=ms]` | Wait for something instead of counting frames (`paquete=` and `chat=` also count what arrived since the previous command) |
 | `captura <path.bmp>`, `mudo on\|off`, `traza on\|off`, `traza-html on\|off`, `perf on\|off`, `depuracion on\|off`, `salir` | Screenshots and debugging |
 | `forzar-hora <seconds 0-86399>\|off` | Fix the time of day for light and ambient sound, for tests |
+| `rueda <x> <y> <steps>`, `barra-pagina [n]` | Mouse wheel; visible shortcut bar page (without `n`, reports it) |
+| `tecla-mantener <1-0> <ms>` | Hold a number key (also `alt+1`...) that long, for the hold-to-self-cast |
 
 `herramientas/lin_ctl.py` uses it from the terminal (`lin_ctl.py <socket> estado`, or interactively) or as a module
 for writing tests.

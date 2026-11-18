@@ -103,11 +103,15 @@ bool mapa(Lector& l, Evento& e) {
         l.c();
         l.c();
         l.c();
-        e.v[FA_N] = n;
+        int validas = 0;
         for (int i = 0; i < n; ++i) {
-            e.v[FA_MINUTOS + i] = MINUTOS_1997 + 1200 + static_cast<i32>(l.d()) * 182;
+            // En i64; una fecha que no entra en i32 (un valor absurdo del servidor) se descarta en vez de
+            // truncarse a otra fecha cualquiera.
+            const i64 m = MINUTOS_1997 + 1200 + static_cast<i64>(static_cast<i32>(l.d())) * 182;
             l.c();
+            if (m >= INT32_MIN && m <= INT32_MAX) e.v[FA_MINUTOS + validas++] = static_cast<i32>(m);
         }
+        e.v[FA_N] = validas;
         return true;
     }
     e.tipo = Ev::MAPA;
@@ -138,6 +142,7 @@ bool poner(Lector& l, Evento& e) {
     e.v[OB_MASCOTA] = dueno.empty() ? 0 : 1;
     if (!dueno.empty()) {  // como el original: "Andromeda's" sobre el nombre
         char* p = l.arena->reservar_arreglo<char>(dueno.size() + 2);
+        if (!p) return false;  // arena del frame llena
         std::memcpy(p, dueno.data(), dueno.size());
         std::memcpy(p + dueno.size(), "'s", 2);
         e.s[1] = {p, dueno.size() + 2};
@@ -219,9 +224,9 @@ bool atributos(Lector& l, Evento& e) {
 //  - peso (10, escala de 240) y comida (11, 0–225);
 //  - íconos de efectos: S_SkillIconAura (0x16: c índice del hechizo, h segundos) y los de
 //    S_SkillIconGFX que manda L1J para efectos con duración (34 poción azul, 40 Immune to Harm:
-//    h segundos).
+//    h segundos) y S_SkillIconWisdomPotion (0x39: c 0x2c, h segundos / 4).
 //  - asedio (0–4): ver abajo.
-constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40;
+constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
 bool caja(Lector& l, Evento& e) {
     int sub = l.c();
     if (sub == 10 || sub == 11) {
@@ -237,6 +242,12 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_CLASE] = IE_ICONO;
         e.v[IE_TIPO] = sub;
         e.v[IE_SEG] = l.h();
+    } else if (sub == CAJA_SABIDURIA) {
+        e.tipo = Ev::ICONO_EFECTO;
+        e.v[IE_CLASE] = IE_ICONO;
+        e.v[IE_TIPO] = sub;
+        l.c();
+        e.v[IE_SEG] = l.h() * 4;
     } else if (sub <= 4) {
         // Asedio: 0 empieza, 1 termina, 2 sigue (c castillo, h 0); 3 iniciativa y 4 ocupado (nada más).
         e.tipo = Ev::ASEDIO;
@@ -341,7 +352,11 @@ bool html(Lector& l, Evento& e) {
     int n = -1;
     if (e.s[0] == "agsel" && l.quedan(3)) {
         const std::string_view casa = l.s();
-        for (char c : casa) e.v[HT_CASA] = e.v[HT_CASA] * 10 + (c - '0');
+        // Solo dígitos, hasta 9 (entra en i32). Si no, 0 = sin casa: un número parecido sería otra casa
+        // real y "map"/"apply" mandarían la equivocada.
+        const bool numero = !casa.empty() && casa.size() <= 9 &&
+                            std::all_of(casa.begin(), casa.end(), [](char c) { return c >= '0' && c <= '9'; });
+        for (char c : numero ? casa : std::string_view{}) e.v[HT_CASA] = e.v[HT_CASA] * 10 + (c - '0');
         n = l.h();
     } else if (l.quedan(4) && l.h() != 0) {
         n = l.h();

@@ -65,10 +65,13 @@ LINEAGE_DIR="$LINEAGE_DIR" build/debug/lin_tests             # 62 casos; sin LIN
 
   ```sh
   "$(brew --prefix mariadb)/bin/mariadb" --socket=servidor_local/datos/mysql.sock -uroot l1jdb_363 \
-    -e "UPDATE accounts SET access_level=200 WHERE login='micuenta'"
+    -e "UPDATE accounts SET access_level=200 WHERE name='micuenta';
+        UPDATE characters c JOIN accounts a ON a.id = c.account_id SET c.access_level=200 WHERE a.name='micuenta'"
   ```
 
-  El cambio vale en el próximo login.
+  Los comandos "." miran el `access_level` del personaje, no el de la cuenta: por eso van los dos. El
+  cambio vale en el próximo login. El socket de la base está en el checkout principal
+  (`servidor_local/datos/`), no en los worktrees.
 
 ## 3. Arquitectura en una página
 
@@ -177,10 +180,19 @@ Mantener la lógica en el archivo propio; en los archivos compartidos, solo los 
 - Integrar seguido: `git fetch && git rebase origin/main`. Al terminar, PR a `main` con `gh pr create`
   (descripción: qué, cómo se verificó y qué queda pendiente). Si nadie revisa, el mismo agente puede
   mergear después de rebasear y volver a correr los tests.
-- **Credenciales:** el repo es privado de la cuenta `javiercorrea`. El llavero de macOS y la cuenta activa
-  de `gh` pueden ser otras (si `git push` dice "Repository not found", es eso). Hacer push con el token
-  de esa cuenta, sin cambiar la configuración del usuario:
-  `git -c credential.helper= -c 'credential.helper=!f() { echo username=javiercorrea; echo "password=$(gh auth token -u javiercorrea)"; }; f' push`.
+- **Cuenta: siempre `javiercorrea`.** El repo es privado de esa cuenta y todo lo que se hace en él va a
+  su nombre: commits, push, PRs e issues. En esta máquina hay otras identidades (la de git global, el
+  llavero de macOS, la cuenta activa de `gh`), que no se usan aquí.
+  - **Commits:** autor `javiercorrea <58250+javiercorrea@users.noreply.github.com>` (el email noreply de
+    GitHub de la cuenta). La config global puede tener otro: comprobar con `git config user.email` y, si no
+    es ese, commitear con
+    `git -c user.name=javiercorrea -c user.email=58250+javiercorrea@users.noreply.github.com commit ...`.
+  - **Push:** por SSH con la llave exclusiva del repo: el remoto `origin` es
+    `git@github-personal:javiercorrea/lineage-cliente.git` (el host `github-personal` de `~/.ssh/config`).
+    No cambiar el remoto a HTTPS ni a `github.com`.
+  - **`gh` (PRs, issues):** la cuenta activa puede ser otra (si dice "must be a collaborator" o
+    "Repository not found", es eso). Usar el token de `javiercorrea` sin cambiar la cuenta activa:
+    `GH_TOKEN="$(gh auth token -u javiercorrea)" gh pr create ...`.
 - Para trabajar en la misma máquina sin pisarse:
   - `git worktree add ../cliente-<tema> -b agente/<tema>`;
   - cada worktree con su propio `build/`.

@@ -5,8 +5,9 @@
 //    se mandan con C_NPCAction ("buy", "sell", "retrieve", "teleport ..."). "deposit" lo resuelve
 //    el cliente: abre el almacén con el propio inventario.
 //  - Tienda y almacén: S_ShopSellList (comprar), S_ShopBuyList (vender) y S_RetrieveList
-//    (retirar) abren la lista en la misma ventana. Clic suma 1 (con Shift, 10 o todo), clic
-//    derecho resta 1 (con Shift, nada); OK manda C_Result.
+//    (retirar) abren la lista en la misma ventana. Clic en una pila pregunta cuántos (diálogo de
+//    cantidad; lo que no se apila suma 1), Shift+clic suma 10, clic derecho resta 1 (con Shift,
+//    nada); OK manda C_Result.
 //  - Teletransporte: el servidor manda S_Teleport y espera C_Teleport para mover al personaje.
 //  - Maestros de magia: el vínculo "buyspell" no va con C_NPCAction sino con C_SkillBuy; la lista
 //    (S_SkillBuy) se elige como una tienda (un hechizo por fila) y OK manda C_SkillBuyOK.
@@ -232,7 +233,7 @@ void dibujar_tienda(App& a, int x0, int y0) {
         if (i >= n) break;
         FilaTienda& f = a.tienda_filas[static_cast<size_t>(i)];
         const int x = x0 + MARGEN, y = y0 + ARRIBA + k * FILA_TIENDA, w = ui::VENTANA_ANCHO - 2 * MARGEN;
-        const bool encima = ui::sobre(e, x, y, w, FILA_TIENDA - 2);
+        const bool encima = ui::sobre(e, x, y, w, FILA_TIENDA - 2) && !sobre_cantidad(a);  // el diálogo va encima
         g.gpu().rectangulo(x, y, w, FILA_TIENDA - 2, kf, f.elegido ? rgba(80, 64, 20, 230) : encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
         g.gpu().dibujar(g.icono(f.gfx), x + 1, y, ki);
         size_t m = nombre_fila(a, f, buf, sizeof buf);
@@ -266,6 +267,23 @@ void dibujar_tienda(App& a, int x0, int y0) {
             enviar(a, cmd::inventario_mascota(a.op, a.tienda_npc));
             continue;
         }
+        if (encima && e.clic && !e.shift && f.maximo > 1 && a.tienda != TipoTienda::MAGIA) {
+            // De una pila: el diálogo de cantidad (se escribe el número; 0 la quita de la lista).
+            DialogoCantidad& d = a.cantidad;
+            d = {};
+            d.abierto = true;
+            d.tienda = CANTIDAD_FILA_NPC;
+            d.objeto = a.tienda_npc;
+            d.item = static_cast<ObjId>(i);
+            d.titulo.assign(buf, m);
+            d.accion = "How many? (0: none)";
+            d.min = 0;
+            d.max = static_cast<i32>(f.maximo);
+            d.valor = f.elegido ? static_cast<i32>(f.elegido) : 1;
+            if (a.tienda == TipoTienda::COMPRA || a.tienda == TipoTienda::VENTA) d.precio = static_cast<i32>(f.precio);
+            a.entrada.clic = false;  // que este clic no llegue a los botones del diálogo
+            continue;
+        }
         if (encima && e.clic) f.elegido = std::min(f.maximo, f.elegido + (e.shift ? (f.maximo > 10 ? 10u : f.maximo) : 1u));
         if (encima && e.clic_derecho) f.elegido = e.shift ? 0 : (f.elegido ? f.elegido - 1 : 0);
     }
@@ -284,7 +302,7 @@ void dibujar_tienda(App& a, int x0, int y0) {
     case TipoTienda::RETIRO: std::snprintf(pie, sizeof pie, "Fee %s adena (30 each)", con_miles(t, m1, sizeof m1)); break;
     case TipoTienda::MASCOTA: std::snprintf(pie, sizeof pie, a.tienda_filas.empty() ? "The pet carries nothing" : "Click: use or equip"); break;
     case TipoTienda::REPARAR: std::snprintf(pie, sizeof pie, a.tienda_filas.empty() ? "No damaged weapons" : "Click a weapon to repair it"); break;
-    default: std::snprintf(pie, sizeof pie, "Click: +1  Shift: +10  Right: -1"); break;
+    default: std::snprintf(pie, sizeof pie, "Click: amount  Shift: +10  Right: -1"); break;
     }
     g.texto(pie, static_cast<float>(x0 + MARGEN), static_cast<float>(yp), kt, rgba(214, 190, 140));
     if (ui::boton_texto(g, e, "OK", x0 + MARGEN, yp + 18, 90, 18)) confirmar(a);

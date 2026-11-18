@@ -76,7 +76,7 @@ bool elegir_carpeta_inicial(SDL_Window* v, std::string& carpeta) {
 // La configuración, más los campos numéricos como texto (se convierten al guardar).
 struct Formulario {
     Config cfg;
-    std::string ancho, alto, zoom, opacidad, musica, efectos, puerto;
+    std::string ancho, alto, zoom, opacidad, musica, efectos, puerto, paginas, ms_mantener;
     size_t sv = 0;         // servidor que se edita (pestaña Servidores)
     size_t personaje = 0;  // personaje de la pestaña Personajes
     std::vector<std::string> protocolos = PROTOCOLOS;
@@ -102,6 +102,8 @@ void cargar_campos(Formulario& f) {
     f.alto = std::to_string(c.ventana_alto);
     f.zoom = std::to_string(c.zoom);
     f.opacidad = std::to_string(c.opacidad_ventanas);
+    f.paginas = std::to_string(c.paginas_barra);
+    f.ms_mantener = std::to_string(c.ms_mantener_tecla);
     f.musica = std::to_string(c.volumen_musica);
     f.efectos = std::to_string(c.volumen_efectos);
     f.sv = std::min(f.sv, c.servidores.size() - 1);  // leer_config siempre deja al menos un servidor
@@ -123,6 +125,10 @@ std::string volcar(Formulario& f) {
     c.zoom = n;
     if (!entero(f.opacidad, 0, 255, n)) return tr(Tx::AJ_ERR_OPACIDAD);
     c.opacidad_ventanas = n;
+    if (!entero(f.paginas, 1, PAGINAS_BARRA_MAX, n)) return tr(Tx::AJ_ERR_PAGINAS);
+    c.paginas_barra = n;
+    if (!entero(f.ms_mantener, MS_MANTENER_MIN, MS_MANTENER_MAX, n)) return tr(Tx::AJ_ERR_MS_MANTENER);
+    c.ms_mantener_tecla = n;
     if (!entero(f.musica, 0, 100, n)) return tr(Tx::AJ_ERR_MUSICA);
     c.volumen_musica = n;
     if (!entero(f.efectos, 0, 100, n)) return tr(Tx::AJ_ERR_EFECTOS);
@@ -167,7 +173,7 @@ struct Pantalla {
     Pantalla(Graficos& g_, EntradaFrame& e_, SDL_Window* v) : g(g_), e(e_), ventana(v) {}
     int foco = -1;                    // campo de texto con foco (su número dentro de la pestaña)
     int campos = 0, campos_antes = 0;  // campos de texto de este frame y del anterior (para Tab)
-    bool abre_sv = false, abre_proto = false, abre_ini = false, abre_pj = false, abre_idioma = false;  // desplegables abiertos
+    bool abre_sv = false, abre_proto = false, abre_ini = false, abre_pj = false, abre_idioma = false, abre_umbral = false;  // desplegables abiertos
     std::string aviso;  // lo que pasó con el último botón; sale en la línea de abajo
     bool aviso_error = false;
     // Scroll del contenido de la pestaña: las filas se corren `desplaza` px; lo que queda fuera de la caja no se dibuja.
@@ -268,6 +274,10 @@ void pestana_interfaz(Pantalla& p, Formulario& f) {
         aplicar_idioma(c.idioma);
     }
     si_no(p, fila(p, 8), tr(Tx::AJ_PANTALLA_COMPLETA), c.pantalla_completa);
+    campo(p, fila(p, 9), tr(Tx::AJ_PAGINAS_BARRA), f.paginas, 1);
+    campo(p, fila(p, 10), tr(Tx::AJ_MS_MANTENER), f.ms_mantener, 4);
+    si_no(p, fila(p, 11), tr(Tx::AJ_USAR_AUTOBUFFS), c.usar_autobuffs);
+    si_no(p, fila(p, 12), tr(Tx::AJ_USAR_AUTOPOCION), c.usar_autopocion);
 }
 
 void pestana_audio(Pantalla& p, Formulario& f) {
@@ -318,9 +328,31 @@ void pestana_personajes(Pantalla& p, Formulario& f) {
             std::snprintf(buf, sizeof buf, tr(Tx::AJ_BARRA_QUITADA), nombre.c_str());
             estado(p, buf, false);
         }
+        texto(p, fila(p, 4), valor_de_personaje(c.autobuffs, nombre).empty() ? tr(Tx::AJ_AUTOBUFFS_NO) : tr(Tx::AJ_AUTOBUFFS_SI));
+        if (boton(p, X_CAMPO + 170, fila(p, 4), 160, tr(Tx::AJ_QUITAR_AUTOBUFFS))) {
+            quitar_valor_de_personaje(c.autobuffs, nombre);
+            std::snprintf(buf, sizeof buf, tr(Tx::AJ_AUTOBUFFS_QUITADOS), nombre.c_str());
+            estado(p, buf, false);
+        }
+        // Auto-poción del personaje (sin entrada: apagada con 60 %).
+        OpcionPocion o = autopocion_de(c, nombre);
+        bool encendida = o.encendida;
+        si_no(p, fila(p, 5), tr(Tx::AJ_AUTOPOCION), encendida);
+        static const std::vector<std::string> UMBRALES = [] {
+            std::vector<std::string> v;
+            for (int u = UMBRAL_POCION_MIN; u <= UMBRAL_POCION_MAX; u += 5) v.push_back(std::to_string(u) + " %");
+            return v;
+        }();
+        size_t umbral = static_cast<size_t>((o.umbral - UMBRAL_POCION_MIN) / 5);
+        const bool otro_umbral = lista(p, fila(p, 6), tr(Tx::AJ_UMBRAL_POCION), UMBRALES, umbral, p.abre_umbral);
+        if (encendida != o.encendida || otro_umbral) {
+            o.encendida = encendida;
+            o.umbral = UMBRAL_POCION_MIN + static_cast<int>(umbral) * 5;
+            poner_autopocion(c, nombre, o);
+        }
     }
-    texto(p, fila(p, 5), c.ventanas.empty() ? tr(Tx::AJ_VENTANAS_DEF) : tr(Tx::AJ_VENTANAS_GUARD));
-    if (boton(p, X_CAMPO, fila(p, 6), 220, tr(Tx::AJ_RESTABLECER))) {
+    texto(p, fila(p, 7), c.ventanas.empty() ? tr(Tx::AJ_VENTANAS_DEF) : tr(Tx::AJ_VENTANAS_GUARD));
+    if (boton(p, X_CAMPO, fila(p, 8), 220, tr(Tx::AJ_RESTABLECER))) {
         c.ventanas.clear();
         estado(p, tr(Tx::AJ_VENTANAS_RESET), false);
     }

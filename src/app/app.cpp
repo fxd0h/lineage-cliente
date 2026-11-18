@@ -136,18 +136,23 @@ void leer_entrada(App& a) {
                     e.numero = 1 + static_cast<int>(ev.key.key - SDLK_1);
                 texto_antes = e.ntexto;
                 break;
-            case SDLK_F1: a.ayuda_teclas = !a.ayuda_teclas; break;
+            case SDLK_F1:
+                if (!ev.key.repeat) a.ayuda_teclas = !a.ayuda_teclas;
+                break;
             case SDLK_F3:  // con Shift, el contador de fps
+                if (ev.key.repeat) break;  // mantenida, alternaría y escribiría settings.ini en cada repetición
                 if (ev.key.mod & SDL_KMOD_SHIFT) {
                     a.cfg.mostrar_fps = !a.cfg.mostrar_fps;
                     guardar_config(a.cfg);
                 } else a.depuracion = !a.depuracion;
                 break;
             case SDLK_F2:  // UI simple (texto) o panel original
+                if (ev.key.repeat) break;
                 a.cfg.ui_simple = !a.cfg.ui_simple;
                 guardar_config(a.cfg);
                 break;
             case SDLK_F4:
+                if (ev.key.repeat) break;
                 // Cámara a saltos (como el original) o suave; con Shift, personajes oscurecidos en
                 // la sombra o no.
                 if (ev.key.mod & SDL_KMOD_SHIFT) a.cfg.sombra_personajes = !a.cfg.sombra_personajes;
@@ -183,6 +188,12 @@ void leer_entrada(App& a) {
     e.arriba = teclas[SDL_SCANCODE_UP];
     e.abajo = teclas[SDL_SCANCODE_DOWN];
     e.izquierda = teclas[SDL_SCANCODE_LEFT];
+    // El número apretado ahora (por su tecla, no su posición: igual que `numero`).
+    e.numeros_mantenidos = 0;
+    for (int i = 0; i < 10; ++i) {
+        const SDL_Scancode s = SDL_GetScancodeFromKey(i < 9 ? SDLK_1 + static_cast<SDL_Keycode>(i) : SDLK_0, nullptr);
+        if (s != SDL_SCANCODE_UNKNOWN && teclas[s]) e.numeros_mantenidos |= static_cast<u16>(1u << i);
+    }
     e.derecha = teclas[SDL_SCANCODE_RIGHT];
     e.ctrl = (SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_GUI)) != 0;
     e.shift = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
@@ -237,6 +248,8 @@ void procesar_red(App& a) {
         eventos_mascotas(a, e);
         eventos_marcadores(a, e);
         eventos_hechizos(a, e);
+        eventos_autobuffs(a, e);
+        eventos_autopocion(a, e);
         if (e.tipo == Ev::MAPA && (a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO)) avisar_mapa(a, static_cast<MapId>(e.v[0]));
         // "Miss" sobre el personaje: un ataque que lo tiene de objetivo y no acierta (el daño recibido
         // se detecta por la caída de HP tras aplicar los eventos, abajo).
@@ -245,6 +258,7 @@ void procesar_red(App& a) {
             empujar_texto_combate(a, "Miss", 230, 230, 230);
     }
     aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    a.red.en_juego(a.mundo.en_juego && a.pantalla == Pantalla::JUEGO);  // el keepalive lo manda el hilo de red
     if (a.cfg.texto_dano && a.mundo.jugador.hp_max > 0 && a.mundo.jugador.hp < a.hp_anterior) {
         char t[12];
         std::snprintf(t, sizeof t, "-%d", a.hp_anterior - a.mundo.jugador.hp);
@@ -341,10 +355,10 @@ static void cerrar_medicion(App& a) {
     a.asign_frame_max = a.max_asign;
     a.asign_total = a.acum_asign;
     if (a.perf)
-        LIN_LOG("perf: %.0f fps  cpu %.2f ms (max %.2f)  decod %.2f ms (%u)  asign %llu (max/frame %llu)  inst %u  pag %u (reemplazos %u)  precarga %u  efectos %u  musica %d",
+        LIN_LOG("perf: %.0f fps  cpu %.2f ms (max %.2f)  decod %.2f ms (%u)  asign %llu (max/frame %llu)  inst %u  pag %u (reemplazos %u)  precarga %u  efectos %u (wav %u)  musica %d",
                 a.fps, a.ms_cpu, a.ms_cpu_max, a.ms_decod, a.decodificados, static_cast<unsigned long long>(a.asign_total),
                 static_cast<unsigned long long>(a.asign_frame_max), a.gpu.instancias_ultimo_frame(), a.gpu.paginas_usadas(), a.gpu.reemplazos_atlas(),
-                a.g ? a.g->precargas_en_curso() : 0u, a.audio.efectos_tocados(), a.audio.musica_actual());
+                a.g ? a.g->precargas_en_curso() : 0u, a.audio.efectos_tocados(), a.audio.wavs_cargados(), a.audio.musica_actual());
     a.acum_cpu = a.max_cpu = 0;
     a.acum_asign = a.max_asign = 0;
     a.frames_fps = 0;

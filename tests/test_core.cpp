@@ -54,6 +54,15 @@ TEST_CASE("TablaSoa: el índice queda consistente tras borrar con intercambio") 
     CHECK(t.tamano() == 66);
 }
 
+TEST_CASE("TablaSoa: reordenar mueve columnas e índice juntos") {
+    TablaSoa<u32> t;
+    for (ObjId id = 1; id <= 4; ++id) t.col<0>()[t.insertar(id)] = id * 10;
+    const Slot orden[] = {3, 1, 0, 2};
+    t.reordenar(orden);
+    CHECK(t.ids() == std::vector<ObjId>{4, 2, 1, 3});
+    for (ObjId id = 1; id <= 4; ++id) CHECK(t.col<0>()[t.buscar(id)] == id * 10);
+}
+
 TEST_CASE("AnilloBytes: mensajes de longitud variable con vuelta del anillo") {
     AnilloBytes a(64);
     std::vector<u8> salida;
@@ -68,6 +77,21 @@ TEST_CASE("AnilloBytes: mensajes de longitud variable con vuelta del anillo") {
     CHECK_FALSE(a.sacar(salida));
     u8 grande[70] = {};
     CHECK_FALSE(a.empujar({grande, 70}));  // no entra
+}
+
+TEST_CASE("AnilloBytes: vaciar descarta lo pendiente (reconexión)") {
+    AnilloBytes a(64);
+    std::vector<u8> salida;
+    const u8 m[3] = {1, 2, 3};
+    CHECK(a.vacio());
+    REQUIRE(a.empujar({m, 3}));
+    CHECK_FALSE(a.vacio());
+    a.vaciar();
+    CHECK(a.vacio());
+    CHECK_FALSE(a.sacar(salida));
+    REQUIRE(a.empujar({m, 2}));
+    REQUIRE(a.sacar(salida));
+    CHECK(salida.size() == 2);
 }
 
 TEST_CASE("Arena: alineación, copia y reset") {

@@ -28,12 +28,23 @@ void aceptar(App& a) {
     DialogoCantidad& d = a.cantidad;
     d.abierto = false;
     d.valor = std::clamp(d.valor, d.min, d.max);
-    if (d.tienda) {
+    if (d.tienda == CANTIDAD_FILA_NPC) {  // solo marca la fila; el OK de la tienda manda todo junto
+        // Si la lista cambió o se cerró mientras tanto, no es la misma fila: no se toca.
+        if (d.objeto == a.tienda_npc && a.tienda != TipoTienda::NINGUNA && d.item < a.tienda_filas.size()) {
+            FilaTienda& f = a.tienda_filas[d.item];
+            f.elegido = std::min(static_cast<u32>(d.valor), f.maximo);
+        }
+        d.tienda = 0;
+    } else if (d.tienda) {
         aceptar_cantidad_tienda(a);
     } else if (d.castillo == CF_TASA + 1) {
         enviar(a, cmd::tasa_castillo(a.op, d.objeto, static_cast<u8>(d.valor)));
     } else if (d.castillo) {
         if (d.valor > 0) enviar(a, cmd::fondos_castillo(a.op, d.castillo == CF_DEPOSITAR + 1, d.objeto, static_cast<u32>(d.valor)));
+    } else if (d.borrar && !d.varios.empty()) {
+        for (ObjId id : d.varios)
+            if (Slot s = a.mundo.inventario.items.buscar(id); s != SIN_SLOT)
+                enviar(a, cmd::borrar_item(a.op, id, std::max(a.mundo.inventario.items.col<I_CANTIDAD>()[s], 1u)));
     } else if (d.borrar) {
         if (a.mundo.inventario.items.buscar(d.item) != SIN_SLOT && d.valor > 0)  // 0 sería toda la pila
             enviar(a, cmd::borrar_item(a.op, d.item, static_cast<u32>(d.valor)));
@@ -105,6 +116,7 @@ void borrar_item(App& a, ObjId item) {
     DialogoCantidad& d = a.cantidad;
     d.dar = false;
     d.borrar = true;
+    d.varios.clear();
     d.tienda = d.castillo = 0;
     d.item = item;
     d.precio = 0;
@@ -112,6 +124,30 @@ void borrar_item(App& a, ObjId item) {
     char titulo[256];
     const size_t m = expandir_desc(a.desc, nombre_item(a.mundo.inventario, s), titulo, sizeof titulo);
     abrir(a, std::string_view(titulo, m), 1, n, n);
+}
+
+void borrar_items(App& a, std::span<const ObjId> items) {
+    if (items.size() == 1) return borrar_item(a, items[0]);
+    DialogoCantidad& d = a.cantidad;
+    d.dar = false;
+    d.borrar = true;
+    d.varios.assign(items.begin(), items.end());
+    d.tienda = d.castillo = 0;
+    d.precio = 0;
+    char titulo[32];
+    std::snprintf(titulo, sizeof titulo, "%zu items", items.size());
+    abrir(a, titulo, 1, 1, 1);
+}
+
+void dar_items(App& a, ObjId objetivo, std::span<const ObjId> items) {
+    if (items.size() == 1) return dar_item(a, objetivo, items[0]);
+    const Slot so = a.mundo.objetos.buscar(objetivo);
+    if (so == SIN_SLOT) return;
+    const TablaObjetos& o = a.mundo.objetos;
+    for (ObjId id : items)
+        if (Slot s = a.mundo.inventario.items.buscar(id); s != SIN_SLOT)
+            enviar(a, cmd::dar_item(a.op, objetivo, static_cast<u16>(o.col<O_X>()[so]), static_cast<u16>(o.col<O_Y>()[so]), id,
+                                    std::max(a.mundo.inventario.items.col<I_CANTIDAD>()[s], 1u)));
 }
 
 bool sobre_cantidad(const App& a) {
@@ -127,7 +163,7 @@ void dibujar_cantidad(App& a) {
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 90);
     ui::recuadro(g, x, y, ANCHO, ALTO, 240);
     g.texto(d.titulo, static_cast<float>(x + 10), static_cast<float>(y + 8), kt, ui::COLOR_TITULO);
-    const char* pregunta = d.tienda || d.castillo ? d.accion.c_str() : d.borrar ? (d.max > 1 ? "Delete how many? (cannot be undone)" : "Delete it? (cannot be undone)")
+    const char* pregunta = d.tienda || d.castillo ? d.accion.c_str() : d.borrar ? (!d.varios.empty() ? "Delete them all? (cannot be undone)" : d.max > 1 ? "Delete how many? (cannot be undone)" : "Delete it? (cannot be undone)")
                                     : d.dar ? "Give how many?" : "Amount";
     g.texto(pregunta, static_cast<float>(x + 10), static_cast<float>(y + 30), kt, d.borrar ? rgba(255, 140, 110) : rgba(170, 160, 140));
 

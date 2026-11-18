@@ -70,6 +70,7 @@ struct PasoMouse {
     int x, y;
     u8 boton;  // 0 izquierdo, 1 derecho, 2 medio
     bool apretar, soltar;
+    int rueda = 0;  // pasos de la rueda en ese frame (+ hacia arriba)
 };
 
 struct Control {
@@ -78,6 +79,9 @@ struct Control {
     std::vector<Conexion> conexiones;
     std::deque<PasoMouse> mouse;
     std::deque<std::string> textos;  // un SDL_EVENT_TEXT_INPUT por frame
+    bool izquierdo = false;          // el botón izquierdo inyectado quedó apretado en el paso anterior
+    int mantenido = 0;               // tecla-mantener: el número (1..10) que se ve apretado
+    u64 mantenido_hasta = 0;
     std::string texto_actual;        // el que SDL está por leer (tiene que seguir vivo)
     bool ctrl = false;               // "ctrl on": Ctrl mantenido (forzar ataque)
     bool shift = false;              // "shift on": Shift mantenido (Shift+clic gira)
@@ -237,8 +241,9 @@ void inventario(App& a, Conexion& c) {
     char nombre[256], l[320];
     for (Slot s = 0; s < t.tamano(); ++s) {
         const size_t n = expandir_desc(a.desc, nombre_item(inv, s), nombre, sizeof nombre);
-        std::snprintf(l, sizeof l, "id=%u nombre=\"%.*s\" cantidad=%u gfx=%u%s", t.ids()[s], static_cast<int>(n), nombre,
-                      t.col<I_CANTIDAD>()[s], static_cast<unsigned>(t.col<I_GFX>()[s]), item_equipado(nombre_item(inv, s)) ? " equipado" : "");
+        std::snprintf(l, sizeof l, "id=%u nombre=\"%.*s\" cantidad=%u gfx=%u uso=%u%s", t.ids()[s], static_cast<int>(n), nombre,
+                      t.col<I_CANTIDAD>()[s], static_cast<unsigned>(t.col<I_GFX>()[s]), static_cast<unsigned>(t.col<I_USO>()[s]),
+                      item_equipado(nombre_item(inv, s)) ? " equipado" : "");
         responder(c, l);
     }
 }
@@ -293,6 +298,8 @@ const char* AYUDA[] = {
     "abrir|cerrar inventario|estado|hechizos|opciones|social|salida|teclas",
     "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
     "clic <x> <y> [der|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
+    "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
+    "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
     "tecla <nombre> (ctrl+ alt+ shift+)   texto \"...\"   ctrl on|off   shift on|off",
     "esperar pantalla=X | paquete=NOMBRE | html=X | ventana=X | dialogo=pregunta|cantidad | chat=texto | frames=n | ms=n  [plazo=ms]",
     "captura <ruta.bmp>   mudo on|off   traza on|off   traza-html on|off   perf on|off   depuracion on|off   salir",
@@ -385,7 +392,6 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             if (fin == p[1].c_str() || *fin || s < 0 || s > 86399) return error("la hora va de 0 a 86399, o off");
             a.hora_forzada = static_cast<i32>(s);
         }
-        responder(c, "ok");
     } else if (cmd == "perf") {
         a.perf = p.size() < 2 || p[1] == "on";
     } else if (cmd == "depuracion") {
@@ -522,6 +528,17 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         ev.button.y = static_cast<float>(std::atoi(p[2].c_str()));
         ev.button.windowID = SDL_GetWindowID(a.ventana);
         SDL_PushEvent(&ev);
+    } else if (cmd == "tecla-mantener") {
+        if (p.size() < 3 || p[1].empty() || p[1].back() < '0' || p[1].back() > '9' || !tecla(p[1]))
+            return error("uso: tecla-mantener <1-0, con alt+ si se quiere> <ms>");
+        g.mantenido = p[1].back() == '0' ? 10 : p[1].back() - '0';
+        g.mantenido_hasta = ahora + std::strtoull(p[2].c_str(), nullptr, 10);
+    } else if (cmd == "rueda") {
+        if (p.size() < 4) return error("uso: rueda <x> <y> <pasos>");
+        g.mouse.push_back({std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), 3, false, false, std::atoi(p[3].c_str())});
+    } else if (cmd == "barra-pagina") {
+        if (p.size() > 1) cambiar_pagina_barra(a, std::atoi(p[1].c_str()) - 1);
+        responder(c, "pagina=" + std::to_string(a.pagina_barra + 1) + " paginas=" + std::to_string(a.cfg.paginas_barra));
     } else if (cmd == "clic") {
         if (p.size() < 3) return error("uso: clic <x> <y> [der|medio]");
         clic(std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), p.size() > 3 ? (p[3] == "der" ? 1 : p[3] == "medio" ? 2 : 0) : 0);
@@ -720,21 +737,25 @@ void control_entrada(App& a) {
     EntradaFrame& e = a.entrada;
     if (g.ctrl) e.ctrl = true;
     if (g.shift) e.shift = true;
+    if (g.mantenido && e.ahora_ms < g.mantenido_hasta) e.numeros_mantenidos |= static_cast<u16>(1u << (g.mantenido - 1));
+    else g.mantenido = 0;
     if (g.mouse.empty()) return;
     const PasoMouse m = g.mouse.front();
     g.mouse.pop_front();
     e.mx = m.x;
     e.my = m.y;
     if (m.boton == 0) {
-        e.pulsado = m.apretar;
-        e.presionado = m.apretar;
+        e.pulsado = m.apretar && !g.izquierdo;  // apretado en este paso, no mantenido desde el anterior
+        e.presionado = g.izquierdo = m.apretar;
         e.clic = m.soltar;
     } else if (m.boton == 1) {
         e.derecho_presionado = m.apretar;
         e.clic_derecho = m.soltar;
-    } else {
+    } else if (m.boton == 2) {
         e.medio_presionado = m.apretar;
         e.clic_medio = m.soltar;
+    } else {
+        e.rueda = m.rueda;
     }
 }
 

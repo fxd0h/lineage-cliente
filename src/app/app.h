@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 #include "audio/audio.h"
+#include "mundo/autobuffs.h"
+#include "mundo/autopocion.h"
 #include "mundo/chat.h"
 #include "mundo/mundo.h"
 #include "plataforma/rutas.h"
@@ -40,6 +42,21 @@ struct Atajo {
     u16 gfx = 0;  // ítems: gfx de inventario
 };
 constexpr int CASILLEROS_BARRA = 10;
+// Auto-buffs (autobuffs_ui.cpp): a la derecha del selector de páginas de la barra.
+constexpr int CELDA_AUTO = 34, ANCHO_AUTO = CASILLEROS_AUTO * (CELDA_AUTO + 2) - 2, SEPARACION_AUTO = 8;
+struct AutoBuffs {
+    bool encendido = false;
+    CasilleroAuto c[CASILLEROS_AUTO];
+    std::string de;        // personaje cuyos auto-buffs están cargados
+    int arrastrando = -1;  // casillero que se arrastra
+    int pidiendo = -1;     // casillero cuyo hechizo se pidió y todavía no salió
+    u64 pedido_ms = 0;
+    int ultimo = -1;       // el último que salió (a él se le atribuye un "falló")
+    int x = 0, y = -1000;  // posición del último frame (la pone dibujar_barra)
+    u64 desde_ms = 0;      // no lanza antes (al entrar: que lleguen los íconos de lo que sigue activo)
+    bool apretado_interruptor = false;  // el botón se apretó sobre "Auto"
+    TurnoAuto turno;       // compartido con la auto-poción
+};
 
 // Tienda y almacén (npc_ui.cpp): una fila por ítem; `id` es el índice en la tienda (compra) o el id
 // del ítem (venta, retiro, depósito).
@@ -190,11 +207,14 @@ struct ReinicioAtributos {
 };
 
 // Diálogo de cantidad (cantidad_ui.cpp): S_InputAmount del servidor, o cuántos dar de una pila.
+constexpr u8 CANTIDAD_FILA_NPC = 4;
 struct DialogoCantidad {
     bool abierto = false;
     bool dar = false;         // true: C_GiveItem del `item` a `objeto`; false: C_Amount a `objeto`
     bool borrar = false;      // true: C_DeleteInventoryItem del `item` (el basurero)
-    u8 tienda = 0;            // tienda de jugadores (tienda_ui.cpp): 1 comprar, 2 venderle, 3 precio al armar
+    std::vector<ObjId> varios;  // con `borrar`: los ítems de la selección, enteros (si no está vacío, en vez de `item`)
+    u8 tienda = 0;            // tienda de jugadores (tienda_ui.cpp): 1 comprar, 2 venderle, 3 precio al armar;
+                              // CANTIDAD_FILA_NPC: cuántos de la fila `item` de la tienda o almacén de `objeto` (npc_ui.cpp)
     u8 castillo = 0;          // castillos_ui.cpp: CF_TASA + 1 impuesto, CF_DEPOSITAR + 1 poner, CF_RETIRAR + 1 sacar
     bool escribiendo = false; // ya se escribió un número (el siguiente se agrega en vez de reemplazar)
     ObjId objeto = 0, item = 0;
@@ -292,7 +312,6 @@ struct App {
     int extra[6] = {};  // puntos agregados a fue, des, con, sab, car, int
 
     // Juego
-    u64 t_mantener_vivo = 0;
     bool ayuda_teclas = false;     // F1
     u64 t_intento_portal = 0;      // último paso hacia una celda bloqueada (pantalla_juego.cpp: intento_portal)
     u32 celda_intento_portal = 0;
@@ -342,16 +361,35 @@ struct App {
     u64 t_item_usado = 0;
     u16 icono_fuerza = 0, icono_destreza = 0;  // el de la poción que dio el efecto activo
     u64 t_repetir_medio = 0;          // botón del medio mantenido: último uso de un ítem
+    bool medio_sin_objetivo = false;  // esta pulsación del medio ya dejó un hechizo esperando el clic
+    AutoBuffs autobuffs;
+    // Auto-poción (autopocion_ui.cpp): la opción del personaje cargado y la demora de la última.
+    struct AutoPocion {
+        std::string de;
+        OpcionPocion op;
+        u64 proxima_ms = 0, bebida_ms = 0;
+        bool apretado_boton = false;  // el botón se apretó sobre el de la barra
+        int x = 0, y = -1000;         // el botón de la barra en el último frame (lo pone dibujar_barra)
+    } autopocion;
+    // Tecla 1–0 mantenida sobre un hechizo con objetivo que no es de ataque (barra_ui.cpp).
+    struct TeclaMantenida {
+        int numero = 0;      // 1..10; 0 = ninguna
+        u32 hechizo = 0;
+        u64 desde_ms = 0;
+        bool sobre_si = false;  // pasó el tiempo: se lanza sobre uno mismo
+    } tecla_mantenida;
     bool clic_consumido = false;      // el clic que eligió el objetivo no camina hasta soltarlo
     u16 atajos[8] = {};               // F5..F12
     std::string atajos_de;            // personaje cuyos atajos están cargados
     // Barra de atajos (Alt+1..Alt+0; barra_ui.cpp): hechizos o ítems arrastrados a sus casilleros.
-    Atajo barra[CASILLEROS_BARRA];
+    // Páginas (cfg.paginas_barra a la vista; las de más se conservan) y la visible.
+    Atajo barra[PAGINAS_BARRA_MAX][CASILLEROS_BARRA];
+    int pagina_barra = 0;
     std::string barra_de;             // personaje cuya barra está cargada
     int barra_x = 0, barra_y = -1000; // posición del último frame (para el puntero)
     u32 arrastrando_hechizo = 0;      // desde la ventana de hechizos
     int arrastrando_atajo = -1;       // desde un casillero de la barra
-    int casillero_elegido = -1;       // el que usa el clic del medio sobre el mundo (-1 ninguno)
+    int casillero_elegido = -1;       // el que usa el clic del medio sobre el mundo: página * CASILLEROS_BARRA + casillero (-1 ninguno)
     int arrastre_x0 = 0, arrastre_y0 = 0;
     // Polymorph (forma_ui.cpp): diálogo para escribir el monstruo.
     bool ventana_forma = false;
@@ -430,6 +468,7 @@ struct App {
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
+    std::vector<ObjId> inventario_seleccion;  // marcados con Shift+clic: se arrastran juntos
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     ObjId ultimo_clic_item = 0;         // para el doble clic
     u64 t_ultimo_clic_item = 0;
@@ -525,6 +564,8 @@ void usar_item(App& a, ObjId item);
 void soltar_item(App& a, ObjId item);
 // Al basurero: pregunta cuántos (o confirma, si es uno) y lo elimina (cantidad_ui.cpp).
 void borrar_item(App& a, ObjId item);
+// Varios a la vez (la selección con Shift): una sola confirmación y la pila entera de cada uno.
+void borrar_items(App& a, std::span<const ObjId> items);
 
 // Hechizos (hechizos_ui.cpp).
 bool sobre_hechizos(const App& a);
@@ -571,12 +612,35 @@ void control_cerrar();
 #endif
 // Casillero bajo el puntero, -1 si no hay.
 int casillero_bajo_puntero(const App& a);
-bool sobre_barra(const App& a);
+bool sobre_barra(const App& a);  // también el selector de página
+// Un arrastre que empezó en arrastre_x0/y0 ya se movió lo suficiente para no ser un clic.
+bool arrastre_movido(const App& a);
+// Página visible de la barra (con vuelta: de la última a la primera).
+void cambiar_pagina_barra(App& a, int pagina);
 void poner_atajo(App& a, int casillero, Atajo atajo);
 // Al comienzo del frame del juego: Alt+número y carga de la barra del personaje.
 void procesar_barra(App& a);
 // `y`: fila de arriba de la barra.
 void dibujar_barra(App& a, int y);
+
+// Auto-buffs (autobuffs_ui.cpp).
+int autobuff_bajo_puntero(const App& a);  // -1 si no hay
+bool sobre_autobuffs(const App& a);       // casilleros e interruptor
+void poner_autobuff(App& a, int casillero, u32 hechizo);  // con aviso en el chat si no es un buff propio
+void poner_autobuff_item(App& a, int casillero, ObjId item);  // un ítem: solo las pociones de POCIONES_AUTO
+void procesar_autobuffs(App& a);          // después de procesar_barra: lanza el que toque
+void eventos_autobuffs(App& a, const Evento& e);
+void dibujar_autobuffs(App& a);           // después de dibujar_barra
+
+// Auto-poción (autopocion_ui.cpp).
+void procesar_autopocion(App& a);
+void eventos_autopocion(App& a, const Evento& e);
+void guardar_autopocion(App& a);          // a.autopocion.op en settings.ini (lo usan las opciones)
+// Encendida, "Pot<60%" en (x, y) (rojo sin pociones de curación); devuelve el ancho (0 apagada).
+int dibujar_indicador_pocion(App& a, float x, float y, u64 clave);
+// Botón a la derecha de los auto-buffs: clic gira Off -> 30 -> 60 -> 80 -> 90 -> Off.
+bool sobre_boton_pocion(const App& a);
+void dibujar_boton_pocion(App& a);  // después de dibujar_autobuffs
 
 // Polymorph (forma_ui.cpp).
 bool cargar_formas(App& a);
@@ -612,6 +676,8 @@ const u8* stats_base_clase(int clase);
 int bonus_clase(int clase);
 // Dar un ítem del inventario a un NPC o una mascota; de una pila, pregunta cuántos.
 void dar_item(App& a, ObjId objetivo, ObjId item);
+// Varios a la vez: la pila entera de cada uno, sin preguntar.
+void dar_items(App& a, ObjId objetivo, std::span<const ObjId> items);
 void dibujar_cantidad(App& a);
 bool sobre_cantidad(const App& a);
 

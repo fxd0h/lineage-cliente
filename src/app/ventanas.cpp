@@ -327,6 +327,35 @@ void dibujar_opciones(App& a) {
         a.escribiendo_chat = false;
         cambio = true;
     }
+    std::snprintf(t, sizeof t, "%d", a.cfg.paginas_barra);
+    if (fila("Hotbar pages", t)) {  // 1 -> 2 ... -> 9 -> 1; las que dejan de verse se conservan
+        a.cfg.paginas_barra = a.cfg.paginas_barra % PAGINAS_BARRA_MAX + 1;
+        cambio = true;
+    }
+    std::snprintf(t, sizeof t, "%d ms", a.cfg.ms_mantener_tecla);
+    if (fila("Hold 1-0 to self-cast", t)) {  // 150 -> 200 -> 300 -> 400 -> 500 -> 700 -> 1000 -> 150
+        static constexpr int VALORES[] = {150, 200, 300, 400, 500, 700, 1000};
+        int sig = VALORES[0];
+        for (int v : VALORES)
+            if (v > a.cfg.ms_mantener_tecla) { sig = v; break; }
+        a.cfg.ms_mantener_tecla = sig;
+        cambio = true;
+    }
+    // Auto-poción del personaje con el que se juega (la carga procesar_autopocion).
+    if (a.cfg.usar_autopocion && !a.autopocion.de.empty()) {
+        char n[64];
+        std::snprintf(n, sizeof n, "Auto potion (%s)", a.autopocion.de.c_str());
+        if (fila(n, a.autopocion.op.encendida ? "On" : "Off")) {
+            a.autopocion.op.encendida = !a.autopocion.op.encendida;
+            guardar_autopocion(a);
+        }
+        std::snprintf(t, sizeof t, "below %d%% HP", a.autopocion.op.umbral);
+        if (fila("Auto potion when", t)) {  // 10 -> 15 ... -> 95 -> 10
+            int& u = a.autopocion.op.umbral;
+            u = u >= UMBRAL_POCION_MAX ? UMBRAL_POCION_MIN : u + 5;
+            guardar_autopocion(a);
+        }
+    }
     if (fila("HP/MP bar over char", a.cfg.barra_personaje ? "On" : "Off"))
         a.cfg.barra_personaje = !a.cfg.barra_personaje, cambio = true;
     if (fila("Damage numbers", a.cfg.texto_dano ? "On" : "Off"))
