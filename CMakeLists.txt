@@ -20,6 +20,13 @@ else()
     add_compile_definitions(LIN_CONTROL=0)
 endif()
 
+# Versión del paquete: la pone el empaquetado (herramientas/empaquetar_*); en Windows va en el .exe.
+set(LIN_VERSION "0.0.0" CACHE STRING "Versión del paquete (X.Y.Z, admite un sufijo: 0.2.0-abc1234)")
+
+# MSVC: runtime de C++ estático (/MT), para todo (también SDL3): el .exe no necesita el redistribuible de
+# Visual C++ instalado. herramientas/empaquetar_windows.ps1 comprueba que no dependa de sus DLL.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # Dependencias antes de las opciones de advertencias: estas aplican solo a nuestro código.
 include(cmake/dependencias.cmake)
 
@@ -161,11 +168,28 @@ else()
         COMMAND ${CMAKE_COMMAND} -DBIN=$<TARGET_FILE:lineage> -P ${CMAKE_SOURCE_DIR}/cmake/sin_control.cmake
         COMMENT "Comprobando que el ejecutable no incluya el control en vivo")
 endif()
-if(WIN32 AND NOT LIN_CONTROL)
-    # Versión final: subsistema GUI, sin ventana de consola (SDL_main.h pone el WinMain). En desarrollo
-    # queda de consola para ver el log.
-    set_target_properties(lineage PROPERTIES WIN32_EXECUTABLE ON)
-endif()
+# Windows: ícono y versión del .exe (cmake/windows.rc.in) y, en la versión final, subsistema GUI, sin
+# ventana de consola (SDL_main.h pone el WinMain). En desarrollo queda de consola para ver el log.
+function(lin_windows objetivo descripcion icono)
+    if(NOT WIN32)
+        return()
+    endif()
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ "${LIN_VERSION}")
+    if(CMAKE_MATCH_COUNT EQUAL 3)
+        set(RC_VERSION_COMAS "${CMAKE_MATCH_1},${CMAKE_MATCH_2},${CMAKE_MATCH_3},0")
+    else()
+        set(RC_VERSION_COMAS "0,0,0,0")
+    endif()
+    set(RC_EJECUTABLE ${objetivo})
+    set(RC_DESCRIPCION "${descripcion}")
+    set(RC_ICONO "${CMAKE_SOURCE_DIR}/datos/iconos/${icono}.ico")
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/windows.rc.in ${CMAKE_BINARY_DIR}/generado/${objetivo}.rc @ONLY)
+    target_sources(${objetivo} PRIVATE ${CMAKE_BINARY_DIR}/generado/${objetivo}.rc)
+    if(NOT LIN_CONTROL)
+        set_target_properties(${objetivo} PROPERTIES WIN32_EXECUTABLE ON)
+    endif()
+endfunction()
+lin_windows(lineage "Lineage" lineage)
 if(APPLE)
     # MULTIPLATAFORMA: en macOS se compila como ejecutable de consola para depurar;
     # el empaquetado .app (MACOSX_BUNDLE, Info.plist, icono) queda para el entregable 11.
@@ -178,9 +202,7 @@ target_link_libraries(explorador PRIVATE lin_ui)
 # Editor visual de settings.ini: la misma UI simple del juego, sin cargar el juego.
 add_executable(settings tools/settings.cpp)
 target_link_libraries(settings PRIVATE lin_ui)
-if(WIN32 AND NOT LIN_CONTROL)
-    set_target_properties(settings PROPERTIES WIN32_EXECUTABLE ON)
-endif()
+lin_windows(settings "Lineage Settings" settings)
 
 if(LIN_TESTS)
     enable_testing()

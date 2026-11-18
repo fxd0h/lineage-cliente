@@ -44,6 +44,11 @@ para probar rápido, no para las releases.
 - **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
   `core/asignaciones.cpp`). Los 65 avisos de `/W4` están corregidos (casi todos C4244: coordenadas `int` en
   `Graficos::texto`, que ahora acepta enteros) y el CI compila con `LIN_AVISOS_ERROR=ON` (`/WX`, `-Werror`).
+- **Fase 4 (Windows, primera parte):** `herramientas/empaquetar_windows.ps1` arma el `.zip` (x64 y arm64) con los
+  `.exe` de la versión final, `datos/`, `LICENSE.txt` y `herramientas/windows/LEEME.txt`. Ícono y versión en el
+  `.exe` (`cmake/windows.rc.in`, `datos/iconos/*.ico` de `tools/generar_iconos.py --ico`, `LIN_VERSION`), runtime
+  de C++ estático (`/MT`, comprobado con `dumpbin`). El CI lo arma en cada push (artefacto) y `release.yml` lo
+  publica con un tag. Falta: instalador (Inno Setup o WiX) y firma de código (sin firma, SmartScreen avisa).
 
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)
 

@@ -66,3 +66,18 @@ jobs:
       - name: Tests (Linux, con Xvfb y lavapipe)
         if: runner.os == 'Linux'
         run: xvfb-run -a ctest --preset debug
+
+      # El .zip de la versión final (preset release), como artefacto descargable de la corrida: comprueba
+      # que la versión final compila y deja un paquete para probar.
+      - name: Empaquetar (Windows)
+        if: runner.os == 'Windows'
+        id: paquete
+        run: |
+          $zip = herramientas/empaquetar_windows.ps1 -Version "0.0.0-$("${{ github.sha }}".Substring(0, 7))" | Select-Object -Last 1
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: lineage-windows-${{ matrix.arch }}
+          path: ${{ steps.paquete.outputs.zip }}

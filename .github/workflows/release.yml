@@ -1,8 +1,8 @@
 # Empaquetado y releases.
-# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS
-#   y publica la release en GitHub con el .dmg adjunto y notas generadas.
-# - A mano (Actions > Release > Run workflow): lo mismo sin publicar; el .dmg queda como artefacto.
-# Por ahora solo macOS: el shader es Metal (ver "Missing for Windows and Linux" en el README).
+# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS y
+#   los .zip de Windows (x64 y arm64), y publica la release en GitHub con los tres adjuntos y notas generadas.
+# - A mano (Actions > Release > Run workflow): lo mismo sin publicar; los paquetes quedan como artefactos.
+# Linux todavía no tiene paquete (PLAN_PORTADO.md, Fase 4).
 name: Release
 
 on:
@@ -40,8 +40,53 @@ jobs:
           name: lineage-macos
           path: ${{ steps.paquete.outputs.dmg }}
 
+  windows:
+    strategy:
+      matrix:
+        include:
+          - { runner: windows-latest, arch: x64 }
+          - { runner: windows-11-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Herramientas
+        run: python -m pip install ninja
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Tests
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --target lin_tests
+          build/debug/lin_tests.exe  # sin LINEAGE_DIR se saltan los que necesitan los recursos del juego
+
+      - name: Empaquetar
+        id: paquete
+        run: |
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".Substring(1) } else { "0.0.0-$("${{ github.sha }}".Substring(0, 7))" }
+          $zip = herramientas/empaquetar_windows.ps1 -Version $version | Select-Object -Last 1
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lineage-windows-${{ matrix.arch }}
+          path: ${{ steps.paquete.outputs.zip }}
+
+  # La release se publica una vez, con los paquetes de todos los jobs.
+  publicar:
+    if: github.ref_type == 'tag'
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: paquetes
+          merge-multiple: true
+
       - name: Publicar la release
-        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "${{ steps.paquete.outputs.dmg }}" --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

@@ -44,6 +44,12 @@ workload (ARM64 tools on arm64) and the Windows SDK, whose `dxc.exe` makes the D
 console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages listed in
 `.github/workflows/compilar.yml`.
 
+**Windows package:** from the developer console (x64 or arm64),
+`powershell -ExecutionPolicy Bypass -File herramientas\empaquetar_windows.ps1 -Version 0.2.0` leaves
+`dist\Lineage-0.2.0-windows-<arch>.zip` with `lineage.exe`, `settings.exe`, `datos\`, `LICENSE.txt` and `LEEME.txt`.
+The runtime is linked statically (no Visual C++ redistributable needed; the script checks it). CI builds the zip on
+every push (artifact `lineage-windows-<arch>`), and a `v*` tag publishes it in the release next to the macOS `.dmg`.
+
 **Game folder on a WebDAV drive (Windows):** if the console shows `error de Windows 223` for the `.pak` files, the
 drive is mounted over WebDAV, whose client downloads the whole file on open and refuses files over ~50 MB.
 Copy the game to a local disk (recommended: WebDAV would download the ~2 GB `Sprite.pak` on every start), or raise
