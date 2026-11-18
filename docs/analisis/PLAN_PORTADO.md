@@ -17,7 +17,18 @@ para probar rápido, no para las releases.
 - **Fase 2:** Winsock2, `MapViewOfFile` con rutas UTF-16, `WIN32_EXECUTABLE` en `release` (con
   `SDL_main.h`) y el control en vivo por TCP en 127.0.0.1 (`LIN_CONTROL=tcp:<puerto>`, el único en
   Windows; `lin_ctl.py` lo usa solo). Comprobado con MinGW, con `tests/test_socket.cpp` en Linux y en el
-  CI; falta probarlo en una máquina Windows (sin la Fase 1 no dibuja).
+  CI; falta probarlo en una máquina Windows.
+- **Fase 1 (pasos 1 a 3):** los 6 shaders en HLSL (`src/render/shaders/sprite|brillo|mundo.hlsl`).
+  `cmake/shaders.cmake` los compila en cada build: DXIL con el `dxc.exe` del SDK de Windows, SPIR-V con
+  glslang (`--auto-sampled-textures` une textura y sampler, como pide el backend Vulkan de SDL), y los
+  incrusta en `generado/shaders.h`. No hizo falta SDL_shadercross. `Gpu::iniciar` pide un formato por
+  plataforma. `tests/test_gpu.cpp` dibuja con los tres pipelines y lee la captura: pasa con Vulkan
+  (lavapipe, en Xvfb, también en el CI) y se salta sin GPU. **Falta el paso 4**: macOS sigue con el MSL a
+  mano; generarlo con `spirv-cross --msl` desde el SPIR-V y comparar capturas en un Mac antes de borrarlo.
+  Tampoco se probó todavía D3D12 en una máquina real.
+- **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
+  `core/asignaciones.cpp`). Quedan avisos de `/W4` por resolver: C4244 (conversiones int → float, ~80) y
+  C4458/C4456 (nombres que tapan a otros).
 
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)
 

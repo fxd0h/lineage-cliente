@@ -37,6 +37,12 @@ More documentation, mostly in Spanish, the working language of the project:
 SDL3 3.4.18, stb (`stb_image`, `stb_truetype`), dr_mp3 and doctest are downloaded on the first configure
 (FetchContent, pinned versions). Nothing else needs installing.
 
+**Windows and Linux (in progress, see [PLAN_PORTADO.md](docs/analisis/PLAN_PORTADO.md)):** the shaders are
+compiled from HLSL (`src/render/shaders/`) at build time. Windows: Visual Studio 2022 Build Tools with the C++
+workload (ARM64 tools on arm64) and the Windows SDK, whose `dxc.exe` makes the DXIL; build from the developer
+console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages listed in
+`.github/workflows/compilar.yml`.
+
 ## Build and test
 
 ```sh
@@ -461,7 +467,7 @@ Identifiers and comments in the code are in Spanish.
 
 | Where | What's missing |
 |---|---|
-| `src/render/gpu.cpp` | The shader is in MSL (Metal). Write it in HLSL, compile it with SDL_shadercross to SPIR-V (Vulkan/Linux) and DXIL (D3D12/Windows), and choose the format with `SDL_GetGPUShaderFormats()` |
+| `src/render/gpu.cpp` | Windows (DXIL) and Linux (SPIR-V) use the HLSL shaders; macOS still uses the hand-written MSL. Generate it from the HLSL too (`spirv-cross --msl`) once screenshots match pixel for pixel |
 | `src/plataforma/archivo_mapeado.cpp`, `socket.cpp` | Windows: written (`MapViewOfFile`, UTF-16 paths, Winsock2) and checked with MinGW and in CI; not yet tried on a real Windows machine |
 | `std::filesystem` with `std::string` (`ventanas.cpp`, `mundo.cpp`) | Windows: narrow paths use the ANSI code page, not UTF-8; a game folder with non-ASCII characters would not be found |
 | `src/plataforma/rutas.cpp`, `src/mundo/mundo.cpp` | Linux is case-sensitive: look for `Sprite.pak`, `map/`... ignoring case |

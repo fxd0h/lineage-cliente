@@ -318,7 +318,7 @@ void dibujar_barra(App& a, int y) {
         auto centrado = [&](std::string_view t, int ty, u32 color) {
             g.texto(t, static_cast<float>(sx + (ANCHO_SELECTOR - ancho_texto(t.data(), t.size())) / 2), static_cast<float>(ty), kt, color);
         };
-        char n[4];
+        char n[12];  // cabe cualquier int (gcc avisa con menos)
         std::snprintf(n, sizeof n, "%d", a.pagina_barra + 1);
         // Flechas: el mismo triángulo de 4 filas (7, 5, 3, 1 px), invertido para la de arriba
         // (la fuente no tiene flechas, y "^" y "v" no se parecen entre sí).

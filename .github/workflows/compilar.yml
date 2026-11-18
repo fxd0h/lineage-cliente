@@ -1,5 +1,6 @@
 # Compila y corre los tests en las plataformas del plan de portado (docs/analisis/PLAN_PORTADO.md, Fase 0).
-# Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego.
+# Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego; sin GPU, tests/test_gpu.cpp.
+# Los shaders se compilan desde HLSL: glslang en Linux, dxc del SDK de Windows (cmake/shaders.cmake).
 # Linux y Windows siguen con continue-on-error hasta terminar su portado: muestran los errores reales
 # sin bloquear. macOS sí tiene que pasar.
 name: Compilar
@@ -40,7 +41,8 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
-            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev
+            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev \
+            glslang-tools mesa-vulkan-drivers xvfb  # shaders a SPIR-V; Vulkan por software para tests/test_gpu.cpp
 
       - name: Herramientas (Windows)
         if: runner.os == 'Windows'
@@ -59,4 +61,9 @@ jobs:
         run: cmake --build --preset debug
 
       - name: Tests
+        if: runner.os != 'Linux'
         run: ctest --preset debug
+
+      - name: Tests (Linux, con Xvfb y lavapipe)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ctest --preset debug

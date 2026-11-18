@@ -1,22 +1,26 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include "render/gpu.h"
+#include "shaders.h"  // generado por cmake/shaders.cmake desde src/render/shaders/*.hlsl
 
 namespace lin {
 
 namespace {
 
-// MULTIPLATAFORMA: SDL_GPU usa Metal en macOS y por eso este shader está en MSL. Para Vulkan
-// (Linux) y D3D12 (Windows) hay que escribirlo en HLSL y compilarlo con SDL_shadercross a SPIR-V
-// y DXIL, y elegir el formato con SDL_GetGPUShaderFormats(). Convención de recursos de SDL_GPU
-// para MSL: buffer(0) = uniformes, buffer(1) = primer storage buffer; texture(0)/sampler(0).
+// Shaders: en Windows (D3D12) y Linux (Vulkan), DXIL y SPIR-V compilados desde los HLSL de
+// src/render/shaders/ (cmake/shaders.cmake). En macOS (Metal), SHADER_MSL de abajo, que hace lo mismo
+// que esos HLSL. MULTIPLATAFORMA: generarlo también desde el HLSL (PLAN_PORTADO.md, Fase 1, paso 4).
+// Convención de recursos de SDL_GPU para MSL: buffer(0) = uniformes, buffer(1) = primer storage
+// buffer; texture(0)/sampler(0).
 // Tamaño inicial de la textura de brillo (celdas); crece si la vista lo pide (ver asegurar_luz).
 constexpr int LUZ_TAM = 1024;
 constexpr int FILAS_TAM = 1024;  // alto de la textura de color por fila
 // Amplitud (píxeles) del vaivén de la borrachera por filas (S_Liquor 1). Igual que desplazamiento_borracho.
 constexpr float AMPLITUD_BORRACHO = 3.5f;
 
+#if defined(__APPLE__)
 const char* SHADER_MSL = R"(
 #include <metal_stdlib>
 using namespace metal;
@@ -120,6 +124,48 @@ fragment float4 fs_mundo(MundoSalida in [[stage_in]], texture2d<float> escena [[
     return float4(c, 1.0);
 }
 )";
+#endif
+
+#if defined(__APPLE__)
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_MSL;
+#elif defined(_WIN32)
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_DXIL;
+#else
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_SPIRV;
+#endif
+
+// Código de una etapa: en MSL, el texto con todas las funciones; en DXIL/SPIR-V, el binario de esa
+// entrada. El nombre de la entrada es el mismo en los tres formatos.
+struct CodigoShader {
+    const Uint8* datos;
+    size_t tam;
+};
+#if defined(__APPLE__)
+CodigoShader codigo_shader(const char*) {
+    return {reinterpret_cast<const Uint8*>(SHADER_MSL), std::strlen(SHADER_MSL)};
+}
+#else
+CodigoShader codigo_shader(const char* entrada) {
+#define LIN_SHADER(n, var) \
+    if (std::strcmp(entrada, n) == 0) return {var, sizeof var};
+    LIN_SHADER("vs_sprite", SHADER_VS_SPRITE)
+    LIN_SHADER("fs_sprite", SHADER_FS_SPRITE)
+    LIN_SHADER("vs_brillo", SHADER_VS_BRILLO)
+    LIN_SHADER("fs_brillo", SHADER_FS_BRILLO)
+    LIN_SHADER("vs_mundo", SHADER_VS_MUNDO)
+    LIN_SHADER("fs_mundo", SHADER_FS_MUNDO)
+#undef LIN_SHADER
+    return {nullptr, 0};
+}
+#endif
+
+SDL_GPUShader* crear_shader(SDL_GPUDevice* dev, SDL_GPUShaderCreateInfo info) {
+    const CodigoShader c = codigo_shader(info.entrypoint);
+    info.code = c.datos;
+    info.code_size = c.tam;
+    info.format = FORMATO_SHADER;
+    return SDL_CreateGPUShader(dev, &info);
+}
 
 }  // namespace
 
@@ -129,13 +175,13 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
     alto_ = alto_min_ = alto_logico;
     grid_w_ = ancho_logico;
     grid_h_ = alto_logico;
-    // MULTIPLATAFORMA: agregar SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL cuando
-    // existan los shaders compilados para esos backends.
-    dev_ = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, false, nullptr);
+    // Un formato por plataforma: SDL elige el backend que lo acepta (Metal, D3D12 o Vulkan).
+    dev_ = SDL_CreateGPUDevice(FORMATO_SHADER, false, nullptr);
     if (!dev_) {
         LIN_LOG("SDL_CreateGPUDevice: %s", SDL_GetError());
         return false;
     }
+    LIN_LOG("GPU: %s", SDL_GetGPUDeviceDriver(dev_));
     if (!SDL_ClaimWindowForGPUDevice(dev_, ventana_)) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
@@ -221,21 +267,18 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
 
 bool Gpu::crear_pipeline() {
     SDL_GPUShaderCreateInfo vs{};
-    vs.code = reinterpret_cast<const Uint8*>(SHADER_MSL);
-    vs.code_size = std::strlen(SHADER_MSL);
     vs.entrypoint = "vs_sprite";
-    vs.format = SDL_GPU_SHADERFORMAT_MSL;
     vs.stage = SDL_GPU_SHADERSTAGE_VERTEX;
     vs.num_uniform_buffers = 1;
     vs.num_storage_buffers = 1;
-    SDL_GPUShader* v = SDL_CreateGPUShader(dev_, &vs);
+    SDL_GPUShader* v = crear_shader(dev_, vs);
     SDL_GPUShaderCreateInfo fs = vs;
     fs.entrypoint = "fs_sprite";
     fs.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     fs.num_uniform_buffers = 0;
     fs.num_storage_buffers = 0;
     fs.num_samplers = 1;
-    SDL_GPUShader* f = SDL_CreateGPUShader(dev_, &fs);
+    SDL_GPUShader* f = crear_shader(dev_, fs);
     if (!v || !f) {
         LIN_LOG("SDL_CreateGPUShader: %s", SDL_GetError());
         return false;
@@ -271,8 +314,8 @@ bool Gpu::crear_pipeline() {
     bf.entrypoint = "fs_brillo";
     bf.num_uniform_buffers = 1;
     bf.num_samplers = 2;
-    SDL_GPUShader* bvs = SDL_CreateGPUShader(dev_, &bv);
-    SDL_GPUShader* bfs = SDL_CreateGPUShader(dev_, &bf);
+    SDL_GPUShader* bvs = crear_shader(dev_, bv);
+    SDL_GPUShader* bfs = crear_shader(dev_, bf);
     if (!bvs || !bfs) {
         LIN_LOG("SDL_CreateGPUShader (brillo): %s", SDL_GetError());
         return false;
@@ -309,8 +352,8 @@ bool Gpu::crear_pipeline() {
     mf.num_uniform_buffers = 1;
     mf.num_samplers = 1;
     mf.num_storage_buffers = 0;
-    SDL_GPUShader* mvs = SDL_CreateGPUShader(dev_, &mv);
-    SDL_GPUShader* mfs = SDL_CreateGPUShader(dev_, &mf);
+    SDL_GPUShader* mvs = crear_shader(dev_, mv);
+    SDL_GPUShader* mfs = crear_shader(dev_, mf);
     if (!mvs || !mfs) {
         LIN_LOG("SDL_CreateGPUShader (mundo): %s", SDL_GetError());
         return false;

@@ -22,9 +22,13 @@ endif()
 include(cmake/dependencias.cmake)
 
 if(MSVC)
-    # MULTIPLATAFORMA (Windows): equivalentes de -fno-exceptions / -fno-rtti en MSVC
-    add_compile_options(/W4 /EHs-c- /GR- /utf-8)
-    add_compile_definitions(_HAS_EXCEPTIONS=0)
+    # Equivalentes de -fno-exceptions / -fno-rtti. CMake pone /EHsc por omisión: se saca para que no
+    # choque con /EHs-c- (aviso D9025 en cada archivo).
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    # C4324: relleno por alignas (buscado, en los anillos y estructuras por hilo).
+    add_compile_options(/W4 /EHs-c- /GR- /utf-8 /wd4324)
+    # _CRT_SECURE_NO_WARNINGS: getenv, fopen... son las funciones estándar que usa el código portable.
+    add_compile_definitions(_HAS_EXCEPTIONS=0 _CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -Wno-unused-parameter -fno-exceptions -fno-rtti)
 endif()
@@ -90,11 +94,14 @@ add_library(lin_mundo STATIC
     src/mundo/inventario.cpp)
 target_link_libraries(lin_mundo PUBLIC lin_core lin_proto lin_recursos)
 
+include(cmake/shaders.cmake)
 add_library(lin_render STATIC
     src/render/atlas.cpp
     src/render/gpu.cpp
-    src/render/graficos.cpp)
+    src/render/graficos.cpp
+    ${LIN_SHADERS_H})
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
+target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
 
 add_library(lin_audio STATIC
     src/audio/audio.cpp)
@@ -189,6 +196,7 @@ if(LIN_TESTS)
         tests/test_autobuffs.cpp
         tests/test_autopocion.cpp
         tests/test_socket.cpp
+        tests/test_gpu.cpp
         src/core/asignaciones.cpp)
     target_link_libraries(lin_tests PRIVATE lin_mundo lin_render doctest)
     add_test(NAME lin_tests COMMAND lin_tests)
