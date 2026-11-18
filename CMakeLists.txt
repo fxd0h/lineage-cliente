@@ -50,6 +50,9 @@ add_library(lin_plataforma STATIC
     src/plataforma/rutas.cpp
     src/i18n/textos.cpp)
 target_link_libraries(lin_plataforma PUBLIC lin_core PRIVATE SDL3::SDL3)
+if(WIN32)
+    target_link_libraries(lin_plataforma PUBLIC ws2_32)  # Winsock2 (plataforma/socket.cpp)
+endif()
 
 add_library(lin_proto STATIC
     src/proto/cifrado.cpp
@@ -142,6 +145,11 @@ else()
         COMMAND ${CMAKE_COMMAND} -DBIN=$<TARGET_FILE:lineage> -P ${CMAKE_SOURCE_DIR}/cmake/sin_control.cmake
         COMMENT "Comprobando que el ejecutable no incluya el control en vivo")
 endif()
+if(WIN32 AND NOT LIN_CONTROL)
+    # Versión final: subsistema GUI, sin ventana de consola (SDL_main.h pone el WinMain). En desarrollo
+    # queda de consola para ver el log.
+    set_target_properties(lineage PROPERTIES WIN32_EXECUTABLE ON)
+endif()
 if(APPLE)
     # MULTIPLATAFORMA: en macOS se compila como ejecutable de consola para depurar;
     # el empaquetado .app (MACOSX_BUNDLE, Info.plist, icono) queda para el entregable 11.
@@ -154,6 +162,9 @@ target_link_libraries(explorador PRIVATE lin_ui)
 # Editor visual de settings.ini: la misma UI simple del juego, sin cargar el juego.
 add_executable(settings tools/settings.cpp)
 target_link_libraries(settings PRIVATE lin_ui)
+if(WIN32 AND NOT LIN_CONTROL)
+    set_target_properties(settings PROPERTIES WIN32_EXECUTABLE ON)
+endif()
 
 if(LIN_TESTS)
     enable_testing()

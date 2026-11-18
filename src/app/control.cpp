@@ -1,7 +1,9 @@
 // Control en vivo para pruebas (solo con LIN_CONTROL; la versión final no lo compila).
 //
 // Un socket de archivo (Unix domain socket) en $LIN_CONTROL o $TMPDIR/lineage-control-<pid>.sock,
-// solo para el usuario. Cada línea es un comando; la respuesta son líneas que terminan con "ok" o
+// solo para el usuario. Con LIN_CONTROL=tcp:<puerto>, TCP en 127.0.0.1 (en Windows es lo único: Python
+// no tiene AF_UNIX ahí; sin LIN_CONTROL usa un puerto libre, que sale en el log). El transporte está
+// en plataforma/socket.cpp. Cada línea es un comando; la respuesta son líneas que terminan con "ok" o
 // "error <motivo>". Se revisa una vez por frame en el hilo principal (sin hilos ni locks): los
 // comandos llaman a las mismas funciones que la interfaz. Los que esperan algo ("esperar", "login",
 // "personaje", "captura") dejan la conexión en espera y responden en el frame en que se cumple o
@@ -11,19 +13,15 @@
 //
 // Comandos: "ayuda" (AYUDA) y docs/analisis/PLAN_CONTROL_VIVO.md. Herramienta: herramientas/lin_ctl.py.
 // Los textos van en CP949, como los del juego (nombres coreanos incluidos); ASCII es igual.
-// MULTIPLATAFORMA: AF_UNIX existe en Windows 10 1803+ (afunix.h, closesocket, ioctlsocket); falta.
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <cerrno>
+#if !defined(_WIN32)
+#include <unistd.h>  // getpid
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include "app/app.h"
+#include "plataforma/socket.h"
 
 namespace lin {
 
@@ -56,7 +54,7 @@ struct Espera {
 };
 
 struct Conexion {
-    int fd = -1;
+    DescLocal fd = SIN_DESC;
     std::string entrada, salida;
     Espera espera;
     // Paquetes recibidos y líneas de chat al empezar el comando anterior y el actual: "esperar
@@ -74,7 +72,7 @@ struct PasoMouse {
 };
 
 struct Control {
-    int escucha = -1;
+    DescLocal escucha = SIN_DESC;
     std::string ruta;
     std::vector<Conexion> conexiones;
     std::deque<PasoMouse> mouse;
@@ -649,8 +647,8 @@ void revisar_espera(App& a, Conexion& c) {
 }
 
 void cerrar_conexion(Conexion& c) {
-    ::close(c.fd);
-    c.fd = -1;
+    local_cerrar(c.fd);
+    c.fd = SIN_DESC;
 }
 
 }  // namespace
@@ -660,52 +658,38 @@ void control_iniciar(App&) {
     if (e && *e) {
         g.ruta = e;
     } else {
+#if defined(_WIN32)
+        g.ruta = "tcp:0";
+#else
         const char* tmp = std::getenv("TMPDIR");
         std::string dir = tmp && *tmp ? tmp : "/tmp/";
         if (dir.back() != '/') dir += '/';
         g.ruta = dir + "lineage-control-" + std::to_string(::getpid()) + ".sock";
+#endif
     }
-    sockaddr_un dir{};
-    dir.sun_family = AF_UNIX;
-    if (g.ruta.size() >= sizeof dir.sun_path) {
-        LIN_LOG("Control en vivo: la ruta es demasiado larga (%zu bytes): %s", g.ruta.size(), g.ruta.c_str());
-        return;
-    }
-    std::memcpy(dir.sun_path, g.ruta.c_str(), g.ruta.size() + 1);
-    ::unlink(g.ruta.c_str());
-    g.escucha = ::socket(AF_UNIX, SOCK_STREAM, 0);
-    const mode_t antes = ::umask(0077);  // solo el usuario
-    const bool ok = g.escucha >= 0 && ::bind(g.escucha, reinterpret_cast<sockaddr*>(&dir), sizeof dir) == 0 &&
-                    ::listen(g.escucha, MAX_CONEXIONES) == 0;
-    ::umask(antes);
-    if (!ok) {
-        LIN_LOG("Control en vivo: no se pudo abrir %s (%s)", g.ruta.c_str(), std::strerror(errno));
-        if (g.escucha >= 0) ::close(g.escucha);
-        g.escucha = -1;
-        return;
-    }
-    ::fcntl(g.escucha, F_SETFL, O_NONBLOCK);
-    LIN_LOG("Control en vivo: %s", g.ruta.c_str());
+    std::string donde;
+    g.escucha = local_escuchar(g.ruta, MAX_CONEXIONES, donde);
+    // "lineage-control-" también es la marca que busca cmake/sin_control.cmake en las versiones finales.
+    // Si falló, `donde` tiene el motivo.
+    LIN_LOG("Control en vivo (lineage-control-): %s", donde.c_str());
 }
 
 void control_frame(App& a) {
-    if (g.escucha < 0) return;
+    if (g.escucha == SIN_DESC) return;
     // Conexiones nuevas.
-    for (int fd; static_cast<int>(g.conexiones.size()) < MAX_CONEXIONES && (fd = ::accept(g.escucha, nullptr, nullptr)) >= 0;) {
-        ::fcntl(fd, F_SETFL, O_NONBLOCK);
+    for (DescLocal fd; static_cast<int>(g.conexiones.size()) < MAX_CONEXIONES && (fd = local_aceptar(g.escucha)) != SIN_DESC;)
         g.conexiones.push_back({fd, {}, {}, {}});
-    }
     for (Conexion& c : g.conexiones) {
         // Leer lo que llegó.
         char buf[4096];
-        for (ssize_t n; (n = ::recv(c.fd, buf, sizeof buf, 0)) != 0;) {
+        for (i64 n; (n = local_recibir(c.fd, buf, sizeof buf)) != 0;) {
             if (n < 0) {
-                if (errno != EAGAIN && errno != EWOULDBLOCK) cerrar_conexion(c);
+                cerrar_conexion(c);
                 break;
             }
             c.entrada.append(buf, static_cast<size_t>(n));
         }
-        if (c.fd < 0) continue;
+        if (c.fd == SIN_DESC) continue;
         // Un comando a la vez: el siguiente espera a que el anterior responda.
         revisar_espera(a, c);
         for (size_t fin; c.espera.tipo == Espera::NADA && (fin = c.entrada.find('\n')) != std::string::npos;) {
@@ -716,12 +700,12 @@ void control_frame(App& a) {
         }
         // Escribir las respuestas.
         while (!c.salida.empty()) {
-            const ssize_t n = ::send(c.fd, c.salida.data(), c.salida.size(), 0);
+            const i64 n = local_enviar(c.fd, c.salida.data(), c.salida.size());
             if (n <= 0) break;
             c.salida.erase(0, static_cast<size_t>(n));
         }
     }
-    std::erase_if(g.conexiones, [](const Conexion& c) { return c.fd < 0; });
+    std::erase_if(g.conexiones, [](const Conexion& c) { return c.fd == SIN_DESC; });
     // Texto inyectado: uno por frame (SDL guarda el puntero hasta leer el evento).
     if (!g.textos.empty()) {
         g.texto_actual = std::move(g.textos.front());
@@ -766,13 +750,10 @@ void control_paquete(Srv s) {
 }
 
 void control_cerrar() {
-    for (Conexion& c : g.conexiones) ::close(c.fd);
+    for (Conexion& c : g.conexiones) local_cerrar(c.fd);
     g.conexiones.clear();
-    if (g.escucha >= 0) {
-        ::close(g.escucha);
-        ::unlink(g.ruta.c_str());
-    }
-    g.escucha = -1;
+    local_dejar_de_escuchar(g.escucha, g.ruta);
+    g.escucha = SIN_DESC;
 }
 
 }  // namespace lin

@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include <string>
 #include <vector>
 #include "proto/cifrado.h"
 

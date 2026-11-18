@@ -1,0 +1,62 @@
+# Compila y corre los tests en las plataformas del plan de portado (docs/analisis/PLAN_PORTADO.md, Fase 0).
+# Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego.
+# Linux y Windows siguen con continue-on-error hasta terminar su portado: muestran los errores reales
+# sin bloquear. macOS sí tiene que pasar.
+name: Compilar
+
+on:
+  push:
+    branches: [main, "agente/*portado*", "agente/windows*", "agente/linux*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compilar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    name: ${{ matrix.nombre }}
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { nombre: macOS arm64, runner: macos-latest, experimental: false }
+          - { nombre: Linux x64, runner: ubuntu-latest, experimental: true }
+          - { nombre: Linux arm64, runner: ubuntu-24.04-arm, experimental: true }
+          - { nombre: Windows x64, runner: windows-latest, arch: x64, experimental: true }
+          - { nombre: Windows arm64, runner: windows-11-arm, arch: arm64, experimental: true }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Herramientas (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Herramientas (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev
+
+      - name: Herramientas (Windows)
+        if: runner.os == 'Windows'
+        run: python -m pip install ninja
+
+      - name: MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Configurar
+        run: cmake --preset debug
+
+      - name: Compilar
+        run: cmake --build --preset debug
+
+      - name: Tests
+        run: ctest --preset debug

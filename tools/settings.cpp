@@ -8,6 +8,7 @@
 // Tab: siguiente campo de texto. Enter: cierra el campo. Esc: sale sin guardar (en un desplegable, lo cierra).
 // Desarrollo: --pestana=N (0–4) y --captura=x.bmp (guarda una imagen a los 30 frames y sale).
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>  // Windows: WinMain (subsistema GUI en la versión final)
 #include <algorithm>
 #include <cctype>
 #include <cstddef>

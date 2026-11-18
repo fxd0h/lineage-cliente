@@ -10,6 +10,15 @@ pueden mergear por separado; cada una deja `main` compilando y con los tests en 
 La compilación cruzada (mingw-w64 o llvm-mingw para Windows, Docker para Linux) queda como opción local
 para probar rápido, no para las releases.
 
+## Avance
+
+- **Fase 0:** `.github/workflows/compilar.yml` (rama `agente/plan-portado`). Antes de eso, Linux ya no
+  compilaba por dos `#include <string>` que faltaban (`sonidos.cpp`, `test_cifrado.cpp`) y dos avisos de gcc.
+- **Fase 2:** Winsock2, `MapViewOfFile` con rutas UTF-16, `WIN32_EXECUTABLE` en `release` (con
+  `SDL_main.h`) y el control en vivo por TCP en 127.0.0.1 (`LIN_CONTROL=tcp:<puerto>`, el único en
+  Windows; `lin_ctl.py` lo usa solo). Comprobado con MinGW, con `tests/test_socket.cpp` en Linux y en el
+  CI; falta probarlo en una máquina Windows (sin la Fase 1 no dibuja).
+
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)
 
 Antes de portar nada, ver dónde rompe. Un workflow nuevo `.github/workflows/compilar.yml` (en cada PR y

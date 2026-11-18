@@ -1,6 +1,7 @@
 #include "recursos/sonidos.h"
 #include <cctype>
 #include <cstdlib>
+#include <string>
 
 namespace lin {
 

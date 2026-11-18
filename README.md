@@ -361,6 +361,8 @@ The `debug` and `debug-asan` builds (CMake option `LIN_CONTROL`) open a Unix dom
 commands. The `release` build doesn't include it: a CMake step (`cmake/sin_control.cmake`) fails if it slips in.
 
 - **Socket:** `$LIN_CONTROL`, or `$TMPDIR/lineage-control-<pid>.sock`. The path is printed at startup.
+  `LIN_CONTROL=tcp:<port>` listens on 127.0.0.1 instead (port 0: any free one). On Windows it is the only
+  option and the default (Python has no `AF_UNIX` there); `lin_ctl.py` uses it by itself on Windows.
 - **Responses:** each ends with `ok` or `error <reason>`.
 - **Waits:** commands that wait for something (`login`, `personaje`, `esperar`, `captura`) respond when it
   happens or the time limit passes, without blocking the game.
@@ -460,8 +462,8 @@ Identifiers and comments in the code are in Spanish.
 | Where | What's missing |
 |---|---|
 | `src/render/gpu.cpp` | The shader is in MSL (Metal). Write it in HLSL, compile it with SDL_shadercross to SPIR-V (Vulkan/Linux) and DXIL (D3D12/Windows), and choose the format with `SDL_GetGPUShaderFormats()` |
-| `src/plataforma/archivo_mapeado.cpp` | Windows: `CreateFileMappingW` / `MapViewOfFile`, and UTF-8 → UTF-16 paths (`_wfopen`). Currently an `#error` |
-| `src/plataforma/socket.cpp` / `socket.h` | Windows: Winsock2 (`WSAStartup`, `closesocket`, `SOCKET` type). Currently an `#error`. Linux is already covered (POSIX and `MSG_NOSIGNAL`) |
+| `src/plataforma/archivo_mapeado.cpp`, `socket.cpp` | Windows: written (`MapViewOfFile`, UTF-16 paths, Winsock2) and checked with MinGW and in CI; not yet tried on a real Windows machine |
+| `std::filesystem` with `std::string` (`ventanas.cpp`, `mundo.cpp`) | Windows: narrow paths use the ANSI code page, not UTF-8; a game folder with non-ASCII characters would not be found |
 | `src/plataforma/rutas.cpp`, `src/mundo/mundo.cpp` | Linux is case-sensitive: look for `Sprite.pak`, `map/`... ignoring case |
 | `CMakeLists.txt` | MSVC: equivalent options are in place, untested. `.app` / `.exe` / AppImage packaging (deliverable 11) |
 | `servidor_local/*.sh` | Linux: system packages instead of brew. Windows: the server's own `.bat` files |
