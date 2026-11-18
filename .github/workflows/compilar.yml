@@ -1,8 +1,7 @@
 # Compila y corre los tests en las plataformas del plan de portado (docs/analisis/PLAN_PORTADO.md, Fase 0).
 # Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego; sin GPU, tests/test_gpu.cpp.
 # Los shaders se compilan desde HLSL: glslang en Linux, dxc del SDK de Windows (cmake/shaders.cmake).
-# Linux y Windows siguen con continue-on-error hasta terminar su portado: muestran los errores reales
-# sin bloquear. macOS sí tiene que pasar.
+# Las cinco plataformas tienen que pasar.
 name: Compilar
 
 on:
@@ -19,16 +18,15 @@ jobs:
   compilar:
     name: ${{ matrix.nombre }}
     runs-on: ${{ matrix.runner }}
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { nombre: macOS arm64, runner: macos-latest, experimental: false }
-          - { nombre: Linux x64, runner: ubuntu-latest, experimental: true }
-          - { nombre: Linux arm64, runner: ubuntu-24.04-arm, experimental: true }
-          - { nombre: Windows x64, runner: windows-latest, arch: x64, experimental: true }
-          - { nombre: Windows arm64, runner: windows-11-arm, arch: arm64, experimental: true }
+          - { nombre: macOS arm64, runner: macos-latest }
+          - { nombre: Linux x64, runner: ubuntu-latest }
+          - { nombre: Linux arm64, runner: ubuntu-24.04-arm }
+          - { nombre: Windows x64, runner: windows-latest, arch: x64 }
+          - { nombre: Windows arm64, runner: windows-11-arm, arch: arm64 }
     steps:
       - uses: actions/checkout@v4
 

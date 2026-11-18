@@ -26,6 +26,10 @@ para probar rápido, no para las releases.
   (lavapipe, en Xvfb, también en el CI) y se salta sin GPU. **Falta el paso 4**: macOS sigue con el MSL a
   mano; generarlo con `spirv-cross --msl` desde el SPIR-V y comparar capturas en un Mac antes de borrarlo.
   Tampoco se probó todavía D3D12 en una máquina real.
+- **CI en verde en las 5 plataformas** (desde `0ccf85a`), sin `continue-on-error`. En Windows arm64 y x64
+  el test de GPU dibuja con D3D12 (en runners sin GPU física; falta probarlo en una máquina real). También hizo falta:
+  `DOCTEST_CONFIG_USE_STD_HEADERS` (MSVC no imprimía `std::string_view` en los CHECK) y, en
+  `test_asignaciones.cpp`, admitir la reserva extra del proxy de iteradores de MSVC en Debug.
 - **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
   `core/asignaciones.cpp`). Quedan avisos de `/W4` por resolver: C4244 (conversiones int → float, ~80) y
   C4458/C4456 (nombres que tapan a otros).
