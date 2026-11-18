@@ -9,122 +9,13 @@ namespace lin {
 
 namespace {
 
-// Shaders: en Windows (D3D12) y Linux (Vulkan), DXIL y SPIR-V compilados desde los HLSL de
-// src/render/shaders/ (cmake/shaders.cmake). En macOS (Metal), SHADER_MSL de abajo, que hace lo mismo
-// que esos HLSL. MULTIPLATAFORMA: generarlo también desde el HLSL (PLAN_PORTADO.md, Fase 1, paso 4).
-// Convención de recursos de SDL_GPU para MSL: buffer(0) = uniformes, buffer(1) = primer storage
-// buffer; texture(0)/sampler(0).
+// Shaders: DXIL (Windows, D3D12), SPIR-V (Linux, Vulkan) y MSL (macOS, Metal), todos compilados desde
+// los HLSL de src/render/shaders/ por cmake/shaders.cmake.
 // Tamaño inicial de la textura de brillo (celdas); crece si la vista lo pide (ver asegurar_luz).
 constexpr int LUZ_TAM = 1024;
 constexpr int FILAS_TAM = 1024;  // alto de la textura de color por fila
 // Amplitud (píxeles) del vaivén de la borrachera por filas (S_Liquor 1). Igual que desplazamiento_borracho.
 constexpr float AMPLITUD_BORRACHO = 3.5f;
-
-#if defined(__APPLE__)
-const char* SHADER_MSL = R"(
-#include <metal_stdlib>
-using namespace metal;
-
-struct Instancia { float4 destino; float4 uv; uint pagina; uint color; uint mezcla; uint relleno; };
-struct Uniformes { float2 pantalla; float2 relleno; };
-struct Salida {
-    float4 pos [[position]];
-    float2 uv;
-    float4 color;
-    uint pagina [[flat]];
-    uint mezcla [[flat]];
-};
-
-vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
-                        constant Uniformes& u [[buffer(0)]],
-                        const device Instancia* inst [[buffer(1)]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    Instancia i = inst[iid + uint(u.relleno.x)];
-    float2 e = esquinas[vid];
-    float2 p = i.destino.xy + e * i.destino.zw;
-    Salida o;
-    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    o.uv = mix(i.uv.xy, i.uv.zw, e);
-    o.color = unpack_unorm4x8_to_float(i.color);
-    o.pagina = i.pagina;
-    o.mezcla = i.mezcla;
-    return o;
-}
-
-fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
-                          sampler s [[sampler(0)]]) {
-    float4 c = atlas.sample(s, in.uv, in.pagina) * in.color;
-    if (c.a <= 0.0) discard_fragment();
-    // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    return float4(c.rgb * c.a, in.mezcla == 1 ? 0.0 : c.a);
-}
-
-// Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.
-struct BrilloSalida {
-    float4 pos [[position]];
-    float2 uv;
-    float2 uvf;
-};
-
-vertex BrilloSalida vs_brillo(uint vid [[vertex_id]], constant float4& escala [[buffer(0)]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    float2 e = esquinas[vid];
-    BrilloSalida o;
-    o.pos = float4(e.x * 2.0 - 1.0, 1.0 - e.y * 2.0, 0.0, 1.0);
-    o.uv = e * escala.xy;
-    o.uvf = float2(0.0, e.y * escala.z);
-    return o;
-}
-
-fragment float4 fs_brillo(BrilloSalida in [[stage_in]], texture2d<float> luz [[texture(0)]],
-                          texture2d<float> filas [[texture(1)]], sampler s0 [[sampler(0)]],
-                          sampler s1 [[sampler(1)]], constant float4& tinte [[buffer(0)]]) {
-    float b = luz.sample(s0, in.uv).r;
-    float3 f = filas.sample(s1, in.uvf).rgb;
-    return float4(tinte.rgb * b * f, 1.0);
-}
-
-// Reemplazar el mundo: una copia de lo ya dibujado, leída con la ola (desplazamiento por columnas;
-// p.z = fase, < 0 sin ola) y/o la visión (p.w: 1 elfo, 2 elfo oscuro).
-struct MundoSalida {
-    float4 pos [[position]];
-    float2 uv;
-};
-
-vertex MundoSalida vs_mundo(uint vid [[vertex_id]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    float2 e = esquinas[vid];
-    MundoSalida o;
-    o.pos = float4(e.x * 2.0 - 1.0, 1.0 - e.y * 2.0, 0.0, 1.0);
-    o.uv = e;
-    return o;
-}
-
-fragment float4 fs_mundo(MundoSalida in [[stage_in]], texture2d<float> escena [[texture(0)]],
-                         sampler s [[sampler(0)]], constant float4* u [[buffer(0)]]) {
-    float4 p = u[0];  // ancho, alto, fase de la ola (< 0 sin ola), modo de visión
-    float4 b = u[1];  // fase de la borrachera (< 0 sin ella), amplitud
-    float2 uv = in.uv;
-    if (b.x >= 0.0) {
-        float fila = floor(uv.y * p.y);
-        float dx = trunc(sin((fila + b.x) * 3.14159265 * 2.0 / 100.0) * b.y);
-        float x = clamp(floor(uv.x * p.x) + dx, 0.0, p.x - 1.0);
-        uv.x = (x + 0.5) / p.x;
-    }
-    if (p.z >= 0.0) {
-        float xl = floor(uv.x * p.x);
-        float yl = floor(uv.y * p.y);
-        float dy = trunc(sin((xl + p.z) * 3.14159265 / 50.0) * 6.0);
-        float y = clamp(yl + dy, 0.0, p.y - 1.0);
-        uv = float2((xl + 0.5) / p.x, (y + 0.5) / p.y);
-    }
-    float3 c = escena.sample(s, uv).rgb;
-    if (p.w == 1.0) c = c * float3(1.0 / 16.0, 0.5, 1.0 / 16.0);
-    else if (p.w == 2.0) c = c * ((2.0 * c.r + 7.0 * c.g + c.b) / 10.0);
-    return float4(c, 1.0);
-}
-)";
-#endif
 
 #if defined(__APPLE__)
 constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_MSL;
@@ -134,17 +25,11 @@ constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_DXIL;
 constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_SPIRV;
 #endif
 
-// Código de una etapa: en MSL, el texto con todas las funciones; en DXIL/SPIR-V, el binario de esa
-// entrada. El nombre de la entrada es el mismo en los tres formatos.
+// Código de una etapa (en MSL, su texto). El nombre de la entrada es el mismo en los tres formatos.
 struct CodigoShader {
     const Uint8* datos;
     size_t tam;
 };
-#if defined(__APPLE__)
-CodigoShader codigo_shader(const char*) {
-    return {reinterpret_cast<const Uint8*>(SHADER_MSL), std::strlen(SHADER_MSL)};
-}
-#else
 CodigoShader codigo_shader(const char* entrada) {
 #define LIN_SHADER(n, var) \
     if (std::strcmp(entrada, n) == 0) return {var, sizeof var};
@@ -157,7 +42,6 @@ CodigoShader codigo_shader(const char* entrada) {
 #undef LIN_SHADER
     return {nullptr, 0};
 }
-#endif
 
 SDL_GPUShader* crear_shader(SDL_GPUDevice* dev, SDL_GPUShaderCreateInfo info) {
     const CodigoShader c = codigo_shader(info.entrypoint);

@@ -1,6 +1,7 @@
 # Compila y corre los tests en las plataformas del plan de portado (docs/analisis/PLAN_PORTADO.md, Fase 0).
 # Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego; sin GPU, tests/test_gpu.cpp.
-# Los shaders se compilan desde HLSL: glslang en Linux, dxc del SDK de Windows (cmake/shaders.cmake).
+# Los shaders se compilan desde HLSL: glslang en Linux, glslang y spirv-cross en macOS,
+# dxc del SDK de Windows (cmake/shaders.cmake).
 # Las cinco plataformas tienen que pasar.
 name: Compilar
 
@@ -32,7 +33,7 @@ jobs:
 
       - name: Herramientas (macOS)
         if: runner.os == 'macOS'
-        run: brew install ninja
+        run: brew install ninja glslang spirv-cross  # shaders: HLSL -> SPIR-V -> MSL
 
       - name: Herramientas (Linux)
         if: runner.os == 'Linux'

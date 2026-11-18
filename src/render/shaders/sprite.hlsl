@@ -1,6 +1,5 @@
 // Sprites instanciados: una llamada de dibujo para todo el frame (ver render/gpu.cpp).
-// Es la fuente de SPIR-V (Linux) y DXIL (Windows); en macOS se usa todavía SHADER_MSL de gpu.cpp, que
-// debe hacer lo mismo.
+// Es la fuente de SPIR-V (Linux), DXIL (Windows) y MSL (macOS, vía SPIR-V y spirv-cross).
 //
 // Recursos según la convención de SDL_GPU (SDL_CreateGPUShader): en el vértice, storage buffers en
 // t[n]/space0 (set 0 en SPIR-V) y uniformes en b[n]/space1 (set 1); en el fragmento, texturas y
@@ -16,7 +15,14 @@ struct Instancia {
     uint relleno;
 };
 
-[[vk::binding(0, 0)]] StructuredBuffer<Instancia> instancias : register(t0, space0);
+// En MSL (spirv-cross --msl-decoration-binding) el binding es el índice de [[buffer]], y SDL_GPU pone
+// primero los uniformes: buffer(0) = Uniformes, buffer(1) = este storage buffer.
+#ifdef LIN_MSL
+[[vk::binding(1, 0)]]
+#else
+[[vk::binding(0, 0)]]
+#endif
+StructuredBuffer<Instancia> instancias : register(t0, space0);
 [[vk::binding(0, 1)]] cbuffer Uniformes : register(b0, space1) {
     float2 pantalla;
     float2 base;  // x: primera instancia de esta llamada

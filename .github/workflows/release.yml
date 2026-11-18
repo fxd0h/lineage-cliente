@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Herramientas
-        run: brew install ninja
+        run: brew install ninja glslang spirv-cross  # shaders: HLSL -> SPIR-V -> MSL
 
       - name: Tests
         run: |

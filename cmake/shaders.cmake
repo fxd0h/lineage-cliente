@@ -2,8 +2,9 @@
 # formato de su backend de SDL_GPU e incrustada en ${CMAKE_BINARY_DIR}/generado/shaders.h.
 # - Windows (D3D12): DXIL con dxc.exe del SDK de Windows (viene con Visual Studio; firma el DXIL).
 # - Linux (Vulkan): SPIR-V con glslangValidator (paquete glslang-tools) o, si está, dxc del Vulkan SDK.
-# - macOS (Metal): todavía el MSL escrito a mano en gpu.cpp. MULTIPLATAFORMA: generarlo desde el SPIR-V
-#   con spirv-cross --msl cuando se compare píxel a píxel con el actual (PLAN_PORTADO.md, Fase 1).
+# - macOS (Metal): MSL con spirv-cross desde el SPIR-V de glslang (brew install glslang spirv-cross).
+#   --msl-decoration-binding usa el binding de SPIR-V como índice de [[buffer]]/[[texture]]/[[sampler]];
+#   con -DLIN_MSL, sprite.hlsl corre el storage buffer a buffer(1), detrás de los uniformes, como pide SDL.
 
 set(LIN_SHADERS_FUENTE ${CMAKE_SOURCE_DIR}/src/render/shaders)
 # archivo:entrada:etapa
@@ -15,11 +16,6 @@ set(LIN_SHADERS
 set(LIN_SHADERS_DIR ${CMAKE_BINARY_DIR}/generado)
 set(LIN_SHADERS_H ${LIN_SHADERS_DIR}/shaders.h)
 file(MAKE_DIRECTORY ${LIN_SHADERS_DIR})
-
-if(APPLE)
-    file(WRITE ${LIN_SHADERS_H} "// Generado por cmake/shaders.cmake. macOS: shaders en MSL (gpu.cpp).\n#pragma once\n")
-    return()
-endif()
 
 if(WIN32)
     # Con la consola de desarrollador, WindowsSdkVerBinPath apunta a ...\Windows Kits\10\bin\<versión>\.
@@ -37,6 +33,13 @@ else()
         message(FATAL_ERROR "No se encontró glslangValidator: instalar glslang-tools (apt) o glslang (brew).")
     endif()
     set(LIN_SHADERS_EXT spv)
+    if(APPLE)
+        find_program(LIN_SPIRV_CROSS spirv-cross DOC "spirv-cross (SPIR-V a MSL)")
+        if(NOT LIN_SPIRV_CROSS)
+            message(FATAL_ERROR "No se encontró spirv-cross: brew install spirv-cross.")
+        endif()
+        set(LIN_SHADERS_EXT metal)
+    endif()
 endif()
 
 set(LIN_SHADERS_BINARIOS "")
@@ -53,6 +56,11 @@ foreach(s IN LISTS LIN_SHADERS)
             set(perfil ps_6_0)
         endif()
         set(comando ${LIN_DXC} -nologo -T ${perfil} -E ${entrada} -O3 -Fo ${salida} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl)
+    elseif(APPLE)
+        set(spv ${LIN_SHADERS_DIR}/${entrada}.spv)
+        set(comando ${LIN_GLSLANG} -D -V --quiet --auto-sampled-textures -DLIN_MSL -S ${etapa} -e ${entrada}
+                -o ${spv} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl
+            COMMAND ${LIN_SPIRV_CROSS} --msl --msl-version 20100 --msl-decoration-binding ${spv} --output ${salida})
     else()
         # --auto-sampled-textures: textura y sampler en el mismo binding pasan a ser un sampler
         # combinado, que es lo que espera el backend Vulkan de SDL_GPU.

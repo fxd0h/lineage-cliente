@@ -23,8 +23,12 @@ para probar rápido, no para las releases.
   glslang (`--auto-sampled-textures` une textura y sampler, como pide el backend Vulkan de SDL), y los
   incrusta en `generado/shaders.h`. No hizo falta SDL_shadercross. `Gpu::iniciar` pide un formato por
   plataforma. `tests/test_gpu.cpp` dibuja con los tres pipelines y lee la captura: pasa con Vulkan
-  (lavapipe, en Xvfb, también en el CI) y se salta sin GPU. **Falta el paso 4**: macOS sigue con el MSL a
-  mano; generarlo con `spirv-cross --msl` desde el SPIR-V y comparar capturas en un Mac antes de borrarlo.
+  (lavapipe, en Xvfb, también en el CI) y se salta sin GPU. **Paso 4 hecho (2026-11-18)**: en macOS, glslang
+  (`-DLIN_MSL`) y `spirv-cross --msl --msl-decoration-binding` generan el MSL, y se borró el escrito a mano.
+  El binding de SPIR-V pasa a ser el índice de Metal; SDL quiere los uniformes antes de los storage buffers,
+  así que con `LIN_MSL` `sprite.hlsl` pone `instancias` en el binding 1 (= `buffer(1)`). Capturas antes y
+  después (login, plaza de día y de noche, Giran de noche con braseros): iguales salvo lo que se mueve
+  (NPCs, fuego, cursor). `test_gpu.cpp` pasa con Metal.
   Tampoco se probó todavía D3D12 en una máquina real.
 - **CI en verde en las 5 plataformas** (desde `0ccf85a`), sin `continue-on-error`. En Windows arm64 y x64
   el test de GPU dibuja con D3D12 (en runners sin GPU física; falta probarlo en una máquina real). También hizo falta:
@@ -175,7 +179,7 @@ El `.dmg` ya se arma (`herramientas/empaquetar_macos.sh`, release `v0.1.0`). Est
 
 | Riesgo | Mitigación |
 |---|---|
-| El shader generado no queda igual que el MSL a mano | comparar capturas en macOS antes de borrar el MSL (Fase 1, paso 4) |
+| El shader generado no queda igual que el MSL a mano | resuelto: capturas iguales en macOS (Fase 1, paso 4) |
 | SDL_shadercross o DXC no están en todos los runners | bajar sus binarios en CI, o generar los shaders una vez y versionarlos |
 | Linux sin GPU real en CI | los tests no dibujan; para la ventana, probar a mano o con `lavapipe` |
 | Windows arm64: dependencias sin build oficial | SDL3, stb, dr_mp3 y doctest compilan desde el código (FetchContent), así que no deberían faltar |
