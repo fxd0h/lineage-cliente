@@ -55,6 +55,7 @@ constexpr u8 bless_kind(u8 wire) { return static_cast<u8>(wire & ~BLESS_SEALED_F
 struct Inventario {
     TablaItems items;
     std::vector<char> textos;  // nombres y atributos; se vacía con cada S_InvList
+    bool recien_cargado = false;  // llegó S_InvList: la app le aplica el orden guardado y lo baja
     void limpiar() {
         items.limpiar();
         textos.clear();
@@ -83,6 +84,12 @@ bool item_equipado(std::string_view nombre);
 // order (stable). Writes the slots of the first `cap` positions into `salida` and returns how many
 // were written; positions past `cap` keep their natural slot.
 size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap);
+// Mueve `mover` (en el orden en que están en la tabla) junto a `destino`: delante si `destino` está
+// antes que el primero de ellos, detrás si no. Así se ordena el inventario a mano.
+void mover_items(Inventario& inv, std::span<const ObjId> mover, ObjId destino);
+// Pone primero los ítems de `ids`, en ese orden (los que ya no están se ignoran); el resto queda
+// detrás, en el orden que tenía. Así vuelve el orden guardado.
+void ordenar_por_ids(Inventario& inv, std::span<const ObjId> ids);
 // Aplica los eventos de ítems (los demás se ignoran).
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos);
 

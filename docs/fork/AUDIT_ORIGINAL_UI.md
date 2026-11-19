@@ -191,7 +191,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Tab filters | 0 = all (0x44de10); 1 = equipment, type in {1,2,10,18..25,37,40} (0x44dd90); 2 = quest items via table 0x701358 (0x44de40); 3 = misc (0x44df00) | potions+food / equipment / scrolls+magic / other (guessed `tab_of`) | DIFFERENT | inventario_ui.cpp `tab_of` |
 | Tab tooltips | strings 878-881 "All", "Equipment", "Quest", "Miscellaneous" (ctor 0x44cfc8) | "Potions and food", ... | DIFFERENT | `TAB_NAMES` |
 | Equipped marker | img 536 (35x35) at (x-1,y-1) behind the icon (0x44e22b..0x44e291) | brown box + yellow "E" | DIFFERENT | inventario_ui.cpp |
-| Item order | list order | worn items first | DIFFERENT | `orden_inventario` |
+| Item order | list order; no Sort button, no drag-to-reorder, no multi-select in handler 0x44d1b0 (tabs, scroll, trash, close only) | worn items first; Sort / drag-reorder / Shift+click only in the simple UI (upstream feature) | DIFFERENT | `orden_inventario` |
 | Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a) | none | MISSING | meaning: U-C6 |
 | Icon position | cell origin (21+34c, 42+34r) (0x445fd0) | +1 px | DIFFERENT | `draw_item_icon` |
 | Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 18+35i | DIFFERENT | 1 px |

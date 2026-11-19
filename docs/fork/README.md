@@ -139,6 +139,14 @@ client. The front page is the [root README](../../README.md).
 
 ### Upstream merges
 
+- **Last merged: `origin/main` cabd99e (2026-11-19)** as a real merge commit; the next sync starts at
+  `git log HEAD..origin/main`. Brought in: `.seg` map segments (Chaotic Temple, north Gludio), pets/summons talk on
+  click, common turn and 200 ms spacing for auto-buffs and auto-potion, inventory sort (Sort button, drag to another
+  cell, Shift+click multi-select, per-character order in settings.ini). Upstream's `CHANGES.md` is in
+  `docs/upstream/CHANGES.md`. Fork resolutions: auto-buffs and auto-potion stay simple-UI only
+  (the 2009 client has none); inventory sorting, multi-select and the saved order are simple-UI only too, because
+  the 2009 inventory (handler 0x44d1b0) only has tabs, scroll bar, trash and close, and shows the list order
+  with worn items first.
 - Upstream `main` is merged from time to time (last: auto-buff potions and NPC shop stack quantity,
   2026-11-15). Upstream's experimental branches (`agente/modelos-3d`, `agente/plan-portado`) are not merged.
 

@@ -13,7 +13,7 @@ import sys
 import time
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-SIN_CAMBIOS = ["login", "moverse", "chat_estado", "combate_hechizos", "inventario", "equipo", "npc",
+SIN_CAMBIOS = ["login", "moverse", "chat_estado", "combate_hechizos", "inventario", "inventario_orden", "mapas_seg", "equipo", "npc",
                "tablon_correo", "subastas", "social"]
 CON_SERVIDOR = ["casas", "castillos", "guerra"]
 

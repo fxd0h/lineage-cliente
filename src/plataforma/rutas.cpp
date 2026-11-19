@@ -72,6 +72,7 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "atajos") c.atajos = valor;
     else if (clave == "barra") c.barra = valor;
     else if (clave == "autobuffs") c.autobuffs = valor;
+    else if (clave == "inventario_orden") c.inventario_orden = valor;
     else if (clave == "autopocion") c.autopocion = valor;
     else if (clave == "usar_autobuffs") c.usar_autobuffs = valor != "0";
     else if (clave == "usar_autopocion") c.usar_autopocion = valor != "0";
@@ -251,6 +252,7 @@ std::string escribir_config(const Config& c) {
     linea("atajos", c.atajos);
     linea("barra", c.barra);
     linea("autobuffs", c.autobuffs);
+    linea("inventario_orden", c.inventario_orden);
     linea("autopocion", c.autopocion);
     linea("usar_autobuffs", c.usar_autobuffs ? "1" : "0");
     linea("usar_autopocion", c.usar_autopocion ? "1" : "0");

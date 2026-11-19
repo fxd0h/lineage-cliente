@@ -200,11 +200,46 @@ size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap) {
     return k;
 }
 
+void mover_items(Inventario& inv, std::span<const ObjId> mover, ObjId destino) {
+    TablaItems& t = inv.items;
+    const Slot sd = t.buscar(destino);
+    if (sd == SIN_SLOT) return;
+    auto se_mueve = [&](Slot s) { return std::find(mover.begin(), mover.end(), t.ids()[s]) != mover.end(); };
+    if (se_mueve(sd)) return;
+    Slot primero = SIN_SLOT;
+    for (Slot s = 0; s < t.tamano() && primero == SIN_SLOT; ++s)
+        if (se_mueve(s)) primero = s;
+    if (primero == SIN_SLOT) return;
+    std::vector<Slot> quedan, movidos;
+    for (Slot s = 0; s < t.tamano(); ++s) (se_mueve(s) ? movidos : quedan).push_back(s);
+    auto pos = std::find(quedan.begin(), quedan.end(), sd) + (sd < primero ? 0 : 1);
+    quedan.insert(pos, movidos.begin(), movidos.end());
+    t.reordenar(quedan);
+}
+
+void ordenar_por_ids(Inventario& inv, std::span<const ObjId> ids) {
+    TablaItems& t = inv.items;
+    std::vector<Slot> orden;
+    std::vector<bool> puesto(t.tamano());
+    orden.reserve(t.tamano());
+    for (ObjId id : ids)
+        if (Slot s = t.buscar(id); s != SIN_SLOT && !puesto[s]) {
+            orden.push_back(s);
+            puesto[s] = true;
+        }
+    for (Slot s = 0; s < t.tamano(); ++s)
+        if (!puesto[s]) orden.push_back(s);
+    t.reordenar(orden);
+}
+
 void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
     TablaItems& t = inv.items;
     for (const Evento& e : eventos) {
         switch (e.tipo) {
-        case Ev::INVENTARIO_VACIAR: inv.limpiar(); break;
+        case Ev::INVENTARIO_VACIAR:
+            inv.limpiar();
+            inv.recien_cargado = true;
+            break;
         case Ev::ITEM: {
             Slot s = t.insertar(e.id);
             t.col<I_GFX>()[s] = static_cast<u16>(e.v[IT_GFX]);

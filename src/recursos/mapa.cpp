@@ -30,13 +30,18 @@ static void calcular_bases(TileObjetoMapa* p, size_t n) {
     }
 }
 
-bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
+// .s32 y .seg (el formato viejo, que algunos segmentos todavía usan: el Chaotic Temple y el norte de
+// Gludio en el mapa 4) tienen el mismo recorrido; el .seg lleva tiles en u16 (mismo valor:
+// til << 8 | subtile), atributos en u8, entradas de 4 bytes en el primer bloque y la lista de .til
+// con largo u8 (ver DESCUBRIMIENTOS.md).
+static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoMapa& s, bool seg) {
     constexpr size_t CELDAS = CELDAS_SEGMENTO * CELDAS_SEGMENTO;
     LectorBinario l{datos};
+    auto tile = [&]() -> u32 { return seg ? l.u16_() : l.u32_(); };
     s.base_x = static_cast<u16>(base_x);
     s.base_y = static_cast<u16>(base_y);
     s.suelo.resize(CELDAS * 2);
-    for (u32& v : s.suelo) v = l.u32_();
+    for (u32& v : s.suelo) v = tile();
     // Second ground layer: transparent tiles laid over the ground (see mapa.h).
     std::vector<TileObjetoMapa> encima;
     const u16 n = l.u16_();
@@ -46,11 +51,11 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
         t.y = l.u8_();
         t.capa = 0;
         t.base = 0;
-        t.tile = l.u32_() & 0xFFFFFF;
+        t.tile = tile() & 0xFFFFFF;
         if (t.x < 2 * CELDAS_SEGMENTO && t.y < CELDAS_SEGMENTO) encima.push_back(t);
     }
     s.atributos.resize(CELDAS * 2);
-    for (u16& v : s.atributos) v = l.u16_();
+    for (u16& v : s.atributos) v = seg ? l.u8_() : l.u16_();
     if (l.error) return false;
     s.tiles_objetos.clear();
     s.objetos.clear();
@@ -72,7 +77,7 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
             t.y = y;
             t.capa = l.u8_();
             t.base = 0;
-            t.tile = l.u32_();
+            t.tile = tile();
             s.tiles_objetos.push_back(t);
         }
         calcular_bases(s.tiles_objetos.data() + inicio, s.tiles_objetos.size() - inicio);
@@ -101,7 +106,7 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
     // Lo que sigue también es opcional: un segmento sin portales o cortado no invalida el resto.
     s.portales.clear();
     l.saltar(static_cast<size_t>(l.u32_()) * 5);
-    l.saltar(static_cast<size_t>(l.u32_()) * 4);
+    l.saltar(seg ? l.u8_() : static_cast<size_t>(l.u32_()) * 4);  // los .til que usa
     const u16 nportales = l.quedan(2) ? l.u16_() : 0;
     for (u16 i = 0; i < nportales && !l.error; ++i) {
         l.saltar(l.u8_());  // nombre
@@ -111,6 +116,14 @@ bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
         if (!l.error) s.portales.push_back({static_cast<u8>(x / 2), y, mapa});
     }
     return true;  // los objetos son opcionales: un error ahí no invalida el suelo
+}
+
+bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
+    return decodificar_s32_o_seg(datos, base_x, base_y, s, false);
+}
+
+bool decodificar_seg(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
+    return decodificar_s32_o_seg(datos, base_x, base_y, s, true);
 }
 
 bool decodificar_mg(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
@@ -194,6 +207,8 @@ bool decodificar_mg(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
 bool decodificar_segmento(std::string_view ruta, Bytes datos, int base_x, int base_y, SegmentoMapa& s) {
     if (ruta.size() >= 3 && ruta.substr(ruta.size() - 3) == ".mg")
         return decodificar_mg(datos, base_x, base_y, s);
+    if (ruta.size() >= 4 && ruta.substr(ruta.size() - 4) == ".seg")
+        return decodificar_seg(datos, base_x, base_y, s);
     return decodificar_s32(datos, base_x, base_y, s);
 }
 

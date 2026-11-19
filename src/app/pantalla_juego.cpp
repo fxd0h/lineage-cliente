@@ -1833,8 +1833,8 @@ void frame_juego(App& a) {
     procesar_mascotas(a);
     procesar_barra(a);
     if (a.cfg.ui_simple) {  // auto-buff and auto-potion macros: simple UI only
+        procesar_autopocion(a);  // before the auto-buffs: if both are due, heal first
         procesar_autobuffs(a);
-        procesar_autopocion(a);
     }
     procesar_npc(a, ahora);
     elegir_cursor(a);

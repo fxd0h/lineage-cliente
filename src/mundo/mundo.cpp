@@ -500,7 +500,7 @@ void guardar_segmento(Mundo& m, u64 k, SegmentoMapa&& s) {
 }  // namespace
 
 // LIN_MAPAS: carpeta de mapas generados (ver generador_mapas/). Si el segmento existe ahí como .mg,
-// se usa en vez de la instalación, sin ensuciarla. Solo desarrollo; si no, el .s32 de la instalación.
+// se usa en vez de la instalación, sin ensuciarla. Solo desarrollo; si no, el .s32 (o .seg) de la instalación.
 static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) {
     if (const char* base = std::getenv("LIN_MAPAS"); base && *base) {
         char seg[48];
@@ -510,7 +510,15 @@ static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) 
         ruta += seg;
         if (std::filesystem::exists(ruta)) return ruta;
     }
-    return rec.ruta_archivo(nombre_segmento(mapa, x, y));
+    const std::string ruta = rec.ruta_archivo(nombre_segmento(mapa, x, y));
+    // Without the .s32, the old .seg format: Chaotic Temple and north Gludio exist only that way.
+    if (!std::filesystem::exists(ruta)) {
+        std::string nombre = nombre_segmento(mapa, x, y);
+        nombre.replace(nombre.size() - 3, 3, "seg");
+        const std::string seg = rec.ruta_archivo(nombre);
+        if (std::filesystem::exists(seg)) return seg;
+    }
+    return ruta;
 }
 
 const SegmentoMapa* segmento_cargado(Mundo& m, const Recursos& rec, int x, int y) {

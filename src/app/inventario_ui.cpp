@@ -3,7 +3,15 @@
 // un ítem fuera de la ventana lo suelta al suelo. Arrastrarlo al basurero (abajo a la derecha) lo
 // elimina, para lo que no se puede soltar ni vender (el servidor rechaza lo equipado y lo que no se
 // puede borrar, con su mensaje).
+// Ordenar: el botón "Sort" (equipado, tipo de uso y nombre) o arrastrar un ítem sobre otra celda. El
+// servidor no guarda posiciones: el orden queda en settings.ini por personaje y vuelve tras S_InvList.
+// Shift+clic marca varios ítems; arrastrar uno marcado lleva todos (suelo, basurero, intercambio, NPC
+// u otra celda).
+#include <algorithm>
+#include <charconv>
 #include <cstring>
+#include <string>
+#include <tuple>
 #include "app/app.h"
 #include "app/item_icon.h"
 
@@ -80,6 +88,54 @@ ObjId buscar_item(const App& a, std::string_view texto) {
 
 namespace {
 
+// El orden en settings.ini (inventario_orden), por personaje: se guarda al cambiarlo a mano.
+void guardar_orden(App& a) {
+    std::string v;
+    for (ObjId id : a.mundo.inventario.items.ids()) (v += std::to_string(id)) += ',';
+    if (!v.empty()) v.pop_back();
+    poner_valor_de_personaje(a.cfg.inventario_orden, nombre_personaje(a), v);
+    guardar_config(a.cfg);
+}
+
+// Tras S_InvList (al entrar), el orden guardado; los ítems nuevos quedan al final.
+void cargar_orden(App& a) {
+    Inventario& inv = a.mundo.inventario;
+    if (!inv.recien_cargado) return;
+    inv.recien_cargado = false;
+    std::vector<ObjId> ids;
+    for (std::string_view v = valor_de_personaje(a.cfg.inventario_orden, nombre_personaje(a)); !v.empty();) {
+        const std::string_view t = v.substr(0, v.find(','));
+        v = t.size() < v.size() ? v.substr(t.size() + 1) : std::string_view{};
+        ObjId id = 0;
+        std::from_chars(t.data(), t.data() + t.size(), id);
+        if (id) ids.push_back(id);
+    }
+    if (!ids.empty()) ordenar_por_ids(inv, ids);
+}
+
+// Equipado primero, después por tipo de uso y por nombre (con los "$N" resueltos).
+void ordenar_inventario(App& a) {
+    Inventario& inv = a.mundo.inventario;
+    const size_t n = inv.items.tamano();
+    std::vector<std::string> nombres(n);
+    std::vector<Slot> orden(n);
+    char buf[256];
+    for (Slot s = 0; s < n; ++s) {
+        nombres[s].assign(buf, expandir_desc(a.desc, nombre_item(inv, s), buf, sizeof buf));
+        orden[s] = s;
+    }
+    auto clave = [&](Slot s) {
+        return std::tuple(!item_equipado(nombre_item(inv, s)), inv.items.col<I_USO>()[s], std::string_view(nombres[s]));
+    };
+    std::stable_sort(orden.begin(), orden.end(), [&](Slot x, Slot y) { return clave(x) < clave(y); });
+    inv.items.reordenar(orden);
+    guardar_orden(a);
+}
+
+bool seleccionado(const App& a, ObjId id) {
+    return std::find(a.inventario_seleccion.begin(), a.inventario_seleccion.end(), id) != a.inventario_seleccion.end();
+}
+
 }  // namespace
 
 bool sobre_inventario(const App& a) { return sobre_ventana(a, IdVentana::INVENTARIO); }
@@ -148,11 +204,18 @@ void soltar_item(App& a, ObjId item) {
 }
 
 void dibujar_inventario(App& a) {
+    if (!uses_original_frame(a, IdVentana::INVENTARIO)) cargar_orden(a);  // saved order: simple UI only; el orden solo se ve aquí: basta con aplicarlo al abrir la ventana
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const Inventario& inv = a.mundo.inventario;
     const TablaItems& t = inv.items;
     arrastrar_ventana(a, IdVentana::INVENTARIO);
+    std::erase_if(a.inventario_seleccion, [&](ObjId id) { return t.buscar(id) == SIN_SLOT; });  // gastados o soltados
+    // Lo que se arrastra: la selección si el ítem está en ella; si no, solo él.
+    const std::span<const ObjId> arrastrados =
+        a.arrastrando && seleccionado(a, a.arrastrando) ? std::span<const ObjId>(a.inventario_seleccion)
+                                                        : std::span<const ObjId>(&a.arrastrando, a.arrastrando ? 1 : 0);
+    auto arrastrado = [&](ObjId id) { return std::find(arrastrados.begin(), arrastrados.end(), id) != arrastrados.end(); };
     const Rect rv = rect_ventana(a, IdVentana::INVENTARIO);
     const int x0 = rv.x, y0 = rv.y;
     const bool original = uses_original_frame(a, IdVentana::INVENTARIO);
@@ -221,7 +284,14 @@ void dibujar_inventario(App& a) {
             g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
         }
         if (!hay) continue;
-        if (t.ids()[s] != a.arrastrando)
+        if (!original && seleccionado(a, t.ids()[s])) {  // light-blue frame (simple UI only)
+            const u32 c = rgba(120, 190, 255);
+            g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, c);
+            g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, c);
+            g.gpu().rectangulo(x, y, 2, CELDA - 2, ki, c);
+            g.gpu().rectangulo(x + CELDA - 4, y, 2, CELDA - 2, ki, c);
+        }
+        if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         if (equipado) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));
         if (u32 n = t.col<I_CANTIDAD>()[s]; n > 1) {
@@ -241,6 +311,10 @@ void dibujar_inventario(App& a) {
         if (a.usar_sobre) g.texto("Click the target item (Esc cancels)", x0 + gr.x, pie_y, kt, rgba(255, 230, 120));
         else g.texto(pie, x0 + gr.x, pie_y, kt, rgba(214, 190, 140));
     }
+    // Sorting is a fork feature: the 2009 inventory has no Sort button (see docs/fork/AUDIT_ORIGINAL_UI.md section 8).
+    if (!original && !a.usar_sobre && !a.arrastrando &&
+        ui::boton_texto(g, e, "Sort", x0 + gr.trash_x - 44, y0 + gr.trash_y, 40, BASURA_H))
+        ordenar_inventario(a);
     const bool sobre_basura = ui::sobre(e, x0 + gr.trash_x, y0 + gr.trash_y, BASURA_W, BASURA_H);
     dibujar_basurero(g, x0 + gr.trash_x - (original ? 3 : 0), y0 + gr.trash_y, sobre_basura && a.arrastrando);
     if (sobre_basura && !a.arrastrando) {
@@ -329,12 +403,17 @@ void dibujar_inventario(App& a) {
         if (s != SIN_SLOT)
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), e.mx - 16, e.my - 16, clave_orden(CAPA_ARRASTRE, 0),
                            t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        if (arrastrados.size() > 1) {
+            char cant[16];
+            std::snprintf(cant, sizeof cant, "x%zu", arrastrados.size());
+            g.texto_sombra(cant, e.mx + 10, e.my + 6, clave_orden(CAPA_ARRASTRE, 1), rgba(120, 190, 255));
+        }
     }
     if (e.clic) {
         if (a.arrastrando && sobre_basura) {
-            borrar_item(a, a.arrastrando);  // pregunta antes
+            borrar_items(a, arrastrados);  // pregunta antes
         } else if (a.arrastrando && sobre_ventana(a, IdVentana::INTERCAMBIO)) {
-            ofrecer_en_intercambio(a, a.arrastrando);  // al intercambio
+            for (ObjId id : arrastrados) ofrecer_en_intercambio(a, id);  // al intercambio
         } else if (a.arrastrando && casillero_bajo_puntero(a) >= 0) {
             // A la barra de atajos (Alt+número lo usa).
             Slot s = t.buscar(a.arrastrando);
@@ -351,9 +430,18 @@ void dibujar_inventario(App& a) {
             const ObjId obj = objeto_bajo_puntero(a);
             const Slot so = obj ? a.mundo.objetos.buscar(obj) : SIN_SLOT;
             const u8 tipo = so != SIN_SLOT ? tipo_objeto(a, so) : 0;
-            if (so != SIN_SLOT && tipo != TIPO_PERSONAJE && tipo != TIPO_ITEM && tipo != TIPO_PUERTA) dar_item(a, obj, a.arrastrando);
-            else soltar_item(a, a.arrastrando);
+            if (so != SIN_SLOT && tipo != TIPO_PERSONAJE && tipo != TIPO_ITEM && tipo != TIPO_PUERTA) dar_items(a, obj, arrastrados);
+            else for (ObjId id : arrastrados) soltar_item(a, id);
+        } else if (!original && a.arrastrando && bajo >= 0 && slot_bajo != SIN_SLOT && t.ids()[slot_bajo] != a.arrastrando) {
+            mover_items(a.mundo.inventario, arrastrados, t.ids()[slot_bajo]);  // a otra celda
+            guardar_orden(a);
+        } else if (!original && bajo >= 0 && e.shift) {
+            const ObjId id = t.ids()[slot_bajo];
+            if (seleccionado(a, id)) std::erase(a.inventario_seleccion, id);
+            else a.inventario_seleccion.push_back(id);
+            a.ultimo_clic_item = 0;  // Shift+clic no cuenta para el doble clic
         } else if (bajo >= 0) {
+            a.inventario_seleccion.clear();
             // Doble clic: usar (equipar/quitar armas y armaduras, beber pociones...).
             ObjId id = t.ids()[slot_bajo];
             if (id == a.ultimo_clic_item && e.ahora_ms - a.t_ultimo_clic_item < MS_DOBLE_CLIC) {

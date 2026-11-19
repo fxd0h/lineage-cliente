@@ -52,6 +52,13 @@ los px, lógicos (640×480 en el original).
 ### Mapas (`.s32`)
 - **Segmentos de 64×64 celdas**, archivo `map/<mapa>/<XXXXYYYY>.s32` con
   X = (x >> 6) + 0x7E00. Formato en `recursos/mapa.h`.
+- **Formato viejo `.seg`:** 67 segmentos de la instalación solo están así (43 del mapa 4, entre ellos el
+  Chaotic Temple en 80017ffe y otros alrededor de Gludio; 22 del 371; uno del 3 y uno del 6): sin leerlos
+  se veían negros. Es el mismo recorrido que el `.s32` con campos más chicos: suelo u16 (mismo valor,
+  `til << 8 | subtile`), primer bloque u16 n + n×4 (en vez de 6), atributos u8 (en vez de u16), piezas de
+  objeto con tile u16 (5 bytes), y la lista de `.til` usados con largo u8 (en vez de u32 + n×4). Deducido
+  comparando pares `.seg`/`.s32`; los 486 `.seg` de la instalación terminan justo con ese formato (180
+  portales). Si están los dos, se usa el `.s32`.
 - **Orientación:** las celdas van "y exterior, x interior"; comprobado contra `maps/2005.txt` del
   servidor en los 35 segmentos del mapa 2005 (la otra orientación mezcla bloqueadas y libres).
 - **Bloqueo:** bit 0 del atributo de cada media celda; una celda se pasa si alguna mitad lo está.

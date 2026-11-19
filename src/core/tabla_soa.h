@@ -8,6 +8,8 @@
 //   Slot s = t.insertar(id);
 //   t.col<0>()[s] = 32691;
 #pragma once
+#include <cassert>
+#include <span>
 #include <tuple>
 #include <vector>
 #include "core/mapa_hash.h"
@@ -56,6 +58,15 @@ public:
         return true;
     }
 
+    // Reordena las filas: la fila i pasa a ser la que estaba en el slot orden[i] (una permutación de
+    // 0..n-1). Asigna memoria: solo para acciones del usuario, no en el frame.
+    void reordenar(std::span<const Slot> orden) {
+        assert(orden.size() == ids_.size());
+        permutar(ids_, orden);
+        std::apply([&](auto&... c) { (permutar(c, orden), ...); }, cols_);
+        for (Slot s = 0; s < ids_.size(); ++s) indice_.poner(ids_[s], s);
+    }
+
     void limpiar() {
         ids_.clear();
         std::apply([](auto&... c) { (c.clear(), ...); }, cols_);
@@ -63,6 +74,14 @@ public:
     }
 
 private:
+    template <typename V>
+    static void permutar(V& c, std::span<const Slot> orden) {
+        V nueva;
+        nueva.reserve(c.size());
+        for (Slot s : orden) nueva.push_back(std::move(c[s]));
+        c.swap(nueva);
+    }
+
     std::vector<ObjId> ids_;
     std::tuple<std::vector<Cols>...> cols_;
     MapaHash indice_;

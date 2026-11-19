@@ -767,6 +767,16 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 - **Verificado:** un "Helmet of Magic Resistance" +2 sin identificar ("Unidentified"); `--usar="Scroll of Identify"` y un clic sobre el casco: `S_ItemStatus` con los atributos y `S_IdentifyDesc`; el detalle muestra AC 2, hierro, peso 35, Enchant +2, todas las clases y MR +6. Tests del formato (un arma y una armadura), de los paquetes y de los comandos.
 - **Pendiente o conocido:** los pergaminos de encantar no se probaron (mismo camino que identificar); el grado de los accesorios llega pero no se muestra; los textos del detalle están en inglés como el resto de la interfaz.
 
+## Ordenar el inventario y seleccionar varios ítems
+
+![Inventario ordenado](docs/capturas/6_inventario_orden.png) ![Selección con Shift](docs/capturas/6_inventario_seleccion.png)
+
+- **Ordenar** (`app/inventario_ui.cpp`): el botón "Sort" del pie deja primero lo equipado, después por tipo de uso y por nombre (con los `$N` resueltos). Arrastrar un ítem sobre otra celda lo mueve ahí (`mover_items` en `mundo/inventario.cpp`). Las filas se reordenan en la tabla (`TablaSoa::reordenar`), así que todo lo que recorre el inventario ve el orden nuevo.
+- **Selección con Shift+clic:** marca o desmarca (marco celeste); un clic sin Shift la limpia. Arrastrar un ítem marcado lleva todos: al suelo, al intercambio, a otra celda, a un NPC o mascota (pilas enteras, sin preguntar: `dar_items`) o al basurero (una sola confirmación, pilas enteras: `borrar_items`). Los atajos y los casilleros Auto reciben solo el ítem arrastrado.
+- **Verificado:** `herramientas/pruebas/inventario_orden.py` (Charla, 50 ítems): Sort deja el orden esperado, Shift+clic marca dos y arrastrarlos a la primera celda los pone al principio. Tests de `reordenar` y `mover_items`.
+- **Orden guardado:** el servidor no guarda posiciones, así que el orden queda en settings.ini por personaje (`inventario_orden`: los ids de los ítems) al usar Sort o mover un ítem, y vuelve tras `S_InvList` (`ordenar_por_ids`). **Verificado:** la prueba en vivo reinicia el cliente y el orden se mantiene.
+- **Pendiente o conocido:** un ítem nuevo va al final; el programa de configuración no tiene botón para borrar el orden guardado. Soltar varios al suelo o al basurero no se probó en vivo (es el mismo camino que uno, en un bucle).
+
 ## Invisibilidad, resucitar, modo espectador y volver al login
 
 ![Resucitado](../capturas/resucitar.png)
