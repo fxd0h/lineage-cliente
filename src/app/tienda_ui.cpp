@@ -199,7 +199,7 @@ void dibujar_tienda(App& a) {
             if (l.gfx) g.gpu().dibujar(g.icono(l.gfx), x + 10, fy + 1, ki);
             char nom[256];
             const size_t n = expandir_desc(a.desc, l.nombre, nom, sizeof nom);
-            g.texto({nom, n}, static_cast<float>(x + 48), static_cast<float>(fy + 4), kt, l.bendicion == 1 ? rgba(255, 230, 120) : ui::COLOR_TEXTO);
+            g.texto({nom, n}, static_cast<float>(x + 48), static_cast<float>(fy + 4), kt, tipo_bendicion(l.bendicion) == BENDICION_BENDITO ? rgba(255, 230, 120) : ui::COLOR_TEXTO);
             char mil[32];
             std::snprintf(txt, sizeof txt, "%s adena  x%u", con_miles(l.precio, mil, sizeof mil), l.cantidad);
             g.texto(txt, static_cast<float>(x + 48), static_cast<float>(fy + 18), kt, rgba(255, 220, 130));

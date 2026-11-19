@@ -36,6 +36,10 @@ struct Lector : LectorBinario {
 
 using Decodificador = bool (*)(Lector&, Evento&);
 
+// CA propia: el servidor la manda en un byte con signo (writeC). El cliente original le resta 256 desde
+// 0x28 (0x4b0c16), así que una CA por debajo de -128 (0x7f...0x28) se lee bien y no como positiva.
+int ca_de_byte(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
+
 bool ignorar(Lector&, Evento& e) { e.tipo = Ev::IGNORADO; return true; }
 
 // S_ServerVersion: c c d d d d d c c c d d h
@@ -56,7 +60,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_LEGAL] = static_cast<i16>(l.h());
     e.v[PJ_HP] = l.h();
     e.v[PJ_MP] = l.h();
-    e.v[PJ_CA] = static_cast<i8>(l.c());
+    e.v[PJ_CA] = ca_de_byte(l.c());
     e.v[PJ_NIVEL] = l.c();
     e.v[PJ_FUE] = l.c();
     e.v[PJ_DES] = l.c();
@@ -83,7 +87,7 @@ bool estado(Lector& l, Evento& e) {
     e.v[EP_HPMAX] = l.vida();
     e.v[EP_MP] = l.vida();
     e.v[EP_MPMAX] = l.vida();
-    e.v[EP_CA] = static_cast<i8>(l.c());
+    e.v[EP_CA] = ca_de_byte(l.c());
     l.d();
     e.v[EP_COMIDA] = l.c();
     e.v[EP_PESO] = l.c();
@@ -210,7 +214,8 @@ bool sp_mr(Lector& l, Evento& e) { e.tipo = Ev::SP_MR; e.v[0] = static_cast<i8>(
 // S_OwnCharAttrDef: c CA, c fuego, c agua, c viento, c tierra
 bool defensa(Lector& l, Evento& e) {
     e.tipo = Ev::DEFENSA;
-    for (int i = DF_CA; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
+    e.v[DF_CA] = ca_de_byte(l.c());
+    for (int i = DF_FUEGO; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
     return true;
 }
 // S_OwnCharStatus2: c fue int sab des con car, c peso (0–240). Mismos índices que ESTADO_PROPIO.
@@ -676,7 +681,7 @@ bool correo(Lector& l, Evento& e) {
 bool hp_objeto(Lector& l, Evento& e) { e.tipo = Ev::HP_OBJETO; e.id = l.d(); e.v[0] = l.c(); return true; }
 
 // Ítem de S_InvList y S_AddItem: d id, h catalizador, c uso, c cargas, h gfx de inventario,
-// c bendición (0 normal, 1 bendito, 2 maldito...), d cantidad, c identificado, s nombre visible,
+// c bendición (0 bendito, 1 normal, 2 maldito, 3 sin identificar; +128 sellado), d cantidad, c identificado, s nombre visible,
 // c n + n bytes de atributos, c 10, d 0, d 0, h 0.
 // c n + n bytes de atributos (L1ItemInstance.getStatusBytes; 0 si no está identificado), a la arena.
 std::string_view atributos_item(Lector& l) {
@@ -928,6 +933,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             if (e.origen == Srv::SHOWSHOPBUYLIST) {
                 it.v[IT_GFX] = l.h();
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
+                it.v[IT_BENDICION] = 1;  // la tienda no lo manda: normal (0 sería bendito)
                 it.s[0] = l.s();
                 l.saltar(l.c());
             } else if (e.origen == Srv::SHOWSHOPSELLLIST) {

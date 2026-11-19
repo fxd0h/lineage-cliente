@@ -225,8 +225,8 @@ void dibujar_inventario(App& a) {
         size_t n = expandir_desc(a.desc, nombre_item(inv, s), buf, sizeof buf);
         size_t nd = describir_atributos(atributos_item(inv, s), det, sizeof det);
         if (nd == 0 && !t.col<I_IDENTIFICADO>()[s]) nd = static_cast<size_t>(std::snprintf(det, sizeof det, "Unidentified"));
-        u8 b = t.col<I_BENDICION>()[s];
-        u32 color = b == 1 ? rgba(255, 230, 120) : (b == 2 ? rgba(255, 110, 100) : rgba(255, 255, 254));
+        const u8 b = tipo_bendicion(t.col<I_BENDICION>()[s]);
+        u32 color = b == BENDICION_BENDITO ? rgba(255, 230, 120) : (b == BENDICION_MALDITO ? rgba(255, 110, 100) : rgba(255, 255, 254));
         int w = ancho_texto(buf, n), lineas = 0;
         for (std::string_view resto(det, nd); !resto.empty(); ++lineas) {
             const size_t fin = std::min(resto.find('\n'), resto.size());

@@ -36,7 +36,7 @@ void compactar_textos(std::vector<char>& textos, F&& cada) {
 enum ColItem : size_t {
     I_GFX,          // ícono de inventario (N.tbt)
     I_USO,          // tipo de uso (L1J ItemTable: 1 arma, 2 armadura, 59 curación...)
-    I_BENDICION,    // 0 normal, 1 bendito, 2 maldito (color del nombre)
+    I_BENDICION,    // byte del servidor: ver BENDICION_* (color del nombre)
     I_CANTIDAD,
     I_IDENTIFICADO,
     I_NOMBRE,
@@ -45,6 +45,11 @@ enum ColItem : size_t {
 using TablaItems = TablaSoa<u16, u8, u8, u32, u8, TextoRef, TextoRef>;
 
 constexpr u8 USO_ARMA = 1, USO_ARMADURA = 2;
+
+// Byte de bendición de S_AddItem, S_InvList, S_ItemColor, S_RetrieveList, S_TradeAddItem y S_PrivateShop
+// (L1ItemInstance.getStatusForPacket): 0 bendito, 1 normal, 2 maldito, 3 sin identificar; +128 si está sellado.
+enum : u8 { BENDICION_BENDITO = 0, BENDICION_NORMAL = 1, BENDICION_MALDITO = 2, BENDICION_SIN_IDENTIFICAR = 3 };
+constexpr u8 tipo_bendicion(u8 b) { return static_cast<u8>(b & 0x7f); }  // sin la marca de sellado
 
 struct Inventario {
     TablaItems items;
