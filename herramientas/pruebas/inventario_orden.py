@@ -51,5 +51,14 @@ def prueba():
         esperado = [orden[a]["id"], orden[b]["id"]] + [i["id"] for k, i in enumerate(orden) if k not in (a, b)]
         comprobar(despues == esperado, "la selección no quedó al principio:\n%s\n%s" % (despues, esperado))
 
+        # Reiniciar el cliente (con el mismo settings.ini): el orden vuelve al abrir el inventario.
+        c.cerrar()
+        p.clientes.clear()
+        c = p.entrar("Charla", volver=False)
+        c("abrir inventario")
+        c("esperar ventana=inventario")
+        c("esperar frames=3")
+        comprobar([i["id"] for i in items(c)] == despues, "el orden no se mantuvo al reiniciar el cliente")
+
 
 correr(prueba)

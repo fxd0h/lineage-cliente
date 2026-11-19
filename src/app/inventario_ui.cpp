@@ -4,10 +4,11 @@
 // elimina, para lo que no se puede soltar ni vender (el servidor rechaza lo equipado y lo que no se
 // puede borrar, con su mensaje).
 // Ordenar: el botón "Sort" (equipado, tipo de uso y nombre) o arrastrar un ítem sobre otra celda. El
-// orden es solo del cliente: se pierde al volver a entrar (S_InvList trae el del servidor).
+// servidor no guarda posiciones: el orden queda en settings.ini por personaje y vuelve tras S_InvList.
 // Shift+clic marca varios ítems; arrastrar uno marcado lleva todos (suelo, basurero, intercambio, NPC
 // u otra celda).
 #include <algorithm>
+#include <charconv>
 #include <cstring>
 #include <string>
 #include <tuple>
@@ -61,6 +62,31 @@ ObjId buscar_item(const App& a, std::string_view texto) {
 
 namespace {
 
+// El orden en settings.ini (inventario_orden), por personaje: se guarda al cambiarlo a mano.
+void guardar_orden(App& a) {
+    std::string v;
+    for (ObjId id : a.mundo.inventario.items.ids()) (v += std::to_string(id)) += ',';
+    if (!v.empty()) v.pop_back();
+    poner_valor_de_personaje(a.cfg.inventario_orden, nombre_personaje(a), v);
+    guardar_config(a.cfg);
+}
+
+// Tras S_InvList (al entrar), el orden guardado; los ítems nuevos quedan al final.
+void cargar_orden(App& a) {
+    Inventario& inv = a.mundo.inventario;
+    if (!inv.recien_cargado) return;
+    inv.recien_cargado = false;
+    std::vector<ObjId> ids;
+    for (std::string_view v = valor_de_personaje(a.cfg.inventario_orden, nombre_personaje(a)); !v.empty();) {
+        const std::string_view t = v.substr(0, v.find(','));
+        v = t.size() < v.size() ? v.substr(t.size() + 1) : std::string_view{};
+        ObjId id = 0;
+        std::from_chars(t.data(), t.data() + t.size(), id);
+        if (id) ids.push_back(id);
+    }
+    if (!ids.empty()) ordenar_por_ids(inv, ids);
+}
+
 // Equipado primero, después por tipo de uso y por nombre (con los "$N" resueltos).
 void ordenar_inventario(App& a) {
     Inventario& inv = a.mundo.inventario;
@@ -77,6 +103,7 @@ void ordenar_inventario(App& a) {
     };
     std::stable_sort(orden.begin(), orden.end(), [&](Slot x, Slot y) { return clave(x) < clave(y); });
     inv.items.reordenar(orden);
+    guardar_orden(a);
 }
 
 bool seleccionado(const App& a, ObjId id) {
@@ -125,6 +152,7 @@ void soltar_item(App& a, ObjId item) {
 }
 
 void dibujar_inventario(App& a) {
+    cargar_orden(a);  // el orden solo se ve aquí: basta con aplicarlo al abrir la ventana
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const Inventario& inv = a.mundo.inventario;
@@ -267,6 +295,7 @@ void dibujar_inventario(App& a) {
             else for (ObjId id : arrastrados) soltar_item(a, id);
         } else if (a.arrastrando && bajo >= 0 && t.ids()[static_cast<Slot>(bajo)] != a.arrastrando) {
             mover_items(a.mundo.inventario, arrastrados, t.ids()[static_cast<Slot>(bajo)]);  // a otra celda
+            guardar_orden(a);
         } else if (bajo >= 0 && e.shift) {
             const ObjId id = t.ids()[static_cast<Slot>(bajo)];
             if (seleccionado(a, id)) std::erase(a.inventario_seleccion, id);
