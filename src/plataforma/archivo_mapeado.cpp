@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <cstdio>
+#include <map>
+#include <mutex>
 #include <vector>
 #include "plataforma/archivo_mapeado.h"
 
@@ -12,7 +14,9 @@
 #endif
 #include <windows.h>
 #else
+#include <dirent.h>
 #include <fcntl.h>
+#include <strings.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -32,6 +36,49 @@ std::wstring utf16(const std::string& s) {
 }
 }  // namespace
 #endif
+
+std::string ruta_real(const std::string& ruta) {
+#if defined(_WIN32) || defined(__APPLE__)
+    return ruta;
+#else
+    if (ruta.empty() || access(ruta.c_str(), F_OK) == 0) return ruta;
+    // Lo que hay en cada carpeta ya listada. shortcut: no se vuelve a listar, así que un archivo creado
+    // después con otras mayúsculas no se encuentra; alcanza para la instalación del juego, que no cambia.
+    static std::mutex mu;
+    static std::map<std::string, std::vector<std::string>> carpetas;
+    std::lock_guard<std::mutex> lk(mu);
+    std::string actual = ruta[0] == '/' ? "/" : "";
+    for (size_t i = 0; i < ruta.size();) {
+        size_t j = ruta.find('/', i);
+        if (j == std::string::npos) j = ruta.size();
+        const std::string parte = ruta.substr(i, j - i);
+        i = j + 1;
+        if (parte.empty()) continue;
+        std::string elegida = parte;
+        if (parte != "." && parte != "..") {
+            const std::string dir = actual.empty() ? "." : actual;
+            auto it = carpetas.find(dir);
+            if (it == carpetas.end()) {
+                std::vector<std::string> nombres;
+                if (DIR* d = opendir(dir.c_str())) {
+                    while (const dirent* e = readdir(d)) nombres.emplace_back(e->d_name);
+                    closedir(d);
+                }
+                it = carpetas.emplace(dir, std::move(nombres)).first;
+            }
+            const auto& v = it->second;
+            if (std::find(v.begin(), v.end(), parte) == v.end()) {
+                auto igual = std::find_if(v.begin(), v.end(), [&](const std::string& n) { return strcasecmp(n.c_str(), parte.c_str()) == 0; });
+                if (igual == v.end()) return ruta;
+                elegida = *igual;
+            }
+        }
+        actual += elegida;
+        if (j < ruta.size()) actual += '/';
+    }
+    return actual;
+#endif
+}
 
 ArchivoMapeado& ArchivoMapeado::operator=(ArchivoMapeado&& o) noexcept {
     if (this != &o) {
@@ -79,7 +126,7 @@ bool ArchivoMapeado::abrir(const std::string& ruta) {
     tam_ = static_cast<size_t>(t.QuadPart);
     return true;
 #else
-    int fd = ::open(ruta.c_str(), O_RDONLY);
+    int fd = ::open(ruta_real(ruta).c_str(), O_RDONLY);
     if (fd < 0) return false;
     struct stat st;
     if (fstat(fd, &st) != 0 || st.st_size == 0) {
@@ -132,7 +179,7 @@ bool leer_archivo(const std::string& ruta, std::vector<u8>& salida) {
 #if defined(_WIN32)
     FILE* f = _wfopen(utf16(ruta).c_str(), L"rb");
 #else
-    FILE* f = std::fopen(ruta.c_str(), "rb");
+    FILE* f = std::fopen(ruta_real(ruta).c_str(), "rb");
 #endif
     if (!f) return false;
     std::fseek(f, 0, SEEK_END);

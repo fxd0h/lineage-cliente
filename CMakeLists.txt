@@ -121,7 +121,7 @@ target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
 
 add_library(lin_audio STATIC
     src/audio/audio.cpp)
-target_link_libraries(lin_audio PUBLIC lin_core PRIVATE SDL3::SDL3 dr_mp3)
+target_link_libraries(lin_audio PUBLIC lin_core lin_plataforma PRIVATE SDL3::SDL3 dr_mp3)
 
 add_library(lin_ui STATIC
     src/ui/ui.cpp)

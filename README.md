@@ -486,7 +486,6 @@ Identifiers and comments in the code are in Spanish.
 |---|---|
 | `src/plataforma/archivo_mapeado.cpp`, `socket.cpp` | Windows: written (`MapViewOfFile`, UTF-16 paths, Winsock2) and checked with MinGW and in CI; not yet tried on a real Windows machine |
 | `std::filesystem` with `std::string` (`ventanas.cpp`, `mundo.cpp`) | Windows: narrow paths use the ANSI code page, not UTF-8; a game folder with non-ASCII characters would not be found |
-| `src/plataforma/rutas.cpp`, `src/mundo/mundo.cpp` | Linux is case-sensitive: look for `Sprite.pak`, `map/`... ignoring case |
 | `CMakeLists.txt` | MSVC: equivalent options are in place, untested. `.app` / `.exe` / AppImage packaging (deliverable 11) |
 | `servidor_local/*.sh` | Linux: system packages instead of brew. Windows: the server's own `.bat` files |
 

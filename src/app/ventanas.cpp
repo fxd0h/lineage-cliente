@@ -491,7 +491,7 @@ void avisar_mapa(App& a, MapId mapa) {
     char t[160];
     std::snprintf(t, sizeof t, "map/%u", mapa);
     std::error_code ec;
-    if (std::filesystem::is_directory(a.cfg.carpeta_juego + t, ec)) return;
+    if (std::filesystem::is_directory(ruta_real(a.cfg.carpeta_juego + t), ec)) return;
     std::snprintf(t, sizeof t,
                   "The server sent you to map %u, which this game installation does not have. Use Exit > Restart to go back.",
                   mapa);

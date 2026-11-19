@@ -44,6 +44,12 @@ para probar rápido, no para las releases.
 - **MSVC (CI):** `std::aligned_alloc` no existe en Windows (`_aligned_malloc`/`_aligned_free` en
   `core/asignaciones.cpp`). Los 65 avisos de `/W4` están corregidos (casi todos C4244: coordenadas `int` en
   `Graficos::texto`, que ahora acepta enteros) y el CI compila con `LIN_AVISOS_ERROR=ON` (`/WX`, `-Werror`).
+- **Fase 3, paso 1 (2026-11-19):** `ruta_real` (`plataforma/archivo_mapeado.cpp`) busca en Linux los nombres
+  sin distinguir mayúsculas, componente por componente, con lo listado de cada carpeta en memoria; en macOS y
+  Windows devuelve la ruta tal cual. La usan `ArchivoMapeado::abrir` y `leer_archivo` (paks, mapas, fuentes),
+  `carpeta_juego_valida`, la búsqueda del `.seg` en `mundo.cpp`, el aviso de mapa faltante y el audio (WAV y
+  MP3). Test en `test_ajustes.cpp` (con `MAP/` en disco, pide `map/`), que corre en los jobs de Linux del CI.
+  Falta probar el juego completo en Linux (pasos 2 a 4).
 - **Fase 4 (Windows, primera parte):** `herramientas/empaquetar_windows.ps1` arma el `.zip` (x64 y arm64) con los
   `.exe` de la versión final, `datos/`, `LICENSE.txt` y `herramientas/windows/LEEME.txt`. Ícono y versión en el
   `.exe` (`cmake/windows.rc.in`, `datos/iconos/*.ico` de `tools/generar_iconos.py --ico`, `LIN_VERSION`), runtime
