@@ -7,6 +7,14 @@ con su verificación y lo pendiente, está en [ENTREGABLES.md](ENTREGABLES.md).
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
+## Sin publicar
+
+### Corregido
+- **Inventario:** el orden (Sort o mover a otra celda) se guarda por personaje en settings.ini y se
+  mantiene al reiniciar el cliente.
+- **Mapas negros:** se leen los segmentos en el formato viejo `.seg`, que algunas zonas tienen en vez de
+  `.s32` (el Chaotic Temple, alrededor de Gludio y partes del mapa 371).
+
 ## v0.1.2 (2026-11-17)
 
 ### Agregado

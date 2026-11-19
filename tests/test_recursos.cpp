@@ -284,3 +284,19 @@ TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)
     CHECK(hay(32678, 33392, 29));
     CHECK(hay(32682, 33387, 4));
 }
+
+TEST_CASE("Mapa 4: el Chaotic Temple solo está como .seg (formato viejo)" * doctest::skip(carpeta_juego().empty())) {
+    // Destino del teleport "chaos" de Teleporter.xml: (32885, 32652). No hay 80017ffe.s32.
+    std::string ruta = carpeta_juego() + nombre_segmento(4, 32885, 32652);
+    std::vector<u8> d;
+    CHECK_FALSE(leer_archivo(ruta, d));
+    ruta.replace(ruta.size() - 3, 3, "seg");
+    REQUIRE(leer_archivo(ruta, d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_segmento(ruta, d, 32885 & ~63, 32652 & ~63, s));
+    REQUIRE(s.suelo.size() == CELDAS_SEGMENTO * CELDAS_SEGMENTO * 2);
+    REQUIRE(s.atributos.size() == s.suelo.size());
+    const auto con_suelo = std::count_if(s.suelo.begin(), s.suelo.end(), [](u32 t) { return (t >> 8) != 0; });
+    CHECK(con_suelo > static_cast<long>(s.suelo.size() * 9 / 10));
+    CHECK_FALSE(s.objetos.empty());
+}

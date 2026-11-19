@@ -280,7 +280,8 @@ title is shown as text.
   - Double-click uses an item: equips or removes weapons and armor, drinks potions.
   - Drag an item out of the window to drop it on the ground.
   - **Sort** (bottom of the window) orders the items: equipped first, then by type and name. Dragging an item onto
-    another cell moves it there. The order is client-side only and resets on the next login.
+    another cell moves it there. The server keeps no order: it is saved per character in settings.ini
+    (`inventario_orden`) and comes back on the next login; new items go to the end.
   - Shift+click marks several items (blue frame); a plain click clears the mark. Dragging a marked item takes all of
     them: to the ground, the trash (one confirmation, whole stacks), a trade, an NPC or pet (whole stacks), or another cell.
   - **Item details:** hovering shows the name and, if identified, its attributes (damage or defense,

@@ -43,6 +43,9 @@ struct Config {
     std::string barra;
     // Auto-buffs por personaje: "Nombre:1|43,42,0,0,0,0" (encendido y los hechizos de los 6 casilleros).
     std::string autobuffs;
+    // Orden del inventario por personaje: "Nombre:268522252,268522254,..." (ids de los ítems; los que
+    // no están van al final). Lo guarda el botón Sort o mover un ítem a otra celda.
+    std::string inventario_orden;
     // Auto-buffs y auto-poción del todo: apagados, ni se dibujan ni hacen nada (ni sus opciones).
     bool usar_autobuffs = true, usar_autopocion = true;
     // Auto-poción por personaje: "Nombre:1,60" (encendida y umbral de HP en %). Ver autopocion_de.
