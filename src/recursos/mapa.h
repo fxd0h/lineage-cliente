@@ -77,12 +77,14 @@ struct SegmentoMapa {
 // Nombre del archivo del segmento que contiene la celda (x, y).
 std::string nombre_segmento(MapId mapa, int x, int y);
 bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& salida);
+// El formato viejo: lo mismo con campos más chicos. Algunos segmentos solo están así (43 del mapa 4).
+bool decodificar_seg(Bytes datos, int base_x, int base_y, SegmentoMapa& salida);
 
 // Formato propio liviano de los mapas generados (ver generador_mapas/): piso uniforme + una pieza
 // de pared por celda bloqueada + grilla de 64×64. Cabecera "MG01", u16 base_x, u16 base_y,
 // u32 piso_izq, u32 piso_der, u8 pared_capa, u32 pared_tile, y 64×64 bytes (0=piso, 1=pared).
 bool decodificar_mg(Bytes datos, int base_x, int base_y, SegmentoMapa& salida);
-// Elige el decodificador por la extensión de la ruta (.mg -> generado; si no, .s32).
+// Elige el decodificador por la extensión de la ruta (.mg -> generado, .seg -> viejo; si no, .s32).
 bool decodificar_segmento(std::string_view ruta, Bytes datos, int base_x, int base_y, SegmentoMapa& salida);
 
 }  // namespace lin
