@@ -381,6 +381,20 @@ TEST_CASE("Inventario: mover ítems a otra celda (orden a mano)") {
     for (ObjId id = 1; id <= 5; ++id) CHECK(inv.items.ids()[inv.items.buscar(id)] == id);
 }
 
+TEST_CASE("Inventario: el orden guardado vuelve tras S_InvList") {
+    Inventario inv;
+    Evento vaciar{};
+    vaciar.tipo = Ev::INVENTARIO_VACIAR;
+    aplicar_inventario(inv, std::span(&vaciar, 1));
+    CHECK(inv.recien_cargado);
+    for (ObjId id = 1; id <= 5; ++id) inv.items.insertar(id);
+    // 9 ya no está (se vendió), 4 aparece dos veces; 1 y 3 son nuevos: van al final, en su orden.
+    const ObjId guardado[] = {5, 9, 2, 4, 4};
+    ordenar_por_ids(inv, guardado);
+    CHECK(std::vector<ObjId>(inv.items.ids().begin(), inv.items.ids().end()) == std::vector<ObjId>{5, 2, 4, 1, 3});
+    for (ObjId id = 1; id <= 5; ++id) CHECK(inv.items.ids()[inv.items.buscar(id)] == id);
+}
+
 TEST_CASE("Inventario: atributos de un ítem identificado (getStatusBytes) en texto") {
     char buf[512];
     // Arma: daño 6/8, hierro, peso 30, +3, dos manos, caballero, FUE +1.
