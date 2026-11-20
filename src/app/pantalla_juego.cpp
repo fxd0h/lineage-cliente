@@ -376,12 +376,14 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
 }
 
 // Título centrado en x, con sus códigos de color (\fX).
-void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave, u32 normal) {
+void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave, u32 normal, bool contorno = false) {
     const bool doble_byte = !es_utf8(t.data(), t.size());
     int ancho = 0;
     recorrer_codigos(t, normal, doble_byte, [&](std::string_view s, u32) { ancho += ancho_texto(s.data(), s.size()); });
     float cx = x - ancho / 2;
-    recorrer_codigos(t, normal, doble_byte, [&](std::string_view s, u32 c) { cx += g.texto_sombra(s, cx, y, clave, c); });
+    recorrer_codigos(t, normal, doble_byte, [&](std::string_view s, u32 c) {
+        cx += contorno ? g.texto_contorno(s, cx, y, clave, c) : g.texto_sombra(s, cx, y, clave, c);
+    });
 }
 
 // Lo último que dijo el objeto, sobre su nombre (hasta 3 filas centradas). Se quita el
@@ -662,7 +664,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                                                           sizeof nombre_buf));
         if (a.sprites.tipo(gfx) == TIPO_ITEM && !bajo_puntero) nombre = {};
         // Panel original: solo se rotula lo que está bajo el puntero y el objetivo del ataque.
-        if (!a.cfg.ui_simple && !bajo_puntero && o.ids()[s] != a.objetivo) nombre = {};
+        if (!a.cfg.ui_simple && !bajo_puntero) nombre = {};
         // NPC con título: el nombre llega como "Merchant^Nombre"; se muestra "[Merchant]" encima del
         // nombre normal (la misma franja que el título de un personaje, más abajo).
         char titulo_npc_buf[64] = "";
@@ -678,14 +680,17 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             // alineamiento: legal azul, caótico rojo, neutral blanco; rosa mientras dura el PK
             // (S_PinkName). Los monstruos, según su nivel respecto del jugador (nivel_relativo).
             const bool personaje = !texto(a.mundo, o.col<O_NOMBRE>()[s]).empty() && texto(a.mundo, o.col<O_NOMBRE>()[s])[0] != '$';
-            u32 color = rgba(200, 220, 255);
+            u32 color = a.cfg.ui_simple ? rgba(200, 220, 255) : BLANCO;
+            u32 contorno_nivel = 0;  // original UI: monster level tier is a 1 px outline, not the fill
             if (personaje) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
             else if (o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO) {
                 static const u32 COLORES[] = {rgba(240, 240, 240), rgba(120, 230, 120), rgba(255, 215, 80), rgba(255, 90, 80)};
-                color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
+                if (a.cfg.ui_simple) color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
+                else contorno_nivel = color_nivel_original(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel);
             }
-            if (o.ids()[s] == a.objetivo) color = rgba(255, 230, 90);
-            g.texto_sombra(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color);
+            if (a.cfg.ui_simple && o.ids()[s] == a.objetivo) color = rgba(255, 230, 90);
+            if (a.cfg.ui_simple) g.texto_sombra(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color);
+            else g.texto_nombre(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color, contorno_nivel);
             if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {  // título de la tienda
                 dibujar_titulo(g, v->titulo, ex + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
             }
@@ -706,7 +711,9 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                                       : personaje || o.col<O_MASCOTA>()[s] ? texto(a.mundo, o.col<O_TITULO>()[s])
                                                           : std::string_view{};
             if (!titulo.empty()) {
-                dibujar_titulo(g, titulo, ex + 24, top - 14, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130));
+                // Original: the title sits 13 px above the name (0x4676bb..), outlined.
+                dibujar_titulo(g, titulo, ex + 24, top - (a.cfg.ui_simple ? 14 : 13), clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130),
+                               !a.cfg.ui_simple);
                 top -= 14;
             }
         }

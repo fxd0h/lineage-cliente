@@ -210,6 +210,16 @@ constexpr NivelRelativo nivel_relativo(int monstruo, int jugador) {
 static_assert(nivel_relativo(5, 30) == NivelRelativo::FACIL && nivel_relativo(28, 30) == NivelRelativo::PAREJO &&
               nivel_relativo(36, 30) == NivelRelativo::DIFICIL && nivel_relativo(45, 30) == NivelRelativo::PELIGROSO);
 
+// Original client level tier of a monster name (S3EP1U 0x467856..0x4679e2, US locale): 0xAABBGGRR outline colour,
+// or 0 when there is none. d = monster level - player level.
+constexpr u32 color_nivel_original(int monstruo, int jugador) {
+    const int d = monstruo - jugador;
+    return d >= 10 ? 0xFF0000FFu : d >= 3 ? 0xFF008383u : d >= -1 ? 0xFFFF0000u : d >= -4 - (jugador >> 1) ? 0xFF00BD00u : 0u;
+}
+static_assert(color_nivel_original(40, 30) == 0xFF0000FFu && color_nivel_original(33, 30) == 0xFF008383u &&
+              color_nivel_original(29, 30) == 0xFFFF0000u && color_nivel_original(12, 30) == 0xFF00BD00u &&
+              color_nivel_original(5, 30) == 0u);
+
 // Pone (o quita, con 0 segundos) un efecto activo del propio personaje.
 void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 ahora);
 

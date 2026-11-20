@@ -95,6 +95,10 @@ public:
     // eng.fnt text with the 1 px 4-way outline of 0x4334f0 (colour `color`, outline `contorno`, default black 0x5004f0).
     int texto_contorno(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO, u32 contorno = 0xFF000000u);
 
+    // World name label of the original client: 1 px black outline; with `nivel` != 0 an 8x14-ish black halo first and
+    // then `nivel` as a 1 px coloured outline (monster level tier, 0x433a90 + 0x4334f0), the fill keeps `color`.
+    int texto_nombre(std::string_view t, float x, float y, u64 clave, u32 color, u32 nivel = 0);
+
     // Enables the HD UI pack at `dir` (img()/icono() prefer its images). false (and HD stays off) if unreadable.
     bool abrir_hd(const std::string& dir) { return hd_abierto_ = hd_.abrir(dir); }
     bool hd_activo() const { return hd_abierto_; }

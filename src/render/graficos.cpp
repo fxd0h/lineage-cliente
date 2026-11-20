@@ -414,6 +414,18 @@ int Graficos::texto_contorno(std::string_view t, float x, float y, u64 clave_ord
     return texto(t, x, y, clave_orden + (1u << 24), color);
 }
 
+int Graficos::texto_nombre(std::string_view t, float x, float y, u64 clave_orden, u32 color, u32 nivel) {
+    constexpr u32 NEGRO = 0xFF000000u;
+    if (nivel == 0) return texto_contorno(t, x, y, clave_orden, color, NEGRO);
+    for (const auto& [dx, dy] : {std::pair{-2.0f, -2.0f}, {2.0f, -2.0f}, {-2.0f, 2.0f}, {2.0f, 2.0f}, {-2.0f, 0.0f},
+                                 {2.0f, 0.0f}, {0.0f, -2.0f}, {0.0f, 2.0f}, {-1.0f, -1.0f}, {1.0f, -1.0f},
+                                 {-1.0f, 1.0f}, {1.0f, 1.0f}})
+        texto(t, x + dx, y + dy, clave_orden, NEGRO);
+    for (const auto& [dx, dy] : {std::pair{-1.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, -1.0f}, {0.0f, 1.0f}})
+        texto(t, x + dx, y + dy, clave_orden + (1u << 23), nivel);
+    return texto(t, x, y, clave_orden + (1u << 24), color);
+}
+
 int Graficos::texto_sombra(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
     texto(t, x + 1, y + 1, clave_orden, rgba(0, 0, 0));
     return texto(t, x, y, clave_orden + (1u << 24), color);

@@ -266,3 +266,12 @@ TEST_CASE("Chat: color del nombre según el alineamiento (0x4cc140)") {
     CHECK(color_alineamiento(-1920) == rgb555(0x7c00));  // full red
     CHECK(color_alineamiento(-32768) == rgb555(0x7c00));
 }
+
+TEST_CASE("original client chat colours and monster level tiers") {
+    CHECK(color_chat_original(0, true, "Ana: hi") == (255u | 255u << 8 | 255u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(0, true, "Ana: (hi") == (189u | 238u << 8 | 230u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(CHAT_COMERCIO, false, "Ana: x") == (189u | 164u << 8 | 106u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(CHAT_NORMAL, false, "x") == (255u | 246u << 8 | 180u << 16 | 0xFF000000u));
+    CHECK(color_nivel_original(12, 30) == 0xFF00BD00u);
+    CHECK(color_nivel_original(5, 30) == 0u);
+}
