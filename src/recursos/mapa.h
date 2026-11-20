@@ -13,6 +13,7 @@
 // El orden de las celdas en el archivo es fila por fila: y exterior, x interior. Esto está
 // verificado contra los mapas del servidor en tests/test_recursos.cpp.
 #pragma once
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -42,6 +43,15 @@ struct TileObjetoMapa {
 struct ObjetoMapa {
     u32 primera, cantidad;
     u8 x0, y0, x1, y1;
+    u16 gid = 0xFFFF;  // object group id of the file (roof records refer to it); 0xFFFF = none
+};
+
+// Roof record of the .s32 (block after the tile objects): the object group `gid` fades while the local player stands
+// in the cell. tipo 0 fades to 50%, tipo 1 to hidden. x is the cell column (half tiles / 2), relative to the segment.
+struct TechoMapa {
+    u8 x, y;
+    u16 gid;
+    u8 tipo;
 };
 
 // Orden de dibujo de los objetos del mapa. Un objeto (árbol, casa, cerca) son muchas piezas de
@@ -73,6 +83,7 @@ struct SegmentoMapa {
     std::vector<TileObjetoMapa> tiles_objetos;     // aplanado, en orden de archivo
     std::vector<ObjetoMapa> objetos;
     std::vector<PortalMapa> portales;
+    std::vector<TechoMapa> techos;                 // sorted by (y, x); see techos_en
     // Celdas con una pieza de sombra (tile translúcido; ver tiles.h), un u64 por fila. Hace falta
     // leer los .til para saberlo: lo calcula el render la primera vez que lo necesita.
     mutable std::vector<u64> sombra;
@@ -94,6 +105,9 @@ constexpr TipoZona tipo_zona_de_atributo(u16 atributo_izq) {
 constexpr const char* rotulo_zona(TipoZona t) {
     return t == TipoZona::SEGURA ? "Safety zone" : t == TipoZona::COMBATE ? "Combat zone" : "Normal zone";
 }
+
+// Roof records registered on the absolute cell (x, y) of the segment (empty when outside it).
+std::span<const TechoMapa> techos_en(const SegmentoMapa& s, int x, int y);
 
 // Nombre del archivo del segmento que contiene la celda (x, y).
 std::string nombre_segmento(MapId mapa, int x, int y);

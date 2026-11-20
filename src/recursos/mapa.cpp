@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
+#include <utility>
 #include "recursos/mapa.h"
 
 namespace lin {
@@ -61,7 +62,7 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
     s.objetos.clear();
     u32 nobj = l.u32_();
     for (u32 i = 0; i < nobj && !l.error; ++i) {
-        l.u16_();
+        const u16 gid = l.u16_();
         int ntiles = l.u16_();
         size_t inicio = s.tiles_objetos.size();
         for (int j = 0; j < ntiles && !l.error; ++j) {
@@ -82,7 +83,7 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
         }
         calcular_bases(s.tiles_objetos.data() + inicio, s.tiles_objetos.size() - inicio);
         if (s.tiles_objetos.size() == inicio) continue;
-        ObjetoMapa o{static_cast<u32>(inicio), static_cast<u32>(s.tiles_objetos.size() - inicio), 255, 255, 0, 0};
+        ObjetoMapa o{static_cast<u32>(inicio), static_cast<u32>(s.tiles_objetos.size() - inicio), 255, 255, 0, 0, gid};
         for (size_t k = inicio; k < s.tiles_objetos.size(); ++k) {
             const TileObjetoMapa& t = s.tiles_objetos[k];
             o.x0 = std::min<u8>(o.x0, t.x / 2);
@@ -105,7 +106,17 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
     }
     // Lo que sigue también es opcional: un segmento sin portales o cortado no invalida el resto.
     s.portales.clear();
-    l.saltar(static_cast<size_t>(l.u32_()) * 5);
+    // Roof records: u8 x (half tiles), u8 y, u16 gid, u8 kind; those outside the segment are dropped.
+    s.techos.clear();
+    for (u32 n_techos = l.u32_(), i = 0; i < n_techos && l.quedan(5) && !l.error; ++i) {
+        const u8 x = l.u8_(), y = l.u8_();
+        const u16 gid = l.u16_();
+        const u8 tipo = l.u8_();
+        if (x / 2 < CELDAS_SEGMENTO && y < CELDAS_SEGMENTO && tipo <= 1) s.techos.push_back({static_cast<u8>(x / 2), y, gid, tipo});
+    }
+    std::sort(s.techos.begin(), s.techos.end(), [](const TechoMapa& a, const TechoMapa& b) {
+        return a.y != b.y ? a.y < b.y : a.x < b.x;
+    });
     l.saltar(seg ? l.u8_() : static_cast<size_t>(l.u32_()) * 4);  // los .til que usa
     const u16 nportales = l.quedan(2) ? l.u16_() : 0;
     for (u16 i = 0; i < nportales && !l.error; ++i) {
@@ -116,6 +127,16 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
         if (!l.error) s.portales.push_back({static_cast<u8>(x / 2), y, mapa});
     }
     return true;  // los objetos son opcionales: un error ahí no invalida el suelo
+}
+
+std::span<const TechoMapa> techos_en(const SegmentoMapa& s, int x, int y) {
+    const int lx = x - s.base_x, ly = y - s.base_y;
+    if (lx < 0 || ly < 0 || lx >= CELDAS_SEGMENTO || ly >= CELDAS_SEGMENTO) return {};
+    const auto cmp = [](const TechoMapa& t, std::pair<int, int> k) { return t.y != k.second ? t.y < k.second : t.x < k.first; };
+    auto it = std::lower_bound(s.techos.begin(), s.techos.end(), std::make_pair(lx, ly), cmp);
+    auto fin = it;
+    while (fin != s.techos.end() && fin->x == lx && fin->y == ly) ++fin;
+    return it == fin ? std::span<const TechoMapa>{} : std::span<const TechoMapa>{&*it, static_cast<size_t>(fin - it)};
 }
 
 bool decodificar_s32(Bytes datos, int base_x, int base_y, SegmentoMapa& s) {

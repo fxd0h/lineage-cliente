@@ -484,3 +484,18 @@ TEST_CASE("Mapa 4: el Chaotic Temple solo está como .seg (formato viejo)" * doc
     CHECK(con_suelo > static_cast<long>(s.suelo.size() * 9 / 10));
     CHECK_FALSE(s.objetos.empty());
 }
+
+TEST_CASE("Mapa: roof records of the .s32 refer to objects of the same segment" * doctest::skip(carpeta_juego().empty())) {
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(4, 32639, 32985), d));
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32639 & ~63, 32985 & ~63, s));
+    REQUIRE_FALSE(s.techos.empty());
+    size_t con_objeto = 0;
+    for (const TechoMapa& t : s.techos) {
+        for (const ObjetoMapa& o : s.objetos)
+            if (o.gid == t.gid) { ++con_objeto; break; }
+        CHECK(techos_en(s, s.base_x + t.x, s.base_y + t.y).size() >= 1);
+    }
+    CHECK(con_objeto * 10 >= s.techos.size() * 9);
+}

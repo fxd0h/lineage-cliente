@@ -388,6 +388,17 @@ struct App {
     i32 hora_forzada = -1;                    // comando forzar-hora (pruebas): segundos del día, -1 = la del servidor
     bool ambiente_agua = false;               // el ambiente que suena es el del agua (sonido 330)
     std::vector<u32> agua_filas;              // color por fila del agua (1416.img), cargado al primer uso
+    // Roof groups of the local player's cell fading (original UI; see actualizar_techos): level 0..31 per group.
+    struct TechoFade {
+        u32 segmento;  // base_x << 16 | base_y of the segment that owns the group id
+        u16 gid;
+        u8 tipo, nivel;
+        bool activo;
+    };
+    static constexpr u32 MAX_TECHOS_FADE = 16;
+    TechoFade techos_fade[MAX_TECHOS_FADE] = {};
+    u32 n_techos_fade = 0;
+    u64 techos_proximo_ms = 0;
     bool jugador_tapado = false;  // un objeto del mapa tapa al propio personaje (se ve translúcido)
     ObjId objetivo = 0;
     u64 fin_ataque = 0;

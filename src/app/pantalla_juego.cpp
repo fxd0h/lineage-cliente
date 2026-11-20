@@ -300,12 +300,49 @@ bool preparar_mezcla(const TablaSprites& t, GfxId gfx, u32& color, Mezcla& mezcl
     return true;
 }
 
+// Roof fade of the original client (0xc00 / FUN_00468240): the groups registered on the local player's cell go towards
+// 50% (kind 0, level 16 of 0..31) or hidden (kind 1, level 31); the others return to 0. The level steps by 4 every 50 ms.
+void actualizar_techos(App& a, int cx, int cy, u64 ahora) {
+    const Slot sy = a.mundo.objetos.buscar(a.mundo.jugador.id);
+    if (sy != SIN_SLOT) {
+        cx = a.mundo.objetos.col<O_X>()[sy];
+        cy = a.mundo.objetos.col<O_Y>()[sy];
+    }
+    for (u32 i = 0; i < a.n_techos_fade; ++i) a.techos_fade[i].activo = false;
+    if (const SegmentoMapa* s = segmento_cargado(a.mundo, a.rec, cx, cy)) {
+        const u32 clave = static_cast<u32>(s->base_x) << 16 | s->base_y;
+        for (const TechoMapa& t : techos_en(*s, cx, cy)) {
+            u32 i = 0;
+            while (i < a.n_techos_fade && !(a.techos_fade[i].segmento == clave && a.techos_fade[i].gid == t.gid)) ++i;
+            if (i == a.n_techos_fade) {
+                if (i == App::MAX_TECHOS_FADE) continue;
+                a.techos_fade[a.n_techos_fade++] = {clave, t.gid, t.tipo, 0, true};
+            }
+            a.techos_fade[i].activo = true;
+            a.techos_fade[i].tipo = t.tipo;
+        }
+    }
+    if (a.techos_proximo_ms == 0 || ahora - a.techos_proximo_ms > 1000) a.techos_proximo_ms = ahora;
+    for (int pasos = 0; ahora >= a.techos_proximo_ms && pasos < 20; ++pasos, a.techos_proximo_ms += 50) {
+        for (u32 i = 0; i < a.n_techos_fade; ++i) {
+            App::TechoFade& f = a.techos_fade[i];
+            const int meta = !f.activo ? 0 : f.tipo ? 31 : 16;
+            f.nivel = static_cast<u8>(f.nivel < meta ? std::min(meta, f.nivel + 4) : std::max(meta, f.nivel - 4));
+        }
+    }
+    for (u32 i = 0; i < a.n_techos_fade;)
+        if (!a.techos_fade[i].activo && a.techos_fade[i].nivel == 0) a.techos_fade[i] = a.techos_fade[--a.n_techos_fade];
+        else ++i;
+}
+
 void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double oy) {
     Graficos& g = *a.g;
     int cx = static_cast<int>(cam_x), cy = static_cast<int>(cam_y);
     const Vista vi = vista_mundo(a);
     const App::ObjetoEnPantalla* yo = nullptr;
     a.jugador_tapado = false;
+    const bool original = !a.cfg.ui_simple;
+    if (original) actualizar_techos(a, cx, cy, a.entrada.ahora_ms);
     for (const App::ObjetoEnPantalla& r : a.en_pantalla)
         if (r.id == a.mundo.jugador.id) yo = &r;
     // Centro del cuerpo: el rectángulo del frame trae márgenes (arma, capa).
@@ -327,9 +364,18 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                 const int ox0 = s->base_x + obj.x0, ox1 = s->base_x + obj.x1, oy0 = s->base_y + obj.y0, oy1 = s->base_y + obj.y1;
                 if (ox1 < cx - radio || ox0 > cx + radio || oy1 < cy - radio || oy0 > cy + radio) continue;
                 const TileObjetoMapa* piezas = s->tiles_objetos.data() + obj.primera;
+                // Roof group fading: alpha of the whole object (original UI), 0 = hidden.
+                u8 alfa_techo = 255;
+                if (a.n_techos_fade && obj.gid != 0xFFFF) {
+                    const u32 clave = static_cast<u32>(s->base_x) << 16 | s->base_y;
+                    for (u32 i = 0; i < a.n_techos_fade; ++i) {
+                        const App::TechoFade& f = a.techos_fade[i];
+                        if (f.segmento == clave && f.gid == obj.gid) alfa_techo = f.nivel >= 31 ? 0 : static_cast<u8>(255 * (32 - f.nivel) / 32);
+                    }
+                }
                 // ¿Tapa al personaje? Solo si alguna de sus piezas está a pocas celdas.
                 bool tapa = false;
-                const bool cerca = yo && ox1 >= cx - CELDAS_TAPA && ox0 <= cx + CELDAS_TAPA && oy1 >= cy - CELDAS_TAPA &&
+                const bool cerca = yo && !original && ox1 >= cx - CELDAS_TAPA && ox0 <= cx + CELDAS_TAPA && oy1 >= cy - CELDAS_TAPA &&
                                    oy0 <= cy + CELDAS_TAPA;
                 for (u32 k = 0; cerca && k < obj.cantidad && !tapa; ++k) {
                     const TileObjetoMapa& t = piezas[k];
@@ -367,8 +413,10 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                     // Del objeto que tapa, solo lo que queda delante (techo, pared del frente): el
                     // interior y la pared de atrás siguen opacos.
                     const bool delante = tapa && prof > yo->profundidad;
+                    if (alfa_techo == 0) continue;
                     g.gpu().dibujar_en(g.medio_tile(t.tile, (t.x & 1) != 0), sx, sy, clave_orden(CAPA_MUNDO, prof),
-                                       delante ? rgba(255, 255, 255, ALFA_TAPA) : BLANCO, mezcla_tile(g, t.tile));
+                                       delante ? rgba(255, 255, 255, ALFA_TAPA) : alfa_techo != 255 ? rgba(255, 255, 255, alfa_techo) : BLANCO,
+                                       mezcla_tile(g, t.tile));
                 }
             }
         }
