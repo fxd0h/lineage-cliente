@@ -77,3 +77,40 @@ Tags: [C] confirmed from decompile, [I] inferred. Coordinates are relative to th
 ## Pet / summon
 
 - Frame 1197 also belongs to window 0x4a6c90 (global `[0x8ed650]`), separate from the volume window 0x4a9cd0; content U.
+
+## Round 2 findings
+
+- **Spellbook tabs (C):** strip handler 0x47e9d0 (down / double click); tab i is an 18x19 rect at strip_y + 19*i; a
+  click selects it, sets the first scroll row to 2*i; the drawn tab follows the scroll (row / 2). Each tab is 8 slots
+  (2 rows of 4). Max scroll rows: prince 13, elf 21, dark elf 9, others 19.
+  Spell placement (S_SkillAdd 0x48ce40, idx = row*8 + bit, skill id = idx+1) by class slot tables (0x4424xx):
+  knight/wizard slots 0-79 = idx 0-79; prince 0-47 = idx 0-47, 48-55 = idx 112-119; elf 0-47 = idx 0-47,
+  48-98 = idx 128-178; dark elf 0-15 = idx 0-15, 16-19 = 96-99, 20 = 108, 24-27 = 100-103, 28 = 109, 32-35 = 104-107,
+  36 = 110; dragon knight (5) 0-14 = idx 180-194; illusionist (6) 0-19 = idx 200-219. Knight overrides tab 2:
+  slot 8 = idx 86, 9 = 88, 10 = 87, 13 = 89, 14 = 90.
+- **Buff table 0x6e1020 (C):** 154 rows: icon, seconds (-1 infinite), exclusion group (+8: activating a slot removes the
+  other active slots of the same non-zero group), tooltip string-e index (+0xc), end-of-effect chat message string-e
+  index (+0x10, printed when it expires, e.g. 718 "The weapon has returned to normal."). string-e entry n is line n+1.
+  A dump (with text) is kept outside the repo at re/scratch/buff_table_0x6e1020.tsv.
+- **Close button (C):** art 969 at frame origin + (168,18) for inventory/status; there is no title strip above the frame
+  image (the title is part of the frame art; the drag handle (0,5,191,25) lies inside it).
+- **Quantity entry (C):** there is no quantity window. Drop / pick up / give use the chat input line as a prompt
+  (string-e 119 drop "How many do you want to drop? (1-%u, Enter=all, Esc=cancel)", 121 pick up, 140 give); empty =
+  whole stack. 0x4cfa90 is the warehouse password keypad (image 895, digits 896+2d at (12+22*(i%5), 38+17*(i/5)), field
+  (17,14) with `*`, max 6 digits, clear 916 (12,72), OK 918 (61,72), cancel 920 (90,72), prompts string-e 838-841,
+  wrong 842).
+- **Mail (C/I):** 0x417a90 mailbox list (buttons 658 close (209,305), 660 (34,332), 662 (139,304), 664 (171,304),
+  666 (64,311), 668 (99,311)); 0x416b50 letter writing (edits (16,50) w180, (20,67) w228; buttons 672 (56,312),
+  676 (110,312), 678 close (213,297), 674 (90,299)); 0x417320 read letter; 0x453120 compose (edits (100,55), (100,70),
+  (100,90) w116, body (50,112) 170x192, buttons 1580/1582/1581 at y 308, sends opcode 127 `cchsSS`); 0x4541b0 view
+  variant (I); 0x47fd10 memo editor (frame 1545, button 1583 at x 230) (I).
+- **Info card 0x4a6c90 (C):** frame 1197, background 1198 at (8,11), icon (icon table) at (25,45), wrapped desc-e text
+  below, close (182,19); opened by clicking a type-4 world object (sign) whose name is a `$` desc id (0x408300).
+- **Hold-to-walk (C):** no timer: on arriving at each tile with the mouse held, the click decision 0x468c20 reruns with
+  the stored pointer position; mouse move with the button held also reruns it.
+- **Alt+1/2/3 (C):** emotes via opcode 0x26 for standard human sprites: Alt+1 -> 0x44, Alt+2 -> 0x45, Alt+3 -> 0x43
+  (other sprites gated, U).
+- **Panel buttons (C):** pressed = hover = base+1; no third image.
+- **Inventory overlays (C):** desc-e entries 9 "Armed" and 117 "Worn": items whose name contains them get overlay 2700
+  then 2701 at (+1,+1) (not item types 0x1d1/0x1d2). 2702 at (+24,+24) marks a sealed item (item+0x80, set when the
+  status byte gains 0x80, message string-e 1004 "%s was sealed.", cleared with 1015).
