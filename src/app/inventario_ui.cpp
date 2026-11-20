@@ -30,8 +30,10 @@ constexpr Grid SIMPLE_GRID = {6, 7, 36, 14, 30, 14 + 6 * 36 - 22, 30 + 7 * 36 + 
 constexpr Grid ORIGINAL_GRID = {4, 6, 34, 20, 41, 163, 252, 162};
 constexpr int BASURA_W = 20, BASURA_H = 18;
 constexpr u64 MS_DOBLE_CLIC = 400;
+constexpr u32 IMG_EQUIPPED_MARK = 536;  // behind an equipped icon at (x-1, y-1) (0x44e010)
+constexpr int DRAG_START_PX = 25;       // the original starts a drag after the pointer moved 25 px (0x44f240)
 constexpr u32 IMG_INV_BACKGROUND = 996, IMG_INV_FRAME = 997, IMG_INV_ORNAMENT = 998, IMG_INV_TABS = 999;
-constexpr int TABS_X = 17, TABS_Y = 249, TAB_W = 35, TAB_H = 17, N_TABS = 4;
+constexpr int TABS_X = 17, TABS_HIT_X = 19, TABS_Y = 249, TAB_W = 35, TAB_H = 17, N_TABS = 4;
 constexpr const char* TAB_NAMES[N_TABS] = {"All", "Equipment", "Quest", "Miscellaneous"};
 
 // Original UI tab filters (0x44de10 all, 0x44dd90 equipment, 0x44de40 quest, 0x44df00 misc). Equipment is the
@@ -226,7 +228,7 @@ void dibujar_inventario(App& a) {
         // Category tabs: one image per selected tab.
         g.gpu().dibujar(g.img(IMG_INV_TABS + a.inventory_tab), x0 + TABS_X, y0 + TABS_Y, clave_orden(CAPA_UI, 12));
         for (int i = 0; i < N_TABS; ++i) {
-            const int tx = x0 + TABS_X + i * TAB_W + 1, ty = y0 + TABS_Y;
+            const int tx = x0 + TABS_HIT_X + i * TAB_W, ty = y0 + TABS_Y;
             if (!ui::sobre(e, tx, ty, TAB_W, TAB_H)) continue;
             if (e.clic && !a.arrastrando && a.inventory_tab != i) {
                 a.inventory_tab = static_cast<u8>(i);
@@ -278,7 +280,8 @@ void dibujar_inventario(App& a) {
             ++x;  // inside the image's grid lines
             ++y;
             if (static_cast<int>(i) == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(90, 80, 50, 120));
-            else if (equipado) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(74, 70, 26, 150));
+            else if (equipado && !g.img(IMG_EQUIPPED_MARK).valida()) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(74, 70, 26, 150));
+            if (equipado) g.gpu().dibujar(g.img(IMG_EQUIPPED_MARK), x - 1, y - 1, kf);
         } else {
             u32 fondo = static_cast<int>(i) == bajo ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230);
             g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
@@ -293,7 +296,7 @@ void dibujar_inventario(App& a) {
         }
         if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
-        if (equipado) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));
+        if (equipado && !original) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));
         if (u32 n = t.col<I_CANTIDAD>()[s]; n > 1) {
             char cant[16];
             std::snprintf(cant, sizeof cant, "%u", n);
@@ -397,7 +400,29 @@ void dibujar_inventario(App& a) {
         return;  // mientras tanto no se arrastra ni se usa otra cosa
     }
     if (e.clic && bajo >= 0 && clic_item_tienda(a, t.ids()[slot_bajo])) return;  // armando la tienda
-    if (e.pulsado && bajo >= 0) a.arrastrando = t.ids()[slot_bajo];
+    if (original) {
+        // Original mouse handling (0x44f240): a left double click uses the item; a press only arms a drag that starts
+        // once the pointer is 25 px away; there are no right-click actions in the grid.
+        if (e.pulsado && bajo >= 0) {
+            const ObjId id = t.ids()[slot_bajo];
+            if (e.doble_izquierdo) {
+                if (a.intercambio.abierto) ofrecer_en_intercambio(a, id);  // in a trade it is offered
+                else usar_item(a, id);
+                a.inv_press = 0;
+            } else {
+                a.inv_press = id;
+                a.inv_press_x = e.mx;
+                a.inv_press_y = e.my;
+            }
+        }
+        if (a.inv_press && !a.arrastrando && e.presionado) {
+            const int dx = e.mx - a.inv_press_x, dy = e.my - a.inv_press_y;
+            if (dx * dx + dy * dy >= DRAG_START_PX * DRAG_START_PX) a.arrastrando = a.inv_press;
+        }
+        if (!e.presionado) a.inv_press = 0;
+    } else if (e.pulsado && bajo >= 0) {
+        a.arrastrando = t.ids()[slot_bajo];
+    }
     if (a.arrastrando && e.presionado) {
         Slot s = t.buscar(a.arrastrando);
         if (s != SIN_SLOT)
@@ -440,7 +465,7 @@ void dibujar_inventario(App& a) {
             if (seleccionado(a, id)) std::erase(a.inventario_seleccion, id);
             else a.inventario_seleccion.push_back(id);
             a.ultimo_clic_item = 0;  // Shift+clic no cuenta para el doble clic
-        } else if (bajo >= 0) {
+        } else if (bajo >= 0 && !original) {
             a.inventario_seleccion.clear();
             // Doble clic: usar (equipar/quitar armas y armaduras, beber pociones...).
             ObjId id = t.ids()[slot_bajo];
