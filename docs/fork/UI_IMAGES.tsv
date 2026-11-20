@@ -862,7 +862,7 @@ img_700	257	336				manifest
 img_700c	257	336				manifest
 img_700h	257	336				manifest
 img_700j	257	336				manifest
-img_701	320	32	Yes/No question		0x41fe30,0x4d1cd0	audit,manifest
+img_701	320	32	Yes/No question	src/app/social_ui.cpp:dibujar_pregunta_original	0x41fe30,0x4d1cd0	audit,manifest
 img_702	5	25				manifest
 img_703	257	336				manifest
 img_703h	257	336				manifest
@@ -1152,19 +1152,19 @@ img_943	19	212				manifest
 img_944	19	212				manifest
 img_945	19	212				manifest
 img_946	19	212				manifest
-img_947	19	212				manifest
+img_947	19	212	Spell tab strip, prince (7 tabs; 19x212, 19 px slots, selected slot highlighted)	src/app/hechizos_ui.cpp:tab_strip		manifest
 img_948	19	212				manifest
 img_949	19	212				manifest
 img_950	19	212				manifest
 img_951	19	212				manifest
 img_952	19	212				manifest
 img_953	19	212				manifest
-img_954	19	212				manifest
+img_954	19	212	Spell tab strip, dark elf (5 tabs; same layout)	src/app/hechizos_ui.cpp:tab_strip		manifest
 img_955	19	212				manifest
 img_956	19	212				manifest
 img_957	19	212				manifest
 img_958	19	212				manifest
-img_959	19	212				manifest
+img_959	19	212	Spell tab strip, other classes (10 tabs; same layout)	src/app/hechizos_ui.cpp:tab_strip		manifest
 img_960	19	212				manifest
 img_961	19	212				manifest
 img_962	19	212				manifest
@@ -1504,7 +1504,7 @@ img_1208	11	12	IMG_down; Scroll bars	src/app/original_window.cpp	0x42c327,0x42c3
 img_1209	11	12	IMG_down_lit	src/app/original_window.cpp		code,manifest
 img_1210	15	16	Scroll bars		0x42c327,0x42c3bd	audit,manifest
 img_1211	15	16	IMG_thumb	src/app/original_window.cpp		code,manifest
-img_1212	12	87	Scroll bars			audit,manifest
+img_1212	12	87	Scroll bars	src/app/social_ui.cpp:dibujar_intercambio		audit,manifest
 img_1213	30	31	IMG_orbe_primera	src/app/pantalla_juego.cpp:overhead_bar		code,commit,manifest
 img_1214	30	31				manifest
 img_1215	30	31				manifest
@@ -1560,10 +1560,10 @@ img_1261c	190	288				manifest
 img_1262	190	288				manifest
 img_1262c	190	288				manifest
 img_1262h	190	288				manifest
-img_1263	92	44	HP/MP/EXP gauge box		0x4b3e8f,0x4b4562,0x4b3ff2	audit,manifest
+img_1263	92	44	HP/MP/EXP gauge box	src/app/original_window.cpp:draw_attributes	0x4b3e8f,0x4b4562,0x4b3ff2	audit,manifest
 img_1263c	92	44				manifest
 img_1263h	92	44				manifest
-img_1264	92	13				manifest
+img_1264	92	13	EXP gauge fill (92x13)	src/app/original_window.cpp:draw_attributes		manifest
 img_1264c	92	13				manifest
 img_1264h	92	13				manifest
 img_1265	91	14				manifest
