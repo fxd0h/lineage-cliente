@@ -36,6 +36,7 @@ struct GloboChat {
 
 struct Chat {
     LineaChat lineas[CAPACIDAD_CHAT];
+    bool original_ui = false;     // original UI: colours and bubble rules of the 2009 client (docs/fork/RE_HUD.md)
     bool globo_comercio = false;  // option showMargetMsg: trade chat also shows over the speaker's head
     u32 total = 0;  // líneas agregadas desde el inicio (el anillo guarda las últimas CAPACIDAD_CHAT)
     GloboChat globos[CANTIDAD_GLOBOS] = {};
@@ -54,6 +55,9 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
 
 // Color de cada tipo de chat (0xAABBGGRR).
 u32 color_chat(u8 tipo);
+// Original client colour of a chat line (S3EP1U 0x484800 / S_Say 0x483500). `normal_path`: S_Say packet (types 0 and
+// 2) instead of the typed global packet; `texto` is the line as shown.
+u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto);
 
 // Reemplaza los "$N" del texto por la entrada N de desc-e.tbl. Devuelve los bytes escritos.
 size_t expandir_desc(const TablaTexto& desc, std::string_view t, char* destino, size_t capacidad);
@@ -103,7 +107,7 @@ void recorrer_codigos(std::string_view t, u32 normal, bool doble_byte, F&& f) {
 
 // Arma el texto de un S_ServerMessage. `color` sale del primer código \fX, si lo hay.
 size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, const Evento& e, char* destino,
-                         size_t capacidad, u32& color);
+                         size_t capacidad, u32& color, bool original = false);
 
 // Lo que escribió el jugador, ya separado según el prefijo.
 struct EntradaChat {

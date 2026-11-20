@@ -62,6 +62,26 @@ u32 color_chat(u8 tipo) {
     }
 }
 
+u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto) {
+    // Text after the "Name: " prefix the server builds; S_Say tests the line start for '(' (whisper-like talk).
+    if (normal_path) {
+        if (tipo == CHAT_GRITO) return color(255, 230, 205);
+        if (tipo == 0xf) return color(255, 131, 255);
+        // The server prefixes "Name: "; the original tests the spoken text.
+        const size_t p = texto.find(": ");
+        const std::string_view dicho = p == std::string_view::npos ? texto : texto.substr(p + 2);
+        return !dicho.empty() && dicho[0] == '(' ? color(189, 238, 230) : color(255, 255, 255);
+    }
+    switch (tipo) {
+    case 1: return color(255, 205, 205);
+    case CHAT_GLOBAL: return texto.size() > 1 && texto[1] == '*' ? color(255, 0, 0) : color(172, 238, 238);
+    case CHAT_CLAN: return !texto.empty() && texto[0] == '{' ? color(255, 131, 255) : color(197, 238, 180);
+    case CHAT_GRUPO: return color(205, 213, 255);
+    case CHAT_COMERCIO: return color(189, 164, 106);
+    default: return color(255, 246, 180);  // \fH cream
+    }
+}
+
 void Chat::agregar(std::string_view t, u32 c, u8 tipo) {
     LineaChat& l = lineas[total % CAPACIDAD_CHAT];
     size_t n = recorte_cp949(t, LARGO_LINEA_CHAT);
@@ -137,8 +157,9 @@ size_t expandir_desc(const TablaTexto& desc, std::string_view t, char* destino, 
 }
 
 size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, const Evento& e, char* destino,
-                         size_t capacidad, u32& c) {
-    u32 normal = e.v[MS_AZUL] ? COLOR_AZUL : COLOR_MENSAJE;
+                         size_t capacidad, u32& c, bool original) {
+    // Original client: the default text colour is \\fH cream (255,246,180), used by 184 call sites.
+    u32 normal = e.v[MS_AZUL] ? COLOR_AZUL : original ? color(255, 246, 180) : COLOR_MENSAJE;
     c = normal;
     std::string_view plantilla = mensajes.linea(static_cast<size_t>(e.v[MS_ID]));
     Salida s{destino, capacidad};
@@ -179,7 +200,7 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
     for (const Evento& e : eventos) {
         if (e.tipo == Ev::MENSAJE_SERVIDOR) {
             u32 col;
-            size_t n = formatear_mensaje(mensajes, desc, e, buf, sizeof buf, col);
+            size_t n = formatear_mensaje(mensajes, desc, e, buf, sizeof buf, col, c.original_ui);
             c.agregar({buf, n}, col, CHAT_MENSAJE);
         } else if (e.tipo == Ev::CHAT) {
             u8 tipo = static_cast<u8>(e.v[0]);
@@ -188,7 +209,7 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                 // Llega solo el remitente y el texto. Se arma como el eco que recibe quien envía
                 // ("-> (destino) texto", tipo 9) pero en sentido contrario.
                 Salida s{buf, sizeof buf};
-                s.poner("<- (");
+                s.poner(c.original_ui ? "(" : "<- (");  // original format "(%s) %s" (0x483970)
                 s.poner(e.s[1]);
                 s.poner(") ");
                 s.poner(e.s[0]);
@@ -197,7 +218,13 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                 n = expandir_desc(desc, e.s[0], buf, sizeof buf);  // los NPC hablan como "$1422: ..."
             }
             u32 linea = c.total;
-            c.agregar({buf, n}, color_chat(tipo), tipo);
+            u32 col = color_chat(tipo);
+            if (c.original_ui) {
+                if (tipo == CHAT_SUSURRO) col = color(255, 205, 205);
+                else if (tipo == CHAT_SISTEMA) col = color(255, 230, 205);  // sent-whisper echo (0x48391d)
+                else col = color_chat_original(tipo, e.origen == Srv::NORMALCHAT || e.origen == Srv::NPCSHOUT, {buf, n});
+            }
+            c.agregar({buf, n}, col, tipo);
             // Globo sobre la cabeza: chat normal y grito de quien está a la vista.
             if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO || (c.globo_comercio && tipo == CHAT_COMERCIO))) {
                 GloboChat* destino = &c.globos[0];
