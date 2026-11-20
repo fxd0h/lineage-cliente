@@ -2,10 +2,12 @@
 """Íconos propios del cliente: una L cursiva roja sobre fondo transparente (el juego) y la misma L con
 un engranaje chico abajo a la derecha (settings).
 
-Uso: tools/generar_iconos.py [--icns CARPETA]
+Uso: tools/generar_iconos.py [--icns CARPETA] [--ico]
   - escribe datos/iconos/lineage.png y datos/iconos/settings.png (1024 × 1024, RGBA);
   - con --icns (solo macOS: sips e iconutil) arma además lineage.icns y settings.icns en CARPETA, para
-    el .app del empaquetado.
+    el .app del empaquetado;
+  - con --ico escribe datos/iconos/lineage.ico y settings.ico (Windows: el ícono del .exe, vía
+    cmake/windows.rc.in). Cada tamaño se dibuja directo desde la figura, no achicando el de 1024.
 
 Sin dependencias: dibuja con muestreo 2 × 2 por píxel y escribe el PNG con zlib.
 """
@@ -79,24 +81,25 @@ def color_en(x, y, engranaje):
     return (0, 0, 0, 0)
 
 
-def dibujar(engranaje):
+def dibujar(engranaje, tam=TAM):
     filas = []
-    paso = 1.0 / (TAM * MUESTRAS)
-    for py in range(TAM):
+    muestras = MUESTRAS if tam >= 128 else 4  # más muestras en los chicos: el borde se nota más
+    paso = 1.0 / (tam * muestras)
+    for py in range(tam):
         fila = bytearray([0])  # filtro PNG "ninguno"
-        for px in range(TAM):
+        for px in range(tam):
             acc = [0, 0, 0, 0]
-            for sy in range(MUESTRAS):
-                y = (py * MUESTRAS + sy + 0.5) * paso
-                for sx in range(MUESTRAS):
-                    x = (px * MUESTRAS + sx + 0.5) * paso
+            for sy in range(muestras):
+                y = (py * muestras + sy + 0.5) * paso
+                for sx in range(muestras):
+                    x = (px * muestras + sx + 0.5) * paso
                     r, g, b, a = color_en(x, y, engranaje)
                     acc[0] += r * a
                     acc[1] += g * a
                     acc[2] += b * a
                     acc[3] += a
             if acc[3]:
-                fila += bytes((acc[0] // acc[3], acc[1] // acc[3], acc[2] // acc[3], acc[3] // (MUESTRAS * MUESTRAS)))
+                fila += bytes((acc[0] // acc[3], acc[1] // acc[3], acc[2] // acc[3], acc[3] // (muestras * muestras)))
             else:
                 fila += b"\0\0\0\0"
         filas.append(bytes(fila))
@@ -106,7 +109,8 @@ def dibujar(engranaje):
 def png(filas):
     def bloque(tipo, datos):
         return struct.pack(">I", len(datos)) + tipo + datos + struct.pack(">I", zlib.crc32(tipo + datos) & 0xFFFFFFFF)
-    cabecera = struct.pack(">IIBBBBB", TAM, TAM, 8, 6, 0, 0, 0)  # 8 bits, RGBA
+    tam = len(filas)
+    cabecera = struct.pack(">IIBBBBB", tam, tam, 8, 6, 0, 0, 0)  # 8 bits, RGBA
     return b"\x89PNG\r\n\x1a\n" + bloque(b"IHDR", cabecera) + bloque(b"IDAT", zlib.compress(b"".join(filas), 9)) + bloque(b"IEND", b"")
 
 
@@ -144,6 +148,23 @@ def icns(png_1024, destino):
         subprocess.run(["iconutil", "-c", "icns", conjunto, "-o", destino], check=True)
 
 
+TAMANOS_ICO = (16, 20, 24, 32, 40, 48, 64, 128, 256)  # los que usa el Explorador según el DPI
+
+
+def ico(engranaje, destino):
+    """Windows: .ico con una imagen PNG por tamaño (formato admitido desde Windows Vista)."""
+    imagenes = [png(dibujar(engranaje, t)) for t in TAMANOS_ICO]
+    salida = struct.pack("<HHH", 0, 1, len(imagenes))  # ICONDIR: reservado, tipo 1 (ícono), cantidad
+    offset = 6 + 16 * len(imagenes)
+    for t, datos in zip(TAMANOS_ICO, imagenes):
+        lado = 0 if t >= 256 else t  # 0 significa 256
+        # ICONDIRENTRY: ancho, alto, colores, reservado, planos, bits por píxel, tamaño, offset
+        salida += struct.pack("<BBBBHHII", lado, lado, 0, 0, 1, 32, len(datos), offset)
+        offset += len(datos)
+    with open(destino, "wb") as f:
+        f.write(salida + b"".join(imagenes))
+
+
 def main():
     carpeta = os.path.join(RAIZ, "datos", "iconos")
     os.makedirs(carpeta, exist_ok=True)
@@ -155,6 +176,9 @@ def main():
         with open(ruta, "wb") as f:
             f.write(png(filas))
         print(ruta)
+        if "--ico" in sys.argv:
+            ico(engranaje, os.path.join(carpeta, nombre + ".ico"))
+            print(os.path.join(carpeta, nombre + ".ico"))
         if destino_icns:
             os.makedirs(destino_icns, exist_ok=True)
             icns(ruta, os.path.join(destino_icns, nombre + ".icns"))

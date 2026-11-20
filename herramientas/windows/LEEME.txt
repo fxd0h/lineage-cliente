@@ -1,0 +1,33 @@
+Lineage Cliente para Windows
+============================
+
+Un cliente nuevo para Lineage 1. El juego NO viene incluido: hace falta una instalación del
+juego original (la carpeta con Sprite.pak, Tile.pak, Text.pak y map\).
+
+Uso
+---
+1. Descomprimir esta carpeta donde se quiera (no hace falta instalar nada).
+2. Abrir lineage.exe. La primera vez pide la carpeta del juego.
+3. settings.exe cambia la configuración (carpeta del juego, servidores, interfaz, sonido) sin abrir
+   el juego.
+
+La configuración queda en %APPDATA%\Lineage\LineageCliente\settings.ini.
+
+La carpeta del juego tiene que estar en un disco local: desde una unidad de red por WebDAV (por
+ejemplo, la carpeta compartida de una máquina virtual de UTM) Windows no abre los .pak grandes.
+
+Requisitos: Windows 10 o 11, de 64 bits (x64 o arm64 según el paquete), con DirectX 12.
+
+Licencia: GPLv3 (LICENSE.txt). Lineage es una marca de su dueño; este proyecto no tiene relación
+con él.
+
+
+Lineage Client for Windows (English)
+------------------------------------
+A new client for Lineage 1. The game is NOT included: you need an installation of the original
+game (the folder with Sprite.pak, Tile.pak, Text.pak and map\). Unzip anywhere and run
+lineage.exe; the first time it asks for the game folder. settings.exe changes the settings
+without opening the game. Settings are stored in %APPDATA%\Lineage\LineageCliente\settings.ini.
+The game folder must be on a local disk (Windows cannot open the large .pak files over WebDAV).
+Requires Windows 10 or 11, 64-bit (x64 or arm64, matching the package), with DirectX 12.
+License: GPLv3 (LICENSE.txt).

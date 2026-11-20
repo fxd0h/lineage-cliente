@@ -185,11 +185,11 @@ void dibujar_inventario(App& a) {
         if (!hay) continue;
         Slot s = static_cast<Slot>(i);
         if (seleccionado(a, t.ids()[s])) {  // marco celeste
-            const u32 c = rgba(120, 190, 255);
-            g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, c);
-            g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, c);
-            g.gpu().rectangulo(x, y, 2, CELDA - 2, ki, c);
-            g.gpu().rectangulo(x + CELDA - 4, y, 2, CELDA - 2, ki, c);
+            const u32 celeste = rgba(120, 190, 255);
+            g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, celeste);
+            g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, celeste);
+            g.gpu().rectangulo(x, y, 2, CELDA - 2, ki, celeste);
+            g.gpu().rectangulo(x + CELDA - 4, y, 2, CELDA - 2, ki, celeste);
         }
         if (!arrastrado(t.ids()[s])) g.gpu().dibujar(g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki);
         if (equipado) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));

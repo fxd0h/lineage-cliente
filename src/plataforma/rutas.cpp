@@ -268,11 +268,13 @@ bool guardar_config_en(const std::string& ruta, const Config& c) {
 }
 
 bool carpeta_juego_valida(const std::string& carpeta) {
-    // MULTIPLATAFORMA: en macOS y Windows el sistema de archivos no distingue mayúsculas; en Linux
-    // sí, y la instalación original mezcla "Sprite.pak", "Tile.pak", "map/". Habrá que buscar los
-    // nombres sin distinguir mayúsculas en Linux.
+    // En Linux el sistema de archivos distingue mayúsculas y la instalación original las mezcla
+    // ("Sprite.pak", "map/"): ruta_real las busca sin distinguirlas.
     for (const char* f : {"Sprite.idx", "Sprite.pak", "Tile.idx", "Tile.pak", "Text.idx", "Text.pak"}) {
-        if (!SDL_GetPathInfo((carpeta + f).c_str(), nullptr)) return false;
+        if (!SDL_GetPathInfo(ruta_real(carpeta + f).c_str(), nullptr)) {
+            LIN_LOG("Carpeta del juego: no se encontró %s%s (%s)", carpeta.c_str(), f, SDL_GetError());
+            return false;
+        }
     }
     return true;
 }

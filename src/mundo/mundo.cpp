@@ -479,10 +479,10 @@ static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) 
         ruta += seg;
         if (std::filesystem::exists(ruta)) return ruta;
     }
-    std::string ruta = rec.carpeta() + nombre_segmento(mapa, x, y);
+    std::string ruta = ruta_real(rec.carpeta() + nombre_segmento(mapa, x, y));
     // Sin .s32, el formato viejo (.seg): el Chaotic Temple y el norte de Gludio solo están así.
     if (!std::filesystem::exists(ruta)) {
-        std::string seg = ruta.substr(0, ruta.size() - 3) + "seg";
+        std::string seg = ruta_real(ruta.substr(0, ruta.size() - 3) + "seg");
         if (std::filesystem::exists(seg)) return seg;
     }
     return ruta;
@@ -535,7 +535,7 @@ const SegmentoMapa* segmento(Mundo& m, const Recursos& rec, int x, int y) {
     SegmentoMapa s;
     const std::string ruta = ruta_segmento(rec, m.mapa, x, y);
     bool ok = leer_archivo(ruta, datos) && decodificar_segmento(ruta, datos, x & ~63, y & ~63, s);
-    // MULTIPLATAFORMA (Linux): la carpeta "map" puede venir como "Map"; ver carpeta_juego_valida.
+    // Linux: la carpeta "map" puede venir como "Map"; leer_archivo la busca sin distinguir mayúsculas.
     if (!ok) {
         m.indice_segmentos.poner(k, SEG_NO_EXISTE);
         return nullptr;

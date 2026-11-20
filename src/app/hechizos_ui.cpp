@@ -576,7 +576,7 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
             g.gpu().rectangulo(x, Y, 32, 32, ki, rgba(30, 40, 60, 220));
             g.texto({t, m}, static_cast<float>(x + 3), static_cast<float>(Y + 10), kt, rgba(170, 230, 255));
         }
-        char d[16];
+        char d[24];  // 20 dígitos de un u64, la unidad y el cero
         // Minutos redondeados hacia arriba: una poción de 5 minutos recién tomada dice "5m".
         if (resta >= 60) std::snprintf(d, sizeof d, "%llum", static_cast<unsigned long long>((resta + 59) / 60));
         else std::snprintf(d, sizeof d, "%llus", static_cast<unsigned long long>(resta));

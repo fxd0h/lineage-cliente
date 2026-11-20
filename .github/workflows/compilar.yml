@@ -1,0 +1,83 @@
+# Compila y corre los tests en las plataformas del plan de portado (docs/analisis/PLAN_PORTADO.md, Fase 0).
+# Sin LINEAGE_DIR se saltan los tests que necesitan los recursos del juego; sin GPU, tests/test_gpu.cpp.
+# Los shaders se compilan desde HLSL: glslang en Linux, glslang y spirv-cross en macOS,
+# dxc del SDK de Windows (cmake/shaders.cmake).
+# Las cinco plataformas tienen que pasar.
+name: Compilar
+
+on:
+  push:
+    branches: [main, "agente/*portado*", "agente/windows*", "agente/linux*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compilar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    name: ${{ matrix.nombre }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { nombre: macOS arm64, runner: macos-latest }
+          - { nombre: Linux x64, runner: ubuntu-latest }
+          - { nombre: Linux arm64, runner: ubuntu-24.04-arm }
+          - { nombre: Windows x64, runner: windows-latest, arch: x64 }
+          - { nombre: Windows arm64, runner: windows-11-arm, arch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Herramientas (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja glslang spirv-cross  # shaders: HLSL -> SPIR-V -> MSL
+
+      - name: Herramientas (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev \
+            glslang-tools mesa-vulkan-drivers xvfb  # shaders a SPIR-V; Vulkan por software para tests/test_gpu.cpp
+
+      - name: Herramientas (Windows)
+        if: runner.os == 'Windows'
+        run: python -m pip install ninja
+
+      - name: MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Configurar
+        run: cmake --preset debug -DLIN_AVISOS_ERROR=ON  # sin avisos en ninguna plataforma
+
+      - name: Compilar
+        run: cmake --build --preset debug
+
+      - name: Tests
+        if: runner.os != 'Linux'
+        run: ctest --preset debug
+
+      - name: Tests (Linux, con Xvfb y lavapipe)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ctest --preset debug
+
+      # El .zip de la versión final (preset release), como artefacto descargable de la corrida: comprueba
+      # que la versión final compila y deja un paquete para probar.
+      - name: Empaquetar (Windows)
+        if: runner.os == 'Windows'
+        id: paquete
+        run: |
+          $zip = herramientas/empaquetar_windows.ps1 -Version "0.0.0-$("${{ github.sha }}".Substring(0, 7))" | Select-Object -Last 1
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: lineage-windows-${{ matrix.arch }}
+          path: ${{ steps.paquete.outputs.zip }}
