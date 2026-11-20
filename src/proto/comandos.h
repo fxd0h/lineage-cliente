@@ -205,6 +205,12 @@ inline Escritor rango_clan(const TablaOpcodes& t, u8 rango, std::string_view nom
     e.c(1).c(rango).s(nombre);
     return e;
 }
+// C_ExtraCommand (s3ep1): c action id (Alt+1 / 2 / 3 send 0x44 / 0x45 / 0x43).
+inline Escritor emote(const TablaOpcodes& t, u8 accion) {
+    Escritor e(t, Cli::EXTCOMMAND);
+    e.c(accion);
+    return e;
+}
 // C_Propose: c 0 proposes to the character you face, c 1 divorces.
 inline Escritor proponer(const TablaOpcodes& t, bool divorcio) {
     Escritor e(t, Cli::PROPOSE);

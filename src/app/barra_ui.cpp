@@ -226,6 +226,16 @@ void cambiar_pagina_barra(App& a, int pagina) {
     a.pagina_barra = (pagina % n + n) % n;
 }
 
+// Polymorph icon active (S_PacketBox slots 0x27 / 0x4b / 0x6d / 0x70 / 0x73): the sprite is not the standard human one.
+static bool transformado(const App& a) {
+    const EstadoJugador& j = a.mundo.jugador;
+    for (u32 i = 0; i < j.n_efectos; ++i)
+        if (j.efectos[i].clase == EA_ICONO)
+            for (int r : {0x27, 0x4b, 0x6d, 0x70, 0x73})
+                if (j.efectos[i].tipo == EFECTO_RANURA + r) return true;
+    return false;
+}
+
 void procesar_barra(App& a) {
     if (a.barra_de != nombre_personaje(a)) cargar_barra(a);
     // Con menos páginas (opciones), la visible pasa a la última que queda.
@@ -233,7 +243,21 @@ void procesar_barra(App& a) {
     // La rueda sobre la barra o el selector: hacia arriba, la página siguiente (como "^").
     if (a.entrada.rueda && paginas(a) > 1 && sobre_atajos(a)) cambiar_pagina_barra(a, a.pagina_barra + a.entrada.rueda);
     // Upstream's 1–0 / Alt+1–0 shortcut bar keys: simple UI only (the original UI has no such bar).
-    if (!a.cfg.ui_simple) return mantener_numero(a);
+    if (!a.cfg.ui_simple) {
+        // Original UI: Alt+1 / 2 / 3 are emotes (0x4xxxxx key handler): C_ExtraCommand 0x44 / 0x45 / 0x43 and the own
+        // sprite plays the action at once (the server only rebroadcasts it to the others). Not while polymorphed.
+        static constexpr u8 EMOTES[3] = {0x44, 0x45, 0x43};
+        const int n = a.entrada.alt_numero;
+        if (n >= 1 && n <= 3 && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto && !transformado(a)) {
+            enviar(a, cmd::emote(a.op, EMOTES[n - 1]));
+            const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+            if (yo != SIN_SLOT) {
+                a.mundo.objetos.col<O_ACCION>()[yo] = EMOTES[n - 1];
+                a.mundo.objetos.col<O_TACCION>()[yo] = a.entrada.ahora_ms;
+            }
+        }
+        return mantener_numero(a);
+    }
     if (a.entrada.alt_numero) usar_numero(a, a.entrada.alt_numero);
     // 1–0 sin Alt: con el chat cerrado (chat con Enter) y sin otro diálogo de texto abierto.
     if (a.entrada.numero && a.cfg.chat_con_enter && !a.escribiendo_chat && !escribiendo_en_ventana(a) && !a.cantidad.abierto)

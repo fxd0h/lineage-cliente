@@ -857,6 +857,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         igual_us(cmd::proponer(us, true), {22, 1});
         igual_us(cmd::duelo(us), {3});
         igual_us(cmd::ver_pk(us), {70});
+        igual_us(cmd::emote(us, 0x44), {38, 0x44});  // C_ExtraCommand
         igual_us(cmd::invitar_chat(us, "Ana"), {130, 2, 'A', 'n', 'a', 0});
     }
     // S_War 1: "A" declara la guerra a "B". S_CastleMaster: castillo 1, personaje 5.

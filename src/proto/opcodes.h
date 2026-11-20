@@ -43,6 +43,7 @@ enum class Cli : u8 {
     PROPOSE,          // C_Propose: c 0 propose, c 1 divorce
     FIGHT,            // C_Fight (/duel): no body
     CHECKPK,          // C_CheckPK (/checkpk): no body
+    EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c action, an emote the server rebroadcasts as S_DoActionGFX
     RANK,             // C_Rank: c sub (1 rank, 2 alliance list, 3 alliance join, 4 alliance leave), c rank, s name
     CANTIDAD
 };
