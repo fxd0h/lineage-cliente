@@ -360,6 +360,7 @@ void dibujar_opciones(App& a) {
         a.cfg.barra_personaje = !a.cfg.barra_personaje, cambio = true;
     if (fila("Damage numbers", a.cfg.texto_dano ? "On" : "Off"))
         a.cfg.texto_dano = !a.cfg.texto_dano, cambio = true;
+    if (fila("HD text", a.cfg.texto_hd ? "On" : "Off")) a.cfg.texto_hd = !a.cfg.texto_hd, cambio = true;
     if (fila("Speech balloons", a.cfg.globos_comic ? "Comic" : "Text"))
         a.cfg.globos_comic = !a.cfg.globos_comic, cambio = true;
     if (fila("Attack compensation", a.cfg.compensar_ataque ? "On" : "Off"))

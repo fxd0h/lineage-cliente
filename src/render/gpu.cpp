@@ -331,6 +331,13 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
         }
         return;
     }
+    if (capa_pedida < CAPA_UI && escala_mundo_ != escala_ && !sin_zoom_mundo_) {  // el mundo, con su propio zoom
+        const float z = zoom_mundo();
+        x *= z;
+        y *= z;
+        w *= z;
+        h *= z;
+    }
     // El contenido va desplazado por su origen; se recorta contra la cuadrícula de la ventana.
     x += origen_x_;
     y += origen_y_;
@@ -453,11 +460,13 @@ int Gpu::escala_maxima(int franja) const {
     return std::max(1, std::min(pw / ancho_min_, ph / (alto_min_ + franja)));
 }
 
-void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
+void Gpu::ajustar_vista(bool ampliable, int zoom, int franja, bool solo_mundo) {
     const int maxima = escala_maxima(franja);
     int pw = 0, ph = 0;
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
     escala_ = ampliable && zoom > 0 ? std::min(zoom, maxima) : maxima;
+    escala_mundo_ = escala_;
+    if (ampliable && solo_mundo) escala_ = maxima;
     grid_w_ = std::max(ancho_min_, pw / escala_);
     grid_h_ = std::max(alto_min_ + franja, ph / escala_);
     if (ampliable) {
@@ -641,7 +650,8 @@ void Gpu::presentar() {
         SDL_BindGPUGraphicsPipeline(pase, pipeline_mundo_);
         SDL_GPUTextureSamplerBinding csb{copia_, muestreo_};
         SDL_BindGPUFragmentSamplers(pase, 0, &csb, 1);
-        float p[8] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(reemplazo_fase_),
+        const float z = zoom_mundo();  // la ola y la borrachera van por columnas y filas del mundo
+        float p[8] = {grid_w_ / z, grid_h_ / z, static_cast<float>(reemplazo_fase_),
                       static_cast<float>(reemplazo_modo_), static_cast<float>(reemplazo_fase_b_), AMPLITUD_BORRACHO, 0, 0};
         SDL_PushGPUFragmentUniformData(cmd, 0, p, sizeof p);
         SDL_DrawGPUPrimitives(pase, 6, 1, 0, 0);
@@ -657,7 +667,8 @@ void Gpu::presentar() {
         SDL_BindGPUFragmentSamplers(pase, 0, lsb, 2);
         const float celda = static_cast<float>(brillo_celda_);
         // 0.9999: que el borde derecho e inferior caiga dentro de la última celda, no fuera.
-        float escala[4] = {grid_w_ / (celda * luz_w_) * 0.9999f, grid_h_ / (celda * luz_h_) * 0.9999f,
+        const float z = zoom_mundo();  // las celdas de brillo están en píxeles lógicos del mundo
+        float escala[4] = {grid_w_ / z / (celda * luz_w_) * 0.9999f, grid_h_ / z / (celda * luz_h_) * 0.9999f,
                            static_cast<float>(brillo_filas_.size()) / FILAS_TAM * 0.9999f, 0};
         SDL_PushGPUVertexUniformData(cmd, 0, escala, sizeof escala);
         const u32 t = brillo_tinte_;

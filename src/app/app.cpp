@@ -370,9 +370,14 @@ void bucle_app(App& a) {
         u64 t0 = SDL_GetPerformanceCounter();
         u64 asign0 = asignaciones_hilo();
         a.cursor = Cursor::MANO;
-        if (a.g) a.g->nuevo_frame();
-        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480.
-        a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a));
+        if (a.g) {
+            a.g->nuevo_frame();
+            a.g->texto_hd(a.cfg.texto_hd);
+        }
+        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. Con la UI simple
+        // el zoom es solo del mapa: la interfaz queda del mismo tamaño.
+        a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a),
+                            a.cfg.ui_simple);
 #if LIN_CONTROL
         control_frame(a);  // comandos del socket: antes de leer la entrada (las teclas van como eventos de SDL)
 #endif

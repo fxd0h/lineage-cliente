@@ -93,3 +93,25 @@ TEST_CASE("FuenteBitmap: los glifos TTF no necesitan la carpeta del juego") {
     CHECK(f.rasterizar(GLIFO_TTF_BASE + 'A', img));
     CHECK(img.alto == ALTO_GLIFO);
 }
+
+TEST_CASE("ampliar_glifo_suave: trazos del mismo grosor y escalera suavizada") {
+    ImagenRGBA g;
+    g.preparar(4, 4);
+    for (int x = 0; x < 4; ++x) g.px[1 * 4 + x] = 0xFFFFFFFFu;  // una línea horizontal de 1 px en la fila 1
+    ImagenRGBA s;
+    ampliar_glifo_suave(g, 3, s);
+    REQUIRE(s.ancho == 12);
+    REQUIRE(s.alto == 12);
+    auto a = [&](int x, int y) { return s.px[static_cast<size_t>(y) * s.ancho + x] >> 24; };
+    CHECK(a(6, 4) == 255);  // centro de la línea
+    CHECK(a(6, 0) == 0);    // lejos de ella
+    int filas = 0;          // sigue midiendo 3 píxeles de salida (1 de la fuente × 3)
+    for (int y = 0; y < 12; ++y) filas += a(6, y) >= 128;
+    CHECK(filas == 3);
+    // Escalera diagonal: entre dos píxeles que se tocan por la esquina queda un puente (no un hueco).
+    ImagenRGBA d;
+    d.preparar(2, 2);
+    d.px[0] = d.px[3] = 0xFFFFFFFFu;
+    ampliar_glifo_suave(d, 4, s);
+    CHECK((s.px[4 * s.ancho + 4] >> 24) >= 64);
+}

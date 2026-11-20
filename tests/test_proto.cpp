@@ -947,3 +947,28 @@ TEST_CASE("S_BookmarkLoad (opcode 33, subtipo 42): todos los marcadores al entra
     REQUIRE(decodificar(vacio, t, arena, ev));
     CHECK(ev.empty());
 }
+
+TEST_CASE("CA bajo -128 (S_OwnCharAttrDef) y bendición de la lista de una tienda") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    // S_OwnCharAttrDef: c CA, c fuego, agua, viento, tierra. writeC(-129) = 0x7f; el original lo lee así.
+    const u8 def[] = {15, 0x7f, 0xf6, 0, 0, 0};
+    REQUIRE(decodificar({def, sizeof def}, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].v[DF_CA] == -129);
+    CHECK(ev[0].v[DF_FUEGO] == -10);
+    ev.clear();
+    const u8 def2[] = {15, 0xf3, 0, 0, 0, 0};  // -13 y 39 siguen igual
+    REQUIRE(decodificar({def2, sizeof def2}, t, arena, ev));
+    CHECK(ev[0].v[DF_CA] == -13);
+    // S_ShopSellList: d npc, h n, (d índice, h gfx, d precio, s nombre, c largo + atributos), h moneda. Sin byte de
+    // bendición: el ítem es normal (1), no bendito (0).
+    const u8 tienda[] = {254, 7, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0x10, 0, 50, 0, 0, 0, 'X', 0, 0, 0, 0};
+    ev.clear();
+    REQUIRE(decodificar({tienda, sizeof tienda}, t, arena, ev));
+    REQUIRE(ev.size() == 2);
+    CHECK(ev[1].tipo == Ev::ITEM_TIENDA);
+    CHECK(ev[1].v[IT_BENDICION] == BENDICION_NORMAL);
+}

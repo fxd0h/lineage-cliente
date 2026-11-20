@@ -103,8 +103,10 @@ void aplicar_oscuridad(App& a, int nivel, u32 color, int w, int h) {
     const int bw = (w + CELDA - 1) / CELDA, bh = (h + CELDA - 1) / CELDA;
     const size_t n = static_cast<size_t>(bw) * bh;
     a.luz_mascara.assign(n, 0);
-    // Las luces están en coordenadas del contenido; la máscara cubre la cuadrícula de la ventana.
-    const float ox = static_cast<float>(a.gpu.origen_x()), oy = static_cast<float>(a.gpu.origen_y());
+    // Las luces están en coordenadas del contenido; la máscara cubre la cuadrícula de la ventana, en
+    // píxeles lógicos del mundo (con zoom del mundo, el origen de la interfaz mide origen / zoom).
+    const float z = a.gpu.zoom_mundo();
+    const float ox = a.gpu.origen_x() / z, oy = a.gpu.origen_y() / z;
 
     const Bytes lmp = a.rec.sprite("source.lmp");
     int suma_radios = 0;
@@ -144,7 +146,9 @@ i32 hora_de_juego(const App& a) { return a.hora_forzada >= 0 ? a.hora_forzada : 
 
 void aplicar_luz(App& a, u64 ahora) {
     const Mundo& m = a.mundo;
-    const int w = a.gpu.grid_ancho(), h = a.gpu.grid_alto();
+    // En píxeles lógicos del mundo, que con zoom del mundo cubren más que la cuadrícula de la interfaz.
+    const float z = a.gpu.zoom_mundo();
+    const int w = static_cast<int>(std::ceil(a.gpu.grid_ancho() / z)), h = static_cast<int>(std::ceil(a.gpu.grid_alto() / z));
     // Borrachera (S_Liquor 1): el mundo se mece por filas; va en el mismo pase que la ola y la visión.
     const int fase_borracho = m.jugador.borracho ? static_cast<int>((ahora / 50) % 100) : -1;
     if (m.submarino) {
