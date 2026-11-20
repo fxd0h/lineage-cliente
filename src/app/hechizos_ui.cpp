@@ -802,9 +802,10 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
 void dibujar_efectos_activos(App& a, u64 ahora) {
     Graficos& g = *a.g;
     const EstadoJugador& j = a.mundo.jugador;
-    // Original panel: 32 px icons every 35 px, the row ends 4 px from the right edge, y = 4.
+    // Original panel (0x47df20): n-th icon (n from 1) at x = W-2-35n, y = 5; when x < 0 it wraps to y = 40, x += W-10.
     const bool original = !a.cfg.ui_simple;
-    const int PASO = original ? 35 : 36, Y = original ? 4 : 2;
+    const int PASO = original ? 35 : 36, Y0 = original ? 5 : 2;
+    int Y = Y0;
     // Un efecto registrado por el cliente (EA_HECHIZO) no se dibuja si el servidor ya informó el
     // mismo hechizo con su propio paquete (Holy Walk, Shield...).
     auto repetido = [&](const EfectoActivo& ef) {
@@ -822,7 +823,12 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
     for (u32 i = 0, n = 0; i < j.n_efectos; ++i) {
         const EfectoActivo& ef = j.efectos[i];
         if (repetido(ef)) continue;
-        const int x = x0 + static_cast<int>(n++) * PASO;
+        int x = x0 + static_cast<int>(n++) * PASO;
+        if (original) {
+            x = a.gpu.ancho() - 2 - PASO * static_cast<int>(n);
+            Y = Y0;
+            if (x < 0) x += a.gpu.ancho() - 10, Y = 40;
+        }
         const u64 resta = ef.fin > ahora ? (ef.fin - ahora + 999) / 1000 : 0;
         u32 icono = item_de_efecto(a, ef).icono;
         if (!icono) icono = a.hechizos[hechizo_de_efecto(ef)].icono;
@@ -833,7 +839,7 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         }
         const RegionAtlas& r = icono ? g.icono(icono) : RegionAtlas{};
         // A punto de terminar (menos de 10 s), parpadea.
-        const bool visible = resta >= 10 || (ahora / 250) % 2 == 0;
+        const bool visible = original || resta >= 10 || (ahora / 250) % 2 == 0;  // the original draw does not blink
         if (r.valida() && visible) {
             // The original client draws buff icons with a screen blend (client 0x47e6f0 -> blit 0x49d420 with
             // the 5-bit tables built at 0x4a03b0: out = max + min * (31 - max) / 31 per channel): the dark
@@ -859,12 +865,14 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         if (ui::sobre(a.entrada, x, Y, 32, 32 + ALTO_GLIFO)) {
             char t[96];
             size_t m = nombre_efecto_activo(a, ef, t, 64);
-            std::snprintf(t + m, sizeof t - m, "  %llu:%02llu", static_cast<unsigned long long>(resta / 60),
-                          static_cast<unsigned long long>(resta % 60));
+            if (!original)  // original: the message-table text only, no timer
+                std::snprintf(t + m, sizeof t - m, "  %llu:%02llu", static_cast<unsigned long long>(resta / 60),
+                              static_cast<unsigned long long>(resta % 60));
             int w = ancho_texto(t, std::strlen(t));
             int tx = std::max(4, std::min(a.entrada.mx - w / 2, a.gpu.ancho() - w - 4));  // clamp podría invertirse
             g.gpu().rectangulo(tx - 4, Y + 47, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-            g.texto(t, static_cast<float>(tx), static_cast<float>(Y + 50), clave_orden(CAPA_UI_TEXTO, 30), rgba(170, 230, 255));
+            g.texto(t, static_cast<float>(tx), static_cast<float>(Y + 50), clave_orden(CAPA_UI_TEXTO, 30),
+                    original ? rgba(189, 222, 255) : rgba(170, 230, 255));
         }
     }
     // Eligiendo objetivo: aviso junto al puntero.
