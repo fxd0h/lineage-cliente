@@ -1805,7 +1805,33 @@ void dibujar_fps(App& a) {
 
 // Cursor: círculo si un hechizo espera su objetivo; espada sobre un monstruo (o con Ctrl sobre otro
 // personaje o NPC, que es atacarlo); si no, la mano (también sobre la interfaz).
+// Original UI chooser (0x469e40, docs/fork/RE_HUD.md): picks one of the 16 cursor states. The fork has no
+// weapon type, tile flags or "busy" state, so states 8, 14 and 16 are never chosen.
+void elegir_cursor_original(App& a) {
+    auto poner = [&](int estado) {
+        if (a.cursores[static_cast<int>(cursor_estado(estado))]) a.cursor = cursor_estado(estado);
+    };
+    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando || a.gm_apuntando) return poner(11);
+    const Vista vi = vista(a);
+    if (sobre_alguna_ventana(a)) return poner(5);
+    if (a.entrada.my >= vi.panel_y || sobre_barra(a)) return poner(1);  // arrow over the HUD
+    const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;
+    const ObjId id = objeto_bajo_puntero(a);
+    const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
+    const u8 tipo = s == SIN_SLOT ? static_cast<u8>(TIPO_ITEM) : tipo_objeto(a, s);
+    const bool ataque = a.modo_pk;
+    if (a.arrastrando && s != SIN_SLOT) return poner(13);  // dragging an item over an object
+    if (s == SIN_SLOT || tipo == TIPO_PERSONAJE || tipo == TIPO_MONSTRUO || es_npc(a, s)) {
+        const bool monstruo = s != SIN_SLOT && (tipo == TIPO_MONSTRUO || es_npc(a, s));
+        if (alt && (s != SIN_SLOT || a.entrada.ctrl)) return poner(7);  // no object: Ctrl+Alt
+        if (ataque) return poner(15);
+        if (a.entrada.ctrl || monstruo) return poner(6);
+    }
+    poner(3);
+}
+
 void elegir_cursor(App& a) {
+    if (!a.cfg.ui_simple) return elegir_cursor_original(a);
     if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando || a.gm_apuntando) {
         a.cursor = Cursor::OBJETIVO;
         return;

@@ -119,6 +119,9 @@ SDL_Cursor* crear(char (*pixel)(int, int, const char* const*), const char* const
 // Original cursor resource id per role (Cursor order: HAND, SWORD, TARGET, LIPS, COIN).
 constexpr u32 ORIGINAL_IDS[static_cast<int>(Cursor::CANTIDAD)] = {2, 6, 8, 7, 13};
 
+// Cursor state -> LoadCursor group resource id (table 0x6e0de8, 0x477c50); the RT_CURSOR image comes from its group.
+constexpr u32 STATE_GROUPS[16] = {130, 131, 105, 127, 132, 133, 144, 136, 138, 139, 140, 141, 142, 143, 145, 150};
+
 std::vector<PeCursor> g_originals;  // parsed once, empty if unavailable
 bool g_originals_tried = false;
 int g_scale = 0;
@@ -135,6 +138,12 @@ void load_originals(const std::string& game_dir) {
                 all.clear();
                 break;
             }
+            all.push_back(std::move(c));
+        }
+        for (u32 group : STATE_GROUPS) {  // the 16 original states; a missing one only leaves that slot empty
+            PeCursor c;
+            const u32 rt = all.empty() ? 0 : pe_cursor_group_image(f.datos(), group);
+            if (!rt || !pe_load_cursor(f.datos(), rt, c) || c.width % 8 != 0) c = {};
             all.push_back(std::move(c));
         }
         if (!all.empty()) {
@@ -161,7 +170,8 @@ SDL_Cursor* from_original(const PeCursor& c, int scale) {
 void build(App& a) {
     g_scale = std::clamp(a.gpu.escala(), 1, 4);
     for (int i = 0; i < static_cast<int>(Cursor::CANTIDAD); ++i)
-        if (i < static_cast<int>(g_originals.size())) a.cursores[i] = from_original(g_originals[i], g_scale);
+        if (i < static_cast<int>(g_originals.size()) && g_originals[i].width > 0)
+            a.cursores[i] = from_original(g_originals[i], g_scale);
     if (!g_originals.empty() && a.cursores[0]) return;
     destruir_cursores(a);
     g_originals.clear();

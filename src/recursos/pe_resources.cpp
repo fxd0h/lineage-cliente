@@ -4,7 +4,7 @@ namespace lin {
 
 namespace {
 
-constexpr u32 RT_CURSOR = 1;
+constexpr u32 RT_CURSOR = 1, RT_GROUP_CURSOR = 12;
 
 bool in_range(Bytes b, size_t off, size_t n) { return off <= b.size() && n <= b.size() - off; }
 u32 le16(Bytes b, size_t o) { return static_cast<u32>(b[o] | (b[o + 1] << 8)); }
@@ -113,6 +113,13 @@ bool pe_load_cursor(Bytes pe, u32 res_id, PeCursor& out) {
         }
     }
     return true;
+}
+
+u32 pe_cursor_group_image(Bytes pe, u32 group_id) {
+    // GRPCURSORDIR: u16 reserved, u16 type, u16 count; entries of 14 bytes whose last u16 is the RT_CURSOR id.
+    const Bytes g = pe_find_resource(pe, RT_GROUP_CURSOR, group_id);
+    if (g.size() < 6 + 14 || le16(g, 4) == 0) return 0;
+    return le16(g, 6 + 12);
 }
 
 }  // namespace lin

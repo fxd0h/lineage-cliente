@@ -279,7 +279,14 @@ struct Intercambio {
 };
 
 // Cursor del mouse (cursores.cpp): mano, espada sobre un monstruo, círculo al elegir objetivo.
-enum class Cursor : u8 { MANO, ESPADA, OBJETIVO, LABIOS, MONEDA, CANTIDAD };
+// Original UI: ESTADO_1..ESTADO_16 are the client's 16 cursor states (S3EP1U table 0x6e0de8, docs/fork/RE_HUD.md).
+enum class Cursor : u8 {
+    MANO, ESPADA, OBJETIVO, LABIOS, MONEDA,
+    ESTADO_1, ESTADO_2, ESTADO_3, ESTADO_4, ESTADO_5, ESTADO_6, ESTADO_7, ESTADO_8,
+    ESTADO_9, ESTADO_10, ESTADO_11, ESTADO_12, ESTADO_13, ESTADO_14, ESTADO_15, ESTADO_16,
+    CANTIDAD
+};
+constexpr Cursor cursor_estado(int n) { return static_cast<Cursor>(static_cast<int>(Cursor::ESTADO_1) + n - 1); }
 
 struct App {
     Config cfg;

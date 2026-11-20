@@ -21,4 +21,7 @@ Bytes pe_find_resource(Bytes pe, u32 type_id, u32 res_id);
 // missing, malformed or not 1 bpp.
 bool pe_load_cursor(Bytes pe, u32 res_id, PeCursor& out);
 
+// RT_GROUP_CURSOR `group_id` (LoadCursor's resource name) -> the RT_CURSOR id of its first image; 0 if missing.
+u32 pe_cursor_group_image(Bytes pe, u32 group_id);
+
 }  // namespace lin
