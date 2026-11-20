@@ -281,6 +281,8 @@ void dibujar_inventario(App& a) {
         if (original) {
             ++x;  // inside the image's grid lines
             ++y;
+            // 2700 is an opaque RLE backing drawn first (below the hover tint, the equipped marker and the icon).
+            if (equipado && t.col<I_GFX>()[s] != 0x1d1 && t.col<I_GFX>()[s] != 0x1d2) g.gpu().dibujar(g.icono(ICON_ARMED_A), x, y, kf - 1);
             if (static_cast<int>(i) == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(90, 80, 50, 120));
             else if (equipado && !g.img(IMG_EQUIPPED_MARK).valida()) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(74, 70, 26, 150));
             if (equipado) g.gpu().dibujar(g.img(IMG_EQUIPPED_MARK), x - 1, y - 1, kf);
@@ -299,11 +301,10 @@ void dibujar_inventario(App& a) {
         if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         if (original) {
-            // Overlays of the 2009 inventory: worn / armed items get 2700 then 2701 at (+1,+1) (not icons 0x1d1 / 0x1d2);
+            // Overlays of the 2009 inventory: worn / armed items get 2700 under the icon (above) then 2701 at (+1,+1) (not icons 0x1d1 / 0x1d2);
             // a sealed item (status bit 0x80) gets 2702 at (+24,+24).
             const u32 gfx = t.col<I_GFX>()[s];
             if (equipado && gfx != 0x1d1 && gfx != 0x1d2) {
-                g.gpu().dibujar_en(g.icono(ICON_ARMED_A), static_cast<float>(x + 1), static_cast<float>(y + 1), ki + 4, BLANCO, Mezcla::ADITIVA);
                 g.gpu().dibujar(g.icono(ICON_ARMED_B), x + 1, y + 1, ki + 5);
             }
             if (t.col<I_BENDICION>()[s] & BLESS_SEALED_FLAG) g.gpu().dibujar(g.icono(ICON_SEALED), x + 24, y + 24, ki + 6);
