@@ -112,3 +112,25 @@ day/night updater 0x4b2f00 skips while counter > 0); saved value in [0x7026cc], 
   created at startup (0x45914f), opened/toggled with 0x4d1200 by the HTML page action **`sendsmp`** (0x40c514 -> 0x40c53b; the sibling
   action `sendsm` sends `cd`, `checkpet` precedes). Scroll callbacks 0x455e30. Not opened by a hotkey or login. [C]
 - Not done (budget): U-A8 zone label colours, U-A9 game-time orb, Ctrl+P GM message text.
+
+## 6. Implementation status (round 4 follow-up, original UI)
+- Done: Esc menu (Esc with no window open pops it; own death auto-opens it, the "You have died" box stays only in the simple UI;
+  button 1 = C_RESTART when dead / C_CHANGECHAR when alive, string 130 within 15 s of combat; button 2 = quit through
+  cerrar_app's C_QUITGAME, string 131 within 15 s of combat unless dead or on a safe tile). The combat clock is the fork's music
+  clock (`t_combate`), which may differ slightly from the exe's [0x8f0df8]. The exe's early return `0x456860(0x14)` is not modelled.
+- Done: Ctrl+T sizes (top y 402 - 36*mode, 12 px pitch, 5/8/11/14 rows, scroll track image 1047+mode, no backdrop). Text behind
+  open HTML windows is hidden as for any window.
+- Done: blindness in the original UI = light level 0 (no veil); strings 147 (state 1) / 148 (state 2) are printed by the client on a
+  state change (l1j-en sends no text; the id-to-state mapping is inferred). The veil remains in the simple UI.
+- Done: `/infracon` toggle (client side, default on) and S_Ability idx 4 in `modo_vision`; the fork's existing elf/dark-elf filter
+  (`efecto_infravision`) is that draw. l1j-en never sends idx 2/4/5, so the `monlist` shortcut (idx 2) and the `summonlist` page
+  (idx 5) are NOT implemented (nothing can trigger them).
+- Done (untested in game, no trigger set up): light flash. `TablaSprites::flash_de_luz` (109.effect type 2) marks effects from
+  the attack-skill path (frame 2); `gfx_con_flash` marks the flag-carrying gfx from S_EffectLocation / S_SkillSound (frame 1).
+  While one is past its frame the world level is forced to 15 (blindness still wins).
+- Skipped: cooking window. l1j-en: COOK_WINDOW sends `type 52, c 0xdb, 0x31, 0xdf, 0x02 (dword 0x02df31db), c 1, c pan-1`
+  and C_ItemUSe for 41255..41259 reads `c cookStatus, c cookNo` (cookStatus 0 re-opens the window, otherwise `makeCooking(cookNo)`;
+  needs a bonfire gfx 5943 within 3 cells, server messages 1160/1103/1102/1101). Missing prerequisites: where the exe
+  gets the recipe names/order of each pan (recipes[] are server side, indexed by cookNo) and the list/bar layout coordinates.
+- Char-select stats: no change. The fork already draws slots 4-6 as the packet orders them (wis, cha, int) and the background
+  labels read Strength, Dexterity, Constitution, Wisdom, Charisma, Intelligence, so each value sits under its label.
