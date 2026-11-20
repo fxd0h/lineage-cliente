@@ -136,3 +136,15 @@ Tags: [C] confirmed from decompile, [I] inferred. Coordinates are relative to th
 - **Hold-to-walk:** already equivalent (no timer, per-frame decision after each step).
 - **Panel buttons:** already pressed = hover = base+1.
 
+
+## Round 3 implementation notes (warehouse password, info card)
+
+- **Warehouse password keypad (0x4cfa90):** not implemented. l1j-en has no warehouse password (no `C_*` / `S_*` packet or
+  password column for the warehouse; `password` only appears in C_AuthLogin), so the keypad never opens there.
+- **Info card:** `src/app/cartel_ui.cpp` (`IdVentana::CARTEL`, original layout above; icon `g.icono(0x83 + heading)`, text
+  wrapped to 150 px at (29,78)). Opened from the talk-to-object path in `pantalla_juego.cpp` when the sprite type is 4
+  (`TIPO_CARTEL`) and the second pack string (title) is a `$` id; no packet is sent. l1j-en sends signs as S_SignboardPack
+  (an S_CharPack, first string empty, second string `getName()` = "Sign Post", never a `$` id) and ignores clicks, so
+  `servidor_classic/patches/0102-signboard-desc-id.patch` makes it send `getNameId()` (`$5216`...; takes effect at the
+  next server build, not applied to the running jar). Live-control `cartel <desc id> [heading]` opens the card for tests.
+  Verified in a test instance with `cartel 5216 3` (frame, background, sign icon, wrapped text, close button).

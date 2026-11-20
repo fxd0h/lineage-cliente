@@ -1105,6 +1105,8 @@ void mover_jugador(App& a, u64 ahora) {
             // A una puerta no se le habla: se abre o se cierra (C_Door).
             if (vendedor(a, a.objetivo))
                 abrir_tienda_de(a, a.objetivo);
+            else if (a.sprites.tipo(o.col<O_GFX>()[obj]) == TIPO_CARTEL)
+                abrir_cartel(a, obj);  // signs open a local info card (exe 0x408300); the server ignores clicks on them
             else if (es_tablon(o.col<O_GFX>()[obj]))
                 enviar(a, cmd::tablon(a.op, Cli::BOARD, a.objetivo));
             else if (tipo_objeto(a, obj) == TIPO_PUERTA)
@@ -1814,6 +1816,7 @@ void dibujar_ventanas(App& a) {
         case IdVentana::LISTA: dibujar_lista_orig(a); break;
         case IdVentana::MASCOTA: dibujar_mascota_orig(a); break;
         case IdVentana::DESTINO: dibujar_destino_orig(a); break;
+        case IdVentana::CARTEL: dibujar_cartel(a); break;
         default: break;
         }
         e.mx = mx;

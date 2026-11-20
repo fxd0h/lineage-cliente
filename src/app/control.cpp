@@ -296,7 +296,7 @@ const char* AYUDA[] = {
     "accion <vínculo de la página>   responder si|no|\"texto\"   cantidad <n>",
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
     "abrir|cerrar inventario|estado|hechizos|ajustes|social|salida|teclas",
-    "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
+    "girar <0-7>   cartel <id desc-e> [rumbo]   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
     "mover <x> <y> <frames> (puntero sin botón)   clic <x> <y> [der|dder|dizq|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
     "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
@@ -361,6 +361,9 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.tipo = Espera::CREAR;
         es.texto = p[1];
         return false;
+    } else if (cmd == "cartel") {  // opens the sign info card without a sign nearby (l1j-en only sends `$` ids after patch 0102)
+        if (a.pantalla != Pantalla::JUEGO || p.size() < 2) return error("uso: cartel <id desc-e> [rumbo 0-7] (en el juego)");
+        a.cartel = {true, static_cast<u8>(p.size() > 2 ? std::atoi(p[2].c_str()) & 7 : 0), static_cast<u32>(std::atoi(p[1].c_str()))};
     } else if (cmd == "girar") {
         if (a.pantalla != Pantalla::JUEGO || p.size() < 2) return error("uso: girar <0-7> (en el juego)");
         const u8 d = static_cast<u8>(std::atoi(p[1].c_str()) & 7);

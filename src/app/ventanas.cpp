@@ -17,9 +17,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota", "destino"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota", "destino", "cartel"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 13, "App::orden_ventanas se inicializa con 0..12");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 14, "App::orden_ventanas se inicializa con 0..13");
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
 // Original exit window (client draw at 0x4a1570, built at 0x4a1180): background 1058 at (7,7), frame 1059, ornaments
 // 1060 at (0,6), close button at (108,11), buttons Restart 1063 / Quit 1065 / Cancel 1067 (hover +1) at x 31, y 34/52/70.
@@ -113,6 +113,7 @@ Rect por_defecto(const App& a, IdVentana v) {
     case IdVentana::LISTA: return rect_lista_orig(a);
     case IdVentana::MASCOTA: return rect_mascota_orig(a);
     case IdVentana::DESTINO: return rect_destino_orig(a);
+    case IdVentana::CARTEL: return rect_cartel(a);
     default: return {0, y, w, h};
     }
 }
@@ -132,6 +133,7 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::LISTA: return a.lista.abierta && !a.cfg.ui_simple;
     case IdVentana::MASCOTA: return mascota_orig_abierta(a);
     case IdVentana::DESTINO: return destino_orig_abierto(a);
+    case IdVentana::CARTEL: return a.cartel.abierto;
     default: return false;
     }
 }

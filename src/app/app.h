@@ -75,7 +75,7 @@ struct FilaTienda {
     std::string atributos;  // S_ShopSellList status bytes (L1ItemInstance.getStatusBytes), for the tooltip property lines
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, DESTINO, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, DESTINO, CARTEL, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -501,7 +501,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -559,6 +559,7 @@ struct App {
     size_t mascota_activa = 0;
     u8 hpmp_estilo = 0;                // floating HP/MP window style 0..2 ([0x8169b0], float_hpmp_ui.cpp)
     bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
+    struct Cartel { bool abierto = false; u8 rumbo = 0; u32 desc = 0; } cartel;  // sign info card (cartel_ui.cpp)
     int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
     int volumen_arrastre = -1;         // slider being dragged
 
@@ -656,6 +657,9 @@ void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image 
 // A button made of two images (normal, pointer over); true when clicked.
 bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
 void dibujar_volumen(App& a);  // volume_ui.cpp
+void dibujar_cartel(App& a);   // cartel_ui.cpp: info card of a sign (exe 0x4a6c90)
+Rect rect_cartel(const App& a);
+void abrir_cartel(App& a, Slot s);  // reads the sign's `$` name and heading; no-op when the name is not a desc id
 Rect rect_volumen(const App& a);
 void dibujar_hpmp_flotante(App& a);  // float_hpmp_ui.cpp
 Rect rect_hpmp_flotante(const App& a);

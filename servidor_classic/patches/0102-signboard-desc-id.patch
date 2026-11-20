@@ -1,0 +1,13 @@
+diff --git a/src/l1j/server/server/serverpackets/S_SignboardPack.java b/src/l1j/server/server/serverpackets/S_SignboardPack.java
+index cf84d820..cea05eff 100644
+--- a/src/l1j/server/server/serverpackets/S_SignboardPack.java
++++ b/src/l1j/server/server/serverpackets/S_SignboardPack.java
+@@ -51,7 +51,7 @@ public class S_SignboardPack extends ServerBasePacket {
+ 		writeD(0);
+ 		writeH(0);
+ 		writeS(null);
+-		writeS(signboard.getName());
++		writeS(signboard.getNameId());
+ 		int status = 0;
+ 		if (signboard.getPoison() != null) {
+ 			if (signboard.getPoison().getEffectId() == 1) {

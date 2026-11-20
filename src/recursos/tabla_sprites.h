@@ -55,7 +55,7 @@ struct RangoAccion {
 
 // Tipos de gfx (atributo 102 de la tabla; verificado con los gfx de suelo de ítems de etc_items y
 // weapons, los monstruos de npcs y los personajes). Los NPC del pueblo son 6 o 12.
-enum TipoGfx : u8 { TIPO_PERSONAJE = 5, TIPO_ITEM = 9, TIPO_MONSTRUO = 10 };
+enum TipoGfx : u8 { TIPO_CARTEL = 4, TIPO_PERSONAJE = 5, TIPO_ITEM = 9, TIPO_MONSTRUO = 10 };
 
 // Acciones conocidas (ActionCodes de L1J). Caminar, atacar, recibir daño y quieto tienen una
 // variante por arma: acción + código de arma (4 espada, 11 hacha, 20 arco...); morir no.
