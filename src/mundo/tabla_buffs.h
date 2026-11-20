@@ -82,6 +82,19 @@ inline int ranura_de_skillsound(u32 gfx) {
     return -1;
 }
 
+// S_SkillSound 0xbe on the own character: the slot comes from the own sprite (exe 0x48a656), -1 when none.
+inline int ranura_de_gfx_be(u32 sprite) {
+    switch (sprite) {
+    case 0x4b: case 0x5ca: case 0x9d3: case 0x9d8: return 0x26;
+    case 0x9a1: return 0x5b;
+    case 0xa26: return 0x4f;
+    case 0x9aa: return 0x50;
+    case 0x998: return 0x51;
+    case 0xbb4: return 0x84;
+    default: return -1;
+    }
+}
+
 // Effect type of a S_SkillBrave packet: type 4 (Holy Walk) gets the class variant in the high nibble
 // (class byte 2 elf -> 0, 3 wizard -> 1, others -> 2).
 inline u8 tipo_brave(u8 tipo, int clase) { return tipo == 4 ? static_cast<u8>(4 | ((clase == 2 ? 0 : clase == 3 ? 1 : 2) << 4)) : tipo; }
@@ -101,6 +114,7 @@ inline int ranura_de_efecto_activo(u8 clase, u8 tipo) {
             return (tipo >> 4) == 0 ? 0x18 : (tipo >> 4) == 1 ? 0x2a : 0x25;
         }
     case EA_TERCERA: return 73;
+    case EA_EVA: return 0xb;  // opcode 0x11 (S_SkillIconBlessOfEva), exe 0x48e380
     case EA_ESCUDO:
         switch (tipo) {
         case 5: return 4;

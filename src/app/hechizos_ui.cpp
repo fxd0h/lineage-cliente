@@ -808,6 +808,7 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
         default: return 0;
         }
     case EA_TERCERA: return 5396;                                       // S_Liquor 8: slot 73 (486, same glyph as brave)
+    case EA_EVA: return BUFF_ICONO[0xb];                                // opcode 0x11: slot 0xb (classic icon 552, no twin known)
     case EA_ESCUDO:
         switch (ef.tipo) {
         case 5: case 3: return 5271;                                    // Shield, Shadow Armor: slots 4/5 (485)

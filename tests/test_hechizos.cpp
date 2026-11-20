@@ -417,4 +417,14 @@ TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage")
     aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
     CHECK(m.jugador.n_efectos == 1);
     CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x10);
+
+    // Graphic 0xbe picks the slot by the own sprite; Bless of Eva (opcode 0x11) is slot 0xb.
+    m.jugador.n_efectos = 0;
+    const Slot yo = m.objetos.insertar(7);
+    m.objetos.col<O_GFX>()[yo] = 0x9aa;
+    snd.v[EF_GFX] = 0xbe;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x50);
+    CHECK(ranura_de_efecto_activo(EA_EVA, 0) == 0xb);
 }

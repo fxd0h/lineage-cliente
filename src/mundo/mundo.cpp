@@ -427,8 +427,21 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
             if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
                 // Own S_SkillSound: some graphics start a buff slot lasting the slot's table time (exe 0x48a5c0).
-                const int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
-                if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
+                if (ef.gfx == 0xbe) {
+                    // Graphic 0xbe: the slot depends on the own sprite (exe 0x48a656). Slot 0x5b replaces 0x26; 0x4f, 0x50, 0x51
+                    // and 0x84 replace each other.
+                    const Slot yo = o.buscar(m.jugador.id);
+                    const u32 sprite = yo == SIN_SLOT ? 0 : o.col<O_GFX>()[yo];
+                    const int r = ranura_de_gfx_be(sprite);
+                    if (r == 0x5b) poner_ranura(m.jugador, 0x26, 0, ahora);
+                    if (r >= 0x4f && r != 0x5b)
+                        for (int otro : {0x4f, 0x50, 0x51, 0x84})
+                            if (otro != r) poner_ranura(m.jugador, otro, 0, ahora);
+                    if (r >= 0) poner_ranura(m.jugador, r, sprite == 0x9d8 ? 300 : segundos_de_ranura(r), ahora);
+                } else {
+                    const int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
+                    if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
+                }
             }
             break;
         }

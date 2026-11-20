@@ -63,4 +63,7 @@ Other sprites: nothing. [C]
 - S_Ability: tracked per index (`EstadoJugador::habilidad`). l1j-en sends only indices 1 and 5, so the see-invisible gate (index 3) never opens there.
 - Roof groups: `SegmentoMapa::techos` + `techos_en`; fade state in `App::techos_fade` (`actualizar_techos`). Verified on a Giran house: the house next to the player turns translucent and the others stay opaque; moving away restores it.
 - Emotes: `accion_emote` in `barra_ui.cpp`. The 0x456b30 sprite list itself was not extracted, so "standard" is approximated.
-- Not done: gfx 0xbe slot choice, 0x1130 / 0x16c1 -> 0x42 variants, PacketBox 44 / 60 / 74, opcode 0x11, light flash.
+- gfx 0xbe (`ranura_de_gfx_be`): own sprite 0x4b/0x5ca/0x9d3/0x9d8 -> slot 0x26 (0x9d8 lasts 300 s), 0x9a1 -> 0x5b (clears 0x26), 0xa26 -> 0x4f, 0x9aa -> 0x50, 0x998 -> 0x51, 0xbb4 -> 0x84 (the 0x4f/0x50/0x51/0x84 group clears its siblings). The exe's extra guards on unknown flags ([0x816867], [0x6f1da8]) are ignored. [C]
+- Opcode 0x11 = S_SkillIconBlessOfEva (l1j-en sends it from C_ItemUSe and L1SkillStop): slot 0xb, duration from the packet.
+- PacketBox 44 / 60 / 74: l1j-en's S_PacketBox has no such constants and never sends them, so they are not implemented (the existing 74 -> 0x4a mapping is a fork variant, untouched).
+- Not done: 0x1130 / 0x16c1 -> 0x42 variants (depend on unknown flags), light flash.
