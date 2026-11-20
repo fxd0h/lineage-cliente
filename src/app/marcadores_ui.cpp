@@ -32,7 +32,8 @@ bool igual_sin_mayusculas(std::string_view x, std::string_view y) {
 // Ir al destino elegido (marcador o, con nullptr, al azar).
 void ir(App& a, const Marcador* m) {
     ElegirDestino& d = a.destino;
-    d.abierto = false;
+    if (!a.cfg.ui_simple) d.enviado = true;  // the window stays up until the teleport happens (0x418d84, closed at 0x4623aa)
+    else d.abierto = false;
     const u16 mapa = m ? m->mapa : 0;
     const u32 id = m ? m->id : 0;
     if (d.item) {
@@ -50,6 +51,7 @@ void ir(App& a, const Marcador* m) {
 bool es_hechizo_teleport(u32 id) { return id == HECHIZO_TELEPORT || id == HECHIZO_MASS_TELEPORT; }
 
 void eventos_marcadores(App& a, const Evento& e) {
+    if (e.tipo == Ev::TELETRANSPORTE || e.tipo == Ev::MAPA) a.destino.abierto = false;  // the teleport went through
     if (e.tipo != Ev::MARCADOR) return;
     auto it = std::find_if(a.marcadores.begin(), a.marcadores.end(), [&](const Marcador& m) { return m.id == e.id; });
     if (it == a.marcadores.end()) it = a.marcadores.insert(a.marcadores.end(), Marcador{});
@@ -81,7 +83,8 @@ bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
 
 bool elegir_destino(App& a, ObjId item, u32 hechizo) {
     // Only with the Ring of Teleport Control on (S_Ability 1, bit 1 of jugador.anillos); otherwise random.
-    if (a.marcadores.empty() || !(a.mundo.jugador.anillos & 2)) return false;
+    // The original client (0x409690, 0x4ac830) opens its bookmark window whenever the ring is on, even with no bookmarks.
+    if (!(a.mundo.jugador.anillos & 2) || (a.marcadores.empty() && a.cfg.ui_simple)) return false;
     a.destino = ElegirDestino{};
     a.destino.abierto = true;
     a.destino.item = item;
@@ -90,6 +93,7 @@ bool elegir_destino(App& a, ObjId item, u32 hechizo) {
 }
 
 bool sobre_destino(const App& a) {
+    if (!a.cfg.ui_simple) return sobre_ventana(a, IdVentana::DESTINO);
     int x = 0, y = 0;
     posicion(a, x, y);
     return a.destino.abierto && ui::sobre(a.entrada, x, y, ANCHO, alto_ventana());
@@ -97,7 +101,7 @@ bool sobre_destino(const App& a) {
 
 void dibujar_destino(App& a) {
     ElegirDestino& d = a.destino;
-    if (!d.abierto) return;
+    if (!d.abierto || !a.cfg.ui_simple) return;  // the original UI draws it as a framed window (dibujar_destino_orig)
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const u64 kf = clave_orden(CAPA_UI, 3), kt = clave_orden(CAPA_UI_TEXTO, 3);
@@ -161,6 +165,64 @@ void dibujar_destino(App& a) {
     e.escape = false;
     if (elegido || azar) ir(a, elegido);
     else if (cancelar || a.marcadores.empty()) d.abierto = false;
+}
+
+// Original UI: the bookmark list window of S3EP1U.bin. Teleport use with the Ring of Teleport Control (S_Ability 1) opens it
+// (0x409690 scroll, 0x4ac830 spell); a click on a name sends the use with that bookmark (0x418b50 -> 0x418d62 `cdhhh`: item,
+// then the three words of the S_Bookmarks row; the spell sends 0x500320 `ccchhh`). Class: window ctor 0x419040, draw
+// 0x419360, row list 0x418a50 (rect (23,46)-(174,260), row 12 px, rows at (25,49), up to 17).
+//  - translucent background 978 at (8,11), frame 979, ornament 980 at (2,11) over the rows, close 969 at (182,19);
+//  - scroll bar (0x47cd80): track 971 at (176,60), up arrow at (176,52), down arrow at (177,239), range 0..count-1 (0..2 for
+//    fewer than 3 rows);
+//  - no title, no Random row, no buttons: names in plain colour 0x5ef7 (chat run 0x432aa0), the clicked row tinted over
+//    145 px like the NPC lists (0x498d90); closing the window cancels, Esc closes it.
+bool destino_orig_abierto(const App& a) { return !a.cfg.ui_simple && a.destino.abierto; }
+
+Rect rect_destino_orig(const App& a) { return rect_lista_orig(a); }
+
+void dibujar_destino_orig(App& a) {
+    ElegirDestino& d = a.destino;
+    if (!destino_orig_abierto(a)) return;
+    constexpr u32 IMG_BG = 978, IMG_FRAME = 979, IMG_ORNAMENT = 980, IMG_CLOSE = 969;
+    constexpr int CLOSE_X = 182, CLOSE_Y = 19, ROWS = 17, ROW_H = 12, ROW_X = 25, ROW_Y = 49, TINT_W = 145;
+    constexpr int HIT_L = 23, HIT_T = 46, HIT_R = 174, HIT_B = 260;
+    constexpr int SCROLL_X = 176, SCROLL_Y = 52, SCROLL_H = 199;
+    arrastrar_ventana(a, IdVentana::DESTINO);
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    const Rect r = rect_ventana(a, IdVentana::DESTINO);
+    const u64 kb = clave_orden(CAPA_UI, 10), kf = clave_orden(CAPA_UI, 11), km = clave_orden(CAPA_UI, 12), kc = clave_orden(CAPA_UI, 16),
+              kt = clave_orden(CAPA_UI_TEXTO, 16);
+    g.gpu().dibujar(g.img(IMG_BG), r.x + 8, r.y + 11, kb, rgba(255, 255, 255, opacidad_ventanas(a)));
+    g.gpu().dibujar(g.img(IMG_FRAME), r.x, r.y, kf);
+    const bool sobre_cierre = ui::sobre(e, r.x + CLOSE_X, r.y + CLOSE_Y, 14, 14);
+    g.gpu().dibujar(g.img(IMG_CLOSE), r.x + CLOSE_X, r.y + CLOSE_Y, kc, sobre_cierre ? rgba(255, 255, 255) : rgba(200, 200, 200));
+    if ((sobre_cierre && e.clic) || e.escape) {
+        d.abierto = false;
+        e.escape = false;
+        return;
+    }
+    const u32 total = static_cast<u32>(a.marcadores.size());
+    // The bar scrolls one row per step up to the last one (the original range is count-1, 2 for fewer than 3 rows).
+    const bool sobre_lista = sobre_ventana(a, IdVentana::DESTINO);
+    original_scrollbar(a, d.barra, r.x + SCROLL_X, r.y + SCROLL_Y, SCROLL_H, std::max<u32>(total, 3) + ROWS - 1, ROWS, d.desplaza,
+                       sobre_lista, 0, -2);
+    const u32 primero = std::min(d.desplaza, total ? total - 1 : 0);
+    // A click on a row: hit rows start 3 px above the drawn ones (list rect top 46 vs text 49).
+    if (sobre_lista && e.clic && !d.enviado && ui::sobre(e, r.x + HIT_L, r.y + HIT_T, HIT_R - HIT_L, HIT_B - HIT_T)) {
+        const u32 i = primero + static_cast<u32>((e.my - (r.y + HIT_T)) / ROW_H);
+        if (i < total) {
+            d.sel = static_cast<int>(i);
+            ir(a, &a.marcadores[i]);
+        }
+    }
+    for (int k = 0; k < ROWS && primero + static_cast<u32>(k) < total; ++k) {
+        const u32 i = primero + static_cast<u32>(k);
+        const int y = r.y + ROW_Y + k * ROW_H;
+        if (d.sel == static_cast<int>(i)) g.gpu().rectangulo(r.x + ROW_X, y, TINT_W, ROW_H, km, rgba(0, 0, 85), Mezcla::PANTALLA);
+        g.texto(a.marcadores[i].nombre, static_cast<float>(r.x + ROW_X), static_cast<float>(y), kt, rgb555(0x5ef7));
+    }
+    draw_original_overlay(a, r.x + 2, r.y + 11, IMG_ORNAMENT);
 }
 
 }  // namespace lin

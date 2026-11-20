@@ -1174,18 +1174,18 @@ img_965	19	212				manifest
 img_966	19	212				manifest
 img_967	19	212				manifest
 img_968	19	212				manifest
-img_969	13	13	IMG_close; Close button position	src/app/lista_ui.cpp, src/app/volume_ui.cpp	0x44cd4d,0x4b4754	audit,code,manifest
+img_969	13	13	IMG_close; Close button position	src/app/lista_ui.cpp, src/app/volume_ui.cpp, src/app/marcadores_ui.cpp:dibujar_destino_orig	0x44cd4d,0x4b4754	audit,code,manifest
 img_970	13	13				manifest
-img_971	12	182	IMG_track; track - Scroll bar; scroll bar	src/app/original_window.cpp		audit,code,docs,manifest
+img_971	12	182	IMG_track; track - Scroll bar; scroll bar	src/app/original_window.cpp, src/app/marcadores_ui.cpp:dibujar_destino_orig	0x419360	audit,code,docs,manifest
 img_972	11	12	arrows - Chat scroll bar		0x47cd80,0x41f650	audit,manifest
 img_973	11	12				manifest
 img_974	12	10	arrows - Chat scroll bar		0x47cd80,0x41f650	audit,manifest
 img_975	12	10				manifest
 img_976	15	16		src/app/pantalla_juego.cpp:dibujar_barra_chat		code,manifest
 img_977	15	16				manifest
-img_978	191	274	IMG_bg	src/app/lista_ui.cpp		code,manifest
-img_979	207	289	IMG_frame; frame - Party / alliance / buddy lists; frame	src/app/lista_ui.cpp		audit,code,manifest
-img_980	203	251				manifest
+img_978	191	274	IMG_bg; viewed: translucent background of the bookmark/teleport picker (8,11)	src/app/lista_ui.cpp, src/app/marcadores_ui.cpp:dibujar_destino_orig	0x419360	code,manifest
+img_979	207	289	IMG_frame; frame - Party / alliance / buddy lists; frame	src/app/lista_ui.cpp, src/app/marcadores_ui.cpp:dibujar_destino_orig	0x419360	audit,code,manifest
+img_980	203	251	viewed: ornament of the bookmark window over the rows (inner border, corners) at (2,11)	src/app/marcadores_ui.cpp:dibujar_destino_orig	0x419360	manifest
 img_981	179	275	IMG_equipo (179×275)	src/app/equipo_ui.cpp		code,manifest
 img_981c	179	275				manifest
 img_981h	179	275				manifest

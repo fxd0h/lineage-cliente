@@ -75,7 +75,7 @@ struct FilaTienda {
     std::string atributos;  // S_ShopSellList status bytes (L1ItemInstance.getStatusBytes), for the tooltip property lines
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, DESTINO, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -211,6 +211,8 @@ struct ElegirDestino {
     int dx = 0, dy = 0;
     u32 desplaza = 0;
     ui::BarraScroll barra;
+    int sel = -1;          // original UI: the row clicked (tinted until the teleport happens)
+    bool enviado = false;  // original UI: the choice was sent; the window stays until the teleport (0x418d6e)
 };
 
 // Reiniciar atributos (reinicio_ui.cpp): S_CharReset / C_CharReset, con la Candle of Reminiscence.
@@ -476,7 +478,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -633,6 +635,9 @@ Rect rect_hpmp_flotante(const App& a);
 void abrir_lista_orig(App& a, std::string_view pagina, std::string_view datos);  // lista_ui.cpp; false-less: only for the 3 pages
 bool es_pagina_lista(std::string_view pagina);
 void dibujar_lista_orig(App& a);
+void dibujar_destino_orig(App& a);  // marcadores_ui.cpp: the teleport bookmark list (original UI)
+Rect rect_destino_orig(const App& a);
+bool destino_orig_abierto(const App& a);
 Rect rect_lista_orig(const App& a);
 void dibujar_mascota_orig(App& a);  // mascotas_ui.cpp
 Rect rect_mascota_orig(const App& a);

@@ -1626,6 +1626,7 @@ void dibujar_ventanas(App& a) {
         case IdVentana::TIENDA_PRIV: dibujar_tienda_original(a); break;
         case IdVentana::LISTA: dibujar_lista_orig(a); break;
         case IdVentana::MASCOTA: dibujar_mascota_orig(a); break;
+        case IdVentana::DESTINO: dibujar_destino_orig(a); break;
         default: break;
         }
         e.mx = mx;
