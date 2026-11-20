@@ -1201,35 +1201,44 @@ void Gpu::presentar() {
     llamadas_ = 0;
     auto dibujar = [&](SDL_GPURenderPass* p, u32 desde, u32 cuantas, auto&& self) -> void {
         if (!cuantas) return;
-        // Screen and multiply instances are drawn after the normal ones of their call: keep the world and the
-        // layers above it (effects, UI) in separate calls so a world multiply cannot darken a window.
+        // Keep the world and the layers above it (effects, UI) in separate calls (cheap; the run split handles order).
         if ((n_pantalla_ || n_mult_) && n_mundo_ > desde && n_mundo_ < desde + cuantas) {
             self(p, desde, n_mundo_ - desde, self);
             self(p, n_mundo_, desde + cuantas - n_mundo_, self);
             return;
         }
-        SDL_BindGPUGraphicsPipeline(p, pipeline_);
         SDL_BindGPUVertexStorageBuffers(p, 0, &instancias_gpu_, 1);
         const SDL_GPUTextureSamplerBinding tsb[2] = {{atlas_, muestreo_}, {atlas_, muestreo_lineal_}};
         SDL_BindGPUFragmentSamplers(p, 0, tsb, 2);
-        float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(desde), 0};
-        SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
-        SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
-        ++llamadas_;
-        if (n_pantalla_ && pipeline_pantalla_) {
-            // Second call with the screen-blend pipeline: the vertex shader keeps only the PANTALLA instances.
-            SDL_BindGPUGraphicsPipeline(p, pipeline_pantalla_);
-            uni[3] = 1;
-            SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
-            SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
-            ++llamadas_;
-        }
-        if (n_mult_ && pipeline_mult_) {
-            SDL_BindGPUGraphicsPipeline(p, pipeline_mult_);
-            uni[3] = 3;
-            SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
-            SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
-            ++llamadas_;
+        // Painter order: consecutive instances of the same blend class (0 normal, 1 screen, 3 multiply) form one
+        // draw; the vertex shader still filters by class, so a run may hold HD text instances (skipped here,
+        // they neither start nor split a run). Without screen/multiply instances this is one draw as before.
+        auto clase = [&](u32 m) -> int { return (m & 8u) ? 1 : (m & 128u) ? 3 : 0; };
+        SDL_GPUGraphicsPipeline* const tuberias[4] = {pipeline_, pipeline_pantalla_, nullptr, pipeline_mult_};
+        const bool mezclas = (n_pantalla_ || n_mult_);
+        u32 i = desde;
+        const u32 fin = desde + cuantas;
+        while (i < fin) {
+            int c = clase(inst_ordenadas_[i].mezcla);
+            u32 j = i + 1;
+            if (mezclas) {
+                while (j < fin) {
+                    const u32 m = inst_ordenadas_[j].mezcla;
+                    if (!(m & 64u) && clase(m) != c) break;
+                    ++j;
+                }
+            } else {
+                j = fin;
+            }
+            if (tuberias[c]) {
+                SDL_BindGPUGraphicsPipeline(p, tuberias[c]);
+                const float uni[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(i),
+                                      static_cast<float>(c)};
+                SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
+                SDL_DrawGPUPrimitives(p, 6, j - i, 0, 0);
+                ++llamadas_;
+            }
+            i = j;
         }
     };
     SDL_GPURenderPass* pase = SDL_BeginGPURenderPass(cmd, &objetivo, 1, nullptr);
