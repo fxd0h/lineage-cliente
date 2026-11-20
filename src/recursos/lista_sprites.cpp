@@ -5,7 +5,8 @@
 //   #<gfx> <subsprites>[=<gfx de archivos>][$] <nombre>   una entrada por gfx, '#' al principio de la línea
 //   <id>.<nombre>(<dir> <n>,<sub>.<frame>:<ticks>[sufijo] ...)   acción (id < 100 o >= 121)
 //   <id>.<nombre>(<valor> ...)                   atributo (100-120): 101 sombra, 102 tipo, 104 atributo,
-//                                                109 "n gfx" gráfico siguiente, 110 velocidad
+//                                                109 "n gfx" gráfico siguiente, 110 velocidad, 111 stride,
+//                                                105 "n gfx..." clothes
 // Sufijos pegados a un frame: ! impacto, [N o <N sonido; ]N ^ > { } se ignoran.
 // El formato varía (tabulador, espacios o nada; varias acciones en una línea; "1 10.8.9:4" por
 // "1 10,8.9:4"), así que se recorren tokens y no líneas. Los frames vienen como en sprite_table.txt (el
@@ -53,6 +54,8 @@ struct Entrada {
     u8 tipo = 0;
     u16 atributos = 0;
     GfxId siguiente = 0;
+    bool zancada = false;
+    std::vector<GfxId> ropa;
     std::vector<std::pair<u8, RangoAccion>> acciones;  // id de la acción -> rango en `frames`
     std::vector<FrameAccion> frames;
 };
@@ -123,6 +126,15 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
                 b.numero_con_signo();
                 const int g = b.numero_con_signo();
                 e.siguiente = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
+                break;
+            }
+            case 111: e.zancada = b.numero_con_signo() != 0; break;
+            case 105: {
+                const int n = b.numero_con_signo();
+                for (int i = 0; i < n && i < 16; ++i) {
+                    const int g = b.numero_con_signo();
+                    if (g > 0 && g < 0xFFFF) e.ropa.push_back(static_cast<GfxId>(g));
+                }
                 break;
             }
             case 110: {
@@ -229,6 +241,8 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             tipo_.resize(n, 0);
             atributos_.resize(n, 0);
             siguiente_.resize(n, 0);
+            zancada_.resize(n, false);
+            ropa_.resize(n);
         }
         if (e.acciones.empty()) {
             // Sin acciones (ítems del suelo, objetos): sus atributos, si sprite_table.txt no tiene el gfx. El tipo
@@ -239,6 +253,8 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
                 tipo_[e.gfx] = e.tipo;
                 atributos_[e.gfx] = e.atributos;
                 siguiente_[e.gfx] = e.siguiente;
+                zancada_[e.gfx] = e.zancada;
+                ropa_[e.gfx] = e.ropa;
                 ++resumen.atributos;
             } else {
                 ++resumen.omitidos;
@@ -271,6 +287,8 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             tipo_[e.gfx] = e.tipo;
             atributos_[e.gfx] = e.atributos;
             siguiente_[e.gfx] = e.siguiente;
+            zancada_[e.gfx] = e.zancada;
+            ropa_[e.gfx] = e.ropa;
             const u32 base = static_cast<u32>(frames_.size());
             frames_.insert(frames_.end(), e.frames.begin(), e.frames.end());
             for (auto& [id, r] : e.acciones) {

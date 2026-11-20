@@ -62,6 +62,8 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     tipo_.clear();
     atributos_.clear();
     siguiente_.clear();
+    zancada_.clear();
+    ropa_.clear();
     gfx_de_tabla_ = 0;
     const char* p = reinterpret_cast<const char*>(texto.data());
     const char* fin = p + texto.size();
@@ -75,6 +77,8 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
         tipo_.push_back(0);
         atributos_.push_back(0);
         siguiente_.push_back(0);
+        zancada_.push_back(false);
+        ropa_.emplace_back();
         bool con_filas = false;
         u8 velocidad = 24;       // "110 N": vale para las acciones siguientes del registro
         c.numero();              // cantidad de sub-sprites
@@ -93,10 +97,11 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
             case 101: sombra_.back() = static_cast<i16>(c.numero()); break;
             case 102: tipo_.back() = static_cast<u8>(c.numero()); break;
             case 104: atributos_.back() = static_cast<u16>(c.numero()); break;
-            case 103: case 108: case 111: case 112: case 113: case 114: c.numero(); break;
-            case 105: {  // ropa: n números
+            case 111: zancada_.back() = c.numero() != 0; break;
+            case 103: case 108: case 112: case 113: case 114: c.numero(); break;
+            case 105: {  // clothes: n gfx drawn over the body
                 int n = c.numero();
-                for (int i = 0; i < n && c.hay_numero(); ++i) c.numero();
+                for (int i = 0; i < n && c.hay_numero(); ++i) ropa_.back().push_back(static_cast<GfxId>(c.numero()));
                 break;
             }
             case 106: break;
@@ -177,12 +182,16 @@ void TablaSprites::copiar_filas_faltantes() {
             tipo_.resize(n, 0);
             atributos_.resize(n, 0);
             siguiente_.resize(n, 0);
+            zancada_.resize(n, false);
+            ropa_.resize(n);
         }
         alias_[nuevo] = alias_[origen];
         sombra_[nuevo] = sombra_[origen];
         tipo_[nuevo] = tipo_[origen];
         atributos_[nuevo] = atributos_[origen];
         siguiente_[nuevo] = siguiente_[origen];
+        zancada_[nuevo] = zancada_[origen];
+        ropa_[nuevo] = ropa_[origen];
         for (u64 a = 0; a < 256; ++a)
             if (const u32* i = indice_.buscar((static_cast<u64>(origen) << 8) | a)) {
                 const u32 rango = *i;  // poner() puede mover la tabla

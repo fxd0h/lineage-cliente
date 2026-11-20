@@ -164,6 +164,11 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     } else if (caminando(a.mundo, s, ahora)) {
         base = ACC_CAMINAR;
         v.inicio = o.col<O_TMOV>()[s];
+        // Stride sprites (list.spz 111): steps alternate the half-strides 0 and 4, whatever the weapon.
+        if (a.sprites.zancada(gfx)) {
+            base = a.sprites.accion_caminar(gfx, o.col<O_ZANCADA>()[s]);
+            arma = 0;
+        }
     } else {
         base = ACC_QUIETO;
     }
@@ -472,6 +477,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         RegionAtlas rg;
         bool rg_pendiente = false;
         bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
+        const FrameAccion* frame_cuerpo = nullptr;  // for the clothes layers (attribute 105)
+        u16 sub_cuerpo = 0;
         // pendiente() compara la dirección: se consulta sobre la referencia, antes de copiarla a rg.
         auto pedir_frame = [&](u16 sub_pedido, u16 frame) {
             const RegionAtlas& r = g.frame_sprite(a.sprites.gfx_archivos(gfx), sub_pedido, frame);
@@ -494,6 +501,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (termino && acc.puntual) o.col<O_ACCION>()[s] = 0xFF;  // fin de la acción puntual
             sonido_de_frame(a, o.col<O_SONIDO>()[s], *f, vis_x, vis_y, ahora, false, o.col<O_DIR>()[s]);
             u16 sub = static_cast<u16>(f->sub + (r->direccional ? o.col<O_DIR>()[s] : 0));
+            frame_cuerpo = f;
+            sub_cuerpo = sub;
             i16 sombra = a.sprites.sombra(gfx);
             if (sombra >= 0)
                 g.gpu().dibujar_en(g.frame_sprite(static_cast<GfxId>(sombra), sub, f->frame), px, py,
@@ -526,6 +535,31 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) color = (color & 0x00FFFFFFu) | (110u << 24);
             // Atributo 104 bit 8 (fuego, braseros...): suma luz, su fondo oscuro no tapa.
             g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color, a.sprites.aditivo(gfx) ? Mezcla::ADITIVA : Mezcla::NORMAL);
+            // Clothes (attribute 105): after the body, same sub-sprite and frame, each with its own attribute
+            // 104. As in the exe (0x4cbc50), if any layer's file is missing none is drawn.
+            if (const auto ropa = a.sprites.ropa(gfx); frame_cuerpo && !ropa.empty()) {
+                RegionAtlas capas[3];  // subcapas 5-7 over the body (4)
+                GfxId gfx_capa[3];
+                size_t n = 0;
+                bool todas = true;
+                for (GfxId c : ropa) {
+                    if (n == std::size(capas)) break;
+                    const RegionAtlas& rc = g.frame_sprite(c, sub_cuerpo, frame_cuerpo->frame);
+                    if (g.pendiente(rc)) continue;  // still loading: skip it this frame
+                    if (!rc.valida()) {
+                        char nombre[32];
+                        std::snprintf(nombre, sizeof nombre, "%u-%u.spr", static_cast<unsigned>(c), static_cast<unsigned>(sub_cuerpo));
+                        if (a.rec.sprite(nombre).empty()) todas = false;
+                        continue;
+                    }
+                    gfx_capa[n] = c;
+                    capas[n++] = rc;
+                }
+                if (todas)
+                    for (size_t i = 0; i < n; ++i)
+                        g.gpu().dibujar_en(capas[i], px, py, clave_orden(CAPA_MUNDO, prof + 1 + static_cast<u32>(i)), color,
+                                           a.sprites.aditivo(gfx_capa[i]) ? Mezcla::ADITIVA : Mezcla::NORMAL);
+            }
             // Tapado por un objeto del mapa: también su silueta encima de todo (varias piezas
             // translúcidas superpuestas casi lo esconden).
             if (o.ids()[s] == a.mundo.jugador.id && a.mundo.jugador.ceguera)  // ciego: solo se ve a sí mismo
@@ -986,6 +1020,7 @@ void mover_jugador(App& a, u64 ahora) {
         o.col<O_X>()[s] = static_cast<u16>(nx);
         o.col<O_Y>()[s] = static_cast<u16>(ny);
         o.col<O_TMOV>()[s] = inicio_paso;
+        o.col<O_ZANCADA>()[s] ^= 1;
         o.col<O_DURMOV>()[s] = static_cast<u16>(intervalo_propio(
             a.mundo.jugador, Intervalo::CAMINAR, duracion_paso(a.mundo, o.col<O_GFX>()[s], o.col<O_ESTADO>()[s], 0),
             MS_ENCADENAR_PASO));

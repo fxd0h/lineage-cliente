@@ -238,6 +238,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_Y>()[s] = static_cast<u16>(e.v[1]);
             o.col<O_DIR>()[s] = static_cast<u8>(e.v[2]);
             o.col<O_TMOV>()[s] = ahora;
+            o.col<O_ZANCADA>()[s] ^= 1;
             break;
         }
         case Ev::QUITAR_OBJETO: o.quitar(e.id); break;
@@ -665,8 +666,10 @@ double fraccion_frame(const Mundo& m, Slot s, u64 ahora) {
     const u64 transcurrido = ahora - o.col<O_TMOV>()[s], duracion = o.col<O_DURMOV>()[s];
     const RangoAccion* r = nullptr;
     if (m.sprites) {
-        r = m.sprites->accion(o.col<O_GFX>()[s], static_cast<u8>(ACC_CAMINAR + o.col<O_ESTADO>()[s]));
-        if (!r) r = m.sprites->accion(o.col<O_GFX>()[s], ACC_CAMINAR);
+        const GfxId gfx = o.col<O_GFX>()[s];
+        if (m.sprites->zancada(gfx)) r = m.sprites->accion(gfx, m.sprites->accion_caminar(gfx, o.col<O_ZANCADA>()[s]));
+        if (!r) r = m.sprites->accion(gfx, static_cast<u8>(ACC_CAMINAR + o.col<O_ESTADO>()[s]));
+        if (!r) r = m.sprites->accion(gfx, ACC_CAMINAR);
     }
     u32 total = r ? m.sprites->ticks(*r) : 0;
     if (total == 0) return static_cast<double>(transcurrido * 4 / duracion) / 4.0;

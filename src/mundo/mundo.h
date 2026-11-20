@@ -37,9 +37,10 @@ enum ColObjeto : size_t {
     O_NIVEL,             // de S_CharPack (los monstruos; 0 en los personajes): color del nombre
     O_MASCOTA,           // 1 si es mascota o invocación de un jugador (trae el nombre del dueño)
     O_ROSA,              // nombre rosa (S_PinkName: atacó a otro jugador) hasta este momento (ms)
+    O_ZANCADA,           // step parity: sprites with list.spz attribute 111 (stride) alternate walk actions 0 and 4
 };
 using TablaObjetos = TablaSoa<u16, u16, double, double, u64, u16, u8, u16, u8, u8, u64, u8, u8, u8, u8, u32, u32, i16, u32,
-                              TextoRef, TextoRef, u8, u8, u64>;
+                              TextoRef, TextoRef, u8, u8, u64, u8>;
 
 // Efecto con duración sobre el propio personaje (módulo "Buffs" del plan): haste, brave, escudos...
 // Clase EA_* y tipo según el paquete que lo informó (ver ICONO_EFECTO y VELOCIDAD en eventos.h).

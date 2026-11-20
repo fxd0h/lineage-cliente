@@ -14,6 +14,7 @@
 // una tabla hash (gfx, acción) -> rango.
 #pragma once
 #include <functional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -88,6 +89,17 @@ public:
     // Atributo 104, bit 8: se dibuja sumando la luz al fondo (los 1921 gfx que lo tienen son
     // efectos de hechizos; su "fondo" oscuro no tapa).
     bool aditivo(GfxId gfx) const { return gfx < atributos_.size() && (atributos_[gfx] & 8); }
+    // Attribute 111 (stride): the walk is two half-strides, action 0 and action 4 (each starts on the
+    // other's pose), played on alternate steps. Valakas, Antharas, the race bugbears, the dogs...
+    bool zancada(GfxId gfx) const { return gfx < zancada_.size() && zancada_[gfx]; }
+    // Walk action for a step of a stride sprite (S3EP1U 0x4c6ff0: a per-object step counter picks from
+    // {0, 4}, whatever the weapon status): 0 on even steps, 4 on odd ones if the sprite has it.
+    u8 accion_caminar(GfxId gfx, u8 paso) const { return paso & 1 && accion(gfx, 4) ? 4 : 0; }
+    // Attribute 105 (clothes): gfx drawn over the body, after it and in list order, with the body's
+    // sub-sprite and frame and their own attribute 104 (S3EP1U 0x4cbc50 / 0x4cbdb0). Valakas -> 2003.
+    std::span<const GfxId> ropa(GfxId gfx) const {
+        return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
+    }
     // Atributo 109: gráfico que sigue a este al terminar (la explosión de Energy Bolt al llegar); 0 si no hay.
     GfxId siguiente(GfxId gfx) const { return gfx < siguiente_.size() ? siguiente_[gfx] : 0; }
     // Duración total de una acción en ms (suma de los frames × ms por tick); 0 si no existe. Para
@@ -108,6 +120,8 @@ private:
     void copiar_filas_faltantes();
     u32 gfx_de_tabla_ = 0;
     std::vector<FrameAccion> frames_;
+    std::vector<bool> zancada_;
+    std::vector<std::vector<GfxId>> ropa_;
     std::vector<RangoAccion> rangos_;
     MapaHash indice_;              // (gfx << 8 | accion) -> índice en rangos_
     std::vector<GfxId> alias_;     // por gfx: gfx cuyos archivos .spr se usan
