@@ -236,6 +236,20 @@ static bool transformado(const App& a) {
     return false;
 }
 
+// Emote action (C_ExtraCommand 66 Think, 67 Aggress, 68 Salute, 69 Cheer) of Alt+n for the own sprite, 0 = none.
+// Standard sprites: Alt+1..4 -> 68, 69, 67, 66; the special set: Alt+1..3 -> 67, 68, 69. Others do nothing.
+static int accion_emote(int n, u32 gfx, bool transformado) {
+    const bool solo_alt1 = gfx == 0xea6 || gfx == 0xebf || gfx == 0xf12;
+    const bool especial = gfx == 0x17ce || gfx == 0x17c0 || gfx == 0x1a57 || gfx == 0x1a58 || gfx == 0x1a5a || gfx == 0x1a5b ||
+                          gfx == 0x1a5d || gfx == 0x1a5e || gfx == 0x1a60 || gfx == 0x1a61;
+    const bool estandar = (!transformado && !especial) || (gfx >= 0x1aa6 && gfx <= 0x1aeb) || (gfx >= 0x1be3 && gfx <= 0x1bfe) || solo_alt1;
+    if (solo_alt1) return n == 1 ? 68 : 0;
+    if (especial) return n <= 3 ? 66 + n : 0;
+    if (!estandar) return 0;
+    static constexpr int ESTANDAR[4] = {68, 69, 67, 66};
+    return ESTANDAR[n - 1];
+}
+
 void procesar_barra(App& a) {
     if (a.barra_de != nombre_personaje(a)) cargar_barra(a);
     // Con menos páginas (opciones), la visible pasa a la última que queda.
@@ -244,15 +258,16 @@ void procesar_barra(App& a) {
     if (a.entrada.rueda && paginas(a) > 1 && sobre_atajos(a)) cambiar_pagina_barra(a, a.pagina_barra + a.entrada.rueda);
     // Upstream's 1–0 / Alt+1–0 shortcut bar keys: simple UI only (the original UI has no such bar).
     if (!a.cfg.ui_simple) {
-        // Original UI: Alt+1 / 2 / 3 are emotes (0x4xxxxx key handler): C_ExtraCommand 0x44 / 0x45 / 0x43 and the own
-        // sprite plays the action at once (the server only rebroadcasts it to the others). Not while polymorphed.
-        static constexpr u8 EMOTES[3] = {0x44, 0x45, 0x43};
+        // Original UI: Alt+1..4 are emotes (key handler, RE_ROUND3.md): C_ExtraCommand 66..69 chosen by the own sprite and
+        // the own sprite plays the action at once (the server only rebroadcasts it to the others).
         const int n = a.entrada.alt_numero;
-        if (n >= 1 && n <= 3 && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto && !transformado(a)) {
-            enviar(a, cmd::emote(a.op, EMOTES[n - 1]));
-            const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
-            if (yo != SIN_SLOT) {
-                a.mundo.objetos.col<O_ACCION>()[yo] = EMOTES[n - 1];
+        const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+        if (n >= 1 && n <= 4 && yo != SIN_SLOT && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto) {
+            const u32 gfx = a.mundo.objetos.col<O_GFX>()[yo];
+            const int accion = accion_emote(n, gfx, transformado(a));
+            if (accion) {
+                enviar(a, cmd::emote(a.op, static_cast<u8>(accion)));
+                a.mundo.objetos.col<O_ACCION>()[yo] = static_cast<u8>(accion);
                 a.mundo.objetos.col<O_TACCION>()[yo] = a.entrada.ahora_ms;
             }
         }
