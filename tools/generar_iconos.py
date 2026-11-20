@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Íconos propios del cliente: una L cursiva roja sobre fondo transparente (el juego) y la misma L con
-un engranaje chico abajo a la derecha (settings).
+"""Ícono propio del cliente: una L cursiva roja sobre fondo transparente. (La variante con engranaje era
+la del programa de ajustes, que ahora es una ventana del juego; dibujar() la conserva.)
 
 Uso: tools/generar_iconos.py [--icns CARPETA] [--ico]
-  - escribe datos/iconos/lineage.png y datos/iconos/settings.png (1024 × 1024, RGBA);
-  - con --icns (solo macOS: sips e iconutil) arma además lineage.icns y settings.icns en CARPETA, para
+  - escribe datos/iconos/lineage.png (1024 × 1024, RGBA);
+  - con --icns (solo macOS: sips e iconutil) arma además lineage.icns en CARPETA, para
     el .app del empaquetado;
-  - con --ico escribe datos/iconos/lineage.ico y settings.ico (Windows: el ícono del .exe, vía
+  - con --ico escribe datos/iconos/lineage.ico (Windows: el ícono del .exe, vía
     cmake/windows.rc.in). Cada tamaño se dibuja directo desde la figura, no achicando el de 1024.
 
 Sin dependencias: dibuja con muestreo 2 × 2 por píxel y escribe el PNG con zlib.
@@ -169,7 +169,7 @@ def main():
     carpeta = os.path.join(RAIZ, "datos", "iconos")
     os.makedirs(carpeta, exist_ok=True)
     destino_icns = sys.argv[sys.argv.index("--icns") + 1] if "--icns" in sys.argv else None
-    for nombre, engranaje in (("lineage", False), ("settings", True)):
+    for nombre, engranaje in (("lineage", False),):  # el de los ajustes ya no hace falta: son una ventana
         filas = dibujar(engranaje)
         comprobar(filas, engranaje)
         ruta = os.path.join(carpeta, nombre + ".png")

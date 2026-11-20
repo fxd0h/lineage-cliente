@@ -46,7 +46,7 @@ console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages l
 
 **Windows package:** from the developer console (x64 or arm64),
 `powershell -ExecutionPolicy Bypass -File herramientas\empaquetar_windows.ps1 -Version 0.2.0` leaves
-`dist\Lineage-0.2.0-windows-<arch>.zip` with `lineage.exe`, `settings.exe`, `datos\`, `LICENSE.txt` and `LEEME.txt`.
+`dist\Lineage-0.2.0-windows-<arch>.zip` with `lineage.exe`, `datos\`, `LICENSE.txt` and `LEEME.txt`.
 The runtime is linked statically (no Visual C++ redistributable needed; the script checks it). CI builds the zip on
 every push (artifact `lineage-windows-<arch>`), and a `v*` tag publishes it in the release next to the macOS `.dmg`.
 
@@ -68,19 +68,18 @@ LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, tests 
 | Program | What it is |
 |---|---|
 | `build/<preset>/lineage` | The game |
-| `build/<preset>/settings` | [Settings editor](#settings-editor) |
 | `build/<preset>/explorador` | [Resource explorer](#resource-explorer) |
 | `build/<preset>/lin_tests` | Tests |
 
 ### Packaging and releases (macOS)
 
-- **Locally:** `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app` and `Lineage Settings.app`
+- **Locally:** `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app`
   (universal: arm64 and x86_64, ad-hoc signed, with `datos/` inside) and leaves `dist/Lineage-VERSION-macos.dmg`.
 - **On GitHub:** pushing a `v*` tag (`git tag v0.1.0 && git push origin v0.1.0`) runs
   `.github/workflows/release.yml`: tests, the `.dmg`, and a GitHub release with it and generated notes. Run the
   workflow by hand (Actions > Release) to get only the `.dmg` as an artifact.
 - **Not notarized yet:** macOS warns that it cannot verify the developer; the first time, right-click the app and
-  choose Open. Game resources are not included: pick the game folder in Settings.
+  choose Open. Game resources are not included: the game asks for the folder on first start.
 
 ## Local test servers
 
@@ -135,25 +134,28 @@ The client takes **no command-line parameters**: everything comes from `settings
   used on that server. The password is not saved. An old `settings.ini` (`host=`, `puerto=`...) is
   converted automatically.
 
-### Settings editor
+### Settings window
 
-`build/<preset>/settings` edits `settings.ini` in a form with tabs (Game, Interface, Audio, Servers,
-Characters), without touching the text file. It uses the same simple interface as the game, writes the
-same file and validates numeric fields before saving. In the Characters tab, you can remove a
-character's saved shortcuts and bar, and reset window positions. `--config=PATH` edits another file.
+The **Settings** window edits `settings.ini` in a form with tabs (Game, Interface, Audio, Servers,
+Characters). Open it from the login screen (the Settings button, or Options in the original interface) or in
+the game (the Options button). It is modal: the screen behind keeps running but takes no input. Numeric fields
+are validated before saving. In the Characters tab, you can remove a character's saved shortcuts, bar and
+auto-buffs, set its auto potion, and reset window positions.
 
-Run it while the game is closed: the game saves `settings.ini` too and can overwrite your changes.
+**Save** applies the changes at once and writes the file. The game folder and the sprite table are read at
+startup: if they change, the window says they apply when the client restarts. **Revert** goes back to what is
+in use; **Close** (or Esc) discards what was not saved.
 
 | Interface tab | Servers tab |
 |---|---|
-| ![Settings editor, Interface tab](docs/capturas/readme_settings_editor.png) | ![Settings editor, Servers tab](docs/capturas/readme_settings_servers.png) |
+| ![Settings window, Interface tab](docs/capturas/readme_settings_editor.png) | ![Settings window, Servers tab](docs/capturas/readme_settings_servers.png) |
 
 ### Languages
 
 The interface is available in **Spanish, English, Portuguese, German and French**. Choose it in the
-settings editor (Interface tab) or with `idioma=es|en|pt|de|fr` in `settings.ini`. With no value it follows
-the system language, and falls back to English if that is not one of the five. The game applies it at
-startup; the editor switches as soon as you pick it.
+Settings window (Interface tab) or with `idioma=es|en|pt|de|fr` in `settings.ini`. With no value it follows
+the system language, and falls back to English if that is not one of the five. The window switches as soon as
+you pick it; Save keeps it.
 
 | Español | Português |
 |---|---|
@@ -163,7 +165,7 @@ startup; the editor switches as soon as you pick it.
 |---|---|
 | ![Login in German](docs/capturas/readme_login_de.png) | ![Login in French](docs/capturas/readme_login_fr.png) |
 
-- **What is translated so far:** login, character selection and creation, and the settings editor. The
+- **What is translated so far:** login, character selection and creation, and the Settings window. The
   in-game windows are not migrated yet and keep their current text. Text sent by the server is shown as
   it arrives.
 - **Translations** live in `src/i18n/catalogo.def`, one line per text with its five languages. The tests
@@ -312,7 +314,7 @@ title is shown as text.
   on, each one is cast again when its effect ends (or has less than 2 s left), left to right and one at a time,
   only while you are not walking, attacking or casting something else. Off by default; saved per character.
   It sends the same packet as casting by hand.
-- **Auto potion:** per character, in Options ("Auto potion", "Auto potion when") or in the settings tool. While HP
+- **Auto potion:** per character, in Settings (Characters tab). While HP
   is below the threshold (60 % by default) it drinks a healing potion as soon as the previous one's delay is over:
   condensed first, then ancient, then normal, and within each the colour that fits what is missing (clear for a
   big loss, orange for a medium one, red for a small one). "Pot<60%" next to HP shows it is on (red: no potions).

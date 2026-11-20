@@ -139,7 +139,7 @@ paquete adjunto a la misma release:
 
 | Plataforma | Paquete | Cómo |
 |---|---|---|
-| Windows x64 / arm64 | `.zip` con `lineage.exe`, `settings.exe`, `datos/` y, si hace falta, el runtime de MSVC; luego un instalador (Inno Setup o WiX) | ícono `.ico` desde `datos/iconos/*.png` (agregar `--ico` a `tools/generar_iconos.py`) y un `.rc` con el ícono y la versión |
+| Windows x64 / arm64 | `.zip` con `lineage.exe`, `datos/` y, si hace falta, el runtime de MSVC; luego un instalador (Inno Setup o WiX) | ícono `.ico` desde `datos/iconos/*.png` (agregar `--ico` a `tools/generar_iconos.py`) y un `.rc` con el ícono y la versión |
 | Linux x64 / arm64 | AppImage (`linuxdeploy`) con `.desktop` e ícono PNG | `datos/` junto al ejecutable dentro del AppImage |
 
 - Los programas buscan `datos/` con `SDL_GetBasePath()`: en Windows y en el AppImage es la carpeta del
@@ -182,7 +182,7 @@ El `.dmg` ya se arma (`herramientas/empaquetar_macos.sh`, release `v0.1.0`). Est
      nota de origen de `datos/sprite_table.txt` (l1j-client) en `Resources/`. Con el repo privado hay que
      decidir cómo se ofrece la fuente.
    - **Marca:** "Lineage" es del juego original; el plan anterior proponía llamar al paquete
-     "Lineage Cliente". Hoy los `.app` se llaman `Lineage` y `Lineage Settings`.
+     "Lineage Cliente". Hoy el `.app` se llama `Lineage` (los ajustes son una ventana del juego).
    - **Versión mínima:** el `Info.plist` declara macOS 13.0, pero solo se probó en la versión actual.
    - **Actualizaciones:** no hay mecanismo; se baja la versión nueva.
 

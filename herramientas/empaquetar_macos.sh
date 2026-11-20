@@ -1,5 +1,5 @@
 #!/bin/bash
-# Arma Lineage.app y "Lineage Settings.app" (universales: arm64 y x86_64) y un .dmg con los dos.
+# Arma Lineage.app (universal: arm64 y x86_64) y un .dmg con él.
 # Uso: herramientas/empaquetar_macos.sh [VERSIÓN]   (por defecto, 0.0.0)
 # Deja todo en dist/. Lo usa .github/workflows/release.yml; también se puede correr a mano.
 #
@@ -7,7 +7,7 @@
 # - datos/ va en Contents/Resources: dentro de un .app, SDL_GetBasePath() devuelve esa carpeta.
 # - Firma ad hoc: sin una cuenta de Apple Developer, macOS avisa que no puede verificar al
 #   desarrollador (clic derecho > Abrir la primera vez). Firmar y notarizar queda pendiente.
-# - No incluye recursos del juego: el jugador elige su carpeta en Settings.
+# - No incluye recursos del juego: el jugador elige su carpeta al primer arranque (o en Ajustes).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${1:-0.0.0}"
@@ -15,7 +15,7 @@ BUILD=build/empaquetado
 DIST=dist
 
 cmake --preset release -B "$BUILD" -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
-cmake --build "$BUILD" --target lineage settings
+cmake --build "$BUILD" --target lineage
 python3 tools/generar_iconos.py --icns "$BUILD/iconos" >/dev/null
 
 rm -rf "$DIST"
@@ -51,7 +51,6 @@ PLIST
 }
 
 app "Lineage" lineage cl.lineage.cliente lineage
-app "Lineage Settings" settings cl.lineage.settings settings
 ln -s /Applications "$DIST/dmg/Applications"
 
 hdiutil create -volname "Lineage $VERSION" -srcfolder "$DIST/dmg" -ov -format UDZO "$DIST/Lineage-$VERSION-macos.dmg" >/dev/null

@@ -7,6 +7,7 @@
 X(UI_F2_ORIGINAL, "F2: interfaz original", "F2: original interface", "F2: interface original",
   "F2: Originaloberfläche", "F2 : interface d'origine")
 X(UI_VOLVER, "Volver", "Back", "Voltar", "Zurück", "Retour")
+X(UI_AJUSTES, "Ajustes", "Settings", "Ajustes", "Einstellungen", "Paramètres")
 
 // --- Login ---------------------------------------------------------------------------------
 X(LOGIN_SERVIDOR, "Servidor", "Server", "Servidor", "Server", "Serveur")
@@ -78,11 +79,9 @@ X(CLASE_CABALLERO_DRAGON, "Caballero dragón", "Dragon Knight", "Cavaleiro drag�
   "Chevalier dragon")
 X(CLASE_ILUSIONISTA, "Ilusionista", "Illusionist", "Ilusionista", "Illusionist", "Illusionniste")
 
-// --- Editor de ajustes (tools/settings.cpp) -------------------------------------------------
+// --- Ventana de ajustes (app/ajustes_ui.cpp) ------------------------------------------------
 X(AJ_TITULO, "AJUSTES DEL CLIENTE", "CLIENT SETTINGS", "AJUSTES DO CLIENTE", "CLIENT-EINSTELLUNGEN",
   "PARAMÈTRES DU CLIENT")
-X(AJ_TITULO_VENTANA, "Ajustes del cliente Lineage", "Lineage client settings", "Configurações do cliente Lineage",
-  "Lineage-Client-Einstellungen", "Paramètres du client Lineage")
 X(AJ_PESTANA_JUEGO, "Juego", "Game", "Jogo", "Spiel", "Jeu")
 X(AJ_PESTANA_INTERFAZ, "Interfaz", "Interface", "Interface", "Oberfläche", "Interface")
 X(AJ_PESTANA_AUDIO, "Audio", "Audio", "Áudio", "Audio", "Audio")
@@ -149,7 +148,8 @@ X(AJ_MS_MANTENER, "Mantener 1-0 para lanzar sobre uno mismo (ms)", "Hold 1-0 to 
 X(AJ_ERR_MS_MANTENER, "Mantener 1-0: entre 150 y 1000 ms", "Hold 1-0: between 150 and 1000 ms",
   "Manter 1-0: entre 150 e 1000 ms", "1-0 halten: zwischen 150 und 1000 ms", "Maintenir 1-0 : entre 150 et 1000 ms")
 X(AJ_FPS, "Mostrar FPS (Mayús+F3)", "Show FPS (Shift+F3)", "Mostrar FPS (Shift+F3)", "FPS anzeigen (Umschalt+F3)", "Afficher les FPS (Maj+F3)")
-X(AJ_PANTALLA_COMPLETA, "Pantalla completa (al abrir)", "Full screen (on start)", "Tela cheia (ao abrir)", "Vollbild (beim Start)", "Plein écran (au lancement)")
+X(AJ_PANTALLA_COMPLETA, "Pantalla completa (Alt+Enter)", "Full screen (Alt+Enter)", "Tela cheia (Alt+Enter)",
+  "Vollbild (Alt+Enter)", "Plein écran (Alt+Entrée)")
 X(AJ_UI_SIMPLE, "Interfaz simple (F2)", "Simple interface (F2)", "Interface simples (F2)",
   "Einfache Oberfläche (F2)", "Interface simple (F2)")
 X(AJ_OPACIDAD, "Opacidad de ventanas (0-255)", "Window opacity (0-255)", "Opacidade das janelas (0-255)",
@@ -230,9 +230,18 @@ X(AJ_VENTANAS_RESET, "Posiciones de ventanas restablecidas (al pulsar Guardar)",
   "Fensterpositionen zurückgesetzt (Speichern drücken)",
   "Positions des fenêtres réinitialisées (appuyez sur Enregistrer)")
 X(AJ_GUARDAR, "Guardar", "Save", "Salvar", "Speichern", "Enregistrer")
-X(AJ_GUARDADO, "Guardado. El juego lo usa al arrancar.", "Saved. The game uses it on startup.",
-  "Salvo. O jogo o usa ao iniciar.", "Gespeichert. Das Spiel verwendet es beim Start.",
-  "Enregistré. Le jeu l'utilise au démarrage.")
+X(AJ_GUARDADO, "Guardado y aplicado.", "Saved and applied.", "Salvo e aplicado.", "Gespeichert und übernommen.",
+  "Enregistré et appliqué.")
+X(AJ_GUARDADO_REINICIO, "Guardado. La carpeta del juego y la tabla de sprites se aplican al reiniciar el cliente.",
+  "Saved. The game folder and the sprite table apply when the client restarts.",
+  "Salvo. A pasta do jogo e a tabela de sprites se aplicam ao reiniciar o cliente.",
+  "Gespeichert. Spielordner und Sprite-Tabelle gelten nach dem Neustart des Clients.",
+  "Enregistré. Le dossier du jeu et la table des sprites s'appliquent au redémarrage du client.")
+X(AJ_TEXTO_HD, "Texto HD", "HD text", "Texto HD", "HD-Text", "Texte HD")
+X(AJ_GLOBOS, "Globos de diálogo con recuadro", "Framed speech balloons", "Balões de fala com moldura",
+  "Sprechblasen mit Rahmen", "Bulles de dialogue encadrées")
+X(AJ_LISTA_SPRITES, "Tabla de sprites (vacío: auto)", "Sprite table (empty: auto)", "Tab. de sprites (vazio: auto)",
+  "Sprite-Tabelle (leer: auto)", "Table sprites (vide : auto)")
 X(AJ_NO_ESCRIBE, "No se pudo escribir el archivo de ajustes.", "Could not write the settings file.",
   "Não foi possível gravar o arquivo de configurações.", "Die Einstellungen konnten nicht geschrieben werden.",
   "Impossible d'écrire le fichier de paramètres.")
@@ -240,4 +249,4 @@ X(AJ_REVERTIR, "Revertir", "Revert", "Reverter", "Zurücksetzen", "Annuler les m
 X(AJ_RELEIDO, "Se volvieron a leer los ajustes guardados.", "Saved settings were reloaded.",
   "As configurações salvas foram recarregadas.", "Die gespeicherten Einstellungen wurden neu geladen.",
   "Les paramètres enregistrés ont été relus.")
-X(AJ_SALIR, "Salir", "Quit", "Sair", "Beenden", "Quitter")
+X(AJ_CERRAR, "Cerrar", "Close", "Fechar", "Schließen", "Fermer")

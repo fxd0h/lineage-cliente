@@ -28,7 +28,7 @@ enum class Tx : u16 {
 
 // Texto en el idioma activo (UTF-8, válido hasta el próximo fijar_idioma).
 const char* tr(Tx clave);
-// Texto en un idioma concreto (para los tests y para el editor de ajustes).
+// Texto en un idioma concreto (para los tests).
 const char* tr_en(Tx clave, Idioma i);
 // Si el catálogo trae ese texto en ese idioma (tr_en vuelve al inglés cuando falta).
 bool hay_traduccion(Tx clave, Idioma i);

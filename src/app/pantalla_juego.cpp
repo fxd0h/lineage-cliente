@@ -1241,7 +1241,7 @@ void dibujar_ventanas(App& a) {
     EntradaFrame& e = a.entrada;
     const int mx = e.mx, my = e.my;
     const bool arrastre = a.arrastrando || a.arrastrando_hechizo || a.arrastrando_atajo >= 0 || a.ventana_arrastrada >= 0;
-    // Esc cierra todas las ventanas. NPC, Social y Opciones ya lo hacen al dibujarse; los diálogos, el
+    // Esc cierra todas las ventanas. NPC y Social ya lo hacen al dibujarse (los ajustes son modales: app.cpp); los diálogos, el
     // chat y un hechizo o mascota eligiendo objetivo se lo quedan antes. Con un pergamino esperando su
     // objetivo, Esc solo cancela eso (inventario_ui.cpp). Arrastrando algo no cierra: soltarlo lo
     // resuelve la ventana de donde salió. El intercambio tampoco: dejaría el trade abierto.
@@ -1256,7 +1256,6 @@ void dibujar_ventanas(App& a) {
         case IdVentana::INVENTARIO: if (a.ventana_inventario) dibujar_inventario(a); break;
         case IdVentana::HECHIZOS: if (a.ventana_hechizos) dibujar_hechizos(a); break;
         case IdVentana::NPC: dibujar_npc(a); break;
-        case IdVentana::OPCIONES: dibujar_opciones(a); break;
         case IdVentana::SALIDA: dibujar_salida(a); break;
         case IdVentana::SOCIAL: dibujar_social(a); break;
         case IdVentana::INTERCAMBIO: dibujar_intercambio(a); break;

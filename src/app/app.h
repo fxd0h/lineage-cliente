@@ -26,6 +26,8 @@
 
 namespace lin {
 
+struct EstadoAjustes;  // ajustes_ui.cpp
+
 enum class Pantalla { ELEGIR_CARPETA, LOGIN, PERSONAJES, CREAR, CARGANDO, JUEGO };
 
 struct PersonajeLista {
@@ -71,7 +73,7 @@ struct FilaTienda {
     std::string nombre;  // con "$N" sin resolver
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, OPCIONES, SALIDA, SOCIAL, INTERCAMBIO, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -179,9 +181,7 @@ struct Marcador {
 };
 // Barras de scroll de las ventanas que no tienen un struct propio (ver barra_scroll_ventana).
 struct ScrollVentanas {
-    ui::BarraScroll hechizos, inventario, tienda, opciones, forma;
-    u32 opciones_pos = 0;    // primera fila visible de Opciones
-    u32 opciones_filas = 0;  // filas de Opciones en el frame anterior: la barra va antes de las filas
+    ui::BarraScroll hechizos, inventario, tienda, forma;
     u32 forma_pos = 0;       // primera sugerencia visible de polymorph
     std::string forma_filtro;  // lo escrito la última vez: al cambiar, la lista va a los niveles más altos
 };
@@ -419,7 +419,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -446,7 +446,10 @@ struct App {
     std::string marca_texto;  // con chat_con_enter: la línea del chat está abierta (Enter la abrió)  // la que se está dibujando tapa a otra abierta (fondo opaco)
     int ventana_arrastrada = -1;
     int arrastre_dx = 0, arrastre_dy = 0;
-    bool ventana_opciones = false;
+    // Ajustes (ajustes_ui.cpp): ventana modal, también desde el login. El estado del formulario existe solo
+    // mientras está abierta.
+    bool ventana_ajustes = false;
+    std::shared_ptr<EstadoAjustes> ajustes;
     ScrollVentanas scroll;
     bool ventana_salida = false;  // Restart / Quit
     // Texto de combate flotante sobre el personaje (daño recibido / "Miss"), si cfg.texto_dano.
@@ -523,7 +526,9 @@ u8 opacidad_ventanas(const App& a);
 void dibujar_botones_panel(App& a, int x, int y);
 int dibujar_botones_texto(App& a, int x_der, int y_top);
 int ancho_botones_texto();  // ancho del bloque de botones de la UI simple (2 columnas)
-void dibujar_opciones(App& a);
+// Ajustes (ajustes_ui.cpp): con a.ventana_ajustes, la ventana modal encima de cualquier pantalla. app.cpp le
+// deja la entrada del frame y a la pantalla de atrás le pasa una vacía.
+void dibujar_ajustes(App& a);
 void dibujar_ayuda_teclas(App& a);  // F1
 // Clima (clima.cpp): lluvia o nieve sobre el mundo (hasta la fila `h`, donde empieza el panel).
 void dibujar_clima(App& a, int w, int h, u64 ahora);
