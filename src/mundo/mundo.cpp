@@ -109,6 +109,35 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
 }
 
+void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora) {
+    auto poner = [&](int ranura, i32 seg) { poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), seg, ahora); };
+    switch (subtipo) {
+    case 35:  // polymorph: slot 0x4b for the sprites 0x16dd-0x16e6, else 0x27; 0 removes every polymorph slot
+        for (int r : {0x27, 0x4b, 0x6d, 0x70, 0x73}) poner(r, 0);
+        if (segundos > 0) poner(gfx_propio >= 0x16dd && gfx_propio <= 0x16e6 ? 0x4b : 0x27, segundos);
+        break;
+    case 36: poner(0x29, segundos); break;  // chat ban
+    case 56:  // slot 0x5c when the second h is in 0xc20-0xc29, else 0x52; t <= 0 removes both
+        poner(0x52, 0);
+        poner(0x5c, 0);
+        if (segundos > 0) poner(extra[0] >= 0xc20 && extra[0] <= 0xc29 ? 0x5c : 0x52, segundos);
+        break;
+    case 59: poner(0x87, 0); break;
+    case 74: poner(0x4a, segundos); break;
+    case 75: poner(0x87, extra[0] > 0 ? 86400 : 0); break;  // until 59 or n = 0 (no duration in the packet)
+    case 21: {
+        // Four class icons, each lasting b*16-8 s: dark elf 0x1f 0x1d 0x1e 0x20, illusionist b3 -> 0x74, the rest 0xe 0x11 0xf 0x10.
+        static constexpr int OSCURO[4] = {0x1f, 0x1d, 0x1e, 0x20}, OTRAS[4] = {0xe, 0x11, 0xf, 0x10};
+        for (int i = 0; i < 4; ++i) {
+            const int r = clase == 4 ? OSCURO[i] : (clase == 6 && i == 3) ? 0x74 : OTRAS[i];
+            poner(r, extra[i] > 0 ? extra[i] * 16 - 8 : 0);
+        }
+        break;
+    }
+    default: break;
+    }
+}
+
 // Plays the level-up effect on the player when the reported level rose from `previo`.
 static void efecto_subida_nivel(Mundo& m, i32 previo, u64 ahora) {
     if (!subida_de_nivel(previo, m.jugador.nivel) || m.jugador.id == 0) return;
@@ -364,6 +393,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             break;
         }
         case Ev::ICONO_EFECTO: {
+            if (e.v[IE_CLASE] == IE_CONTEXTO) break;  // resolved by the app (needs the class): icono_de_caja
             static constexpr u8 CLASES[] = {EA_ESCUDO, EA_AURA, EA_ICONO, EA_FUERZA, EA_DESTREZA, EA_EVA};
             poner_efecto_activo(m.jugador, CLASES[e.v[IE_CLASE]], static_cast<u8>(e.v[IE_TIPO]), e.v[IE_SEG], ahora);
             break;

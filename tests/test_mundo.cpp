@@ -500,3 +500,39 @@ TEST_CASE("Zone type from the left-half cell attribute") {
     CHECK(std::string_view(rotulo_zona(TipoZona::COMBATE)) == "Combat zone");
     CHECK(std::string_view(rotulo_zona(TipoZona::NORMAL)) == "Normal zone");
 }
+
+TEST_CASE("icono_de_caja: S_PacketBox buff icons pick their slot from the sprite and the class") {
+    EstadoJugador j{};
+    const i32 nada[4] = {};
+    auto tiene = [&](int ranura) {
+        for (u32 i = 0; i < j.n_efectos; ++i)
+            if (j.efectos[i].clase == EA_ICONO && j.efectos[i].tipo == EFECTO_RANURA + ranura) return true;
+        return false;
+    };
+    icono_de_caja(j, 35, 600, nada, 0x16de, 0, 1000);  // polymorph into a sprite of the 0x16dd-0x16e6 range
+    CHECK(tiene(0x4b));
+    CHECK_FALSE(tiene(0x27));
+    icono_de_caja(j, 35, 600, nada, 0x100, 0, 1000);  // another sprite: the other slot replaces it
+    CHECK(tiene(0x27));
+    CHECK_FALSE(tiene(0x4b));
+    icono_de_caja(j, 35, 0, nada, 0x100, 0, 2000);  // t 0 removes
+    CHECK(j.n_efectos == 0);
+    icono_de_caja(j, 36, 60, nada, 0, 0, 1000);
+    CHECK(tiene(0x29));
+    icono_de_caja(j, 36, 0, nada, 0, 0, 1000);
+    CHECK(j.n_efectos == 0);
+    const i32 espejo[4] = {0, 0, 0, 3};  // class icons: b3 = 3 -> 40 s
+    icono_de_caja(j, 21, 0, espejo, 0, 6, 0);  // illusionist: b3 -> slot 0x74
+    REQUIRE(j.n_efectos == 1);
+    CHECK(tiene(0x74));
+    CHECK(j.efectos[0].fin == 40000);
+    icono_de_caja(j, 21, 0, nada, 0, 6, 0);
+    CHECK(j.n_efectos == 0);
+    icono_de_caja(j, 21, 0, espejo, 0, 4, 0);  // dark elf: b3 -> slot 0x20
+    CHECK(tiene(0x20));
+    const i32 n3[4] = {3, 0, 0, 0};
+    icono_de_caja(j, 75, 0, n3, 0, 0, 0);  // n = 3 > 0: slot 0x87 until 59 removes it
+    CHECK(tiene(0x87));
+    icono_de_caja(j, 59, 0, nada, 0, 0, 0);
+    CHECK_FALSE(tiene(0x87));
+}

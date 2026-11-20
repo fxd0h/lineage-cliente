@@ -243,6 +243,7 @@ bool atributos(Lector& l, Evento& e) {
 //  - asedio (0–4): ver abajo.
 constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
+constexpr int CAJA_CLASES = 21, CAJA_POLIMORFO = 35, CAJA_SIN_CHAT = 36, CAJA_56 = 56, CAJA_QUITA_87 = 59, CAJA_74 = 74, CAJA_75 = 75;
 constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
               CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49;
 // S_PacketBox subtypes that are just a string-e.tbl message, turned into a MENSAJE_SERVIDOR (ids checked
@@ -324,6 +325,22 @@ bool caja(Lector& l, Evento& e) {
         e.id = id;
     } else if (sub == CAJA_NIVEL || sub == CAJA_ELFO || sub == CAJA_ALCALDE || sub == CAJA_SIN_REINICIO || sub == CAJA_COLISEO) {
         caja_mensaje(l, e, sub);
+    } else if (sub == CAJA_CLASES || sub == CAJA_POLIMORFO || sub == CAJA_SIN_CHAT || sub == CAJA_56 || sub == CAJA_QUITA_87 ||
+               sub == CAJA_74 || sub == CAJA_75) {
+        // Buff icons whose slot depends on the own sprite or class: resolved in icono_de_caja (mundo.cpp).
+        //  - 21: c b0..b3 (duration b*16-8 s each); 35 polymorph, 36 chat ban, 74: h seconds;
+        //  - 56: h seconds, [h]; 59: h 0 (removes); 75: c n (0 removes).
+        e.tipo = Ev::ICONO_EFECTO;
+        e.v[IE_CLASE] = IE_CONTEXTO;
+        e.v[IE_TIPO] = sub;
+        if (sub == CAJA_CLASES) {
+            for (int i = 0; i < 4; ++i) e.v[IE_EXTRA + i] = l.c();
+        } else if (sub == CAJA_75) {
+            e.v[IE_EXTRA] = l.c();
+        } else {
+            e.v[IE_SEG] = static_cast<i16>(l.h());
+            if (sub == CAJA_56 && l.quedan(2)) e.v[IE_EXTRA] = l.h();
+        }
     } else if (sub == CAJA_LOGOUT) {
         e.tipo = Ev::VOLVER_PERSONAJES;  // back to character select with the cached list
     } else if (sub <= 4) {

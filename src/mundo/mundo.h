@@ -212,6 +212,13 @@ static_assert(nivel_relativo(5, 30) == NivelRelativo::FACIL && nivel_relativo(28
 
 // Pone (o quita, con 0 segundos) un efecto activo del propio personaje.
 void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 ahora);
+
+// S_PacketBox buff icons (subtypes 21, 35, 36, 56, 59, 74, 75) recovered from S3EP1U.bin: each is an EA_ICONO
+// effect of type EFECTO_RANURA + slot, slot = row of the original's buff table at 0x6e1020 (field 0 = classic icon).
+// `extra` = the subtype's extra bytes (see IE_CONTEXTO in eventos.h), `gfx_propio` = the own sprite (polymorph
+// icon), `clase` = the class byte of the character (0 prince .. 6 illusionist).
+constexpr u8 EFECTO_RANURA = 100;
+void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora);
 // Quita los efectos activos que ya terminaron.
 void vencer_efectos(EstadoJugador& j, u64 ahora);
 // Al pedir el reinicio (C_Restart) el servidor reubica al personaje y vuelve a mandar lo que ve:

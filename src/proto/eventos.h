@@ -80,7 +80,10 @@ enum : int { VE_CLASE, VE_TIPO, VE_SEG };
 enum : int { VE_HASTE, VE_BRAVE };
 // ICONO_EFECTO (S_SkillIconShield, S_SkillIconAura, S_SkillIconGFX): clase, tipo y segundos
 // (0 = se terminó).
-enum : int { IE_CLASE, IE_TIPO, IE_SEG };
+// IE_CONTEXTO (S_PacketBox icon subtypes that need the own sprite or class to pick the slot, see
+// icono_de_caja in mundo.h): IE_TIPO = the subtype (21, 35, 36, 56, 59, 74, 75), IE_SEG = seconds,
+// IE_EXTRA... = the extra bytes (21: b0..b3; 56: the second h; 75: n).
+enum : int { IE_CLASE, IE_TIPO, IE_SEG, IE_EXTRA };
 // GRUPO (S_PacketBox 104–110): GR_TIPO GR_VACIAR (llega la lista entera), GR_MIEMBRO (e.id, s[0]
 // nombre, GR_HP en % o 0xFF, GR_LIDER), GR_LIDER_NUEVO (e.id). BLOQUEADO (S_PacketBox 17–19): s[0]
 // el nombre, v[0] 1 agregado / 0 quitado. SONIDO (S_Sound): v[0] el sonido.
@@ -119,7 +122,7 @@ enum : int { GR_VACIAR, GR_MIEMBRO, GR_LIDER_NUEVO };
 // (RE_HP, RE_MP, RE_AC, RE_MAX), 2 estado tras cada paso (RE_NIVEL, RE_MAX, RE_HP, RE_MP, RE_AC y los
 // 6 atributos desde RE_FUE: fue, int, sab, des, con, car), 3 faltan puntos de elixir (RE_PUNTOS).
 enum : int { RE_TIPO, RE_NIVEL, RE_MAX, RE_HP, RE_MP, RE_AC, RE_FUE, RE_PUNTOS = RE_FUE + 6 };
-enum : int { IE_ESCUDO, IE_AURA, IE_ICONO, IE_FUERZA, IE_DESTREZA, IE_EVA };
+enum : int { IE_ESCUDO, IE_AURA, IE_ICONO, IE_FUERZA, IE_DESTREZA, IE_EVA, IE_CONTEXTO };
 // CAMBIO_FORMA (S_ChangeShape; id = objeto): gfx nuevo y si conserva el arma (0 = se la sacó).
 enum : int { CF_GFX, CF_ARMA };
 // HTML (S_NPCTalkReturn / S_ShowHTML; id = objeto que la muestra): s[0] = id de la página

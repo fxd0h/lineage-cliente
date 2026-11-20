@@ -829,6 +829,19 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         CHECK(ev.empty());
         caja_us({62, 42});
         CHECK(ev[0].tipo == Ev::VOLVER_PERSONAJES);
+        caja_us({62, 35, 0x58, 0x02});  // polymorph icon, 600 s
+        CHECK(ev[0].tipo == Ev::ICONO_EFECTO);
+        CHECK(ev[0].v[IE_CLASE] == IE_CONTEXTO);
+        CHECK(ev[0].v[IE_TIPO] == 35);
+        CHECK(ev[0].v[IE_SEG] == 600);
+        caja_us({62, 21, 0, 0, 0, 2});  // class icons: b3 = 2
+        CHECK(ev[0].v[IE_TIPO] == 21);
+        CHECK(ev[0].v[IE_EXTRA + 3] == 2);
+        caja_us({62, 56, 5, 0, 0x21, 0x0c});  // t = 5 with the second h 0xc21
+        CHECK(ev[0].v[IE_SEG] == 5);
+        CHECK(ev[0].v[IE_EXTRA] == 0xc21);
+        caja_us({62, 75, 4});
+        CHECK(ev[0].v[IE_EXTRA] == 4);
         igual_us(cmd::rango_clan(us, 3, "Ana"), {78, 1, 3, 'A', 'n', 'a', 0});
         igual_us(cmd::proponer(us, false), {22, 0});
         igual_us(cmd::proponer(us, true), {22, 1});

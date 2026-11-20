@@ -224,6 +224,14 @@ static void dibujar_area(App& a, const Evento& e) {
 }
 
 void eventos_hechizos(App& a, const Evento& e) {
+    if (e.tipo == Ev::ICONO_EFECTO && e.v[IE_CLASE] == IE_CONTEXTO) {  // S_PacketBox buff icons (see icono_de_caja)
+        const TablaObjetos& o = a.mundo.objetos;
+        const Slot s = o.buscar(a.mundo.jugador.id);
+        const i32 extra[4] = {e.v[IE_EXTRA], e.v[IE_EXTRA + 1], e.v[IE_EXTRA + 2], e.v[IE_EXTRA + 3]};
+        icono_de_caja(a.mundo.jugador, e.v[IE_TIPO], e.v[IE_SEG], extra, s != SIN_SLOT ? o.col<O_GFX>()[s] : 0, clase_personaje(a),
+                      a.entrada.ahora_ms);
+        return;
+    }
     // Pociones de FUE/DES (Flora...): S_Strup/S_Dexup con el aumento en el lugar del tipo; el
     // ícono es el de la poción recién usada.
     if (e.tipo == Ev::ICONO_EFECTO && (e.v[IE_CLASE] == IE_FUERZA || e.v[IE_CLASE] == IE_DESTREZA) && e.v[IE_SEG] > 0 &&
@@ -673,7 +681,30 @@ struct EfectoDeItem {
     u16 icono;
     std::string_view nombre;
 };
+// Slots of the original's buff table (0x6e1020) used by the S_PacketBox icons: classic icon id (field 0), the
+// thin-frame N.tbt twin when known (0 = none) and a name for the tooltip.
+struct RanuraBuff {
+    u8 ranura;
+    u16 clasico, gemelo;
+    std::string_view nombre;
+};
+static constexpr RanuraBuff RANURAS[] = {
+    {0x27, 1477, 0, "Polymorph"},       {0x4b, 2430, 0, "Polymorph"},    {0x29, 1562, 5286, "Chat ban"},
+    {0x4a, 2382, 0, "Effect"},          {0x52, 2588, 0, "Effect"},       {0x5c, 2708, 0, "Effect"},
+    {0x87, 3080, 0, "Effect"},          {0x0e, 813, 0, "Class skill"},   {0x11, 745, 0, "Class skill"},
+    {0x0f, 804, 0, "Class skill"},      {0x10, 807, 0, "Class skill"},   {0x1f, 1122, 0, "Class skill"},
+    {0x1d, 1101, 0, "Class skill"},     {0x1e, 1113, 0, "Class skill"},  {0x20, 1125, 0, "Class skill"},
+    {0x74, 3123, 0, "Class skill"},
+};
+static const RanuraBuff* ranura_de_efecto(const EfectoActivo& ef) {
+    if (ef.clase != EA_ICONO || ef.tipo < EFECTO_RANURA) return nullptr;
+    for (const RanuraBuff& r : RANURAS)
+        if (r.ranura == ef.tipo - EFECTO_RANURA) return &r;
+    return nullptr;
+}
+
 static EfectoDeItem item_de_efecto(const App& a, const EfectoActivo& ef) {
+    if (const RanuraBuff* r = ranura_de_efecto(ef)) return {r->clasico, r->nombre};
     if (ef.clase == EA_BRAVE && ef.tipo == 1) return {79, "Brave Potion"};
     if (ef.clase == EA_BRAVE && ef.tipo == 3) return {130, "Elven Waffle"};
     if (ef.clase == EA_ICONO && ef.tipo == ICONO_POCION_AZUL) return {75, "Blue Potion"};
@@ -741,6 +772,7 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
     case EA_FUERZA: return ef.tipo == 2 ? 5258 : 5246;                  // Dress Mighty: slot 34 (1558); else slot 9 (482), also potions
     case EA_DESTREZA: return ef.tipo == 2 ? 5259 : 5247;                // Dress Dexterity: slot 35 (1559); else slot 10 (483), also potions
     case EA_ICONO:
+        if (const RanuraBuff* r = ranura_de_efecto(ef)) return r->gemelo;  // S_PacketBox icons: classic icon when no twin
         if (ef.tipo == 34) return 5400;                                 // blue potion: slot 38 (1478)
         if (ef.tipo == 40) return 5286;                                 // Immune to Harm: slot 41 (1562)
         return 0;
