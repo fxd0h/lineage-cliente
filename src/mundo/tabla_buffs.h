@@ -1,4 +1,5 @@
-// Numeric columns of the original client's buff table (exe 0x6e1020, 154 rows of 20 bytes): tooltip and end-of-effect
+// Numeric columns of the original client's buff table (exe 0x6e1020, 154 rows of 20 bytes): classic icon id, duration
+// in seconds (0 none, -1 until cleared), tooltip and end-of-effect
 // message indices into string-e.tbl (read at runtime, `TablaTexto::linea(idx)`) and the exclusion group. Only numbers
 // are embedded; no game text.
 #pragma once
@@ -34,6 +35,57 @@ inline constexpr u8 BUFF_GRUPO[154] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
+inline constexpr u16 BUFF_ICONO[154] = {
+    481, 480, 486, 484, 485, 485, 763, 725, 783, 482, 483, 552, 777, 777, 813, 804, 807, 745, 774, 735, 738, 855, 771,
+    827, 1110, 880, 1567, 1557, 890, 1101, 1113, 1122, 1125, 1119, 1558, 1559, 1608, 1110, 1478, 1477, 1556, 1562,
+    1561, 1554, 1607, 795, 1609, 757, 754, 824, 760, 852, 1623, 1740, 852, 1834, 2339, 2706, 1736, 1563, 1612, 1620,
+    1626, 1476, 1889, 1883, 2339, 2357, 2342, 2348, 2351, 2345, 2354, 486, 2382, 2430, 1609, 2433, 2432, 2566, 2563,
+    2563, 2588, 2564, 2564, 2564, 2564, 2564, 2564, 2564, 2565, 1478, 2708, 2564, 2564, 2564, 2564, 2564, 2564, 2564,
+    2565, 2565, 1612, 3069, 2430, 2430, 2430, 3080, 3187, 3078, 3075, 3190, 3078, 3089, 3188, 3078, 3123, 3211, 3117,
+    3104, 3097, 3115, 3106, 3127, 3129, 3254, 3113, 3109, 3119, 3125, 3111, 3201, 2566, 1612, 1612, 3080, 2564, 2564,
+    2564, 2564, 2564, 2564, 2564, 2565, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 486,
+};
+inline constexpr i16 BUFF_SEG[154] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 600, 1800, 3600, 1200, 64, 1200, 600, 600, 600, 0, 0, 0, 0, 0, 0, 0, 60, 180,
+    300, 300, 600, 600, 900, 900, 32, 0, 600, 0, 300, 60, 0, 10, 1800, 600, 320, 1800, 12, 12, 12, 31, 16, 30, 30, 30,
+    960, 64, 192, -1, -1, -1, -1, 120, 32, 64, 100, 3000, 100, 1000, 3000, 3000, 5000, 600, 600, 0, 900, 900, 900,
+    900, 900, 900, 3600, 900, 900, 900, 900, 900, 900, 900, 900, 600, 3600, 900, 900, 900, 900, 900, 900, 900, 900,
+    900, -1, 3600, 3600, 3600, 3600, 1200, 60, -1, 60, 60, -1, 300, 60, -1, 1200, 8, 32, 8, 300, 32, 8, 600, 5, 12,
+    32, 8, 300, 64, 32, 8, 600, -1, -1, 16, 900, 900, 900, 900, 900, 900, 900, 900, 3600, 3600, 3600, 3600, 3600,
+    3600, 3600, 3600, 3600, 480,
+};
+
+// Duration of a slot in seconds: its table value; -1 (until cleared by the server) lasts a day; 0 means no timer.
+inline i32 segundos_de_ranura(int ranura) {
+    if (ranura < 0 || ranura >= RANURAS_BUFF) return 0;
+    return BUFF_SEG[ranura] < 0 ? 86400 : BUFF_SEG[ranura];
+}
+
+// S_SkillSound on the own character -> buff slot (exe FUN_0048a5c0), -1 when the graphic has none.
+inline int ranura_de_skillsound(u32 gfx) {
+    struct F { u16 gfx, ranura; };
+    static constexpr F TABLA[] = {
+        {0xe4, 0x29}, {0xc1, 0xd}, {0x880, 0xd}, {0x875, 0xc}, {0x87a, 0x2f}, {0x87d, 0x2d}, {0x881, 0x31}, {0x885, 0x37},
+        {0x888, 0xf}, {0x88a, 0xe}, {0x8b4, 0x33}, {0x8b6, 0x32}, {0x8b8, 0x30}, {0x8ba, 0x2b}, {0x80b, 0x2e}, {0x8c3, 0x2e},
+        {0x8e8, 0x1c}, {0x8ed, 0x10}, {0xb7e, 0x1d}, {0xb82, 0x1e}, {0xb85, 0x1f}, {0xb86, 0x20}, {0xb84, 0x21},
+        {0xf47, 0x24}, {0xf5f, 0x2c}, {0xf67, 0x28}, {0x112c, 0x35}, {0x1130, 0x38}, {0x16c1, 0x38}, {0x1131, 0x39},
+        {0x1132, 0x3a}, {0x1228, 0x41}, {0x12d8, 0x40}, {0x16c2, 0x43}, {0x16c5, 0x44}, {0x16c6, 0x45}, {0x16c7, 0x46},
+        {0x16c8, 0x47}, {0x16c9, 0x48}, {0x1969, 0x80}, {0x196a, 0x81}, {0x196b, 0x7b}, {0x196c, 0x6c}, {0x1977, 0x71},
+        {0x197f, 0x78}, {0x1982, 0x7c}, {0x1983, 0x6b}, {0x19ba, 0x6f}, {0x19bc, 0x72}, {0x19af, 0x82}, {0x19b0, 0x7e},
+        {0x19b1, 0x79}, {0x19b2, 0x76}, {0x1a34, 0x77}, {0x1a3a, 0x7a}, {0x1a40, 0x7f}, {0x1a41, 0x83}, {0x1a9d, 0x74},
+        {0x1b0a, 0x73}, {0x1b3f, 0x6d}, {0x1b40, 0x70}, {0x1b51, 0x68}, {0x1b52, 0x69}, {0x1b53, 0x6a}, {0x1b65, 0x67},
+        {0x1bc6, 0x99}, {0x1bd0, 0x80}, {0x1bd1, 0x7b}, {0x1bd2, 0x71}, {0x1bd3, 0x78}, {0x1bd4, 0x6b}, {0x1bd5, 0x74},
+    };
+    if (gfx >= 0x1bbd && gfx <= 0x1bc5) return 0x90 + static_cast<int>(gfx - 0x1bbd);
+    for (const F& f : TABLA)
+        if (f.gfx == gfx) return f.ranura;
+    return -1;
+}
+
+// Effect type of a S_SkillBrave packet: type 4 (Holy Walk) gets the class variant in the high nibble
+// (class byte 2 elf -> 0, 3 wizard -> 1, others -> 2).
+inline u8 tipo_brave(u8 tipo, int clase) { return tipo == 4 ? static_cast<u8>(4 | ((clase == 2 ? 0 : clase == 3 ? 1 : 2) << 4)) : tipo; }
+
 // Buff-table slot of an active effect, -1 when unknown. Derived from the packet handlers of the original client
 // (each calls sub_4647a0(duration, slot)); the Shield / Shadow Armor pair (slots 4 / 5) is inferred.
 inline int ranura_de_efecto_activo(u8 clase, u8 tipo) {
@@ -42,9 +94,11 @@ inline int ranura_de_efecto_activo(u8 clase, u8 tipo) {
     case EA_BRAVE:
         switch (tipo) {
         case 1: case 3: case 5: return 2;
-        case 4: return 24;
         case 6: return 110;
-        default: return -1;
+        default:
+            // Type 4 carries the class variant in the high nibble (see tipo_brave): elf 0x18, wizard 0x2a, others 0x25.
+            if ((tipo & 15) != 4) return -1;
+            return (tipo >> 4) == 0 ? 0x18 : (tipo >> 4) == 1 ? 0x2a : 0x25;
         }
     case EA_TERCERA: return 73;
     case EA_ESCUDO:

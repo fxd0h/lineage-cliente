@@ -750,6 +750,8 @@ static const RanuraBuff* ranura_de_efecto(const EfectoActivo& ef) {
 
 static EfectoDeItem item_de_efecto(const App& a, const EfectoActivo& ef) {
     if (const RanuraBuff* r = ranura_de_efecto(ef)) return {r->clasico, r->nombre};
+    if (ef.clase == EA_ICONO && ef.tipo >= EFECTO_RANURA && ef.tipo - EFECTO_RANURA < RANURAS_BUFF)
+        return {BUFF_ICONO[ef.tipo - EFECTO_RANURA], "Effect"};
     if (ef.clase == EA_BRAVE && ef.tipo == 1) return {79, "Brave Potion"};
     if (ef.clase == EA_BRAVE && ef.tipo == 3) return {130, "Elven Waffle"};
     if (ef.clase == EA_ICONO && ef.tipo == ICONO_POCION_AZUL) return {75, "Blue Potion"};
@@ -799,9 +801,9 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
     switch (ef.clase) {
     case EA_HASTE: return ef.tipo == 1 ? 5240 : 0;                      // slot 0 (481); type 2 slow = slot 1 (480): no twin
     case EA_BRAVE:
-        switch (ef.tipo) {
+        switch (ef.tipo & 15) {
         case 1: case 3: case 5: return 5396;                            // slot 2 (486): brave potion, elven wafer
-        case 4: return 5243;                                            // Holy Walk: slot 24/37 (1110)
+        case 4: return (ef.tipo >> 4) == 1 ? 1561 : 5243;               // Holy Walk: slot 24/37 (1110), wizard slot 42 (1561)
         case 6: return 5245;                                            // Bloodlust: slot 110 (3075)
         default: return 0;
         }
@@ -818,6 +820,7 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
     case EA_DESTREZA: return ef.tipo == 2 ? 5259 : 5247;                // Dress Dexterity: slot 35 (1559); else slot 10 (483), also potions
     case EA_ICONO:
         if (const RanuraBuff* r = ranura_de_efecto(ef)) return r->gemelo;  // S_PacketBox icons: classic icon when no twin
+        if (ef.tipo >= EFECTO_RANURA && ef.tipo - EFECTO_RANURA < RANURAS_BUFF) return BUFF_ICONO[ef.tipo - EFECTO_RANURA];
         if (ef.tipo == 34) return 5400;                                 // blue potion: slot 38 (1478)
         if (ef.tipo == 40) return 5286;                                 // Immune to Harm: slot 41 (1562)
         return 0;

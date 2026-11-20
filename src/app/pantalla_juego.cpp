@@ -450,8 +450,9 @@ void dibujar_emblema(App& a, u32 clan, float x, float y) {
 }
 
 // True when the inventory holds "Ring of Sayha" ($431): the exe lets its wearer see other players' invisible bodies
-// at 50% (0x40 flag, FUN_004cc980; it also needs ability slot 1..3 and no pending teleport, not tracked here).
-// l1j-en GMs may see invisibles by other means: this follows the exe only.
+// at 50% (0x40 flag, FUN_004cc980). The exe's gate: S_Ability index 3 in 1..3, no pending teleport (the chosen
+// destination was sent and the teleport has not happened yet) and the ring in the inventory. l1j-en never sends
+// ability index 3, so there it stays off, as in the exe.
 bool tiene_anillo_sayha(const Inventario& inv) {
     for (Slot s = 0; s < inv.items.tamano(); ++s) {
         const std::string_view n = nombre_item(inv, s);
@@ -474,7 +475,8 @@ u32 pulso_veneno(u64 ahora) {
 void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
     Graficos& g = *a.g;
     TablaObjetos& o = a.mundo.objetos;
-    const bool ve_invisibles = tiene_anillo_sayha(a.mundo.inventario);
+    const u8 habilidad3 = a.mundo.jugador.habilidad[3];
+    const bool ve_invisibles = habilidad3 >= 1 && habilidad3 <= 3 && !a.destino.enviado && tiene_anillo_sayha(a.mundo.inventario);
     i32 yo_x = 0, yo_y = 0;
     {
         const Slot sy_ = o.buscar(a.mundo.jugador.id);

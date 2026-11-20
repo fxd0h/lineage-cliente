@@ -79,6 +79,8 @@ struct EstadoJugador {
     bool tercera = false;  // tercer acelerador (S_Liquor 8): todo × 0,87, como la waffle
     bool borracho = false; // S_Liquor 1: la pantalla se mece
     bool luz_hechizo = false;  // S_Light 20 propio (hechizo LIGHT): radio 14 y 5 niveles más de luz ambiente
+    u8 habilidad[6] = {};  // S_Ability values by index (3 = see-invisible gate, 1..3)
+    int clase = -1;        // class byte of the character (0 prince .. 6 illusionist), -1 unknown; set by the app
     u8 anillos = 0;        // S_Ability: bit 1 control de teletransporte, bit 5 control de invocación
     u8 inmovil = 0;   // S_Paralysis: el que empezó (PARALISIS_*), 0 = puede moverse y actuar
     u8 ceguera = 0;   // S_CurseBlind: 0 ve, 1 ciego, 2 ciego con Floating Eye
@@ -236,6 +238,8 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
 // `extra` = the subtype's extra bytes (see IE_CONTEXTO in eventos.h), `gfx_propio` = the own sprite (polymorph
 // icon), `clase` = the class byte of the character (0 prince .. 6 illusionist).
 constexpr u8 EFECTO_RANURA = 100;
+// Starts (seconds > 0) or clears (<= 0) a buff slot of the original's table as an EA_ICONO effect.
+void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora);
 void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora);
 // Quita los efectos activos que ya terminaron.
 void vencer_efectos(EstadoJugador& j, u64 ahora);

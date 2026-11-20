@@ -3,6 +3,7 @@
 #include <doctest/doctest.h>
 #include "comun.h"
 #include "mundo/mundo.h"
+#include "mundo/tabla_buffs.h"
 #include "proto/comandos.h"
 #include "proto/decodificar.h"
 #include "plataforma/rutas.h"
@@ -370,4 +371,50 @@ TEST_CASE("Hechizos: buff exclusion groups and end messages") {
     poner_efecto_activo(j, EA_AURA, 147, 0, 1000);  // removal queues its end message (slot 18 -> idx 723)
     CHECK(j.n_fin_pendientes == 1);
     CHECK(j.fin_pendientes[0].msg == 723);
+}
+
+TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage") {
+    Mundo m;
+    m.jugador.id = 7;
+    m.jugador.clase = 3;  // wizard
+    Evento brave{};
+    brave.tipo = Ev::VELOCIDAD;
+    brave.id = 7;
+    brave.v[VE_CLASE] = VE_BRAVE;
+    brave.v[VE_TIPO] = 4;
+    brave.v[VE_SEG] = 60;
+    aplicar_eventos(m, std::span<const Evento>(&brave, 1), 0);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x2a);
+    brave.v[VE_TIPO] = 0;
+    aplicar_eventos(m, std::span<const Evento>(&brave, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento par{};
+    par.tipo = Ev::PARALISIS;
+    par.v[0] = 24;  // bind
+    aplicar_eventos(m, std::span<const Evento>(&par, 1), 0);
+    CHECK(m.jugador.n_efectos == 1);
+    par.v[0] = 25;
+    aplicar_eventos(m, std::span<const Evento>(&par, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento msg{};
+    msg.tipo = Ev::MENSAJE_SERVIDOR;
+    msg.v[MS_ID] = 0x11e;
+    msg.s[0] = "3";
+    aplicar_eventos(m, std::span<const Evento>(&msg, 1), 1000);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(m.jugador.efectos[0].fin == 1000 + 60000);
+    msg.v[MS_ID] = 0x120;
+    aplicar_eventos(m, std::span<const Evento>(&msg, 1), 1000);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento snd{};
+    snd.tipo = Ev::EFECTO;
+    snd.id = 7;
+    snd.v[EF_GFX] = 0x8ed;  // slot 0x10
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x10);
 }

@@ -112,6 +112,11 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     if (segundos > 0) {
         // Exclusion groups of the buff table (+8): the new effect removes the other active slots of its non-zero group.
         const int nueva = ranura_de_efecto_activo(clase, tipo);
+        // The slot set of the original is idempotent per slot: a second packet for the same slot replaces the first.
+        for (u32 k = 0; k < j.n_efectos && nueva >= 0;) {
+            if (!es_este(j.efectos[k]) && ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == nueva) j.efectos[k] = j.efectos[--j.n_efectos];
+            else ++k;
+        }
         if (nueva >= 0 && BUFF_GRUPO[nueva]) {
             for (u32 k = 0; k < j.n_efectos;) {
                 const int r = ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo);
@@ -134,6 +139,10 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
         ++j.n_efectos;
     }
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
+}
+
+void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora) {
+    poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), segundos, ahora);
 }
 
 void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora) {
@@ -273,6 +282,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         case Ev::ANILLO: {
             const u8 bit = static_cast<u8>(1u << (e.v[0] & 7));
             m.jugador.anillos = static_cast<u8>(e.v[1] ? m.jugador.anillos | bit : m.jugador.anillos & ~bit);
+            if (e.v[0] >= 0 && e.v[0] < 6) m.jugador.habilidad[e.v[0]] = static_cast<u8>(e.v[1]);
             break;
         }
         case Ev::NOMBRE_ROSA: {
@@ -415,6 +425,11 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             ef.y0 = ef.y1 = e.v[EF_Y];
             ef.inicio = ahora;
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
+            if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
+                // Own S_SkillSound: some graphics start a buff slot lasting the slot's table time (exe 0x48a5c0).
+                const int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
+                if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
+            }
             break;
         }
         case Ev::VELOCIDAD: {
@@ -422,7 +437,12 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (e.id == m.jugador.id) {
                 EstadoJugador& j = m.jugador;
                 (e.v[VE_CLASE] == VE_HASTE ? j.haste : j.brave) = tipo;
-                poner_efecto_activo(j, e.v[VE_CLASE] == VE_HASTE ? EA_HASTE : EA_BRAVE, tipo, tipo ? e.v[VE_SEG] : 0, ahora);
+                if (e.v[VE_CLASE] == VE_HASTE) poner_efecto_activo(j, EA_HASTE, tipo, tipo ? e.v[VE_SEG] : 0, ahora);
+                else if (tipo == 0) {  // type 0 clears the brave slots 2, 0x25 and 0x6e
+                    poner_efecto_activo(j, EA_BRAVE, 0, 0, ahora);
+                } else {
+                    poner_efecto_activo(j, EA_BRAVE, tipo_brave(tipo, j.clase), e.v[VE_SEG], ahora);
+                }
             }
             // Los pasos de los demás: rápido o lento (los de brave llegan antes y se encadenan solos).
             Slot s = o.buscar(e.id);
@@ -553,10 +573,30 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         }
         case Ev::PARALISIS: {
             const u8 t = static_cast<u8>(e.v[0]);
+            // Stun (22 / 23) and bind (24 / 25) also show their buff slots (0x3e, 0x3d).
+            if (t == ATURDIDO || t == ATADO) poner_ranura(m.jugador, t == ATURDIDO ? 0x3e : 0x3d, segundos_de_ranura(t == ATURDIDO ? 0x3e : 0x3d), ahora);
+            if (t == ATURDIDO + 1 || t == ATADO + 1) poner_ranura(m.jugador, t == ATURDIDO + 1 ? 0x3e : 0x3d, 0, ahora);
             if (t == PARALISIS || t == PARALISIS_2 || t == SUENO || t == CONGELADO || t == ATURDIDO || t == ATADO)
                 m.jugador.inmovil = t;
             else if (t != 7 && t == m.jugador.inmovil + 1)
                 m.jugador.inmovil = 0;
+            break;
+        }
+        case Ev::MENSAJE_SERVIDOR: {
+            // Messages that drive slot 0x3f: 0x11e sets it for atoi(arg) * 20 s, 0x120 clears it, 0x99 sets the table default.
+            const int id = e.v[MS_ID];
+            if (id == 0x11e) {
+                i32 n = 0;
+                for (char ch : e.s[0]) {
+                    if (ch < '0' || ch > '9') break;
+                    n = std::min(n * 10 + (ch - '0'), 100000);
+                }
+                poner_ranura(m.jugador, 0x3f, n * 20, ahora);
+            } else if (id == 0x120) {
+                poner_ranura(m.jugador, 0x3f, 0, ahora);
+            } else if (id == 0x99) {
+                poner_ranura(m.jugador, 0x3f, segundos_de_ranura(0x3f), ahora);
+            }
             break;
         }
         case Ev::CEGUERA: m.jugador.ceguera = static_cast<u8>(e.v[0]); break;
