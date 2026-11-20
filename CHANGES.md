@@ -7,6 +7,27 @@ con su verificación y lo pendiente, está en [ENTREGABLES.md](ENTREGABLES.md).
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
+## v0.1.5 (2026-11-20)
+
+### Agregado
+- **Tabla real de sprites del cliente:** se lee `TW13032701.txt` (o un `list.spz` descifrado) de la carpeta del
+  juego, o la que indique `lista_sprites=`, y agrega los gfx que `sprite_table.txt` no tiene (llega al 8682),
+  validados contra los `.pak`. Con la del cliente de Reborn: 2156 gfx con animaciones y 1384 con atributos.
+  Antes se veían quietos o como un bloque magenta (#47).
+- **Ventana de ajustes en el juego:** el formulario de configuración (Juego, Interfaz, Audio, Servidores,
+  Personajes) se abre desde el login (Ajustes, u Options en la interfaz original) y en el juego (Options).
+  Guardar aplica los cambios en el momento; la carpeta del juego y la tabla de sprites avisan que valen al
+  reiniciar el cliente. Suma Texto HD, globos con recuadro, tabla de sprites y quitar el orden del
+  inventario de un personaje (#48).
+
+### Cambiado
+- **Opciones y "Lineage Settings":** la ventana Options y el programa aparte de ajustes se reemplazan por la
+  ventana de ajustes; el `.dmg` y el `.zip` de Windows traen solo el juego (#48).
+- **CI:** no compila cuando un cambio es solo de documentación (Markdown, `docs/`, `LICENSE`) (#48).
+
+### Corregido
+- **Muertes:** el cuerpo ya no se levanta y vuelve a caer al morir; la caída termina en el cadáver (#47).
+
 ## v0.1.4 (2026-11-19)
 
 ### Agregado
