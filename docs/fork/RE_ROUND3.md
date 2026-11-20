@@ -60,7 +60,7 @@ Other sprites: nothing. [C]
 ## Implementation notes (fork)
 - Overlays: 2700 opaque below the marker and icon (`inventario_ui.cpp`). Buff slots: `mundo/tabla_buffs.h` (`ranura_de_skillsound`, `BUFF_SEG`, `BUFF_ICONO`, `tipo_brave`), applied in `mundo.cpp` (`poner_ranura`).
 - PacketBox 20 (ICONS1): l1j-en defines the constant but never sends it (no use in `servidor_classic/l1jen/src`), so it is not implemented; the login spell icons come from the S_PacketBox 21 / S_SkillIcon* packets the fork already decodes.
-- S_Ability: tracked per index (`EstadoJugador::habilidad`). l1j-en sends only indices 1 and 5, so the see-invisible gate (index 3) never opens there.
+- S_Ability: tracked per index (`EstadoJugador::habilidad`). l1j-en sends only index 1 (see RE_ROUND4.md), so the see-invisible gate (index 3) never opens there.
 - Roof groups: `SegmentoMapa::techos` + `techos_en`; fade state in `App::techos_fade` (`actualizar_techos`). Verified on a Giran house: the house next to the player turns translucent and the others stay opaque; moving away restores it.
 - Emotes: `accion_emote` in `barra_ui.cpp`. The 0x456b30 sprite list itself was not extracted, so "standard" is approximated.
 - gfx 0xbe (`ranura_de_gfx_be`): own sprite 0x4b/0x5ca/0x9d3/0x9d8 -> slot 0x26 (0x9d8 lasts 300 s), 0x9a1 -> 0x5b (clears 0x26), 0xa26 -> 0x4f, 0x9aa -> 0x50, 0x998 -> 0x51, 0xbb4 -> 0x84 (the 0x4f/0x50/0x51/0x84 group clears its siblings). The exe's extra guards on unknown flags ([0x816867], [0x6f1da8]) are ignored. [C]

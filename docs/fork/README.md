@@ -20,6 +20,7 @@ client. The front page is the [root README](../../README.md).
 | [RE_WINDOWS.md](RE_WINDOWS.md) | Reverse-engineered window management and window layouts |
 | [RE_HUD.md](RE_HUD.md) | Reverse-engineered chat colours, names, bubbles, buff row, cursors |
 | [RE_ROUND3.md](RE_ROUND3.md) | Overlay blits, packet-to-buff-slot map, roof groups in .s32, emotes, S_Ability |
+| [RE_ROUND4.md](RE_ROUND4.md) | Char-list fields, S_Ability indices, cooking window, light flash, Esc/death menu, Ctrl+T, blindness |
 | [../upstream/](../upstream/README.md) | Upstream's README and ENTREGABLES tracker (history, not maintained) |
 
 ## Conventions
