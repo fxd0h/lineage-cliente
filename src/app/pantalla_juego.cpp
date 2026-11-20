@@ -49,6 +49,8 @@ constexpr u32 IMG_ORBE_PRIMERA = 1213;
 constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
 constexpr int ZONA_ROTULO_Y = 346, ZONA_ROTULO_DER = 626;  // zone labels: name on the left, type right-aligned
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
+// Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
+constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
 constexpr int CHAT_X = 124 + 20, CHAT_Y = 363 + 32, CHAT_ANCHO = 342, CHAT_FILAS = 5;
 constexpr u64 DUR_COMBATE = 900;  // ms que dura un texto de combate flotante (sube y se desvanece)
 constexpr int ENTRADA_X = 124 + 30, ENTRADA_Y = 363 + 102;
@@ -692,7 +694,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             }
             // Tapado por un objeto del mapa: también su silueta encima de todo (varias piezas
             // translúcidas superpuestas casi lo esconden).
-            if (o.ids()[s] == a.mundo.jugador.id && a.mundo.jugador.ceguera)  // ciego: solo se ve a sí mismo
+            if (a.cfg.ui_simple && o.ids()[s] == a.mundo.jugador.id && a.mundo.jugador.ceguera)  // ciego: solo se ve a sí mismo
                 g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_EFECTOS, PROF_CEGUERA + 1), color);
             else if (a.jugador_tapado && o.ids()[s] == a.mundo.jugador.id)
                 g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, 0xFFFFFFFEu), rgba(255, 255, 255, ALFA_SILUETA));  // bajo la lluvia, sobre el resto
@@ -885,6 +887,8 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
             }
         }
         sonido_de_frame(a, ef.sonido, *f, x, y, ahora, true);
+        // Light flash: from its trigger frame until it ends the effect holds full brightness (0x450650 / 0x450970).
+        if (ef.flash && f - &a.sprites.frame_en(*r, 0, termino, 0, false) >= (ef.flash == 1 ? 2 : 1)) a.flash_luz_frame = a.frame;
         u16 sub = static_cast<u16>(f->sub + (r->direccional ? ef.dir : 0));
         const RegionAtlas& rg = g.frame_sprite(a.sprites.gfx_archivos(ef.gfx), sub, f->frame);
         float px = static_cast<float>(mundo_px(x, y) + ox), py = static_cast<float>(mundo_py(x, y) + oy);
@@ -1478,6 +1482,10 @@ void dibujar_minimapa(App& a, double cam_x, double cam_y) {
 }  // namespace
 
 void enviar_chat(App& a, std::string_view linea) {
+    if (linea == "/infracon") {  // client-side toggle of the elf infravision filter; nothing is sent
+        a.infracon = !a.infracon;
+        return;
+    }
     if (comando_social(a, linea)) return;
     EntradaChat c;
     if (!interpretar_entrada(linea, c)) return;
@@ -1518,8 +1526,8 @@ AreaChat area_chat(const App& a) {
                 0, vi.panel_y, MARGEN_SIMPLE + ancho, vi.h - vi.panel_y};
     }
     const int X = vi.hx, Y = vi.hy;
-    const int extra = 3 * a.chat_tam * ALTO_GLIFO;  // Ctrl+T grows the log upwards, 3 rows per step
-    return {X + CHAT_X, Y + CHAT_Y - extra, CHAT_ANCHO, X + ENTRADA_X, Y + ENTRADA_Y, 330, X + 124, Y + 363 - extra, 390, 117 + extra};
+    const int extra = CHAT_PASO_ORIG * 3 * a.chat_tam;  // Ctrl+T grows the log upwards, 3 rows (36 px) per step (0x421330)
+    return {X + CHAT_X, Y + CHAT_Y_ORIG - extra, CHAT_ANCHO, X + ENTRADA_X, Y + ENTRADA_Y, 330, X + 124, Y + 363 - extra, 390, 117 + extra};
 }
 
 // Original Ctrl+O (0x456dc3): 16 colour swatches (2 rows of 8, 17 px pitch) above the input box. A click types the
@@ -1557,11 +1565,13 @@ void dibujar_barra_chat(App& a, u32 total, int filas) {
     EntradaFrame& e = a.entrada;
     const Vista vi = vista(a);
     const int X = vi.hx + 470, Y = vi.hy;
-    constexpr int TRACK_Y = 401, TRACK_H = 51, THUMB_H = 16;
-    constexpr int LIBRE = TRACK_H - THUMB_H;
+    // Size n grows the track image (1047 + n) and the up arrow upwards by 36 px per step; the down arrow stays.
+    const int TRACK_Y = 401 - 36 * a.chat_tam, TRACK_H = 51 + 36 * a.chat_tam;
+    constexpr int THUMB_H = 16;
+    const int LIBRE = TRACK_H - THUMB_H;
     const u32 max = total > static_cast<u32>(filas) ? total - static_cast<u32>(filas) : 0;
     a.chat_desplazamiento = std::min(a.chat_desplazamiento, max);
-    const bool sobre_sube = ui::sobre(e, X, Y + 393, 12, 10), sobre_baja = ui::sobre(e, X + 1, Y + 449, 11, 12);
+    const bool sobre_sube = ui::sobre(e, X, Y + 393 - 36 * a.chat_tam, 12, 10), sobre_baja = ui::sobre(e, X + 1, Y + 449, 11, 12);
     if (e.pulsado && sobre_sube && a.chat_desplazamiento < max) ++a.chat_desplazamiento;
     if (e.pulsado && sobre_baja && a.chat_desplazamiento > 0) --a.chat_desplazamiento;
     auto thumb_y = [&] {
@@ -1581,8 +1591,8 @@ void dibujar_barra_chat(App& a, u32 total, int filas) {
         }
     }
     const u64 kb = clave_orden(CAPA_UI, 2);
-    g.gpu().dibujar(g.img(1047), X, Y + TRACK_Y, kb);
-    g.gpu().dibujar(g.img(sobre_sube && e.presionado ? 975 : 974), X, Y + 393, kb);
+    g.gpu().dibujar(g.img(1047 + a.chat_tam), X, Y + TRACK_Y, kb);
+    g.gpu().dibujar(g.img(sobre_sube && e.presionado ? 975 : 974), X, Y + 393 - 36 * a.chat_tam, kb);
     g.gpu().dibujar(g.img(sobre_baja && e.presionado ? 973 : 972), X + 1, Y + 449, kb);
     g.gpu().dibujar(g.img(976), X - 1, thumb_y(), kb);
 }
@@ -1646,8 +1656,7 @@ void dibujar_chat(App& a) {
 
     if (!a.cfg.ui_simple) dibujar_barra_chat(a, n, filas);
     u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
-    if (!a.cfg.ui_simple && a.chat_tam > 0)  // backdrop for the rows added over the world
-        a.gpu.rectangulo(ac.x - 6, ac.y, ac.ancho + 12, 3 * a.chat_tam * ALTO_GLIFO, clave_orden(CAPA_UI, 0), rgba(0, 0, 0, 110));
+    const int pitch = a.cfg.ui_simple ? ALTO_GLIFO : CHAT_PASO_ORIG;
     std::string_view visibles[CHAT_FILAS + 9] = {};  // text of each drawn row, for the double click
     int fila = filas - 1;
     for (u32 i = a.chat_desplazamiento; i < n && fila >= 0; ++i) {
@@ -1662,12 +1671,12 @@ void dibujar_chat(App& a) {
             while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
         }
         for (int p = k - 1; p >= 0 && fila >= 0; --p, --fila) {
-            g.texto_sombra(partes[p], ac.x, ac.y + fila * ALTO_GLIFO, kt, l.color);
+            g.texto_sombra(partes[p], ac.x, ac.y + fila * pitch, kt, l.color);
             visibles[fila] = partes[p];
         }
     }
     if ((e.doble_izquierdo || e.doble_derecho) && e.mx >= ac.x && e.mx < ac.x + ac.ancho && e.my >= ac.y - 4) {
-        const int r = std::max(0, e.my - ac.y) / ALTO_GLIFO;
+        const int r = std::max(0, e.my - ac.y) / pitch;
         if (r < filas) {
             const std::string_view t = visibles[r];
             clic_doble_chat(a, palabra_en(t, byte_en_pixel(t, e.mx - ac.x)), e.doble_derecho);
@@ -1796,7 +1805,12 @@ void dibujar_ventanas(App& a) {
     // chat y un hechizo o mascota eligiendo objetivo se lo quedan antes. Con un pergamino esperando su
     // objetivo, Esc solo cancela eso (inventario_ui.cpp). Arrastrando algo no cierra: soltarlo lo
     // resuelve la ventana de donde salió. El intercambio tampoco: dejaría el trade abierto.
-    if (e.escape && !a.usar_sobre && !arrastre) close_listed_windows(a);
+    if (e.escape && !a.usar_sobre && !arrastre) {
+        // Original: Esc with nothing open pops the exit menu (0x457352).
+        const bool abierta_alguna = alguna_ventana_abierta(a);
+        close_listed_windows(a);
+        if (!a.cfg.ui_simple && !abierta_alguna) a.ventana_salida = true;
+    }
     for (int i = 0; i < static_cast<int>(IdVentana::CANTIDAD); ++i) {
         const IdVentana v = static_cast<IdVentana>(a.orden_ventanas[i]);
         if (!arrastre && a.ventana_arriba >= 0 && a.ventana_arriba != static_cast<int>(v)) e.mx = e.my = -10000;
@@ -1829,7 +1843,7 @@ void dibujar_ventanas(App& a) {
 // Ceguera y el aviso de parálisis, sueño, congelamiento... (arriba al centro del mundo).
 void dibujar_estados_alterados(App& a, int w, int h) {
     const EstadoJugador& j = a.mundo.jugador;
-    if (j.ceguera) {  // el velo va en el mundo: con zoom solo del mapa, en sus píxeles lógicos
+    if (j.ceguera && a.cfg.ui_simple) {  // el velo va en el mundo: con zoom solo del mapa, en sus píxeles lógicos
         const float z = a.gpu.zoom_mundo();
         a.g->gpu().rectangulo(0, 0, static_cast<int>(std::ceil(w / z)), static_cast<int>(std::ceil(h / z)), clave_orden(CAPA_EFECTOS, PROF_CEGUERA), rgba(0, 0, 0, j.ceguera == 2 ? 200 : 245));
     }
@@ -1855,6 +1869,13 @@ void dibujar_estados_alterados(App& a, int w, int h) {
 void dibujar_muerte(App& a) {
     if (!a.mundo.jugador.muerto) {
         a.t_muerte = 0;  // también si lo resucitaron (S_Resurrection)
+        return;
+    }
+    if (!a.cfg.ui_simple) {  // original: no death dialog, the Esc menu pops open (0x457620); its button 1 restarts
+        if (a.t_muerte == 0) {
+            a.t_muerte = a.entrada.ahora_ms;
+            a.ventana_salida = true;
+        }
         return;
     }
     Graficos& g = *a.g;

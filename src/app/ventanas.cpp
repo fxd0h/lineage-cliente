@@ -218,6 +218,12 @@ void limitar_abiertas(App& a, IdVentana nueva) {
 
 }  // namespace
 
+bool alguna_ventana_abierta(const App& a) {
+    for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i)
+        if (static_cast<IdVentana>(i) != IdVentana::HPMP && abierta(a, static_cast<IdVentana>(i))) return true;  // the floating HP/MP bar is always on
+    return false;
+}
+
 void close_listed_windows(App& a) {
     a.ventana_estado = a.ventana_inventario = a.ventana_hechizos = a.ventana_salida = false;
     if (!a.cfg.ui_simple && a.intercambio.abierto) enviar(a, cmd::cancelar_intercambio(a.op));  // Esc cancels a pending trade
@@ -491,13 +497,28 @@ void dibujar_salida(App& a) {
     if (!a.cfg.ui_simple) {
         if (draw_original_frame(a, r.x, r.y, 1058, 7, 7, 1059, 108, 11)) a.ventana_salida = false;
         draw_original_overlay(a, r.x, r.y + 6, 1060);
-        // Restart goes back to town and Quit to the character list (the client's C_Restart / C_ChangeChar).
+        // Esc menu (0x4a1180): button 1 = Restart while dead (C_RESTART) / change character while alive (C_CHANGECHAR,
+        // refused within 15 s of combat, string 130); button 2 = quit (refused within 15 s of combat unless dead or
+        // on a safe tile, string 131); button 3 closes. RE_ROUND4 section 5.
+        const bool muerto = a.mundo.jugador.muerto;
+        const bool combate = a.t_combate && a.entrada.ahora_ms < a.t_combate + 15000;
+        auto aviso = [&](size_t id) { a.chat.agregar(a.mensajes.linea(id), rgba(255, 255, 255), CHAT_SISTEMA); };
         if (draw_original_button(a, r.x + 31, r.y + 34, 1063, 1064)) {
-            reiniciar(a);
-            a.ventana_salida = false;
+            if (muerto) {
+                reiniciar(a);
+                a.ventana_salida = false;
+            } else if (combate) {
+                aviso(130);
+            } else {
+                enviar(a, cmd::cambiar_personaje(a.op));
+                a.ventana_salida = false;
+            }
         } else if (draw_original_button(a, r.x + 31, r.y + 52, 1065, 1066)) {
-            enviar(a, cmd::cambiar_personaje(a.op));
-            a.ventana_salida = false;
+            const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+            const bool segura = yo != SIN_SLOT && tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo],
+                                                                  a.mundo.objetos.col<O_Y>()[yo]) == TipoZona::SEGURA;
+            if (!muerto && !segura && combate) aviso(131);
+            else a.salir = true;  // cerrar_app sends C_QUITGAME
         } else if (draw_original_button(a, r.x + 31, r.y + 70, 1067, 1068)) {
             a.ventana_salida = false;
         }

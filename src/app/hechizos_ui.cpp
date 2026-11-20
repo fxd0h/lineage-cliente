@@ -225,6 +225,13 @@ static void dibujar_area(App& a, const Evento& e) {
 }
 
 void eventos_hechizos(App& a, const Evento& e) {
+    // S_CurseBlind (0x409f00): the client itself prints string 147 / 148 when the blind state changes; l1j-en sends no text.
+    if (e.tipo == Ev::CEGUERA) {
+        const u8 estado = static_cast<u8>(e.v[0]);
+        if (estado != a.ceguera_avisada && estado != 0)
+            a.chat.agregar(a.mensajes.linea(estado == 2 ? 148 : 147), rgba(255, 255, 255), CHAT_SISTEMA);
+        a.ceguera_avisada = estado;
+    }
     if (e.tipo == Ev::MENSAJE_SERVIDOR) {
         const u8 k = a.msgs_recientes_n++ % 8;
         a.msgs_recientes[k] = static_cast<u16>(e.v[MS_ID]);

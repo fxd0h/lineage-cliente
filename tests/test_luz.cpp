@@ -106,6 +106,11 @@ TEST_CASE("Luz: infravisión de elfo y elfo oscuro según las condiciones") {
     CHECK(modo_vision(2, true, 7, false, false) == Vision::ELFO);
     CHECK(modo_vision(4, true, 7, false, false) == Vision::ELFO_OSCURO);
     CHECK(modo_vision(1, true, 7, false, false) == Vision::NINGUNA);  // otra clase
+    // "/infracon" off: only S_Ability 4 = 1 grants it (class 4 keeps its own filter, others use the elf one)
+    CHECK(modo_vision(2, true, 7, false, false, false, 0) == Vision::NINGUNA);
+    CHECK(modo_vision(1, true, 7, false, false, false, 1) == Vision::ELFO);
+    CHECK(modo_vision(4, true, 7, false, false, false, 1) == Vision::ELFO_OSCURO);
+    CHECK(modo_vision(1, true, 7, false, false, true, 1) == Vision::NINGUNA);
     CHECK(modo_vision(2, false, 7, false, false) == Vision::NINGUNA);  // opción apagada
     CHECK(modo_vision(2, true, 15, false, false) == Vision::NINGUNA);  // de día
     CHECK(modo_vision(2, true, 7, true, false) == Vision::NINGUNA);    // bajo el agua

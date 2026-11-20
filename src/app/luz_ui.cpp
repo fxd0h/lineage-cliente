@@ -161,11 +161,15 @@ void aplicar_luz(App& a, u64 ahora) {
     const bool lluvia = m.nieve > 0 || m.lluvia > 0;
     int nivel = nivel_ambiente(m.mapa, seg / 60, dia_del_anio(hora), lluvia);
     if (m.jugador.luz_hechizo) nivel = nivel_con_luz_hechizo(nivel);
+    // Original: blindness has no overlay image; the world is drawn at light level 0 (0x4626c0).
+    if (m.jugador.ceguera && !a.cfg.ui_simple) nivel = 0;
+    // A light-flash effect forces full brightness (the day/night updater skips while it holds); blindness is drawn after it.
+    else if (a.flash_luz_frame && a.frame - a.flash_luz_frame <= 1) nivel = 15;
 
     // Elfo y elfo oscuro: la visión reemplaza a la luz (no hay luces ni mapa de brillo).
     const int clase = (a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) ? a.pjs[a.pj_sel].v[PJ_CLASE] : -1;
     const Vision vis = modo_vision(static_cast<u8>(clase < 0 ? 255 : clase), a.cfg.efecto_infravision, nivel, false,
-                                   m.jugador.ceguera);
+                                   m.jugador.ceguera, a.infracon, m.jugador.habilidad[4]);
     if (vis != Vision::NINGUNA) {
         a.gpu.reemplazar_mundo(-1, vis == Vision::ELFO ? 1 : 2, fase_borracho);
         return;

@@ -580,6 +580,9 @@ struct App {
     ObjId gm_objetivo = 0;              // Ctrl+Z target being re-sent
     u8 gm_repeticiones = 0;
     u64 gm_proximo_ms = 0;
+    u64 flash_luz_frame = 0;            // last frame in which a light-flash effect was past its trigger frame
+    u8 ceguera_avisada = 0;             // last S_CurseBlind state whose string was printed
+    bool infracon = true;               // "/infracon" toggle (0x6f1e4b): elves / dark elves use their infravision filter
     u8 chat_tam = 0;                    // original UI Ctrl+T: chat window size 0..3 (+3 rows per step)
     bool paleta_chat = false;           // original UI Ctrl+O: chat colour palette
     ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
@@ -631,6 +634,7 @@ bool sobre_ventana(const App& a, IdVentana v);  // abierta, con el puntero encim
 bool sobre_alguna_ventana(const App& a);
 // Al dibujar cada ventana, antes que nada: arrastrarla por la barra de título.
 void arrastrar_ventana(App& a, IdVentana v);
+bool alguna_ventana_abierta(const App& a);  // any IdVentana window open (except the floating HP/MP bar)
 void close_listed_windows(App& a);  // Esc: the four listed windows, and a pending trade (original UI)
 void guardar_posiciones_ventanas(App& a);  // after a custom drag
 // Una vez por frame, antes de procesar la entrada: las que se abren pasan adelante (y a un lugar

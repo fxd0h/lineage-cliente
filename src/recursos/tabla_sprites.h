@@ -119,6 +119,8 @@ public:
     std::span<const GfxId> ropa(GfxId gfx) const {
         return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
     }
+    // Attribute 109 type 2 ("109.effect(2 x)"): an effect spawned by S_UseAttackSkill that holds full light from its 3rd frame.
+    bool flash_de_luz(GfxId gfx) const { return flash_.buscar(gfx) != nullptr; }
     // Attribute 113 (morph effect, S3EP1U 0x488f60): effect gfx spawned at an object that changes into this gfx; 0 if none.
     GfxId morfo(GfxId gfx) const {
         const u32* i = morfo_.buscar(gfx);
@@ -170,6 +172,7 @@ private:
         transp_.poner(gfx, static_cast<u32>(rects_transp_.size()));
         rects_transp_.push_back(std::move(r));
     }
+    MapaHash flash_;  // gfx -> 1 for sprites whose attribute 109 type is 2 (light-flash effects, RE_ROUND4 section 4)
     MapaHash morfo_;  // gfx -> morph effect gfx (attribute 113), only the gfx that have one
 };
 

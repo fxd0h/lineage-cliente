@@ -55,6 +55,7 @@ struct Entrada {
     u16 atributos = 0;
     GfxId siguiente = 0;
     bool zancada = false;
+    bool flash = false;  // attribute 109 type 2
     GfxId morfo = 0;  // attribute 113
     std::vector<RectTransparencia> transp;  // attribute 100
     std::vector<GfxId> ropa;
@@ -139,7 +140,7 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
             case 102: e.tipo = static_cast<u8>(b.numero_con_signo()); break;
             case 104: e.atributos = static_cast<u16>(b.numero_con_signo()); break;
             case 109: {
-                b.numero_con_signo();
+                e.flash = b.numero_con_signo() == 2;
                 const int g = b.numero_con_signo();
                 e.siguiente = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
                 break;
@@ -277,6 +278,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
                 zancada_[e.gfx] = e.zancada;
                 ropa_[e.gfx] = e.ropa;
                 if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                if (e.flash) flash_.poner(e.gfx, 1);
                 poner_transparencia(e.gfx, e.transp);
                 ++resumen.atributos;
             } else {
@@ -313,6 +315,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             zancada_[e.gfx] = e.zancada;
             ropa_[e.gfx] = e.ropa;
             if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                if (e.flash) flash_.poner(e.gfx, 1);
                 poner_transparencia(e.gfx, e.transp);
             const u32 base = static_cast<u32>(frames_.size());
             frames_.insert(frames_.end(), e.frames.begin(), e.frames.end());

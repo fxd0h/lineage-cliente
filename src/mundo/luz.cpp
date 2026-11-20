@@ -136,10 +136,14 @@ bool tinte_mapa(MapId m, u8& r, u8& g, u8& b) {
     return false;
 }
 
-Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera) {
+Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera, bool infracon, u8 habilidad4) {
     if (!opcion_activa || submarino || ceguera || nivel >= 15) return Vision::NINGUNA;
-    if (clase == 2) return Vision::ELFO;
-    if (clase == 4) return Vision::ELFO_OSCURO;
+    if (infracon) {
+        if (clase == 2) return Vision::ELFO;
+        if (clase == 4) return Vision::ELFO_OSCURO;
+        return Vision::NINGUNA;
+    }
+    if (habilidad4 == 1) return clase == 4 ? Vision::ELFO_OSCURO : Vision::ELFO;
     return Vision::NINGUNA;
 }
 

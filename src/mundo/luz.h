@@ -54,6 +54,8 @@ int nivel_con_luz_hechizo(int nivel);
 // Infravisión: el elfo y el elfo oscuro ven en la oscuridad con un filtro propio en lugar de la
 // luz normal. No aplica con agua (submarino), con ceguera, con el nivel en día ni si la opción
 // está apagada.
-Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera);
+// `infracon` is the "/infracon" toggle (0x6f1e4b, on by default): with it on classes 2 and 4 get their own filter; with it off only
+// S_Ability 4 = 1 (`habilidad4`) grants one (class 4 keeps its own filter, others use the elf one). RE_ROUND4 section 2.
+Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera, bool infracon = true, u8 habilidad4 = 0);
 
 }  // namespace lin

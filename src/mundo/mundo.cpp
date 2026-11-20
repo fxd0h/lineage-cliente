@@ -393,6 +393,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 int celdas = std::max(std::abs(e.v[AT_X1] - e.v[AT_X0]), std::abs(e.v[AT_Y1] - e.v[AT_Y0]));
                 ef.vuelo_ms = static_cast<u32>(std::max(1, celdas)) * MS_VUELO_CELDA;
                 ef.inicio = inicio + impacto;
+                if (m.sprites && m.sprites->flash_de_luz(ef.gfx)) ef.flash = 1;
                 agregar_efecto(m, ef);
                 impacto += ef.vuelo_ms;
             }
@@ -424,6 +425,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             ef.x0 = ef.x1 = e.v[EF_X];
             ef.y0 = ef.y1 = e.v[EF_Y];
             ef.inicio = ahora;
+            if (gfx_con_flash(ef.gfx)) ef.flash = 2;
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
             if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
                 // Own S_SkillSound: some graphics start a buff slot lasting the slot's table time (exe 0x48a5c0).

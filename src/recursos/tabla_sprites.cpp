@@ -65,6 +65,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     zancada_.clear();
     ropa_.clear();
     morfo_.limpiar();
+    flash_.limpiar();
     transp_.limpiar();
     rects_transp_.clear();
     gfx_de_tabla_ = 0;
@@ -122,7 +123,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
             case 106: break;
             case 107: c.numero(); c.numero(); break;
             case 109: {  // "109 n gfx": al terminar (el proyectil, al llegar) sigue ese gráfico; -1 ninguno
-                c.numero();
+                if (c.numero() == 2) flash_.poner(gfx, 1);
                 int g = c.numero();
                 siguiente_.back() = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
                 break;

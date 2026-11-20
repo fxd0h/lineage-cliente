@@ -124,7 +124,12 @@ struct EfectoVisual {
     u64 inicio = 0;
     u32 vuelo_ms = 0;
     u32 sonido = 0;  // último frame dibujado (como O_SONIDO)
+    u8 flash = 0;    // holds full light while alive from its frame N (1 = 3rd frame, S_UseAttackSkill type-2 sprites;
+                     // 2 = 2nd frame, flag-carrying spawns): see luz_flash_ef and RE_ROUND4 section 4
 };
+// gfx whose spawns carry the light-flash flag in the original (Valakas meteor 762, "give fire" 214, crackers / fire sticks
+// 2029-2055, Cube* effects 6712 / 6718 / 6724).
+constexpr bool gfx_con_flash(GfxId g) { return g == 762 || g == 214 || (g >= 2029 && g <= 2055) || g == 6712 || g == 6718 || g == 6724; }
 constexpr u32 MAX_EFECTOS_VISUALES = 128;
 // Velocidad de los proyectiles (hechizos y flechas). No está en los datos: estimada mirando el
 // original en video (una celda cada ~40 ms).
