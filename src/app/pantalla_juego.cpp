@@ -1702,7 +1702,7 @@ void dibujar_ventanas(App& a) {
     // chat y un hechizo o mascota eligiendo objetivo se lo quedan antes. Con un pergamino esperando su
     // objetivo, Esc solo cancela eso (inventario_ui.cpp). Arrastrando algo no cierra: soltarlo lo
     // resuelve la ventana de donde salió. El intercambio tampoco: dejaría el trade abierto.
-    if (e.escape && !a.usar_sobre && !arrastre) a.ventana_estado = a.ventana_inventario = a.ventana_hechizos = a.ventana_salida = false;
+    if (e.escape && !a.usar_sobre && !arrastre) close_listed_windows(a);
     for (int i = 0; i < static_cast<int>(IdVentana::CANTIDAD); ++i) {
         const IdVentana v = static_cast<IdVentana>(a.orden_ventanas[i]);
         if (!arrastre && a.ventana_arriba >= 0 && a.ventana_arriba != static_cast<int>(v)) e.mx = e.my = -10000;

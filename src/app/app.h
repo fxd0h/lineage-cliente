@@ -569,6 +569,8 @@ struct App {
     std::vector<ObjId> inventario_seleccion;  // marked with Shift+click: dragged together
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     ObjId ultimo_clic_item = 0;         // para el doble clic
+    ObjId inv_press = 0;                // original inventory: item pressed, drag not started yet
+    int inv_press_x = 0, inv_press_y = 0;
     u64 t_ultimo_clic_item = 0;
     float fps = 0;
     // Medición por segundo (overlay F3 y, con --perf, una línea en el registro).
@@ -612,6 +614,7 @@ bool sobre_ventana(const App& a, IdVentana v);  // abierta, con el puntero encim
 bool sobre_alguna_ventana(const App& a);
 // Al dibujar cada ventana, antes que nada: arrastrarla por la barra de título.
 void arrastrar_ventana(App& a, IdVentana v);
+void close_listed_windows(App& a);  // Esc: the four listed windows, and a pending trade (original UI)
 void guardar_posiciones_ventanas(App& a);  // after a custom drag
 // Una vez por frame, antes de procesar la entrada: las que se abren pasan adelante (y a un lugar
 // libre), y la que se toca con el clic también.

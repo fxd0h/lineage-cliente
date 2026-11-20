@@ -129,7 +129,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
 | F1 / F2 / F3 | select F-key page 0/1/2 (0x45b087 -> 0x4b2240) | key help / UI toggle / debug overlay | DIFFERENT | app.cpp: page select in original mode; move the dev keys behind a flag |
-| Esc | closes ALL pop-up windows (0x8f2f54..0x8f2f64), the palette and shop/trade (0x456c65) | closes the focused window only | DIFFERENT | pantalla_juego.cpp Esc handling |
+| Esc | closes ALL pop-up windows (0x8f2f54..0x8f2f64), the palette and shop/trade (0x456c65) | Esc closes the listed windows (and the exit window) and cancels a pending trade (original UI); the palette / popups keep taking it first | MATCH (palette/shop popups U) | pantalla_juego.cpp Esc handling |
 | Ctrl+V | opens HTML page "option1" in the NPC dialog (0x4569a0, 0x6daa34) | same (`alternar_opciones`); fork Options window only in the simple UI | MATCH | - |
 | Ctrl+C | HTML "option2p" when the char-list class byte (`[0x81b534]`, record +0x1e, set 0x470aed) is 0 (prince), else "option2"; page already open -> close (0x456a30) | same (`alternar_comunidad`); Social window only in the simple UI | MATCH | - |
 | Ctrl+H (Ctrl+Backspace) | HTML page "help" (0x458360, 0x6daa2c) | same (`alternar_ayuda`); key-help overlay only in the simple UI | MATCH | - |
@@ -174,11 +174,11 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Close position (trade, shop, quit, NPC, mail) | trade/shop (174,18), quit (108,11), NPC (226,15), mail (209,305)/(213,297) | same | MATCH | - |
 | Hover/pressed art, text buttons (0x47c6d0) | hover = 2nd ctor id (quit 1278/1279/1280, shop OK 1291, Cancel 1288); pressed = id+1 (0x47c760) | shows id+1 (the pressed art) on hover | DIFFERENT | original_window.cpp `draw_original_button` |
 | Plain image buttons (0x47c2d0: trade OK/Cancel, mail) | no hover art; id+1 only while pressed | id+1 on hover | DIFFERENT | same |
-| Window dragging | inventory handler 0x44d1b0 has no move code; only z-order 0x4d0ed0 | every window draggable (ventanas.cpp:196 `arrastrar_ventana`) | EXTRA | note: inventory/status ctors also build a drag handle 0x47bcd0 (0,5,191,25), see U-C1 |
-| Drag region (where one exists) | rect (0,5,w,25) (0x47bcd0) | top 22 px from y=0 | DIFFERENT | ventanas.cpp |
-| Window count | max 4 pop-ups (0x8f2f54..0x8f2f64); a 5th closes the oldest (0x4d0f30) | unlimited | DIFFERENT | ventanas.cpp `actualizar_ventanas` |
-| Right double click closes | WM_RBUTTONDBLCLK inside the inventory -> 0x4d1200 (0x44d2ce) | not present | MISSING | ventanas.cpp (other windows: U-B5) |
-| Default positions | inventory (450,0) (0x44cf6a); spellbook (433,0) (0x4aefcb); quit (250,100) (0x4a1485); mail list (0,0) (0x417d50); map (0,0) | inv/status/spells stacked leftward at y=36; quit centred y=H/3; mail centred, y=50 | DIFFERENT | ventanas.cpp `por_defecto` |
+| Window dragging | inventory handler 0x44d1b0 has no move code; only z-order 0x4d0ed0 | inventory/status/spellbook/trade only by the 0x47bcd0 handle rects (original UI); other windows unchanged | MATCH (listed windows) | note: inventory/status ctors also build a drag handle 0x47bcd0 (0,5,191,25), see U-C1 |
+| Drag region (where one exists) | rect (0,5,w,25) (0x47bcd0) | handle rects (0,5,191,25), trade 199 wide, spellbook (6,9,197,29), minus the close button; dragging clamped to the view | MATCH (listed windows) | ventanas.cpp |
+| Window count | max 4 pop-ups (0x8f2f54..0x8f2f64); a 5th closes the oldest (0x4d0f30) | 4 listed windows (status, inventory, spellbook, trade, pet inventory): opening a 5th closes the one furthest back (trade: cancelled); the panel buttons / Ctrl keys already toggle | MATCH (listed windows) | ventanas.cpp `actualizar_ventanas` |
+| Right double click closes | WM_RBUTTONDBLCLK inside the inventory -> 0x4d1200 (0x44d2ce) | closes the listed window under the pointer (trade: cancelled) | MATCH (listed windows) | ventanas.cpp (other windows: U-B5) |
+| Default positions | inventory (450,0) (0x44cf6a); spellbook (433,0) (0x4aefcb); quit (250,100) (0x4a1485); mail list (0,0) (0x417d50); map (0,0) | inventory (hx+450,0), spellbook (hx+433,0), status (hx,0), hx = origin of the 640x480 block; others unchanged | MATCH (inventory, spellbook, status) | ventanas.cpp `por_defecto` |
 | Inventory x clamp | snaps to x=450 if off-screen (0x44d8d2) | clamps with a 40 px margin | DIFFERENT | ventanas.cpp |
 | Background opacity | option `[0x6e1008]`: 31 = opaque, else alpha; 0 = no bg (0x44d9c3); steps 31/20/13/7 from the `alpha` action (table 0x6e100c) | `opacidad_ventanas`: 255/165/107/58 by `cfg.alpha_orig`, default opaque | MATCH | - |
 | bg/frame/ornament layers | inv 996 (6,8)/997/998 (0,11); status (6,9)/983/984 (0,11); spells 933 (8,10)/934/935 (2,10); quit 1058/1059/1060; trade 1199/1201/1200; NPC 1355/1356/1101 | same | MATCH | - |
@@ -190,11 +190,11 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 |---|---|---|---|---|
 | Tab filters | 0 = all (0x44de10); 1 = equipment, type in {1,2,10,18..25,37,40} (0x44dd90); 2 = quest items via table 0x701358 (0x44de40); 3 = misc (0x44df00) | potions+food / equipment / scrolls+magic / other (guessed `tab_of`) | DIFFERENT | inventario_ui.cpp `tab_of` |
 | Tab tooltips | strings 878-881 "All", "Equipment", "Quest", "Miscellaneous" (ctor 0x44cfc8) | "Potions and food", ... | DIFFERENT | `TAB_NAMES` |
-| Equipped marker | img 536 (35x35) at (x-1,y-1) behind the icon (0x44e22b..0x44e291) | brown box + yellow "E" | DIFFERENT | inventario_ui.cpp |
+| Equipped marker | img 536 (35x35) at (x-1,y-1) behind the icon (0x44e22b..0x44e291) | img 536 at (x-1,y-1) behind the icon (the tint box only remains when 536 is missing) | MATCH | inventario_ui.cpp |
 | Item order | list order; no Sort button, no drag-to-reorder, no multi-select in handler 0x44d1b0 (tabs, scroll, trash, close only) | worn items first; Sort / drag-reorder / Shift+click only in the simple UI (upstream feature) | DIFFERENT | `orden_inventario` |
 | Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a) | none | MISSING | meaning: U-C6 |
 | Icon position | cell origin (21+34c, 42+34r) (0x445fd0) | +1 px | DIFFERENT | `draw_item_icon` |
-| Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 18+35i | DIFFERENT | 1 px |
+| Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 19+35i | MATCH | 1 px |
 | Scroll bar | up 974 (161,48), track 971 (161,56), down 972 (162,235), thumb 976 | x=162 everywhere, up y=41, down 233 | DIFFERENT | Grid scroll constants |
 | Item hover text | grid draw 0x44e45b: hovered cell (index [0x4c], no delay). Item with the equipped flag ([+8], set by the select call 0x44f19b) and attribute lines ([+0x14], from the S_AddItem status bytes through 0x482630/0x446520): bevel box 142 px at the grid x (21), y = cell y + 32 (above, `-12 k - 52`, when below grid y + 161; clamped to grid y + 10 / + 330), name wrapped to 23 columns, attribute lines to 22, 12 px pitch, text at +5, all in the item colour (0x8f0f34[blessed/normal/cursed/unidentified]); any other item: name only with shadow under the cell, no attributes | same (`armar_tooltip_item`, `draw_original_hover_box`) | MATCH | inventario_ui.cpp |
 | Trash tooltip | none in draw 0x44d830 | "Drag an item here to delete it" | EXTRA | remove |

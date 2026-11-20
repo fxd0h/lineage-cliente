@@ -11,6 +11,7 @@
 #include <cstring>
 #include <filesystem>
 #include "app/app.h"
+#include "proto/comandos.h"
 
 namespace lin {
 
@@ -27,6 +28,21 @@ constexpr int SEPARACION = 4, MARGEN = 7;
 constexpr int PASO_LUGAR = 8;  // px entre los lugares que se prueban para una ventana que se abre
 
 int indice(IdVentana v) { return static_cast<int>(v); }
+
+// Original UI windows that live in the client's pop-up list (0x4d0f30: at most 4 open, a 5th closes the oldest) and
+// share the 0x47bcd0 drag handle: inventory, status, spellbook, trade, plus the pet inventory in the list only.
+bool original_listed(const App& a, IdVentana v) {
+    if (a.cfg.ui_simple) return false;
+    return v == IdVentana::ESTADO || v == IdVentana::INVENTARIO || v == IdVentana::HECHIZOS || v == IdVentana::INTERCAMBIO ||
+           v == IdVentana::MASCOTA;
+}
+bool original_draggable(const App& a, IdVentana v) { return original_listed(a, v) && v != IdVentana::MASCOTA; }
+constexpr int MAX_LISTED_WINDOWS = 4;
+// Drag handle rect (0x47bcd0), relative to the window: inventory/status (0,5,191,25), trade 199 wide, spellbook (6,9,197,29).
+Rect original_drag_handle(IdVentana v) {
+    if (v == IdVentana::HECHIZOS) return {6, 9, 197, 29};
+    return {0, 5, v == IdVentana::INTERCAMBIO ? 199 : 191, 25};
+}
 
 void cargar_posiciones(App& a) {
     a.ventanas_cargadas = true;
@@ -68,6 +84,13 @@ Rect por_defecto(const App& a, IdVentana v) {
     const int der_inv = a.gpu.ancho() - MARGEN;
     const int der_estado = der_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
     const int der_hechizos = der_estado - ocupa(a.ventana_estado, IdVentana::ESTADO);
+    if (!a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO || v == IdVentana::HECHIZOS)) {
+        // Original defaults (0x44cf6a, 0x4aefcb): inventory at 640-190, spellbook at 640-207, status at 0; y 0 of the
+        // 640x480 block, which is centred in a wider view (our title strip lies above the view, not inside it).
+        const int hx = (a.gpu.ancho() - 640) / 2;
+        return {hx + (v == IdVentana::INVENTARIO ? 640 - ORIGINAL_WINDOW_W : v == IdVentana::HECHIZOS ? 640 - SPELLBOOK_WINDOW_W : 0),
+                0, w, h};
+    }
     switch (v) {
     case IdVentana::INVENTARIO: return {der_inv - w, y, w, h};
     case IdVentana::ESTADO: return {der_estado - w, y, w, h};
@@ -140,6 +163,7 @@ void al_frente(App& a, IdVentana v) {
 void colocar(App& a, IdVentana v) {
     PosVentana& p = a.pos_ventanas[indice(v)];
     p.colocada = false;
+    if (original_draggable(a, v)) return;  // the original never moves a window out of the way
     if (p.movida || v == IdVentana::HPMP) return;  // the floating HP/MP pair always starts at the top centre
     const Rect r = rect_ventana(a, v);
     auto libre = [&](const Rect& c) {
@@ -162,7 +186,40 @@ void colocar(App& a, IdVentana v) {
     }
 }
 
+// Closes a listed window the way its own X would (the trade is cancelled on the server).
+void cerrar_listada(App& a, IdVentana v) {
+    switch (v) {
+    case IdVentana::ESTADO: a.ventana_estado = false; break;
+    case IdVentana::INVENTARIO: a.ventana_inventario = false; break;
+    case IdVentana::HECHIZOS: a.ventana_hechizos = false; break;
+    case IdVentana::MASCOTA: a.ventana_mascota = false; break;
+    case IdVentana::INTERCAMBIO: enviar(a, cmd::cancelar_intercambio(a.op)); break;
+    default: break;
+    }
+}
+
+// 0x4d0f30: a window newly opened goes to the front of the 4-slot list; with the list full the oldest (the one furthest
+// back in the stacking order) is closed.
+void limitar_abiertas(App& a, IdVentana nueva) {
+    int abiertas = 0;
+    for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
+        const IdVentana o = static_cast<IdVentana>(i);
+        abiertas += original_listed(a, o) && abierta(a, o);
+    }
+    for (int k = 0; k < indice(IdVentana::CANTIDAD) && abiertas > MAX_LISTED_WINDOWS; ++k) {
+        const IdVentana o = static_cast<IdVentana>(a.orden_ventanas[k]);  // back to front
+        if (o == nueva || !original_listed(a, o) || !abierta(a, o)) continue;
+        cerrar_listada(a, o);
+        --abiertas;
+    }
+}
+
 }  // namespace
+
+void close_listed_windows(App& a) {
+    a.ventana_estado = a.ventana_inventario = a.ventana_hechizos = a.ventana_salida = false;
+    if (!a.cfg.ui_simple && a.intercambio.abierto) enviar(a, cmd::cancelar_intercambio(a.op));  // Esc cancels a pending trade
+}
 
 void guardar_posiciones_ventanas(App& a) { guardar_posiciones(a); }
 
@@ -174,18 +231,29 @@ void actualizar_ventanas(App& a) {
         if (ab && !a.ventana_abierta_antes[i]) {
             colocar(a, v);
             al_frente(a, v);
+            if (original_listed(a, v)) limitar_abiertas(a, v);
         }
         if (!ab) a.pos_ventanas[i].colocada = false;
         a.ventana_abierta_antes[i] = ab;
     }
     a.ventana_arriba = ventana_bajo_puntero(a);
     if (a.entrada.pulsado && a.ventana_arriba >= 0) al_frente(a, static_cast<IdVentana>(a.ventana_arriba));
+    // A right double click inside a window closes it (WM_RBUTTONDBLCLK, inventory 0x44d1b0 -> 0x4d1200).
+    if (a.entrada.doble_derecho && a.ventana_arriba >= 0 && original_draggable(a, static_cast<IdVentana>(a.ventana_arriba))) {
+        cerrar_listada(a, static_cast<IdVentana>(a.ventana_arriba));
+        a.entrada.doble_derecho = a.entrada.clic_derecho = false;
+        a.clic_consumido = true;
+    }
 }
 
 Rect rect_ventana(const App& a, IdVentana v) {
     Rect r = por_defecto(a, v);
     const PosVentana& p = a.pos_ventanas[indice(v)];
-    if (p.movida || p.colocada) {
+    if ((p.movida || p.colocada) && original_draggable(a, v)) {
+        // The original keeps a dragged window fully inside the screen (0x47bd90).
+        r.x = std::clamp(p.x, 0, std::max(0, a.gpu.ancho() - r.w));
+        r.y = std::clamp(p.y, 0, std::max(0, a.gpu.alto() - r.h));
+    } else if (p.movida || p.colocada) {
         // Siempre con la barra de título dentro de la pantalla (la ventana puede haber quedado fuera
         // al achicar la ventana del sistema o cambiar el zoom).
         r.x = std::clamp(p.x, 40 - r.w, a.gpu.ancho() - 40);
@@ -209,8 +277,15 @@ void arrastrar_ventana(App& a, IdVentana v) {
     const EntradaFrame& e = a.entrada;
     Rect r = rect_ventana(a, v);
     PosVentana& p = a.pos_ventanas[indice(v)];
-    // Se toma de la barra de título, salvo el botón de cerrar (los últimos 30 px).
-    if (e.pulsado && a.ventana_arrastrada < 0 && ui::sobre(e, r.x, r.y, r.w - 30, ui::ALTO_TITULO)) {
+    // Se toma de la barra de título, salvo el botón de cerrar (los últimos 30 px). The original windows only take the
+    // drag handle rect of their ctor (0x47bcd0), minus the close button.
+    Rect grab{r.x, r.y, r.w - 30, ui::ALTO_TITULO};
+    const bool original = original_draggable(a, v);
+    if (original) {
+        const Rect hr = original_drag_handle(v);
+        grab = {r.x + hr.x, r.y + hr.y, std::min(hr.w, r.w - 30) - hr.x, hr.h};
+    }
+    if (e.pulsado && a.ventana_arrastrada < 0 && ui::sobre(e, grab.x, grab.y, grab.w, grab.h)) {
         a.ventana_arrastrada = indice(v);
         a.arrastre_dx = e.mx - r.x;
         a.arrastre_dy = e.my - r.y;
@@ -220,6 +295,10 @@ void arrastrar_ventana(App& a, IdVentana v) {
     if (e.presionado) {
         p.x = e.mx - a.arrastre_dx;
         p.y = e.my - a.arrastre_dy;
+        if (original) {
+            p.x = std::clamp(p.x, 0, std::max(0, a.gpu.ancho() - r.w));
+            p.y = std::clamp(p.y, 0, std::max(0, a.gpu.alto() - r.h));
+        }
         p.movida = true;
         p.colocada = false;
     } else {
