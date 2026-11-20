@@ -164,8 +164,8 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
             int k = plantilla[i + 1] - '0';
             if (k < e.v[MS_NARGS]) s.n += expandir_desc(desc, e.s[k], destino + s.n, capacidad - s.n);
             ++i;
-        } else if (ch == '%' && i + 1 < plantilla.size() && plantilla[i + 1] == 's') {
-            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" = %0
+        } else if (ch == '%' && i + 1 < plantilla.size() && (plantilla[i + 1] == 's' || plantilla[i + 1] == 'd')) {
+            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" and "%d" = %0
             ++i;
         } else {
             s.poner(plantilla.substr(i, 1));

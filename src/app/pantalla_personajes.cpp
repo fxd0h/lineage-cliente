@@ -135,6 +135,22 @@ void seleccion_simple(App& a) {
     g.texto(tr(Tx::UI_F2_ORIGINAL), LISTA_X, by + 5, kt, rgba(120, 110, 90));
 }
 
+// Back to the selection screen: drops what belonged to the previous character (also used when returning
+// from the game via C_ChangeChar or after losing the connection: the server sends castle lords, sieges
+// and emblems again).
+void volver_a_personajes(App& a) {
+    a.mundo.limpiar();
+    a.tienda_pj.vendedores.clear();
+    a.tienda_pj.vista = 0;
+    a.castillos = {};
+    a.emblemas_pedidos.clear();
+    emblemas_abrir(a);  // the cache of this server (Emblem.dat)
+    a.pj_sel = -1;
+    a.pagina = 0;
+    a.esperando = false;
+    cambiar_pantalla(a, Pantalla::PERSONAJES);
+}
+
 }  // namespace
 
 const char* nombre_clase(int c) {
@@ -147,21 +163,17 @@ const char* nombre_clase(int c) {
 void eventos_personajes(App& a, const Evento& e) {
     switch (e.tipo) {
     case Ev::CANTIDAD_PERSONAJES:
-        // También al volver desde el juego (C_ChangeChar) o tras perder la conexión: lo del personaje
-        // anterior ya no vale (el servidor vuelve a mandar señores de castillo, asedios y emblemas).
-        a.mundo.limpiar();
-        a.tienda_pj.vendedores.clear();
-        a.tienda_pj.vista = 0;
-        a.castillos = {};
-        a.emblemas_pedidos.clear();
-        emblemas_abrir(a);  // the cache of this server (Emblem.dat)
         a.cantidad_pj = e.v[0];
         a.max_pj = e.v[1];
         a.pjs.clear();
-        a.pj_sel = -1;
-        a.pagina = 0;
-        a.esperando = false;
-        cambiar_pantalla(a, Pantalla::PERSONAJES);
+        volver_a_personajes(a);
+        break;
+    case Ev::VOLVER_PERSONAJES:
+        // S_PacketBox 42: l1j-en answers C_NewCharSelect with only this; the client keeps the list it
+        // received at login. Without a cached list (never reached the selection) ignore it.
+        if (a.pjs.empty()) break;
+        a.ventana_salida = false;
+        volver_a_personajes(a);
         break;
     case Ev::PERSONAJE:
     case Ev::PERSONAJE_NUEVO: {

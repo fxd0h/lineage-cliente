@@ -800,6 +800,35 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         REQUIRE(decodificar(usmapid, us, arena, ev));
         CHECK(ev[0].tipo == Ev::MAPA);
         CHECK(ev[0].v[0] == 4);
+        // S_PacketBox (62) message subtypes become server messages; 5 is the duel, 42 the logout.
+        auto caja_us = [&](std::vector<u8> b) {
+            ev.clear();
+            REQUIRE(decodificar(b, us, arena, ev));
+        };
+        caja_us({62, 43});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::MENSAJE_SERVIDOR);
+        CHECK(ev[0].v[MS_ID] == 130);
+        caja_us({62, 12, 0, 45});  // level limit: l1j-en sends min 0, max 45
+        CHECK(ev[0].v[MS_ID] == 673);
+        CHECK(ev[0].s[0] == "45");
+        caja_us({62, 15, 3});
+        CHECK(ev[0].v[MS_ID] == 679);
+        CHECK(ev[0].s[0] == "water");
+        caja_us({62, 15, 1});
+        CHECK(ev[0].v[MS_ID] == 678);
+        caja_us({62, 23, 'G', 'l', 'u', 'd', 'i', 'o', 0});
+        CHECK(ev[0].v[MS_ID] == 764);
+        CHECK(ev[0].s[0] == "Gludio");
+        caja_us({62, 49, 3});
+        CHECK(ev[0].v[MS_ID] == 1046);
+        caja_us({62, 5, 4, 3, 2, 1, 8, 7, 6, 5});
+        CHECK(ev[0].tipo == Ev::DUELO);
+        CHECK(ev[0].id == 0x01020304);
+        caja_us({62, 5, 0, 0, 0, 0, 8, 7, 6, 5});  // id 0: the duel ended, nothing to show
+        CHECK(ev.empty());
+        caja_us({62, 42});
+        CHECK(ev[0].tipo == Ev::VOLVER_PERSONAJES);
         igual_us(cmd::rango_clan(us, 3, "Ana"), {78, 1, 3, 'A', 'n', 'a', 0});
         igual_us(cmd::proponer(us, false), {22, 0});
         igual_us(cmd::proponer(us, true), {22, 1});

@@ -243,6 +243,50 @@ bool atributos(Lector& l, Evento& e) {
 //  - asedio (0–4): ver abajo.
 constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
+constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
+              CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49;
+// S_PacketBox subtypes that are just a string-e.tbl message, turned into a MENSAJE_SERVIDOR (ids checked
+// against the string table: 130 "cannot restart while in combat", 672/673 item level limits, 678-683 elf
+// spirit, 764 new mayor, 1045-1047 Battle Coliseum).
+//  - 12: c min, c max (l1j-en sends 0 and the max level): above max -> 673 with the number;
+//  - 15: c n: 1 spirit melted away (678); 2..5 the strength of fire / water / wind / earth (679 + element);
+//  - 23: s name; 43: no body; 49: c id: 1 starting, 2 cancelled, 3 finished.
+void caja_mensaje(Lector& l, Evento& e, int sub) {
+    static constexpr const char* ELEMENTOS[] = {"fire", "water", "wind", "earth"};  // string-e.tbl 680-683
+    e.tipo = Ev::MENSAJE_SERVIDOR;
+    e.v[MS_NARGS] = 0;
+    if (sub == CAJA_SIN_REINICIO) {
+        e.v[MS_ID] = 130;
+    } else if (sub == CAJA_ALCALDE) {
+        e.v[MS_ID] = 764;
+        e.s[0] = l.s();
+        e.v[MS_NARGS] = 1;
+    } else if (sub == CAJA_NIVEL) {
+        l.c();  // minimum level: l1j-en only sends the "above max" case, the min needs the own level
+        const int maximo = l.c();
+        char* p = l.arena->reservar_arreglo<char>(4);
+        if (maximo == 0 || !p) { e.tipo = Ev::IGNORADO; return; }
+        const int n = std::snprintf(p, 4, "%d", maximo);
+        e.v[MS_ID] = 673;
+        e.s[0] = {p, static_cast<size_t>(n)};
+        e.v[MS_NARGS] = 1;
+    } else if (sub == CAJA_ELFO) {
+        const int n = l.c();
+        if (n == 1) {
+            e.v[MS_ID] = 678;
+        } else if (n >= 2 && n <= 5) {
+            e.v[MS_ID] = 679;
+            e.s[0] = ELEMENTOS[n - 2];
+            e.v[MS_NARGS] = 1;
+        } else {
+            e.tipo = Ev::IGNORADO;
+        }
+    } else {  // CAJA_COLISEO
+        const int id = l.c();
+        if (id < 1 || id > 3) e.tipo = Ev::IGNORADO;
+        else e.v[MS_ID] = id == 1 ? 1045 : id == 2 ? 1047 : 1046;
+    }
+}
 bool caja(Lector& l, Evento& e) {
     int sub = l.c();
     if (sub == 10 || sub == 11) {
@@ -273,6 +317,15 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_TIPO] = sub;
         l.c();
         e.v[IE_SEG] = l.h() * 4;
+    } else if (sub == CAJA_DUELO) {
+        // d opponent id (0 = the duel ended), d own id
+        const u32 id = l.d();
+        e.tipo = id ? Ev::DUELO : Ev::IGNORADO;
+        e.id = id;
+    } else if (sub == CAJA_NIVEL || sub == CAJA_ELFO || sub == CAJA_ALCALDE || sub == CAJA_SIN_REINICIO || sub == CAJA_COLISEO) {
+        caja_mensaje(l, e, sub);
+    } else if (sub == CAJA_LOGOUT) {
+        e.tipo = Ev::VOLVER_PERSONAJES;  // back to character select with the cached list
     } else if (sub <= 4) {
         // Asedio: 0 empieza, 1 termina, 2 sigue (c castillo, h 0); 3 iniciativa y 4 ocupado (nada más).
         e.tipo = Ev::ASEDIO;

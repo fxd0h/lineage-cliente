@@ -416,6 +416,21 @@ void eventos_social(App& a, const Evento& e) {
             std::erase_if(a.grupo, [&](const MiembroGrupo& m) { return m.nombre == e.s[0]; });
         }
         break;
+    case Ev::DUELO: {  // S_PacketBox 5: message 645 "%s accepted the duel..." with the opponent's name
+        const TablaObjetos& o = a.mundo.objetos;
+        const Slot s = o.buscar(e.id);
+        if (s == SIN_SLOT) break;
+        Evento m{};
+        m.tipo = Ev::MENSAJE_SERVIDOR;
+        m.v[MS_ID] = 645;
+        m.v[MS_NARGS] = 1;
+        m.s[0] = texto(a.mundo, o.col<O_NOMBRE>()[s]);
+        char buf[256];
+        u32 color = 0;
+        const size_t n = formatear_mensaje(a.mensajes, a.desc, m, buf, sizeof buf, color);
+        a.chat.agregar({buf, n}, color, CHAT_MENSAJE);
+        break;
+    }
     case Ev::BLOQUEADO: {
         const std::string nombre(e.s[0]);
         std::erase(a.bloqueados, nombre);
