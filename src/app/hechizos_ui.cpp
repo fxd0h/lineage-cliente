@@ -755,6 +755,12 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
         case 155: return 5253;                                          // Storm Eye: slot 22 (771)
         case 162: return 5251;                                          // Burning Weapon: slot 20 (738)
         case 165: return 5254;                                          // Storm Shot: slot 23 (827)
+        // No thin-frame twin known: the classic icon of the slot (S3EP1U 0x4903b0 switch, table 0x6e1020).
+        case 119: return 890;                                           // slot 0x1c
+        case 221: return 2433;                                          // extra 2, Yahee curse: slot 0x4d
+        case 222: return 2432;                                          // extra 1, Barlog curse: slot 0x4e
+        case 223: return 2566;                                          // extra 6: slot 0x84
+        case 227: return 2382;                                          // slot 0x4a
         default: return 0;
         }
     default: return 0;

@@ -239,6 +239,7 @@ bool atributos(Lector& l, Evento& e) {
 //    S_SkillIconGFX que manda L1J para efectos con duración (34 poción azul, 40 Immune to Harm:
 //    h segundos) y S_SkillIconWisdomPotion (0x39: c 0x2c, h segundos / 4).
 //  - asedio (0–4): ver abajo.
+constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
 bool caja(Lector& l, Evento& e) {
     int sub = l.c();
@@ -250,6 +251,15 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_CLASE] = IE_AURA;
         e.v[IE_TIPO] = l.c();
         e.v[IE_SEG] = l.h();
+        // Aura 221 carries a byte that picks the slot (S3EP1U 0x4904b8): 2 Yahee curse, 1 Barlog curse,
+        // 6 a third slot; any other value shows nothing. Folded into the type as 221 / 222 / 223.
+        if (e.v[IE_TIPO] == AURA_MALDICION) {
+            const int extra = l.quedan(1) ? l.c() : 0;
+            if (extra == 2) e.v[IE_TIPO] = AURA_MALDICION;
+            else if (extra == 1) e.v[IE_TIPO] = AURA_MALDICION + 1;
+            else if (extra == 6) e.v[IE_TIPO] = AURA_MALDICION + 2;
+            else e.tipo = Ev::IGNORADO;
+        }
     } else if (sub == CAJA_POCION_AZUL || sub == CAJA_INMUNE) {
         e.tipo = Ev::ICONO_EFECTO;
         e.v[IE_CLASE] = IE_ICONO;
