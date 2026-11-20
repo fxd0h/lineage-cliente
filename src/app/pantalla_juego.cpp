@@ -544,6 +544,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 bool todas = true;
                 for (GfxId c : ropa) {
                     if (n == std::size(capas)) break;
+                    if (a.sprites.translucido(c)) continue;  // blend unknown: not drawn (see TablaSprites)
                     const RegionAtlas& rc = g.frame_sprite(c, sub_cuerpo, frame_cuerpo->frame);
                     if (g.pendiente(rc)) continue;  // still loading: skip it this frame
                     if (!rc.valida()) {
@@ -557,7 +558,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 }
                 if (todas)
                     for (size_t i = 0; i < n; ++i)
-                        g.gpu().dibujar_en(capas[i], px, py, clave_orden(CAPA_MUNDO, prof + 1 + static_cast<u32>(i)), color,
+                        g.gpu().dibujar_en(capas[i], px, py, clave_orden(CAPA_MUNDO, prof + 1 + static_cast<u32>(i)),
+                                           color,
                                            a.sprites.aditivo(gfx_capa[i]) ? Mezcla::ADITIVA : Mezcla::NORMAL);
             }
             // Tapado por un objeto del mapa: también su silueta encima de todo (varias piezas

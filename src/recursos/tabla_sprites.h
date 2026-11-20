@@ -100,6 +100,9 @@ public:
     std::span<const GfxId> ropa(GfxId gfx) const {
         return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
     }
+    // Attribute 104 bit 0x80 (2276 gfx: the disc under street torches, Fafurion parts, sea dancer layers).
+    // TODO: the exe's blend for it is not found yet (likely a multiply/shadow); such clothes layers are skipped.
+    bool translucido(GfxId gfx) const { return gfx < atributos_.size() && (atributos_[gfx] & 0x80); }
     // Atributo 109: gráfico que sigue a este al terminar (la explosión de Energy Bolt al llegar); 0 si no hay.
     GfxId siguiente(GfxId gfx) const { return gfx < siguiente_.size() ? siguiente_[gfx] : 0; }
     // Duración total de una acción en ms (suma de los frames × ms por tick); 0 si no existe. Para
