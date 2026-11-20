@@ -224,7 +224,8 @@ Original UI also: Ctrl+T chat size (4 steps), Ctrl+O chat colour palette, Ctrl+X
 - **Player shops:** the title goes over the seller with no background, and the cursor is a coin. Shop prices use a dot
   every three digits (10.000).
 - **Bookmarks:** `/bookmark name` saves the place (if the map allows it) and `/delbookmark name` deletes it. With
-  bookmarks, the teleport scroll and Teleport ask for the destination.
+  bookmarks and the Ring of Teleport Control worn (S_Ability 1), the teleport scroll and Teleport ask for the
+  destination; without the ring they teleport at random. l1j-en's S_Bookmarks has no x, y after the id.
 - **Chat commands:** anything that isn't a command goes to the chat.
 
 | Area | Commands |

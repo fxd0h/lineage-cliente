@@ -80,7 +80,8 @@ bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
 }
 
 bool elegir_destino(App& a, ObjId item, u32 hechizo) {
-    if (a.marcadores.empty()) return false;
+    // Only with the Ring of Teleport Control on (S_Ability 1, bit 1 of jugador.anillos); otherwise random.
+    if (a.marcadores.empty() || !(a.mundo.jugador.anillos & 2)) return false;
     a.destino = ElegirDestino{};
     a.destino.abierto = true;
     a.destino.item = item;

@@ -709,6 +709,13 @@ TEST_CASE("Reparar armas, marcadores y cambiar de personaje: decodificar y coman
     CHECK(ev[0].id == 1);
     CHECK(ev[0].v[MK_X] == 32598);
     CHECK(ev[0].v[MK_Y] == 33000);
+    // l1j-en (s3ep1) ends after the id: no x, y.
+    ev.clear();
+    std::vector<u8> bm2 = {11, 'B', 'o', 's', 'q', 'u', 'e', 0, 4, 0, 1, 0, 0, 0};
+    REQUIRE(decodificar(bm2, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::MARCADOR);
+    CHECK(ev[0].id == 1);
 
     auto igual = [](Escritor w, std::vector<u8> esperado) {
         REQUIRE(w.cuerpo().size() >= esperado.size());

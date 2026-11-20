@@ -588,14 +588,17 @@ bool marca_objetivo(Lector& l, Evento& e) {
     e.s[0] = l.s();
     return true;
 }
-// S_Bookmarks: s nombre, h mapa, d id, h x, h y (uno por marcador; todos al entrar)
+// S_Bookmarks: s nombre, h mapa, d id (+ h x, h y in L1J-JP; l1j-en/s3ep1 ends after the id).
+// One per bookmark; all of them at login.
 bool marcador(Lector& l, Evento& e) {
     e.tipo = Ev::MARCADOR;
     e.s[0] = l.s();
     e.v[MK_MAPA] = l.h();
     e.id = l.d();
-    e.v[MK_X] = l.h();
-    e.v[MK_Y] = l.h();
+    if (l.quedan(4)) {
+        e.v[MK_X] = l.h();
+        e.v[MK_Y] = l.h();
+    }
     return true;
 }
 // S_Teleport: c 0, c 0x40, d personaje
