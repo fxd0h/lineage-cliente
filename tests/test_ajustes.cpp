@@ -36,6 +36,16 @@ TEST_CASE("personajes_con_datos: también los que solo tienen auto-buffs") {
     CHECK(n[1] == "Eva");
 }
 
+TEST_CASE("personajes_con_datos: también los que solo tienen el orden del inventario") {
+    Config c;
+    c.inventario_orden = "Ana:12,7,9;";
+    const std::vector<std::string> n = personajes_con_datos(c);
+    REQUIRE(n.size() == 1);
+    CHECK(n[0] == "Ana");
+    quitar_valor_de_personaje(c.inventario_orden, "Ana");  // lo que hace "Quitar orden" en los ajustes
+    CHECK(c.inventario_orden.empty());
+}
+
 TEST_CASE("personajes_con_datos: sin datos devuelve lista vacía") {
     Config c;
     CHECK(personajes_con_datos(c).empty());

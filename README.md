@@ -139,8 +139,8 @@ The client takes **no command-line parameters**: everything comes from `settings
 The **Settings** window edits `settings.ini` in a form with tabs (Game, Interface, Audio, Servers,
 Characters). Open it from the login screen (the Settings button, or Options in the original interface) or in
 the game (the Options button). It is modal: the screen behind keeps running but takes no input. Numeric fields
-are validated before saving. In the Characters tab, you can remove a character's saved shortcuts, bar and
-auto-buffs, set its auto potion, and reset window positions.
+are validated before saving. In the Characters tab, you can remove a character's saved shortcuts, bar,
+auto-buffs and inventory order, set its auto potion, and reset window positions.
 
 **Save** applies the changes at once and writes the file. The game folder and the sprite table are read at
 startup: if they change, the window says they apply when the client restarts. **Revert** goes back to what is

@@ -40,8 +40,8 @@ código. El idioma del proyecto es el **español**: código (identificadores), c
    Una clave nueva que el jugador elige (un efecto, un volumen, una ruta) no se agrega solo al archivo: va
    también en su pestaña, con su texto en `src/i18n/catalogo.def` (cinco idiomas) y su fila en la tabla de
    opciones del README. Ver la receta "agregar una opción de settings.ini" (sección 3). Los datos que guarda
-   el propio juego (posiciones de ventanas, barra, atajos, orden del inventario) no son opciones, pero la
-   pestaña Personajes debe permitir borrarlos.
+   el propio juego (posiciones de ventanas, barra, atajos, auto-buffs, orden del inventario) no son
+   opciones, pero la pestaña Personajes debe permitir borrarlos.
 
 ## 2. Puesta en marcha
 

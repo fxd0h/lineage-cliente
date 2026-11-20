@@ -321,25 +321,32 @@ void pestana_personajes(Formulario& p) {
             std::snprintf(buf, sizeof buf, tr(Tx::AJ_AUTOBUFFS_QUITADOS), nombre.c_str());
             estado(p, buf, false);
         }
+        // Orden del inventario (Sort o arrastrar a otra celda): sin él, vuelve el del servidor al entrar.
+        etiqueta(p, fila(p, 5), valor_de_personaje(c.inventario_orden, nombre).empty() ? tr(Tx::AJ_ORDEN_NO) : tr(Tx::AJ_ORDEN_SI));
+        if (boton(p, X_CAMPO + 170, fila(p, 5), 160, tr(Tx::AJ_QUITAR_ORDEN))) {
+            quitar_valor_de_personaje(c.inventario_orden, nombre);
+            std::snprintf(buf, sizeof buf, tr(Tx::AJ_ORDEN_QUITADO), nombre.c_str());
+            estado(p, buf, false);
+        }
         // Auto-poción del personaje (sin entrada: apagada con 60 %).
         OpcionPocion o = autopocion_de(c, nombre);
         bool encendida = o.encendida;
-        si_no(p, fila(p, 5), tr(Tx::AJ_AUTOPOCION), encendida);
+        si_no(p, fila(p, 6), tr(Tx::AJ_AUTOPOCION), encendida);
         static const std::vector<std::string> UMBRALES = [] {
             std::vector<std::string> v;
             for (int u = UMBRAL_POCION_MIN; u <= UMBRAL_POCION_MAX; u += 5) v.push_back(std::to_string(u) + " %");
             return v;
         }();
         size_t umbral = static_cast<size_t>((o.umbral - UMBRAL_POCION_MIN) / 5);
-        const bool otro_umbral = lista(p, fila(p, 6), tr(Tx::AJ_UMBRAL_POCION), UMBRALES, umbral, f.abre_umbral);
+        const bool otro_umbral = lista(p, fila(p, 7), tr(Tx::AJ_UMBRAL_POCION), UMBRALES, umbral, f.abre_umbral);
         if (encendida != o.encendida || otro_umbral) {
             o.encendida = encendida;
             o.umbral = UMBRAL_POCION_MIN + static_cast<int>(umbral) * 5;
             poner_autopocion(c, nombre, o);
         }
     }
-    etiqueta(p, fila(p, 7), c.ventanas.empty() ? tr(Tx::AJ_VENTANAS_DEF) : tr(Tx::AJ_VENTANAS_GUARD));
-    if (boton(p, X_CAMPO, fila(p, 8), 220, tr(Tx::AJ_RESTABLECER))) {
+    etiqueta(p, fila(p, 8), c.ventanas.empty() ? tr(Tx::AJ_VENTANAS_DEF) : tr(Tx::AJ_VENTANAS_GUARD));
+    if (boton(p, X_CAMPO, fila(p, 9), 220, tr(Tx::AJ_RESTABLECER))) {
         c.ventanas.clear();
         estado(p, tr(Tx::AJ_VENTANAS_RESET), false);
     }

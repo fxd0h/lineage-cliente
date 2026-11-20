@@ -202,6 +202,14 @@ X(AJ_AUTOBUFFS_SI, "Auto-buffs: guardados", "Auto-buffs: saved", "Auto-buffs: sa
   "Auto-buffs : enregistrés")
 X(AJ_QUITAR_AUTOBUFFS, "Quitar auto-buffs", "Remove auto-buffs", "Remover auto-buffs", "Auto-Buffs entfernen",
   "Retirer les auto-buffs")
+X(AJ_ORDEN_NO, "Orden del inventario: el del servidor", "Inventory order: the server's",
+  "Ordem do inventário: a do servidor", "Inventarreihenfolge: die des Servers", "Ordre de l'inventaire : celui du serveur")
+X(AJ_ORDEN_SI, "Orden del inventario: guardado", "Inventory order: saved", "Ordem do inventário: salva",
+  "Inventarreihenfolge: gespeichert", "Ordre de l'inventaire : enregistré")
+X(AJ_QUITAR_ORDEN, "Quitar orden", "Remove order", "Remover ordem", "Reihenfolge entfernen", "Retirer l'ordre")
+X(AJ_ORDEN_QUITADO, "%s: orden del inventario quitado (al pulsar Guardar)", "%s: inventory order removed (press Save)",
+  "%s: ordem do inventário removida (ao pulsar Salvar)", "%s: Inventarreihenfolge entfernt (Speichern drücken)",
+  "%s : ordre de l'inventaire retiré (appuyer sur Enregistrer)")
 X(AJ_AUTOBUFFS_QUITADOS, "%s: auto-buffs quitados (al pulsar Guardar)", "%s: auto-buffs removed (press Save)",
   "%s: auto-buffs removidos (ao pulsar Salvar)", "%s: Auto-Buffs entfernt (Speichern drücken)",
   "%s : auto-buffs retirés (appuyer sur Enregistrer)")
