@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LIN_ASAN "Compilar con AddressSanitizer y UBSan" OFF)
 option(LIN_TESTS "Compilar los tests" ON)
+# Avisos como errores (solo nuestro código; las dependencias se agregan antes). El CI lo activa.
+option(LIN_AVISOS_ERROR "Tratar los avisos del compilador como errores" OFF)
 # Control en vivo para pruebas (src/app/control.cpp): ON en los presets de desarrollo, OFF en release.
 option(LIN_CONTROL "Compilar el control en vivo (socket de pruebas)" OFF)
 # Para todo el código: también decide LIN_CONFIG (otro settings.ini), que solo existe en desarrollo.
@@ -18,15 +20,33 @@ else()
     add_compile_definitions(LIN_CONTROL=0)
 endif()
 
+# Versión del paquete: la pone el empaquetado (herramientas/empaquetar_*); en Windows va en el .exe.
+set(LIN_VERSION "0.0.0" CACHE STRING "Versión del paquete (X.Y.Z, admite un sufijo: 0.2.0-abc1234)")
+
+# MSVC: runtime de C++ estático (/MT), para todo (también SDL3): el .exe no necesita el redistribuible de
+# Visual C++ instalado. herramientas/empaquetar_windows.ps1 comprueba que no dependa de sus DLL.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # Dependencias antes de las opciones de advertencias: estas aplican solo a nuestro código.
 include(cmake/dependencias.cmake)
 
 if(MSVC)
-    # MULTIPLATAFORMA (Windows): equivalentes de -fno-exceptions / -fno-rtti en MSVC
-    add_compile_options(/W4 /EHs-c- /GR- /utf-8)
-    add_compile_definitions(_HAS_EXCEPTIONS=0)
+    # Equivalentes de -fno-exceptions / -fno-rtti. CMake pone /EHsc por omisión: se saca para que no
+    # choque con /EHs-c- (aviso D9025 en cada archivo).
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    # C4324: relleno por alignas (buscado, en los anillos y estructuras por hilo).
+    add_compile_options(/W4 /EHs-c- /GR- /utf-8 /wd4324)
+    # _CRT_SECURE_NO_WARNINGS: getenv, fopen... son las funciones estándar que usa el código portable.
+    add_compile_definitions(_HAS_EXCEPTIONS=0 _CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -Wno-unused-parameter -fno-exceptions -fno-rtti)
+endif()
+if(LIN_AVISOS_ERROR)
+    if(MSVC)
+        add_compile_options(/WX)
+    else()
+        add_compile_options(-Werror)
+    endif()
 endif()
 
 if(LIN_ASAN AND NOT MSVC)
@@ -50,6 +70,9 @@ add_library(lin_plataforma STATIC
     src/plataforma/rutas.cpp
     src/i18n/textos.cpp)
 target_link_libraries(lin_plataforma PUBLIC lin_core PRIVATE SDL3::SDL3)
+if(WIN32)
+    target_link_libraries(lin_plataforma PUBLIC ws2_32)  # Winsock2 (plataforma/socket.cpp)
+endif()
 
 add_library(lin_proto STATIC
     src/proto/cifrado.cpp
@@ -87,15 +110,18 @@ add_library(lin_mundo STATIC
     src/mundo/inventario.cpp)
 target_link_libraries(lin_mundo PUBLIC lin_core lin_proto lin_recursos)
 
+include(cmake/shaders.cmake)
 add_library(lin_render STATIC
     src/render/atlas.cpp
     src/render/gpu.cpp
-    src/render/graficos.cpp)
+    src/render/graficos.cpp
+    ${LIN_SHADERS_H})
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
+target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
 
 add_library(lin_audio STATIC
     src/audio/audio.cpp)
-target_link_libraries(lin_audio PUBLIC lin_core PRIVATE SDL3::SDL3 dr_mp3)
+target_link_libraries(lin_audio PUBLIC lin_core lin_plataforma PRIVATE SDL3::SDL3 dr_mp3)
 
 add_library(lin_ui STATIC
     src/ui/ui.cpp)
@@ -142,6 +168,28 @@ else()
         COMMAND ${CMAKE_COMMAND} -DBIN=$<TARGET_FILE:lineage> -P ${CMAKE_SOURCE_DIR}/cmake/sin_control.cmake
         COMMENT "Comprobando que el ejecutable no incluya el control en vivo")
 endif()
+# Windows: ícono y versión del .exe (cmake/windows.rc.in) y, en la versión final, subsistema GUI, sin
+# ventana de consola (SDL_main.h pone el WinMain). En desarrollo queda de consola para ver el log.
+function(lin_windows objetivo descripcion icono)
+    if(NOT WIN32)
+        return()
+    endif()
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ "${LIN_VERSION}")
+    if(CMAKE_MATCH_COUNT EQUAL 3)
+        set(RC_VERSION_COMAS "${CMAKE_MATCH_1},${CMAKE_MATCH_2},${CMAKE_MATCH_3},0")
+    else()
+        set(RC_VERSION_COMAS "0,0,0,0")
+    endif()
+    set(RC_EJECUTABLE ${objetivo})
+    set(RC_DESCRIPCION "${descripcion}")
+    set(RC_ICONO "${CMAKE_SOURCE_DIR}/datos/iconos/${icono}.ico")
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/windows.rc.in ${CMAKE_BINARY_DIR}/generado/${objetivo}.rc @ONLY)
+    target_sources(${objetivo} PRIVATE ${CMAKE_BINARY_DIR}/generado/${objetivo}.rc)
+    if(NOT LIN_CONTROL)
+        set_target_properties(${objetivo} PROPERTIES WIN32_EXECUTABLE ON)
+    endif()
+endfunction()
+lin_windows(lineage "Lineage" lineage)
 if(APPLE)
     # MULTIPLATAFORMA: en macOS se compila como ejecutable de consola para depurar;
     # el empaquetado .app (MACOSX_BUNDLE, Info.plist, icono) queda para el entregable 11.
@@ -154,6 +202,7 @@ target_link_libraries(explorador PRIVATE lin_ui)
 # Editor visual de settings.ini: la misma UI simple del juego, sin cargar el juego.
 add_executable(settings tools/settings.cpp)
 target_link_libraries(settings PRIVATE lin_ui)
+lin_windows(settings "Lineage Settings" settings)
 
 if(LIN_TESTS)
     enable_testing()
@@ -178,6 +227,7 @@ if(LIN_TESTS)
         tests/test_autobuffs.cpp
         tests/test_autopocion.cpp
         tests/test_socket.cpp
+        tests/test_gpu.cpp
         src/core/asignaciones.cpp)
     target_link_libraries(lin_tests PRIVATE lin_mundo lin_render doctest)
     add_test(NAME lin_tests COMMAND lin_tests)

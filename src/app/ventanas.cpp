@@ -439,7 +439,7 @@ void dibujar_ayuda_teclas(App& a) {
     col_tecla += 16;
     const int ancho_desc = std::clamp(std::min(col_desc, a.gpu.ancho() - 20 - col_tecla - 24), 160, 300);
     const int ancho_total = col_tecla + ancho_desc + 24;
-    constexpr int ALTO_LINEA = ALTO_GLIFO + 4, SEPARACION = 4;
+    constexpr int ALTO_LINEA = ALTO_GLIFO + 4, ENTRE_FILAS = 4;
     int renglones_total = 0;
     for (int i = 0; i < n; ++i) {
         int lineas = 0;
@@ -447,7 +447,7 @@ void dibujar_ayuda_teclas(App& a) {
         renglones_total += std::max(1, lineas);
     }
     Rect r{(a.gpu.ancho() - ancho_total) / 2, 60, ancho_total,
-           ui::ALTO_TITULO + 14 + renglones_total * ALTO_LINEA + n * SEPARACION};
+           ui::ALTO_TITULO + 14 + renglones_total * ALTO_LINEA + n * ENTRE_FILAS};
     if (recuadro(a, r, "Keys (F1)") || a.entrada.escape) {
         a.ayuda_teclas = false;
         return;
@@ -457,7 +457,7 @@ void dibujar_ayuda_teclas(App& a) {
     for (int i = 0; i < n; ++i) {
         const int primera = linea;
         partir(FILAS[i][1], ancho_desc, [&](std::string_view t) {
-            const float y = static_cast<float>(r.y + ui::ALTO_TITULO + 8 + linea * ALTO_LINEA + i * SEPARACION);
+            const float y = static_cast<float>(r.y + ui::ALTO_TITULO + 8 + linea * ALTO_LINEA + i * ENTRE_FILAS);
             if (linea == primera) a.g->texto(FILAS[i][0], static_cast<float>(r.x + 12), y, kt, rgba(255, 230, 120));
             a.g->texto(t, static_cast<float>(r.x + 12 + col_tecla), y, kt, rgba(230, 220, 190));
             ++linea;
@@ -492,7 +492,7 @@ void avisar_mapa(App& a, MapId mapa) {
     char t[160];
     std::snprintf(t, sizeof t, "map/%u", mapa);
     std::error_code ec;
-    if (std::filesystem::is_directory(a.cfg.carpeta_juego + t, ec)) return;
+    if (std::filesystem::is_directory(ruta_real(a.cfg.carpeta_juego + t), ec)) return;
     std::snprintf(t, sizeof t,
                   "The server sent you to map %u, which this game installation does not have. Use Exit > Restart to go back.",
                   mapa);

@@ -31,11 +31,30 @@ More documentation, mostly in Spanish, the working language of the project:
 ## Requirements (macOS)
 
 - Xcode Command Line Tools (Apple Clang with C++20)
-- CMake 3.25 or newer, and Ninja: `brew install cmake ninja`
+- CMake 3.25 or newer, Ninja, glslang and spirv-cross: `brew install cmake ninja glslang spirv-cross` (the
+  shaders are written in HLSL and turned into Metal Shading Language at build time)
 - The game installation (the folder with `Sprite*.pak`, `Tile.pak`, `Text.pak`, `map/`, `font/`)
 
 SDL3 3.4.18, stb (`stb_image`, `stb_truetype`), dr_mp3 and doctest are downloaded on the first configure
-(FetchContent, pinned versions). Nothing else needs installing.
+(FetchContent, pinned versions).
+
+**Windows and Linux (in progress, see [PLAN_PORTADO.md](docs/analisis/PLAN_PORTADO.md)):** the shaders are
+compiled from HLSL (`src/render/shaders/`) at build time. Windows: Visual Studio 2022 Build Tools with the C++
+workload (ARM64 tools on arm64) and the Windows SDK, whose `dxc.exe` makes the DXIL; build from the developer
+console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages listed in
+`.github/workflows/compilar.yml`.
+
+**Windows package:** from the developer console (x64 or arm64),
+`powershell -ExecutionPolicy Bypass -File herramientas\empaquetar_windows.ps1 -Version 0.2.0` leaves
+`dist\Lineage-0.2.0-windows-<arch>.zip` with `lineage.exe`, `settings.exe`, `datos\`, `LICENSE.txt` and `LEEME.txt`.
+The runtime is linked statically (no Visual C++ redistributable needed; the script checks it). CI builds the zip on
+every push (artifact `lineage-windows-<arch>`), and a `v*` tag publishes it in the release next to the macOS `.dmg`.
+
+**Game folder on a WebDAV drive (Windows):** if the console shows `error de Windows 223` for the `.pak` files, the
+drive is mounted over WebDAV, whose client downloads the whole file on open and refuses files over ~50 MB.
+Copy the game to a local disk (recommended: WebDAV would download the ~2 GB `Sprite.pak` on every start), or raise
+the limit as administrator and restart the WebClient service:
+`reg add HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f`.
 
 ## Build and test
 
@@ -364,12 +383,17 @@ The `debug` and `debug-asan` builds (CMake option `LIN_CONTROL`) open a Unix dom
 commands. The `release` build doesn't include it: a CMake step (`cmake/sin_control.cmake`) fails if it slips in.
 
 - **Socket:** `$LIN_CONTROL`, or `$TMPDIR/lineage-control-<pid>.sock`. The path is printed at startup.
+  `LIN_CONTROL=tcp:<port>` listens on 127.0.0.1 instead (port 0: any free one). On Windows it is the only
+  option and the default (Python has no `AF_UNIX` there); `lin_ctl.py` uses it by itself on Windows.
 - **Responses:** each ends with `ok` or `error <reason>`.
 - **Waits:** commands that wait for something (`login`, `personaje`, `esperar`, `captura`) respond when it
   happens or the time limit passes, without blocking the game.
 - **Encoding:** text goes in CP949, like the game's.
 - **`LIN_CONFIG=/tmp/x.ini`** (development only): uses another `settings.ini`, so as not to overwrite the user's and
   to run several clients at once.
+- **`LIN_VSYNC=0`:** presents without waiting for the display refresh, to measure what the GPU gives without the
+  monitor's cap. The log's `GPU:` line names the adapter and driver (on D3D12, "Microsoft Basic Render Driver" is
+  WARP, software rendering).
 
 | Commands | What they do |
 |---|---|
@@ -462,10 +486,8 @@ Identifiers and comments in the code are in Spanish.
 
 | Where | What's missing |
 |---|---|
-| `src/render/gpu.cpp` | The shader is in MSL (Metal). Write it in HLSL, compile it with SDL_shadercross to SPIR-V (Vulkan/Linux) and DXIL (D3D12/Windows), and choose the format with `SDL_GetGPUShaderFormats()` |
-| `src/plataforma/archivo_mapeado.cpp` | Windows: `CreateFileMappingW` / `MapViewOfFile`, and UTF-8 → UTF-16 paths (`_wfopen`). Currently an `#error` |
-| `src/plataforma/socket.cpp` / `socket.h` | Windows: Winsock2 (`WSAStartup`, `closesocket`, `SOCKET` type). Currently an `#error`. Linux is already covered (POSIX and `MSG_NOSIGNAL`) |
-| `src/plataforma/rutas.cpp`, `src/mundo/mundo.cpp` | Linux is case-sensitive: look for `Sprite.pak`, `map/`... ignoring case |
+| `src/plataforma/archivo_mapeado.cpp`, `socket.cpp` | Windows: written (`MapViewOfFile`, UTF-16 paths, Winsock2) and checked with MinGW and in CI; not yet tried on a real Windows machine |
+| `std::filesystem` with `std::string` (`ventanas.cpp`, `mundo.cpp`) | Windows: narrow paths use the ANSI code page, not UTF-8; a game folder with non-ASCII characters would not be found |
 | `CMakeLists.txt` | MSVC: equivalent options are in place, untested. `.app` / `.exe` / AppImage packaging (deliverable 11) |
 | `servidor_local/*.sh` | Linux: system packages instead of brew. Windows: the server's own `.bat` files |
 

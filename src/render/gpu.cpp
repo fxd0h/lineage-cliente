@@ -1,125 +1,55 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include "render/gpu.h"
+#include "shaders.h"  // generado por cmake/shaders.cmake desde src/render/shaders/*.hlsl
 
 namespace lin {
 
 namespace {
 
-// MULTIPLATAFORMA: SDL_GPU usa Metal en macOS y por eso este shader está en MSL. Para Vulkan
-// (Linux) y D3D12 (Windows) hay que escribirlo en HLSL y compilarlo con SDL_shadercross a SPIR-V
-// y DXIL, y elegir el formato con SDL_GetGPUShaderFormats(). Convención de recursos de SDL_GPU
-// para MSL: buffer(0) = uniformes, buffer(1) = primer storage buffer; texture(0)/sampler(0).
+// Shaders: DXIL (Windows, D3D12), SPIR-V (Linux, Vulkan) y MSL (macOS, Metal), todos compilados desde
+// los HLSL de src/render/shaders/ por cmake/shaders.cmake.
 // Tamaño inicial de la textura de brillo (celdas); crece si la vista lo pide (ver asegurar_luz).
 constexpr int LUZ_TAM = 1024;
 constexpr int FILAS_TAM = 1024;  // alto de la textura de color por fila
 // Amplitud (píxeles) del vaivén de la borrachera por filas (S_Liquor 1). Igual que desplazamiento_borracho.
 constexpr float AMPLITUD_BORRACHO = 3.5f;
 
-const char* SHADER_MSL = R"(
-#include <metal_stdlib>
-using namespace metal;
+#if defined(__APPLE__)
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_MSL;
+#elif defined(_WIN32)
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_DXIL;
+#else
+constexpr SDL_GPUShaderFormat FORMATO_SHADER = SDL_GPU_SHADERFORMAT_SPIRV;
+#endif
 
-struct Instancia { float4 destino; float4 uv; uint pagina; uint color; uint mezcla; uint relleno; };
-struct Uniformes { float2 pantalla; float2 relleno; };
-struct Salida {
-    float4 pos [[position]];
-    float2 uv;
-    float4 color;
-    uint pagina [[flat]];
-    uint mezcla [[flat]];
+// Código de una etapa (en MSL, su texto). El nombre de la entrada es el mismo en los tres formatos.
+struct CodigoShader {
+    const Uint8* datos;
+    size_t tam;
 };
-
-vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
-                        constant Uniformes& u [[buffer(0)]],
-                        const device Instancia* inst [[buffer(1)]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    Instancia i = inst[iid + uint(u.relleno.x)];
-    float2 e = esquinas[vid];
-    float2 p = i.destino.xy + e * i.destino.zw;
-    Salida o;
-    o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    o.uv = mix(i.uv.xy, i.uv.zw, e);
-    o.color = unpack_unorm4x8_to_float(i.color);
-    o.pagina = i.pagina;
-    o.mezcla = i.mezcla;
-    return o;
+CodigoShader codigo_shader(const char* entrada) {
+#define LIN_SHADER(n, var) \
+    if (std::strcmp(entrada, n) == 0) return {var, sizeof var};
+    LIN_SHADER("vs_sprite", SHADER_VS_SPRITE)
+    LIN_SHADER("fs_sprite", SHADER_FS_SPRITE)
+    LIN_SHADER("vs_brillo", SHADER_VS_BRILLO)
+    LIN_SHADER("fs_brillo", SHADER_FS_BRILLO)
+    LIN_SHADER("vs_mundo", SHADER_VS_MUNDO)
+    LIN_SHADER("fs_mundo", SHADER_FS_MUNDO)
+#undef LIN_SHADER
+    return {nullptr, 0};
 }
 
-fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [[texture(0)]],
-                          sampler s [[sampler(0)]]) {
-    float4 c = atlas.sample(s, in.uv, in.pagina) * in.color;
-    if (c.a <= 0.0) discard_fragment();
-    // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    return float4(c.rgb * c.a, in.mezcla == 1 ? 0.0 : c.a);
+SDL_GPUShader* crear_shader(SDL_GPUDevice* dev, SDL_GPUShaderCreateInfo info) {
+    const CodigoShader c = codigo_shader(info.entrypoint);
+    info.code = c.datos;
+    info.code_size = c.tam;
+    info.format = FORMATO_SHADER;
+    return SDL_CreateGPUShader(dev, &info);
 }
-
-// Multiplicar el mundo: brillo (textura R8 por celda) × color por fila (textura de 1 × N) × tinte.
-struct BrilloSalida {
-    float4 pos [[position]];
-    float2 uv;
-    float2 uvf;
-};
-
-vertex BrilloSalida vs_brillo(uint vid [[vertex_id]], constant float4& escala [[buffer(0)]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    float2 e = esquinas[vid];
-    BrilloSalida o;
-    o.pos = float4(e.x * 2.0 - 1.0, 1.0 - e.y * 2.0, 0.0, 1.0);
-    o.uv = e * escala.xy;
-    o.uvf = float2(0.0, e.y * escala.z);
-    return o;
-}
-
-fragment float4 fs_brillo(BrilloSalida in [[stage_in]], texture2d<float> luz [[texture(0)]],
-                          texture2d<float> filas [[texture(1)]], sampler s0 [[sampler(0)]],
-                          sampler s1 [[sampler(1)]], constant float4& tinte [[buffer(0)]]) {
-    float b = luz.sample(s0, in.uv).r;
-    float3 f = filas.sample(s1, in.uvf).rgb;
-    return float4(tinte.rgb * b * f, 1.0);
-}
-
-// Reemplazar el mundo: una copia de lo ya dibujado, leída con la ola (desplazamiento por columnas;
-// p.z = fase, < 0 sin ola) y/o la visión (p.w: 1 elfo, 2 elfo oscuro).
-struct MundoSalida {
-    float4 pos [[position]];
-    float2 uv;
-};
-
-vertex MundoSalida vs_mundo(uint vid [[vertex_id]]) {
-    const float2 esquinas[6] = { float2(0,0), float2(1,0), float2(0,1), float2(1,0), float2(1,1), float2(0,1) };
-    float2 e = esquinas[vid];
-    MundoSalida o;
-    o.pos = float4(e.x * 2.0 - 1.0, 1.0 - e.y * 2.0, 0.0, 1.0);
-    o.uv = e;
-    return o;
-}
-
-fragment float4 fs_mundo(MundoSalida in [[stage_in]], texture2d<float> escena [[texture(0)]],
-                         sampler s [[sampler(0)]], constant float4* u [[buffer(0)]]) {
-    float4 p = u[0];  // ancho, alto, fase de la ola (< 0 sin ola), modo de visión
-    float4 b = u[1];  // fase de la borrachera (< 0 sin ella), amplitud
-    float2 uv = in.uv;
-    if (b.x >= 0.0) {
-        float fila = floor(uv.y * p.y);
-        float dx = trunc(sin((fila + b.x) * 3.14159265 * 2.0 / 100.0) * b.y);
-        float x = clamp(floor(uv.x * p.x) + dx, 0.0, p.x - 1.0);
-        uv.x = (x + 0.5) / p.x;
-    }
-    if (p.z >= 0.0) {
-        float xl = floor(uv.x * p.x);
-        float yl = floor(uv.y * p.y);
-        float dy = trunc(sin((xl + p.z) * 3.14159265 / 50.0) * 6.0);
-        float y = clamp(yl + dy, 0.0, p.y - 1.0);
-        uv = float2((xl + 0.5) / p.x, (y + 0.5) / p.y);
-    }
-    float3 c = escena.sample(s, uv).rgb;
-    if (p.w == 1.0) c = c * float3(1.0 / 16.0, 0.5, 1.0 / 16.0);
-    else if (p.w == 2.0) c = c * ((2.0 * c.r + 7.0 * c.g + c.b) / 10.0);
-    return float4(c, 1.0);
-}
-)";
 
 }  // namespace
 
@@ -129,18 +59,33 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
     alto_ = alto_min_ = alto_logico;
     grid_w_ = ancho_logico;
     grid_h_ = alto_logico;
-    // MULTIPLATAFORMA: agregar SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL cuando
-    // existan los shaders compilados para esos backends.
-    dev_ = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, false, nullptr);
+    // Un formato por plataforma: SDL elige el backend que lo acepta (Metal, D3D12 o Vulkan).
+    dev_ = SDL_CreateGPUDevice(FORMATO_SHADER, false, nullptr);
     if (!dev_) {
         LIN_LOG("SDL_CreateGPUDevice: %s", SDL_GetError());
         return false;
+    }
+    {
+        // Qué placa y driver eligió SDL: con D3D12, "Microsoft Basic Render Driver" es WARP (por software).
+        const SDL_PropertiesID pr = SDL_GetGPUDeviceProperties(dev_);
+        LIN_LOG("GPU: %s, %s (driver %s %s)", SDL_GetGPUDeviceDriver(dev_),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_VERSION_STRING, ""));
     }
     if (!SDL_ClaimWindowForGPUDevice(dev_, ventana_)) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
     }
-    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_VSYNC);
+    // LIN_VSYNC=0 presenta sin esperar el refresco (si el backend lo permite): para medir cuánto da la
+    // GPU sin el tope del monitor. Por omisión, con vsync.
+    SDL_GPUPresentMode modo = SDL_GPU_PRESENTMODE_VSYNC;
+    if (const char* v = std::getenv("LIN_VSYNC"); v && v[0] == '0') {
+        if (SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_IMMEDIATE)) modo = SDL_GPU_PRESENTMODE_IMMEDIATE;
+        else if (SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_MAILBOX)) modo = SDL_GPU_PRESENTMODE_MAILBOX;
+        LIN_LOG("LIN_VSYNC=0: presentación %s", modo == SDL_GPU_PRESENTMODE_VSYNC ? "con vsync (no hay otra)" : "sin vsync");
+    }
+    SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, modo);
     if (!crear_pipeline()) return false;
 
     SDL_GPUTextureCreateInfo ti{};
@@ -221,21 +166,18 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
 
 bool Gpu::crear_pipeline() {
     SDL_GPUShaderCreateInfo vs{};
-    vs.code = reinterpret_cast<const Uint8*>(SHADER_MSL);
-    vs.code_size = std::strlen(SHADER_MSL);
     vs.entrypoint = "vs_sprite";
-    vs.format = SDL_GPU_SHADERFORMAT_MSL;
     vs.stage = SDL_GPU_SHADERSTAGE_VERTEX;
     vs.num_uniform_buffers = 1;
     vs.num_storage_buffers = 1;
-    SDL_GPUShader* v = SDL_CreateGPUShader(dev_, &vs);
+    SDL_GPUShader* v = crear_shader(dev_, vs);
     SDL_GPUShaderCreateInfo fs = vs;
     fs.entrypoint = "fs_sprite";
     fs.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     fs.num_uniform_buffers = 0;
     fs.num_storage_buffers = 0;
     fs.num_samplers = 1;
-    SDL_GPUShader* f = SDL_CreateGPUShader(dev_, &fs);
+    SDL_GPUShader* f = crear_shader(dev_, fs);
     if (!v || !f) {
         LIN_LOG("SDL_CreateGPUShader: %s", SDL_GetError());
         return false;
@@ -271,8 +213,8 @@ bool Gpu::crear_pipeline() {
     bf.entrypoint = "fs_brillo";
     bf.num_uniform_buffers = 1;
     bf.num_samplers = 2;
-    SDL_GPUShader* bvs = SDL_CreateGPUShader(dev_, &bv);
-    SDL_GPUShader* bfs = SDL_CreateGPUShader(dev_, &bf);
+    SDL_GPUShader* bvs = crear_shader(dev_, bv);
+    SDL_GPUShader* bfs = crear_shader(dev_, bf);
     if (!bvs || !bfs) {
         LIN_LOG("SDL_CreateGPUShader (brillo): %s", SDL_GetError());
         return false;
@@ -309,8 +251,8 @@ bool Gpu::crear_pipeline() {
     mf.num_uniform_buffers = 1;
     mf.num_samplers = 1;
     mf.num_storage_buffers = 0;
-    SDL_GPUShader* mvs = SDL_CreateGPUShader(dev_, &mv);
-    SDL_GPUShader* mfs = SDL_CreateGPUShader(dev_, &mf);
+    SDL_GPUShader* mvs = crear_shader(dev_, mv);
+    SDL_GPUShader* mfs = crear_shader(dev_, mf);
     if (!mvs || !mfs) {
         LIN_LOG("SDL_CreateGPUShader (mundo): %s", SDL_GetError());
         return false;

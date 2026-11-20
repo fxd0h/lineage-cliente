@@ -1,0 +1,34 @@
+// Recursos de Windows para @RC_EJECUTABLE@.exe: el ícono (el que muestra el Explorador) y la versión.
+// Generado por CMakeLists.txt con configure_file; el ícono de la ventana lo pone la app (ui::poner_icono).
+#include <winver.h>
+
+1 ICON "@RC_ICONO@"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION @RC_VERSION_COMAS@
+PRODUCTVERSION @RC_VERSION_COMAS@
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE 0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Lineage Cliente"
+            VALUE "FileDescription", "@RC_DESCRIPCION@"
+            VALUE "FileVersion", "@LIN_VERSION@"
+            VALUE "InternalName", "@RC_EJECUTABLE@"
+            VALUE "LegalCopyright", "GPLv3"
+            VALUE "OriginalFilename", "@RC_EJECUTABLE@.exe"
+            VALUE "ProductName", "Lineage Cliente"
+            VALUE "ProductVersion", "@LIN_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
