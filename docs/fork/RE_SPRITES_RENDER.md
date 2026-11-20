@@ -57,7 +57,7 @@ their own attr 104 `|0x40` or `|1` from the object flags, and are skipped when t
 
 | Id | Meaning | Parse | Behaviour |
 |---|---|---|---|
-| 100 | switches / extra blocked tiles | n, n x (x1,y1,x2,y2) | `FUN_004cba00` after object creation: for x in x1..x2 step 2 (half tiles), y in y1..y2, relative to the object's tile, mark the tile blocked (`FUN_00460360(2)`); if the player is inside, reposition (`FUN_00468240`). (C) |
+| 100 | see-through trigger (see Round 2) | n, n x (x1,y1,x2,y2) | `FUN_004cba00` after object creation: for x in x1..x2 step 2 (half tiles), y in y1..y2, relative to the object's tile, mark the tile blocked (`FUN_00460360(2)`); if the player is inside, reposition (`FUN_00468240`). (C) |
 | 101 | shadow gfx | 1 | same image index as the body, -1 none. (C) |
 | 102 | type | 1 | 0 effect, 1 scenery, 4 sign, 5 player, 6 NPC, 7 chest, 8 door, 9 ground item, 10 monster, 11 gate, 12 shop NPC, 14 board, 15 auction board. (C, values from data) |
 | 103 | interaction radius | 1 | `FUN_004c7460` mode 2: reached when `|dx| <= 2v, |dy| <= v`. (I) |
@@ -65,7 +65,7 @@ their own attr 104 `|0x40` or `|1` from the object flags, and are skipped when t
 | 105 | clothes | n, n gfx | overlays at the body's image index. (C) |
 | 106 | weapon overlays | 5 shorts (global list) | slot = table `DAT_006e51bc[baseAction]` (4->1, 11->2, 20->3, 24->4, 40->5, 46->1); overlay gfx short[slot-1] at the same image index with its own attr 104. (C) |
 | 107 | size | 2 numbers, stored `a | b<<4` | click/arrival box half extents (x doubled). (C) |
-| 108 | stance | 1 | 2 = weapon-stance humanoid: action 0x2c end -> stance 2, base action 4 (11 if stride); 0x2d end -> stance 1, base 0. (C) |
+| 108 | flying type (see Round 2) | 1 | 2 = weapon-stance humanoid: action 0x2c end -> stance 2, base action 4 (11 if stride); 0x2d end -> stance 1, base 0. (C) |
 | 109 | effect class, next gfx | 2 | object subclass at spawn (`FUN_00487780`): 1 default, 2, 3, 4/5/7 get the next gfx, 8 none. (C; class meanings I) |
 | 110 | framerate | 1 | ticks per second for later actions on the line. (C) |
 | 111 | stride | 1 | walk action from `{0,4 | 11,20 | ...}` by stance and a per-object step counter (`FUN_004c6ff0`). (C) |
@@ -112,3 +112,28 @@ There is no `1516.img` / `1518.img` in this installation (only unrelated monster
 - Attribute 113: `TablaSprites::morfo`; `CAMBIO_FORMA` spawns that effect at the object when its gfx changes.
 - Attribute 100 (extra blocked tiles): TODO. `celda_pasable` only knows static map cells plus the door set
   (`puertas_cerradas`, no reference count); marking cells per object needs add/remove/move hooks.
+
+## Round 2 findings (corrections included)
+
+- **Ordering (C):** blends are interleaved with opaque draws. The renderer walks cells in painter order and, per cell,
+  draws the ground tile and then every list entry in array order, applying each entry's blend in place (no deferred
+  blend pass). The layer byte comes from the sprite data: byte +8 of each 12-byte part record of the .spr frame
+  (`FUN_004b0350`, 0x4b03fb); tile objects use 0 or the map entry byte at offset -2. Insertion stops at the first
+  entry with layer >= new, so among equal layers the later-added entry is drawn first.
+- **Status byte -> flags (C):** &1 -> 0x20 pulse (poison), &8 -> 0x200 tint (freeze; l1j-en never sends it),
+  &0x80 -> 0x2 hidden (ghost; never sent), &2 -> 0x100 for the local player / 0x40 for others (invisible).
+- **Pulse 0x20 (C):** level `L = |12 - tick%24| + 16` (tick every 50 ms, period 1.2 s); per channel
+  `out = min(31, s + ((L*c) >> 4))` with c = 0x100 -> (0,4,0) in 565: a green glow of +4..+7/31 on green.
+- **Tint 0x200 (C):** `out = (s >> 1) + c`, c = 0x0c63 -> 565 (1,17,3) dark green cast.
+- **0x40 (I):** others' invisible sprites draw at 50% only when the viewer has ability slot 0x8ed57c in 1..3, no pending
+  teleport `[0x6f5d1c]`, and "Ring of Sayha" ($431, item +0x6a == 0x57) in the inventory; otherwise they are skipped.
+- **Roof fade 0xc00 (C):** map loaders register roof groups per cell (`FUN_00460360(kind)`, kind 0 -> fade to 50%,
+  kind 1 -> fade to hidden). `FUN_00468240` fades groups attached to the local player's cell and restores the others;
+  a 50 ms timer steps the 0..31 level by 4 (about 0.4 s), the 50% target stops near 16.
+- **Attr 100 is a see-through trigger, not blocked cells (C):** each rectangle cell (x in half tiles step 2, y in tiles,
+  relative to the object) is registered with flag byte 5; while the local player stands in one of those cells the
+  object (houses, shops, doors, gates: 205 gfx) is drawn with flag 1 (50% average), and back to 0 when they leave.
+- **Attr 108 is "flying type" (C):** 26 flying monsters (harpies, drakes, griffons, Lindvior, Valakas forms); type 2 with
+  packet state nibble 2 -> base action 4 (11 with stride). Attr 106 and 114 have no uses in the 2009 data.
+- **0x7026d0 (C/U):** reference count of effects whose frame byte +0x13 == 2 forcing ambient light level 15 (flash);
+  trigger unknown.
