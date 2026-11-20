@@ -388,11 +388,14 @@ void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave
 
 // Lo último que dijo el objeto, sobre su nombre (hasta 3 filas centradas). Se quita el
 // "Nombre: " / "<Nombre> " que agrega el servidor porque el nombre ya está debajo.
-void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y) {
+void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false) {
     if (t.empty()) return;
     size_t corte = std::min(t.find(": "), t.find("> "));
     if (corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
-    constexpr int ANCHO = 160, FILAS = 3;
+    // Original client (S_Say -> 0x41a600): plain 20 chars (6 px each) per line, boxed 16; 12 px pitch.
+    const bool caja = a.cfg.globos_comic || (a.cfg.opciones_orig >> OPC_BUBBLE & 1);
+    const int ANCHO = original ? (caja ? 96 : 120) : 160;
+    constexpr int FILAS = 3;
     std::string_view filas[FILAS];
     int n = 0;
     while (!t.empty() && n < FILAS) {
@@ -401,11 +404,15 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y) {
         t.remove_prefix(c);
         while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
     }
-    if (a.cfg.globos_comic || (a.cfg.opciones_orig >> OPC_BUBBLE & 1)) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
+    if (original) base_y -= caja ? 14 : 6;  // lines drawn upward from here: top offset -lines*12-14 / -6
+    const int paso = original ? 12 : 14;
+    if (caja) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
         int ancho = 0;
         for (int i = 0; i < n; ++i) ancho = std::max(ancho, ancho_texto(filas[i].data(), filas[i].size()));
-        const int x0 = static_cast<int>(centro_x) - ancho / 2 - 6, w = ancho + 12;
-        const int y0 = static_cast<int>(base_y) - 14 * n - 6, h = 14 * n + 8;
+        const int pad = original ? 5 : 6;
+        const int x0 = static_cast<int>(centro_x) - ancho / 2 - pad, w = ancho + 2 * pad;
+        const int y0 = original ? static_cast<int>(base_y) - 12 * n : static_cast<int>(base_y) - 14 * n - 6;
+        const int h = original ? 12 * n + 10 : 14 * n + 8;
         const int x1 = x0 + w - 1, y1 = y0 + h - 1, cx = static_cast<int>(centro_x);
         const u64 k = clave_orden(CAPA_EFECTOS, 1);
         const u32 borde = rgba(235, 235, 230, 230);
@@ -423,7 +430,8 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y) {
     }
     for (int i = 0; i < n; ++i) {
         int w = ancho_texto(filas[i].data(), filas[i].size());
-        a.g->texto_sombra(filas[i], centro_x - w / 2, base_y - 14 * (n - i), clave_orden(CAPA_EFECTOS, 2),
+        a.g->texto_sombra(filas[i], centro_x - w / 2, base_y - paso * (n - i) + (original && caja ? 5 : 0),
+                          clave_orden(CAPA_EFECTOS, 2),
                           rgba(255, 255, 254));
     }
 }
@@ -623,6 +631,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             top *= z;
             g.gpu().sin_zoom_mundo(true);
         }
+        const float top_sprite = top;
         // Barra de vida si el servidor la da (S_HpMeter: grupo y mascotas; el % de S_CharPack es
         // 0xFF para los monstruos en L1J-JP) y nombre; el objetivo del ataque, en amarillo.
         const bool soy_yo = o.ids()[s] == a.mundo.jugador.id;
@@ -728,7 +737,9 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             const RegionAtlas& em = g.emblema(Graficos::CLAN_VISTA);
             if (em.valida()) g.gpu().dibujar_en(em, ex - 32, ay - 86, clave_orden(CAPA_EFECTOS, 0));
         }
-        dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
+        if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
+        else  // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
+            dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true);
         g.gpu().sin_zoom_mundo(false);
     }
 }

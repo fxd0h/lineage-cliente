@@ -47,7 +47,7 @@ struct Chat {
     std::string_view texto(const LineaChat& l) const { return {l.texto, l.largo}; }
     void agregar(std::string_view t, u32 color, u8 tipo);
     // Globo vigente del objeto (vacío si no habló en los últimos MS_GLOBO).
-    std::string_view globo(ObjId id, u64 ahora) const;
+    std::string_view globo(ObjId id, u64 ahora, u64 duracion = MS_GLOBO) const;
     void limpiar() { total = 0; for (GloboChat& g : globos) g = {}; }
 };
 

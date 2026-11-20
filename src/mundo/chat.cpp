@@ -92,10 +92,10 @@ void Chat::agregar(std::string_view t, u32 c, u8 tipo) {
     ++total;
 }
 
-std::string_view Chat::globo(ObjId id, u64 ahora) const {
+std::string_view Chat::globo(ObjId id, u64 ahora, u64 duracion) const {
     if (id == 0) return {};
     for (const GloboChat& g : globos) {
-        if (g.id != id || ahora - g.inicio >= MS_GLOBO || total - g.linea > CAPACIDAD_CHAT) continue;
+        if (g.id != id || ahora - g.inicio >= duracion || total - g.linea > CAPACIDAD_CHAT) continue;
         const LineaChat& l = lineas[g.linea % CAPACIDAD_CHAT];
         return {l.texto, l.largo};
     }
