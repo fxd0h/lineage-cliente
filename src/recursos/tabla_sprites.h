@@ -19,6 +19,7 @@
 #include <string_view>
 #include <vector>
 #include "core/mapa_hash.h"
+#include "recursos/modo_mezcla.h"
 
 namespace lin {
 
@@ -86,9 +87,8 @@ public:
     i16 sombra(GfxId gfx) const { return gfx < sombra_.size() ? sombra_[gfx] : -1; }
     // Tipo de gfx (atributo 102): TIPO_ITEM para los ítems del suelo, TIPO_MONSTRUO... 0 si no tiene.
     u8 tipo(GfxId gfx) const { return gfx < tipo_.size() ? tipo_[gfx] : 0; }
-    // Atributo 104, bit 8: se dibuja sumando la luz al fondo (los 1921 gfx que lo tienen son
-    // efectos de hechizos; su "fondo" oscuro no tapa).
-    bool aditivo(GfxId gfx) const { return gfx < atributos_.size() && (atributos_[gfx] & 8); }
+    // Attribute 104 -> blend mode (screen for the spell effects and flames, multiply for the torch discs...).
+    ModoMezcla modo(GfxId gfx) const { return gfx < atributos_.size() ? modo_de_atributo(atributos_[gfx]) : ModoMezcla::NORMAL; }
     // Attribute 111 (stride): the walk is two half-strides, action 0 and action 4 (each starts on the
     // other's pose), played on alternate steps. Valakas, Antharas, the race bugbears, the dogs...
     bool zancada(GfxId gfx) const { return gfx < zancada_.size() && zancada_[gfx]; }
@@ -100,9 +100,6 @@ public:
     std::span<const GfxId> ropa(GfxId gfx) const {
         return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
     }
-    // Attribute 104 bit 0x80 (2276 gfx: the disc under street torches, Fafurion parts, sea dancer layers).
-    // TODO: the exe's blend for it is not found yet (likely a multiply/shadow); such clothes layers are skipped.
-    bool translucido(GfxId gfx) const { return gfx < atributos_.size() && (atributos_[gfx] & 0x80); }
     // Atributo 109: gráfico que sigue a este al terminar (la explosión de Energy Bolt al llegar); 0 si no hay.
     GfxId siguiente(GfxId gfx) const { return gfx < siguiente_.size() ? siguiente_[gfx] : 0; }
     // Duración total de una acción en ms (suma de los frames × ms por tick); 0 si no existe. Para

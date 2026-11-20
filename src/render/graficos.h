@@ -41,7 +41,7 @@ public:
     const RegionAtlas& medio_tile(u32 valor, bool derecha);
     // Tile translúcido (sombra; ver tiles.h). `pendiente`: su .til todavía no está en memoria.
     bool tile_translucido(u32 valor, bool& pendiente);
-    bool tile_aditivo(u32 valor, bool& pendiente);
+    ModoMezcla tile_modo(u32 valor, bool& pendiente);
     // Frame de sprite ya compuesto: archivo "<gfx>-<sub>.spr", frame.
     const RegionAtlas& frame_sprite(GfxId gfx_archivos, u16 sub, u16 frame);
     // La región que se devolvió porque el dato todavía no está (se está cargando, o el atlas no tiene

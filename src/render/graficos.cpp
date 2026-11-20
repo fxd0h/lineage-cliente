@@ -324,9 +324,9 @@ bool Graficos::tile_translucido(u32 valor, bool& pendiente) {
     return j && j->translucido(valor & 0xFF);
 }
 
-bool Graficos::tile_aditivo(u32 valor, bool& pendiente) {
+ModoMezcla Graficos::tile_modo(u32 valor, bool& pendiente) {
     const JuegoTiles* j = juego_tiles(valor >> 8, pendiente);
-    return j && j->aditivo(valor & 0xFF);
+    return j ? j->modo(valor & 0xFF) : ModoMezcla::NORMAL;
 }
 
 const ArchivoSpr* Graficos::archivo_spr(GfxId gfx, u16 sub, bool& pendiente) {

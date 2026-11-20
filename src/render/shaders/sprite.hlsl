@@ -56,13 +56,15 @@ Salida vs_sprite(uint vid : SV_VertexID, uint iid : SV_InstanceID) {
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
     o.pos = float4(p.x / pantalla.x * 2.0 - 1.0, 1.0 - p.y / pantalla.y * 2.0, 0.0, 1.0);
-    // Pass filter: mode 0 = normal blends, 1 = screen blend (bit 3 of mezcla), 2 = HD text layer (text, plus every
+    // Pass filter: mode 0 = normal blends, 1 = screen blend (bit 3 of mezcla), 3 = multiply blend (bit 7), 2 = HD text layer (text, plus every
     // non-additive instance as an attenuator of the text under it). Hidden instances are moved out of the clip volume.
     const uint modo = uint(base.y + 0.5);
     const bool texto = (i.mezcla & 64u) != 0u;
     bool oculto;
-    if (modo == 2u) oculto = !texto && (i.mezcla & 9u) != 0u;
-    else oculto = texto || (((i.mezcla & 8u) != 0u) != (modo == 1u));
+    if (modo == 2u) oculto = !texto && (i.mezcla & 137u) != 0u;
+    else if (modo == 1u) oculto = texto || (i.mezcla & 8u) == 0u;
+    else if (modo == 3u) oculto = texto || (i.mezcla & 128u) == 0u;
+    else oculto = texto || (i.mezcla & 136u) != 0u;
     if (oculto) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = lerp(i.uv.xy, i.uv.zw, e);
     o.color = desempacar(i.color);
@@ -86,5 +88,7 @@ float4 fs_sprite(Salida i) : SV_Target0 {
     if ((i.mezcla & 32u) != 0u) c.rgb = dot(t.rgb, float3(0.299, 0.587, 0.114)) * i.color.rgb;
     if (c.a <= 0.0) discard;
     // Premultiplied alpha: with alpha 0 the colour is added to the background without covering it (additive blend).
+    // Bit 7 = multiply: the blend is dst * src, so a transparent texel must output white (leaves dst unchanged).
+    if ((i.mezcla & 128u) != 0u) return float4(lerp(float3(1.0, 1.0, 1.0), c.rgb, c.a), 0.0);
     return float4(c.rgb * c.a, (i.mezcla & 9u) != 0u ? 0.0 : c.a);
 }

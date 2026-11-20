@@ -314,7 +314,7 @@ TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)
     CHECK(hay(32682, 33387, 4));
 }
 
-TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) son translucidos" * doctest::skip(carpeta_juego().empty())) {
+TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) se multiplican" * doctest::skip(carpeta_juego().empty())) {
     // Tower of Insolence 100F, segment (32640, 32896): sets 989/990 hold pale blood/bone stains with the
     // 0x20 type bit; drawn opaque they showed as large white grainy splotches on the floor.
     Recursos r;
@@ -329,11 +329,12 @@ TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) son 
     for (const TileObjetoMapa& t : s.tiles_objetos) {
         if ((t.tile >> 8) != 990) continue;
         ++manchas;
-        CHECK(til.translucido(t.tile & 0xFF));
+        // Multiply blend (type 0x20, exe 0x461ff0): done on the GPU, so the decoded pixels stay opaque.
+        CHECK(til.modo(t.tile & 0xFF) == ModoMezcla::MULTIPLICAR);
         ImagenRGBA img;
         REQUIRE(til.decodificar(t.tile & 0xFF, false, img));
         for (u32 p : img.px)
-            if (p >> 24) CHECK((p >> 24) == ALFA_TRANSLUCIDO);
+            if (p >> 24) CHECK((p >> 24) == 255);
     }
     CHECK(manchas > 100);
 }

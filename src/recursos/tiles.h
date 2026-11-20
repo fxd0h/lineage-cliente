@@ -12,6 +12,7 @@
 // suelo en vez de pintarlas negras.
 #pragma once
 #include "recursos/imagen.h"
+#include "recursos/modo_mezcla.h"
 
 namespace lin {
 
@@ -27,6 +28,8 @@ struct JuegoTiles {
     // Light tile (type bit 0x10: candle/brazier flames and their glow): drawn additively, so its dark
     // backdrop adds nothing instead of showing as an opaque rectangle.
     bool aditivo(u32 i) const;
+    // Blend of the tile (type byte 0x10 screen, 0x04 average, 0x20 multiply, in that priority).
+    ModoMezcla modo(u32 i) const;
     // Placeholder tile for "no ground" (type bit 0x08; only 47.til #199/#202): never drawn, the void is black.
     bool vacio(u32 i) const;
 };
@@ -38,9 +41,9 @@ bool decodificar_tbt(Bytes tbt, ImagenRGBA& salida);
 constexpr int ANCHO_MEDIO_TILE = 24;
 constexpr int ALTO_TILE = 24;
 constexpr u8 ALFA_TRANSLUCIDO = 128;
-// Type byte bits that make a transparent-format tile translucent: 0x04 (shadows) and 0x20 (blood,
-// bones and dust stains on dungeon floors: pale dithered pixels meant to be blended, not opaque).
-constexpr u8 TILE_TRANSLUCIDO = 0x04 | 0x20;
+// Type byte bit that makes a transparent-format tile translucent (50% average): 0x04 (shadows). Bit 0x20 (blood,
+// bones and dust stains on dungeon floors) is a multiply blend, drawn by the GPU, not baked into the alpha.
+constexpr u8 TILE_TRANSLUCIDO = 0x04;
 constexpr u8 TILE_VACIO = 0x08;
 constexpr u8 TILE_ADITIVO = 0x10;
 

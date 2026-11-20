@@ -22,5 +22,7 @@ void main() {
     if ((i_mezcla & 32u) != 0u) c.rgb = vec3(dot(t.rgb, vec3(0.299, 0.587, 0.114))) * i_color.rgb;
     if (c.a <= 0.0) discard;
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
+    // Bit 7 = multiply: the blend is dst * src, so a transparent texel must output white (leaves dst unchanged).
+    if ((i_mezcla & 128u) != 0u) { salida = vec4(mix(vec3(1.0), c.rgb, c.a), 0.0); return; }
     salida = vec4(c.rgb * c.a, (i_mezcla & 9u) != 0u ? 0.0 : c.a);
 }

@@ -46,13 +46,15 @@ vertex Salida vs_sprite(uint vid [[vertex_id]], uint iid [[instance_id]],
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
     o.pos = float4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 2 = HD text layer
+    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 3 = pass of the multiply blend (bit 7), 2 = HD text layer
     // (text, plus every non-additive instance as an attenuator of the text under it).
     const uint modo = uint(u.relleno.y + 0.5);
     const bool texto = (i.mezcla & 64u) != 0u;
     bool oculto;
-    if (modo == 2u) oculto = !texto && (i.mezcla & 9u) != 0u;
-    else oculto = texto || (((i.mezcla & 8u) != 0u) != (modo == 1u));
+    if (modo == 2u) oculto = !texto && (i.mezcla & 137u) != 0u;
+    else if (modo == 1u) oculto = texto || (i.mezcla & 8u) == 0u;
+    else if (modo == 3u) oculto = texto || (i.mezcla & 128u) == 0u;
+    else oculto = texto || (i.mezcla & 136u) != 0u;
     if (oculto) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = mix(i.uv.xy, i.uv.zw, e);
     o.color = unpack_unorm4x8_to_float(i.color);
@@ -78,6 +80,8 @@ fragment float4 fs_sprite(Salida in [[stage_in]], texture2d_array<float> atlas [
     if ((in.mezcla & 32) != 0) c.rgb = float3(dot(t.rgb, float3(0.299, 0.587, 0.114))) * in.color.rgb;
     if (c.a <= 0.0) discard_fragment();
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
+    // Bit 7 = multiply: the blend is dst * src, so a transparent texel must output white (leaves dst unchanged).
+    if ((in.mezcla & 128) != 0) return float4(mix(float3(1.0), c.rgb, c.a), 0.0);
     return float4(c.rgb * c.a, (in.mezcla & 9) != 0 ? 0.0 : c.a);
 }
 
@@ -565,6 +569,13 @@ bool Gpu::crear_pipeline() {
     ct.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
     pipeline_pantalla_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
     if (!pipeline_pantalla_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (pantalla): %s", SDL_GetError());
+    // Multiply blend: dst * src (the shader outputs white for transparent texels); destination alpha untouched.
+    ct.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_DST_COLOR;
+    ct.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ZERO;
+    ct.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO;
+    ct.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+    pipeline_mult_ = SDL_CreateGPUGraphicsPipeline(dev_, &pi);
+    if (!pipeline_mult_) LIN_LOG("SDL_CreateGPUGraphicsPipeline (multiplicar): %s", SDL_GetError());
     // Released only now: `pi` still points at them for the screen-blend pipeline (Metal frees the function at once).
     SDL_ReleaseGPUShader(dev_, v);
     SDL_ReleaseGPUShader(dev_, f);
@@ -806,6 +817,7 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUTexture(dev_, atlas_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_pantalla_);
+    SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_mult_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipeline_brillo_);
     SDL_ReleaseGPUGraphicsPipeline(dev_, pipe_texto_);
     for (SDL_GPUGraphicsPipeline* pc : pipe_comp_) SDL_ReleaseGPUGraphicsPipeline(dev_, pc);
@@ -888,6 +900,7 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
     const float inset = r.hd ? 0.5f : 0.0f;
     if (r.hd) modo |= 4;
     if (mezcla == Mezcla::PANTALLA) ++n_pantalla_;
+    if (mezcla == Mezcla::MULTIPLICAR) ++n_mult_;
     inst_.push_back({x, y, w, h, (r.x + inset) * inv, (r.y + inset) * inv, (r.x + r.w * s - inset) * inv,
                      (r.y + r.h * s - inset) * inv, r.pagina, color, modo, 0});
     const u64 capa = clave >> 56;
@@ -1075,6 +1088,7 @@ void Gpu::terminar_frame(u32 n) {
     inst_.clear();
     claves_.clear();
     n_pantalla_ = 0;
+    n_mult_ = 0;
     brillo_activo_ = false;
     reemplazo_activo_ = false;
     reemplazo_fase_ = -1;
@@ -1185,8 +1199,15 @@ void Gpu::presentar() {
     const bool efectos = brillo_activo_ || reemplazo_activo_;
     const u32 corte = efectos ? std::min(n_mundo_, n) : n;
     llamadas_ = 0;
-    auto dibujar = [&](SDL_GPURenderPass* p, u32 desde, u32 cuantas) {
+    auto dibujar = [&](SDL_GPURenderPass* p, u32 desde, u32 cuantas, auto&& self) -> void {
         if (!cuantas) return;
+        // Screen and multiply instances are drawn after the normal ones of their call: keep the world and the
+        // layers above it (effects, UI) in separate calls so a world multiply cannot darken a window.
+        if ((n_pantalla_ || n_mult_) && n_mundo_ > desde && n_mundo_ < desde + cuantas) {
+            self(p, desde, n_mundo_ - desde, self);
+            self(p, n_mundo_, desde + cuantas - n_mundo_, self);
+            return;
+        }
         SDL_BindGPUGraphicsPipeline(p, pipeline_);
         SDL_BindGPUVertexStorageBuffers(p, 0, &instancias_gpu_, 1);
         const SDL_GPUTextureSamplerBinding tsb[2] = {{atlas_, muestreo_}, {atlas_, muestreo_lineal_}};
@@ -1203,9 +1224,16 @@ void Gpu::presentar() {
             SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
             ++llamadas_;
         }
+        if (n_mult_ && pipeline_mult_) {
+            SDL_BindGPUGraphicsPipeline(p, pipeline_mult_);
+            uni[3] = 3;
+            SDL_PushGPUVertexUniformData(cmd, 0, uni, sizeof uni);
+            SDL_DrawGPUPrimitives(p, 6, cuantas, 0, 0);
+            ++llamadas_;
+        }
     };
     SDL_GPURenderPass* pase = SDL_BeginGPURenderPass(cmd, &objetivo, 1, nullptr);
-    dibujar(pase, 0, corte);
+    dibujar(pase, 0, corte, dibujar);
     SDL_EndGPURenderPass(pase);
     if (reemplazo_activo_) {
         // Pase 2: copia del mundo y la pasada que lo escribe de nuevo con la ola y/o la visión.
@@ -1253,7 +1281,7 @@ void Gpu::presentar() {
         // Pase 4: lo de encima del mundo (efectos, interfaz, ventanas), sin tocar.
         objetivo.load_op = SDL_GPU_LOADOP_LOAD;
         pase = SDL_BeginGPURenderPass(cmd, &objetivo, 1, nullptr);
-        dibujar(pase, corte, n - corte);
+        dibujar(pase, corte, n - corte, dibujar);
         SDL_EndGPURenderPass(pase);
     }
     if (!ruta_captura_.empty()) cmd = guardar_captura(cmd, destino_, destino_w_, destino_h_, ruta_captura_, true);

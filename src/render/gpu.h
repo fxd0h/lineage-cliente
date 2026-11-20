@@ -39,7 +39,7 @@ static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader"
 // GRIS (bit 5): the texture's luminance times the tint, for the original's monochrome bottom-strip icons.
 // TEXTO_HD (bit 6): HD text glyph (the atlas region is a field, recursos/fuente_hd.h). Skipped by the pre-filter passes
 // and drawn by Gpu::pase_texto after the scaling filter, at output resolution.
-enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32, TEXTO_HD = 64 };
+enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32, MULTIPLICAR = 128, TEXTO_HD = 64 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
 // Gpu::nivel_ventana lleva lo que se dibuja en CAPA_UI y CAPA_UI_TEXTO mientras se dibuja una
@@ -201,6 +201,8 @@ private:
     bool usar_spirv_ = false;  // Vulkan (Linux): shaders SPIR-V de render/shaders
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors
+    SDL_GPUGraphicsPipeline* pipeline_mult_ = nullptr;      // multiply blend (dst * src), see sprite shaders
+    u32 n_mult_ = 0;                                        // multiply instances queued this frame
     u32 n_pantalla_ = 0;                                    // screen-blend instances queued this frame
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
     // HD text pass: instances sorted from the first text one are drawn into `capa_texto_` (colour + coverage) by

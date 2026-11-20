@@ -275,10 +275,29 @@ constexpr u8 ALFA_SILUETA = 120;
 // personaje encima. Con Floating Eye se ve algo a través.
 constexpr u32 PROF_CEGUERA = 0xF00000;
 
-// Light tiles (flames, glows) add their colour to what is behind them.
+// Blend of a sprite / tile attribute. PROMEDIO (50%) and OCULTO are handled by the caller (alpha / skip).
+Mezcla mezcla_de(ModoMezcla m) {
+    switch (m) {
+    case ModoMezcla::PANTALLA: return Mezcla::PANTALLA;
+    case ModoMezcla::MULTIPLICAR: return Mezcla::MULTIPLICAR;
+    case ModoMezcla::ADITIVA: return Mezcla::ADITIVA;
+    default: return Mezcla::NORMAL;
+    }
+}
+
+// Light tiles (flames, glows) are screened over the background, stains multiply (tile type byte).
 Mezcla mezcla_tile(Graficos& g, u32 tile) {
     bool pendiente = false;
-    return g.tile_aditivo(tile, pendiente) ? Mezcla::ADITIVA : Mezcla::NORMAL;
+    return mezcla_de(g.tile_modo(tile, pendiente));
+}
+
+// Same for sprites: attribute 104 of the gfx. 50% average halves the tint alpha; hidden returns false.
+bool preparar_mezcla(const TablaSprites& t, GfxId gfx, u32& color, Mezcla& mezcla) {
+    const ModoMezcla m = t.modo(gfx);
+    if (m == ModoMezcla::OCULTO) return false;
+    mezcla = mezcla_de(m);
+    if (m == ModoMezcla::PROMEDIO) color = (color & 0x00FFFFFFu) | (((color >> 24) / 2) << 24);
+    return true;
 }
 
 void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double oy) {
@@ -533,8 +552,13 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             else if (o.col<O_FLAGS>()[s] & FLAG_VENENO) color = rgba(140, 230, 120);
             // Invisible (S_Invis; un GM también ve así a los demás): translúcido.
             if (o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) color = (color & 0x00FFFFFFu) | (110u << 24);
-            // Atributo 104 bit 8 (fuego, braseros...): suma luz, su fondo oscuro no tapa.
-            g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color, a.sprites.aditivo(gfx) ? Mezcla::ADITIVA : Mezcla::NORMAL);
+            // Attribute 104 (fire, braziers, spell bodies: screen; flag 0x2: hidden; 0x1: 50%...).
+            {
+                u32 color_cuerpo = color;
+                Mezcla mezcla_cuerpo = Mezcla::NORMAL;
+                if (preparar_mezcla(a.sprites, gfx, color_cuerpo, mezcla_cuerpo))
+                    g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color_cuerpo, mezcla_cuerpo);
+            }
             // Clothes (attribute 105): after the body, same sub-sprite and frame, each with its own attribute
             // 104. As in the exe (0x4cbc50), if any layer's file is missing none is drawn.
             if (const auto ropa = a.sprites.ropa(gfx); frame_cuerpo && !ropa.empty()) {
@@ -544,7 +568,6 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 bool todas = true;
                 for (GfxId c : ropa) {
                     if (n == std::size(capas)) break;
-                    if (a.sprites.translucido(c)) continue;  // blend unknown: not drawn (see TablaSprites)
                     const RegionAtlas& rc = g.frame_sprite(c, sub_cuerpo, frame_cuerpo->frame);
                     if (g.pendiente(rc)) continue;  // still loading: skip it this frame
                     if (!rc.valida()) {
@@ -557,10 +580,13 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                     capas[n++] = rc;
                 }
                 if (todas)
-                    for (size_t i = 0; i < n; ++i)
+                    for (size_t i = 0; i < n; ++i) {
+                        u32 color_capa = color;
+                        Mezcla mezcla_capa = Mezcla::NORMAL;
+                        if (!preparar_mezcla(a.sprites, gfx_capa[i], color_capa, mezcla_capa)) continue;
                         g.gpu().dibujar_en(capas[i], px, py, clave_orden(CAPA_MUNDO, prof + 1 + static_cast<u32>(i)),
-                                           color,
-                                           a.sprites.aditivo(gfx_capa[i]) ? Mezcla::ADITIVA : Mezcla::NORMAL);
+                                           color_capa, mezcla_capa);
+                    }
             }
             // Tapado por un objeto del mapa: también su silueta encima de todo (varias piezas
             // translúcidas superpuestas casi lo esconden).
@@ -752,8 +778,11 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
         u16 sub = static_cast<u16>(f->sub + (r->direccional ? ef.dir : 0));
         const RegionAtlas& rg = g.frame_sprite(a.sprites.gfx_archivos(ef.gfx), sub, f->frame);
         float px = static_cast<float>(mundo_px(x, y) + ox), py = static_cast<float>(mundo_py(x, y) + oy);
+        u32 color_ef = BLANCO;
+        Mezcla mezcla_ef = Mezcla::NORMAL;
+        if (!preparar_mezcla(a.sprites, ef.gfx, color_ef, mezcla_ef)) continue;
         g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, profundidad(static_cast<float>(mundo_py(x, y)) + 12.0f, ORDEN_PERSONAJE, 6)),
-                           BLANCO, a.sprites.aditivo(ef.gfx) ? Mezcla::ADITIVA : Mezcla::NORMAL);
+                           color_ef, mezcla_ef);
     }
 }
 
