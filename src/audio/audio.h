@@ -46,7 +46,8 @@ public:
     // every 50 ms, about 0.8 s) and the new one then starts at full volume. Repeating the call is harmless.
     void musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms);
     // Un efecto, con `ganancia` de 0 a 1 (además del volumen de efectos).
-    void efecto(u32 id, float ganancia, u64 ahora_ms);
+    // `solapar`: may start while the same sound still plays; `unico`: only starts if it is not playing at all.
+    void efecto(u32 id, float ganancia, u64 ahora_ms, bool solapar = false, bool unico = false);
     // Sonido de ambiente en bucle (-1 = ninguno).
     void ambiente(i32 id);
 
@@ -62,7 +63,7 @@ private:
     const Wav* wav(u32 id);
     void abrir_mp3(u64 ahora_ms);
     void cerrar_mp3();
-    void tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms);
+    void tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms, bool solapar = false, bool unico = false);
     void poner_ambiente(const Wav* w);
     void bucle_cargador();
     void recoger_cargados(u64 ahora_ms);

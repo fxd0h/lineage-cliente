@@ -86,7 +86,9 @@ void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
             else if (con_numero) {
                 const bool hay = c.digito();
                 const int n = c.numero();
-                if (hay && (s == '[' || s == '<')) f.sonido = static_cast<i16>(n);
+                if (hay && (s == '<' || s == '[' || s == '^'))
+                    agregar_sonido(f, s == '<' ? SONIDO_SOLAPA : s == '[' ? SONIDO_UNICO : SONIDO_DISTANCIA, n);
+                else if (hay && s == ']') f.efecto = static_cast<u16>(n);  // "{" and "}" (newer clients) are skipped
             }
         }
         frames.push_back(f);

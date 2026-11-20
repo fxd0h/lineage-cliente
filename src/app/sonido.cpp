@@ -133,13 +133,18 @@ void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double
         ef.inicio = ahora;
         agregar_efecto(a.mundo, ef);
     }
-    if (f.sonido < 0) return;
+    if (f.n_sonidos == 0) return;
+    // Up to 3 ids per frame: one is picked at random each time the frame shows.
+    const u32 k = f.n_sonidos > 1 ? static_cast<u32>(std::rand()) % f.n_sonidos : 0;
+    const i32 id = k == 0 ? f.sonido : f.sonido_mas[k - 1];
+    if (id < 0) return;
+    const u8 modo = f.modo_sonido[k];
     double d = 0;
     const TablaObjetos& o = a.mundo.objetos;
     if (Slot yo = o.buscar(a.mundo.jugador.id); yo != SIN_SLOT)
         d = std::max(std::abs(x - o.col<O_X>()[yo]), std::abs(y - o.col<O_Y>()[yo]));
     const float ganancia = static_cast<float>(1.0 - d / CELDAS_SILENCIO);
-    a.audio.efecto(static_cast<u32>(f.sonido), ganancia, ahora);
+    a.audio.efecto(static_cast<u32>(id), ganancia, ahora, modo == SONIDO_SOLAPA, modo == SONIDO_UNICO);
 }
 
 }  // namespace lin

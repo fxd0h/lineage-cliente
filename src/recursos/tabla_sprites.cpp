@@ -138,9 +138,13 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                     while (c.p < c.fin && !std::isspace(static_cast<u8>(*c.p))) {  // sufijos
                         char s = *c.p++;
                         if (s == '!') f.impacto = true;
-                        else if (s == '[' || s == '<') f.sonido = static_cast<i16>(c.numero_pegado());
-                        else if (s == ']') f.efecto = static_cast<u16>(c.numero_pegado());
-                        else if (s == '^' || s == '>' || s == '{') c.numero_pegado();
+                        else if (s == '<' || s == '[' || s == '^') {
+                            const char* antes = c.p;
+                            const int id = c.numero_pegado();
+                            if (c.p != antes)
+                                agregar_sonido(f, s == '<' ? SONIDO_SOLAPA : s == '[' ? SONIDO_UNICO : SONIDO_DISTANCIA, id);
+                        } else if (s == ']') f.efecto = static_cast<u16>(c.numero_pegado());
+                        else if (s == '>' || s == '{' || s == '}') c.numero_pegado();  // flag / newer-client tokens: skipped
                     }
                     frames_.push_back(f);
                     ++r.cantidad;

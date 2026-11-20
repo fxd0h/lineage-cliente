@@ -60,7 +60,10 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
     const RangoAccion* w = t.accion(7, ACC_CAMINAR);
     REQUIRE(w);
     CHECK(w->cantidad == 2);
-    CHECK(t.frame(w->primer + 1).sonido == 479);
+    CHECK(t.frame(w->primer + 1).n_sonidos == 2);  // "<478<479": both kept, one picked at random per show
+    CHECK(t.frame(w->primer + 1).sonido == 478);
+    CHECK(t.frame(w->primer + 1).sonido_mas[0] == 479);
+    CHECK(t.frame(w->primer + 1).modo_sonido[0] == SONIDO_SOLAPA);
     const RangoAccion* b = t.accion(7, ACC_QUIETO);
     REQUIRE(b);
     CHECK(b->cantidad == 2);

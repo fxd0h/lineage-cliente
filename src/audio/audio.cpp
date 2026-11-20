@@ -244,11 +244,11 @@ void Audio::recoger_cargados(u64 ahora_ms) {
     }
 }
 
-void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms) {
+void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms, bool solapar, bool unico) {
     int libre = -1, viejo = 0;
     for (int i = 0; i < N_EFECTOS; ++i) {
         const bool ocupado = SDL_GetAudioStreamQueued(streams_[i]) > 0;
-        if (ocupado && id_stream_[i] == id && ahora_ms - inicio_stream_[i] < MS_MISMO_EFECTO) return;
+        if (ocupado && id_stream_[i] == id && (unico || (!solapar && ahora_ms - inicio_stream_[i] < MS_MISMO_EFECTO))) return;
         if (!ocupado && libre < 0) libre = i;
         if (inicio_stream_[i] < inicio_stream_[viejo]) viejo = i;
     }
@@ -261,14 +261,14 @@ void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms) {
     id_stream_[i] = id;
 }
 
-void Audio::efecto(u32 id, float ganancia, u64 ahora_ms) {
+void Audio::efecto(u32 id, float ganancia, u64 ahora_ms, bool solapar, bool unico) {
     if (!dispositivo_ || ganancia <= 0.01f || vol_efectos_ <= 0) {
         ++efectos_tocados_;  // cuenta igual: las pruebas corren en silencio
         return;
     }
     ++efectos_tocados_;
     if (const Wav* w = wav(id)) {
-        tocar(id, w, ganancia, ahora_ms);
+        tocar(id, w, ganancia, ahora_ms, solapar, unico);
         return;
     }
     // Todavía cargándose (o no existe: el cargador lo dirá). Se toca al llegar, si llega a tiempo.

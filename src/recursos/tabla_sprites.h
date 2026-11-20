@@ -28,9 +28,23 @@ struct FrameAccion {
     u16 frame;     // frame dentro del .spr
     u8 duracion;   // en ticks
     bool impacto;  // sufijo "!": el golpe alcanza al objetivo en este frame
-    i16 sonido;    // -1 si no hay
+    i16 sonido;    // first sound id, -1 if none (suffixes "<N", "[N", "^N"; up to 3 per frame, see agregar_sonido)
+    i16 sonido_mas[2];  // second and third sound ids (one of the up to 3 is picked at random each time the frame shows)
+    u8 modo_sonido[3];  // per id: ModoSonido
+    u8 n_sonidos;
     u16 efecto;    // sufijo "]N": al mostrarse este frame nace el gráfico N (polvo, chispas...); 0 = ninguno
 };
+
+// Frame sound suffixes (S3EP1U): "<N" may overlap itself, "[N" only starts if not already playing, "^N" is
+// scaled by the distance to the listener.
+enum ModoSonido : u8 { SONIDO_SOLAPA = 0, SONIDO_UNICO = 1, SONIDO_DISTANCIA = 2 };
+
+inline void agregar_sonido(FrameAccion& f, ModoSonido modo, int id) {
+    if (f.n_sonidos >= 3) return;
+    if (f.n_sonidos == 0) f.sonido = static_cast<i16>(id);
+    else f.sonido_mas[f.n_sonidos - 1] = static_cast<i16>(id);
+    f.modo_sonido[f.n_sonidos++] = modo;
+}
 
 struct RangoAccion {
     u32 primer;
