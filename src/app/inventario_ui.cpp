@@ -303,7 +303,7 @@ void dibujar_inventario(App& a) {
             // a sealed item (status bit 0x80) gets 2702 at (+24,+24).
             const u32 gfx = t.col<I_GFX>()[s];
             if (equipado && gfx != 0x1d1 && gfx != 0x1d2) {
-                g.gpu().dibujar(g.icono(ICON_ARMED_A), x + 1, y + 1, ki + 4);
+                g.gpu().dibujar_en(g.icono(ICON_ARMED_A), static_cast<float>(x + 1), static_cast<float>(y + 1), ki + 4, BLANCO, Mezcla::ADITIVA);
                 g.gpu().dibujar(g.icono(ICON_ARMED_B), x + 1, y + 1, ki + 5);
             }
             if (t.col<I_BENDICION>()[s] & BLESS_SEALED_FLAG) g.gpu().dibujar(g.icono(ICON_SEALED), x + 24, y + 24, ki + 6);
