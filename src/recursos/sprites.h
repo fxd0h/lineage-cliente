@@ -37,4 +37,7 @@ struct ArchivoSpr {
     bool componer_frame(u32 frame, ImagenRGBA& salida) const;
 };
 
+// Cantidad de imágenes de un .spr leyendo solo el encabezado; 0 si está vacío o roto.
+u32 contar_frames_spr(Bytes spr);
+
 }  // namespace lin

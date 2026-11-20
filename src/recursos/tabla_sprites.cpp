@@ -41,6 +41,18 @@ struct Cursor {
 
 }  // namespace
 
+// La tabla lista cada acción rotada: su primera entrada es el último frame del archivo y las demás van de 0 a
+// n-2. En un bucle no importa, pero una muerte así empieza tirada, se levanta y vuelve a caer, y termina en la
+// penúltima pose (Ogre 1020: 6, 0..5). Se pasa esa entrada al final: la caída va de 0 a n-1 y queda el
+// cadáver. (Del fork fxd0h/lineage-cliente.)
+void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
+    if (r.cantidad < 3) return;
+    FrameAccion* f = &frames[r.primer];
+    for (u32 i = 1; i < r.cantidad; ++i)
+        if (f[i].sub != f[0].sub || f[i].frame >= f[0].frame) return;
+    std::rotate(f, f + 1, f + r.cantidad);
+}
+
 bool TablaSprites::cargar(const std::vector<u8>& texto) {
     frames_.clear();
     rangos_.clear();
@@ -125,6 +137,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                     frames_.push_back(f);
                     ++r.cantidad;
                 }
+                if (v == ACC_MORIR) poner_cadaver_al_final(frames_, r);
                 if (v >= 0 && v < 256 && r.cantidad > 0) {
                     indice_.poner((static_cast<u64>(gfx) << 8) | static_cast<u64>(v), static_cast<u32>(rangos_.size()));
                     rangos_.push_back(r);

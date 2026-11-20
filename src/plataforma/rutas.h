@@ -67,6 +67,9 @@ struct Config {
     bool chat_con_enter = true;
     bool barra_personaje = false;  // barra de HP/MP sobre el propio personaje
     bool texto_dano = false;       // daño recibido / "Miss" flotante sobre el personaje
+    // "lista_sprites=": la tabla de sprites del cliente en texto plano (TW13032701.txt, list.spz); vacío = buscarla
+    // en la carpeta del juego (ver app.cpp).
+    std::string lista_sprites;
     bool texto_hd = true;          // "texto_hd=": texto suavizado a la resolución real (Graficos::texto_hd)
     bool globos_comic = false;     // lo que dice un personaje, en globo con recuadro y cola (no solo texto)
     // Compensación de ataque: al atacar, mostrar el golpe (swing propio y flinch del objetivo) ya,

@@ -85,6 +85,7 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "texto_dano") c.texto_dano = valor == "1";
     else if (clave == "globos_comic") c.globos_comic = valor == "1";
     else if (clave == "texto_hd") c.texto_hd = valor != "0";
+    else if (clave == "lista_sprites") c.lista_sprites = valor;
     else if (clave == "compensar_ataque") c.compensar_ataque = valor != "0";
     else if (clave == "ventana") {
         const size_t x = valor.find('x');
@@ -254,6 +255,7 @@ std::string escribir_config(const Config& c) {
     linea("texto_dano", c.texto_dano ? "1" : "0");
     linea("globos_comic", c.globos_comic ? "1" : "0");
     linea("texto_hd", c.texto_hd ? "1" : "0");
+    linea("lista_sprites", c.lista_sprites);
     linea("compensar_ataque", c.compensar_ataque ? "1" : "0");
     linea("ventana", std::to_string(c.ventana_ancho) + 'x' + std::to_string(c.ventana_alto));
     return t;
