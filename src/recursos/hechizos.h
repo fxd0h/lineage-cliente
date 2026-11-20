@@ -19,6 +19,56 @@
 namespace lin {
 
 constexpr u32 CANTIDAD_HECHIZOS = 28 * 8;  // 28 filas (niveles) de 8 en S_AddSkill
+// Original spellbook layout (2009 exe, slot tables near 0x4424xx). Class ids: 0 prince, 1 knight, 2 elf, 3 wizard,
+// 4 dark elf, 5 dragon knight, 6 illusionist. A slot is row * 4 + column; skill id = idx + 1. Returns 0 for an empty slot.
+constexpr u32 spellbook_skill_id(int cls, int slot) {
+    if (slot < 0) return 0;
+    auto in = [&](int lo, int hi) { return slot >= lo && slot <= hi; };
+    int idx = -1;
+    switch (cls) {
+    case 0:  // prince
+        if (in(0, 47)) idx = slot;
+        else if (in(48, 55)) idx = slot - 48 + 112;
+        break;
+    case 2:  // elf
+        if (in(0, 47)) idx = slot;
+        else if (in(48, 98)) idx = slot - 48 + 128;
+        break;
+    case 4:  // dark elf
+        if (in(0, 15)) idx = slot;
+        else if (in(16, 19)) idx = slot - 16 + 96;
+        else if (slot == 20) idx = 108;
+        else if (in(24, 27)) idx = slot - 24 + 100;
+        else if (slot == 28) idx = 109;
+        else if (in(32, 35)) idx = slot - 32 + 104;
+        else if (slot == 36) idx = 110;
+        break;
+    case 5:  // dragon knight
+        if (in(0, 14)) idx = slot + 180;
+        break;
+    case 6:  // illusionist
+        if (in(0, 19)) idx = slot + 200;
+        break;
+    case 1:  // knight: tab 2 holds the knight skills
+        if (in(0, 79)) {
+            switch (slot) {
+            case 8: idx = 86; break;
+            case 9: idx = 88; break;
+            case 10: idx = 87; break;
+            case 13: idx = 89; break;
+            case 14: idx = 90; break;
+            default: idx = slot;
+            }
+        }
+        break;
+    default:  // wizard and unknown
+        if (in(0, 79)) idx = slot;
+    }
+    return idx < 0 ? 0 : static_cast<u32>(idx + 1);
+}
+// Highest first grid row of the scroll bar (0x47e9d0 limits) and tab count of the strip image.
+constexpr int spellbook_max_scroll(int cls) { return cls == 0 ? 13 : cls == 2 ? 21 : cls == 4 ? 9 : 19; }
+
 constexpr u8 ACC_HECHIZO_ATAQUE = 18, ACC_HECHIZO = 19;  // ActionCodes.ACTION_SkillAttack / SkillBuff
 
 struct Hechizo {

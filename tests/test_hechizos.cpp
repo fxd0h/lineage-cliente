@@ -341,3 +341,20 @@ TEST_CASE("sprite table: the ']N' frame suffix is parsed as a spawned effect, no
     CHECK(sprites.frame(r->primer + 2).efecto == 0);
     CHECK(sprites.frame(r->primer + 2).sonido == 1209);
 }
+
+TEST_CASE("Hechizos: spellbook slot tables of the original client") {
+    CHECK(spellbook_skill_id(3, 0) == 1);
+    CHECK(spellbook_skill_id(3, 79) == 80);
+    CHECK(spellbook_skill_id(3, 80) == 0);
+    CHECK(spellbook_skill_id(1, 8) == 87);   // knight override of tab 2
+    CHECK(spellbook_skill_id(1, 10) == 88);
+    CHECK(spellbook_skill_id(1, 11) == 12);
+    CHECK(spellbook_skill_id(0, 48) == 113);
+    CHECK(spellbook_skill_id(2, 98) == 179);
+    CHECK(spellbook_skill_id(4, 20) == 109);
+    CHECK(spellbook_skill_id(4, 21) == 0);
+    CHECK(spellbook_skill_id(4, 36) == 111);
+    CHECK(spellbook_skill_id(5, 14) == 195);
+    CHECK(spellbook_skill_id(6, 19) == 220);
+    CHECK(spellbook_max_scroll(2) == 21);
+}

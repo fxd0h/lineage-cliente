@@ -401,7 +401,6 @@ struct App {
     // (hechizo_apuntando) y después se camina hasta tenerlo en alcance (hechizo_pendiente).
     bool ventana_hechizos = false;
     u32 hechizos_desplazamiento = 0;  // filas
-    int hechizos_pestana = 0;
     int teclas_f_x = 0, teclas_f_y = -1;  // panel original: casilleros F5–F12 (-1 = no se dibujan)         // ventana original: nivel 1..10 (0..9) o habilidades de clase (10)
     u32 hechizo_apuntando = 0;
     u32 hechizo_pendiente = 0;
