@@ -449,9 +449,40 @@ void dibujar_emblema(App& a, u32 clan, float x, float y) {
     }
 }
 
+// True when the inventory holds "Ring of Sayha" ($431): the exe lets its wearer see other players' invisible bodies
+// at 50% (0x40 flag, FUN_004cc980; it also needs ability slot 1..3 and no pending teleport, not tracked here).
+// l1j-en GMs may see invisibles by other means: this follows the exe only.
+bool tiene_anillo_sayha(const Inventario& inv) {
+    for (Slot s = 0; s < inv.items.tamano(); ++s) {
+        const std::string_view n = nombre_item(inv, s);
+        for (std::string_view clave : {std::string_view("$431"), std::string_view("Ring of Sayha")})
+            if (n.starts_with(clave) && (n.size() == clave.size() || n[clave.size()] == ' ' || n[clave.size()] == '('))
+                return true;
+    }
+    return false;
+}
+
+// Poison pulse of the exe (flag 0x20): per channel out = s + ((L * c) >> 4), c = (0, 4, 0) / 31 and
+// L = |12 - tick % 24| + 16 with a 50 ms tick. Approximated by an additive flat green silhouette over the sprite
+// (the exe adds to the sprite's own pixels; the silhouette adds the same amount to every opaque pixel).
+u32 pulso_veneno(u64 ahora) {
+    const int tick = static_cast<int>((ahora / 50) % 24);
+    const int nivel = std::abs(12 - tick) + 16;
+    return rgba(0, static_cast<u8>(std::min(255, nivel * 4 * 255 / (16 * 31))), 0, 255);
+}
+
 void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
     Graficos& g = *a.g;
     TablaObjetos& o = a.mundo.objetos;
+    const bool ve_invisibles = tiene_anillo_sayha(a.mundo.inventario);
+    i32 yo_x = 0, yo_y = 0;
+    {
+        const Slot sy_ = o.buscar(a.mundo.jugador.id);
+        if (sy_ != SIN_SLOT) {
+            yo_x = o.col<O_X>()[sy_];
+            yo_y = o.col<O_Y>()[sy_];
+        }
+    }
     const Vista vi = vista_mundo(a);
     const float mx = raton_mundo_x(a), my = raton_mundo_y(a);
     a.en_pantalla.clear();
@@ -498,6 +529,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (propio) std::swap(a.luces.front(), a.luces.back());  // el corte de 700 no la apaga
         }
         if (fuera(150, 150)) continue;  // alumbra, pero no se dibuja
+        // Others' invisible bodies are not drawn at all (no name, bars or click target) without a Ring of Sayha.
+        if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
@@ -557,17 +590,26 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             u32 color = BLANCO;
             if (a.cfg.sombra_personajes && en_sombra(a, static_cast<int>(std::lround(vis_x)), static_cast<int>(std::lround(vis_y))))
                 color = rgba(LUZ_EN_SOMBRA, LUZ_EN_SOMBRA, LUZ_EN_SOMBRA);
-            // Envenenado: verdoso; congelado: gris azulado (S_Poison y los flags de S_CharPack).
+            // Frozen: grey-blue (S_Poison and the S_CharPack flags). Poison is a pulse overlay drawn after the body.
             if (o.col<O_FLAGS>()[s] & FLAG_CONGELADO) color = rgba(150, 160, 185);
-            else if (o.col<O_FLAGS>()[s] & FLAG_VENENO) color = rgba(140, 230, 120);
-            // Invisible (S_Invis; un GM también ve así a los demás): translúcido.
-            if (o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) color = (color & 0x00FFFFFFu) | (110u << 24);
+            // Invisible (S_Invis, flag 0x100 / 0x40): own body at 50%; others only with a Ring of Sayha, else hidden.
+            const bool invisible = o.col<O_FLAGS>()[s] & FLAG_INVISIBLE;
+            if (invisible) color = (color & 0x00FFFFFFu) | (127u << 24);
+            // Attribute 100: the object turns 50% while the local player stands in one of its rectangles.
+            if (!propio && a.sprites.tiene_transparencia(gfx) &&
+                a.sprites.dentro_transparencia(gfx, yo_x - o.col<O_X>()[s], yo_y - o.col<O_Y>()[s]))
+                color = (color & 0x00FFFFFFu) | (((color >> 24) / 2) << 24);
             // Attribute 104 (fire, braziers, spell bodies: screen; flag 0x2: hidden; 0x1: 50%...).
             {
                 u32 color_cuerpo = color;
                 Mezcla mezcla_cuerpo = Mezcla::NORMAL;
-                if (preparar_mezcla(a.sprites, gfx, color_cuerpo, mezcla_cuerpo))
+                if (preparar_mezcla(a.sprites, gfx, color_cuerpo, mezcla_cuerpo)) {
                     g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color_cuerpo, mezcla_cuerpo);
+                    if ((o.col<O_FLAGS>()[s] & FLAG_VENENO) && mezcla_cuerpo == Mezcla::NORMAL)
+                        g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof + 4),
+                                           (pulso_veneno(ahora) & 0x00FFFFFFu) | (color_cuerpo & 0xFF000000u),
+                                           Mezcla::SILUETA_ADITIVA);
+                }
             }
             // Clothes (attribute 105): after the body, same sub-sprite and frame, each with its own attribute
             // 104. As in the exe (0x4cbc50), if any layer's file is missing none is drawn.

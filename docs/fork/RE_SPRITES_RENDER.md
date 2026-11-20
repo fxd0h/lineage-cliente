@@ -104,14 +104,30 @@ There is no `1516.img` / `1518.img` in this installation (only unrelated monster
   for bodies, clothes layers (the 0x80 ones are no longer skipped) and effects. Tile type byte: 0x10 screen, 0x04 average
   (baked alpha 128, shadows), 0x20 multiply (no longer baked). Multiply is a third pipeline (DST_COLOR / ZERO) whose shader
   outputs white for transparent texels. Not implemented: 0x40, 0x20 (pulse), 0x200 (tint), 0xc00 (fade), the body-flag
-  ORs of `FUN_004cc980`. Screen and multiply instances are still drawn after the normal ones of their call (world and
-  upper layers are split), so a multiply disc can darken a sprite drawn later on top of it; per-run ordering is a TODO.
+  ORs of `FUN_004cc980`. Painter order is kept: `Gpu` splits the sorted instance stream into consecutive runs of the same
+  class (normal / screen / multiply; HD text never splits a run) and issues one draw per run with the run's first index
+  in the vertex uniform (`relleno.x`) and the matching pipeline. Without screen/multiply instances it stays one draw;
+  the world / upper-layer split is kept.
 - Frame suffixes: `<N`, `[N`, `^N` keep up to 3 ids per frame (random pick each time); `<` may overlap, `[` only starts
   if the id is not playing. Distance gain is still applied to all three (the exe's rule for `<`/`[` is not confirmed).
   `]N` now also works in list.spz rows. `{`, `}` and `>` are skipped.
 - Attribute 113: `TablaSprites::morfo`; `CAMBIO_FORMA` spawns that effect at the object when its gfx changes.
-- Attribute 100 (extra blocked tiles): TODO. `celda_pasable` only knows static map cells plus the door set
-  (`puertas_cerradas`, no reference count); marking cells per object needs add/remove/move hooks.
+- Attribute 100 (see-through trigger, round 2): parsed from sprite_table.txt and list.spz as n x (x1,y1,x2,y2) into
+  `TablaSprites` (`dentro_transparencia`); cell dx = x >> 1 (x in half tiles), dy in tiles, relative to the object's
+  cell. `dibujar_personajes` halves the object's alpha while the local player's cell is inside any rectangle. Not
+  blocked cells. Only sprite objects (doors, gates...) are covered; map tile objects (house walls) use the fork's older
+  `jugador_tapado` alpha 110 heuristic.
+- Poison (status &1): the green tint is gone; the exe's pulse L = |12 - tick%24| + 16 (50 ms tick) is approximated by
+  an additive flat green silhouette (`Mezcla::SILUETA_ADITIVA`, green = L*4/16/31 of full scale) drawn over the body
+  sprite. The exe adds per pixel to the sprite's own colour; the flat add also lifts black outlines. Clothes layers
+  are not overlaid.
+- Invisible (status &2): the local player's own body is drawn at 50%; other objects are skipped entirely (no sprite,
+  name, bars or click target) unless the inventory holds "Ring of Sayha" ($431), then 50%. The exe also requires an
+  ability slot 1..3 and no pending teleport (not tracked). l1j-en GMs may see invisibles by other means; not modelled.
+- Roof fade (0xc00): the fork has an instant version (`jugador_tapado`: pieces of a map object in front of the player
+  that covers the body are drawn at alpha 110, plus a silhouette). TODO: exe timing (50 ms steps of 4 over 0..31, about
+  0.4 s; kind 0 fades to 50%, kind 1 to hidden) needs per-group state and the roof kind from the map loader, which
+  the segment format here does not carry.
 
 ## Round 2 findings (corrections included)
 

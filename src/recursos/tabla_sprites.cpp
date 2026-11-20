@@ -65,6 +65,8 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     zancada_.clear();
     ropa_.clear();
     morfo_.limpiar();
+    transp_.limpiar();
+    rects_transp_.clear();
     gfx_de_tabla_ = 0;
     const char* p = reinterpret_cast<const char*>(texto.data());
     const char* fin = p + texto.size();
@@ -90,9 +92,18 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
         while (c.hay_numero()) {
             int v = c.numero();
             switch (v) {
-            case 100: {  // switches: n × 4 números
+            case 100: {  // see-through rectangles: n × (x1, y1, x2, y2)
                 int n = c.numero();
-                for (int i = 0; i < n * 4 && c.hay_numero(); ++i) c.numero();
+                std::vector<RectTransparencia> rs;
+                for (int i = 0; i < n && c.hay_numero(); ++i) {
+                    RectTransparencia r{};
+                    r.x1 = static_cast<i16>(c.numero());
+                    r.y1 = static_cast<i16>(c.numero());
+                    r.x2 = static_cast<i16>(c.numero());
+                    r.y2 = static_cast<i16>(c.numero());
+                    rs.push_back(r);
+                }
+                poner_transparencia(gfx, std::move(rs));
                 break;
             }
             case 101: sombra_.back() = static_cast<i16>(c.numero()); break;

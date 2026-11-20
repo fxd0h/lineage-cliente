@@ -49,11 +49,17 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
         "\t8.death(1 3,40.2:5 40.0:5[191 40.1:5)\n"
         "\t101.shadow(9)\n\t102.type(10)\n\t113.morph(5000)\n"
         "#8 1 misma linea 0.walk(1 1,0.0:2!) 110.framerate(12) 1.attack(1 1,8.0:3]77)\n"
-        "#9 1 solo atributos\n\t102.type(0)\n";
+        "#9 1 solo atributos\n\t102.type(0)\n\t100.see(1 0 -2 4 0)\n";
     CHECK(t.fusionar_lista(txt, r));
     CHECK(r.nuevos == 2);
     CHECK(r.atributos == 1);  // #9: solo el tipo, porque la tabla vacía no lo tenía
     CHECK(t.tipo(9) == 0);
+    // Attribute 100: x in half tiles (0..4 -> cells 0..2), y in tiles (-2..0), relative to the object.
+    CHECK(t.dentro_transparencia(9, 0, -2));
+    CHECK(t.dentro_transparencia(9, 2, 0));
+    CHECK_FALSE(t.dentro_transparencia(9, 3, 0));
+    CHECK_FALSE(t.dentro_transparencia(9, 0, 1));
+    CHECK_FALSE(t.tiene_transparencia(7));
     CHECK(t.gfx_archivos(7) == 5);
     CHECK(t.sombra(7) == 9);
     CHECK(t.tipo(7) == 10);

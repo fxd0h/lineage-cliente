@@ -56,6 +56,7 @@ struct Entrada {
     GfxId siguiente = 0;
     bool zancada = false;
     GfxId morfo = 0;  // attribute 113
+    std::vector<RectTransparencia> transp;  // attribute 100
     std::vector<GfxId> ropa;
     std::vector<std::pair<u8, RangoAccion>> acciones;  // id de la acción -> rango en `frames`
     std::vector<FrameAccion> frames;
@@ -122,6 +123,18 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
             }
         } else {
             switch (id) {
+            case 100: {
+                const int n = b.numero_con_signo();
+                for (int i = 0; i < n && i < 16; ++i) {
+                    RectTransparencia r{};
+                    r.x1 = static_cast<i16>(b.numero_con_signo());
+                    r.y1 = static_cast<i16>(b.numero_con_signo());
+                    r.x2 = static_cast<i16>(b.numero_con_signo());
+                    r.y2 = static_cast<i16>(b.numero_con_signo());
+                    e.transp.push_back(r);
+                }
+                break;
+            }
             case 101: e.sombra = static_cast<i16>(b.numero_con_signo()); break;
             case 102: e.tipo = static_cast<u8>(b.numero_con_signo()); break;
             case 104: e.atributos = static_cast<u16>(b.numero_con_signo()); break;
@@ -264,6 +277,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
                 zancada_[e.gfx] = e.zancada;
                 ropa_[e.gfx] = e.ropa;
                 if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                poner_transparencia(e.gfx, e.transp);
                 ++resumen.atributos;
             } else {
                 ++resumen.omitidos;
@@ -299,6 +313,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             zancada_[e.gfx] = e.zancada;
             ropa_[e.gfx] = e.ropa;
             if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                poner_transparencia(e.gfx, e.transp);
             const u32 base = static_cast<u32>(frames_.size());
             frames_.insert(frames_.end(), e.frames.begin(), e.frames.end());
             for (auto& [id, r] : e.acciones) {

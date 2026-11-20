@@ -74,6 +74,11 @@ struct ResumenLista {
     u32 recortados = 0;    // new gfx with frames (or whole actions) dropped because our paks lack those images
 };
 
+// Attribute 100 rectangle: x in half tiles (the exe steps it by 2), y in tiles, relative to the object's cell.
+struct RectTransparencia {
+    i16 x1, y1, x2, y2;
+};
+
 // Number of images in sprite file "<gfx>-<sub>.spr" of the loaded paks; 0 when the file is absent.
 using ContadorFrames = std::function<u32(GfxId gfx, u16 sub)>;
 
@@ -119,6 +124,16 @@ public:
         const u32* i = morfo_.buscar(gfx);
         return i ? static_cast<GfxId>(*i) : 0;
     }
+    // Attribute 100 (see-through trigger, S3EP1U): while the local player stands inside any rectangle of the object
+    // (dx, dy = player cell minus object cell) the object is drawn at 50%. True when the gfx has none registered.
+    bool dentro_transparencia(GfxId gfx, int dx, int dy) const {
+        const u32* i = transp_.buscar(gfx);
+        if (!i) return false;
+        for (const RectTransparencia& r : rects_transp_[*i])
+            if (dx >= (r.x1 >> 1) && dx <= (r.x2 >> 1) && dy >= r.y1 && dy <= r.y2) return true;
+        return false;
+    }
+    bool tiene_transparencia(GfxId gfx) const { return transp_.buscar(gfx) != nullptr; }
     // Atributo 109: gráfico que sigue a este al terminar (la explosión de Energy Bolt al llegar); 0 si no hay.
     GfxId siguiente(GfxId gfx) const { return gfx < siguiente_.size() ? siguiente_[gfx] : 0; }
     // Duración total de una acción en ms (suma de los frames × ms por tick); 0 si no existe. Para
@@ -148,6 +163,13 @@ private:
     std::vector<u8> tipo_;
     std::vector<u16> atributos_;
     std::vector<GfxId> siguiente_;
+    MapaHash transp_;  // gfx -> index into rects_transp_ (attribute 100), only the gfx that have rectangles
+    std::vector<std::vector<RectTransparencia>> rects_transp_;
+    void poner_transparencia(GfxId gfx, std::vector<RectTransparencia> r) {
+        if (r.empty()) return;
+        transp_.poner(gfx, static_cast<u32>(rects_transp_.size()));
+        rects_transp_.push_back(std::move(r));
+    }
     MapaHash morfo_;  // gfx -> morph effect gfx (attribute 113), only the gfx that have one
 };
 
