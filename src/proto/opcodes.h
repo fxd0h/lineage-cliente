@@ -77,6 +77,9 @@ struct PerfilProtocolo {
     // L1JGO-Whale (tw380) reads the C_Attr answer as [h type][c answer] even though S_MessageYN carries the long
     // form: with this set, `responder` sends the short reply (the long one made every answer read as "no").
     bool respuesta_corta = false;
+    // S_Mail list rows: l1j-en classic (US 2009) sends `d id, c read, c yy, c mm, c dd, s sender, subject` (every row is a
+    // received letter); L1J-JP / Whale send `d id, c read, d unix time, c own copy, s other, subject`.
+    bool correo_ymd = false;
 };
 
 struct TablaOpcodes {

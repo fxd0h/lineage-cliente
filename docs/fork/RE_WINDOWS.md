@@ -148,3 +148,21 @@ Tags: [C] confirmed from decompile, [I] inferred. Coordinates are relative to th
   `servidor_classic/patches/0102-signboard-desc-id.patch` makes it send `getNameId()` (`$5216`...; takes effect at the
   next server build, not applied to the running jar). Live-control `cartel <desc id> [heading]` opens the card for tests.
   Verified in a test instance with `cartel 5216 3` (frame, background, sign icon, wrapped text, close button).
+
+## Round 3 implementation notes (mail)
+
+- **l1j-en S_Mail list differs from L1J-JP:** rows are `d id, c read, c yy, c mm, c dd, s sender, subject (UTF-16 + 0 0)`, all
+  received (no own-copy flag, no unix time); a successful send gets no reply to the sender (the receiver gets a fresh type-0
+  list), a full mailbox gets the bare type 0x20. `PerfilProtocolo::correo_ymd` (s3ep1) selects this in `decodificar`; the
+  date becomes 12:00 UTC of that day. C_Mail 0x20 / 0x21 (`c type, h 0, s receiver, subject, body`) was already right.
+  Before this the s3ep1 list was misparsed. Verified live: send to self, list, read, delete.
+- **List window (0x417a90 / draw 0x417d50), original UI:** opens at the origin of the 640x480 block (0,0) instead of x centred
+  / y 50; id `%04d`, date `yy/mm/dd` clipped to 48 px at x 135, ink (65,65,65). Buttons already matched.
+- **Compose:** the exe's paper-577 window (0x455800: edits (85,47) and (85,64) 136x16, body (45,103) 192x160, Send 582 at
+  (97,298), Cancel 578 at (145,298)) sends `ccss` (not the C_Mail format) and has no subject edit, so it is not the mail
+  composer; the real one is 0x453120 (paper 1545, memo editor, edits (100,55) (100,70) (100,90), body (50,112) 170x192,
+  format buttons). Not reproduced: the fork keeps the 577 paper with its own To / Subject / body fields aligned to the
+  printed labels (To (85,64), Subject (85,86), body (45,105) 192x160). TODO: port 0x453120 once button roles are identified
+  (images 1546-1548, 1580-1582 and the 0x4ff-0x503 format buttons).
+- Write button of the list (0x4183c0) opens the object at `[0x6f5d08]` = class 0x417320 (title string 541), not 0x455800;
+  roles of 0x413500 / 0x413a80 / 0x416b50 remain open (U-C7).

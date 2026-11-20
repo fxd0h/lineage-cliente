@@ -316,6 +316,21 @@ TEST_CASE("Tablón y correo: S_Board, S_BoardRead, S_Mail y comandos") {
     CHECK(ev[1].id == 9);
     CHECK(ev[1].s[0] == "Ana");
     CHECK(ev[1].s[1] == "Hi");
+    // l1j-en classic (s3ep1) list: d id, c read, c yy, c mm, c dd, s sender, subject; and the bare 0x20 reply (mailbox full).
+    TablaOpcodes t2;
+    tabla_opcodes("s3ep1", t2);
+    ev.clear();
+    std::vector<u8> lista2 = {127, 0, 1, 0, 9, 0, 0, 0, 0, 26, 11, 20, 'A', 'n', 'a', 0, 'H', 0, 'i', 0, 0, 0};
+    REQUIRE(decodificar(lista2, t2, arena, ev));
+    REQUIRE(ev.size() == 2);
+    CHECK(ev[1].id == 9);
+    CHECK(ev[1].v[CO_FECHA] == 1795176000);
+    CHECK(ev[1].s[0] == "Ana");
+    CHECK(ev[1].s[1] == "Hi");
+    ev.clear();
+    std::vector<u8> lleno = {127, 0x20};
+    REQUIRE(decodificar(lleno, t2, arena, ev));
+    CHECK(ev[0].v[CO_OK] == 0);
     // El texto (0x10) y el aviso de carta nueva (0x50).
     ev.clear();
     std::vector<u8> texto = {1, 0x10, 9, 0, 0, 0, 'o', 0, 'k', 0, 0, 0};

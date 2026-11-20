@@ -34,8 +34,9 @@ int selected_row = -1, page = 0;  // list state of the original window (reset on
 u32 TINTA, TINTA_SUAVE, TINTA_VIVA;
 constexpr const char* BANDEJAS[3] = {"Inbox", "Clan", "Saved"};
 
-int x0(const App& a) { return (a.gpu.ancho() - ANCHO) / 2; }
-int y0() { return 50; }
+// The original list / letter / compose windows open at the origin of the 640x480 block (0x417d50); the simple UI centres them.
+int x0(const App& a) { return a.cfg.ui_simple ? (a.gpu.ancho() - ANCHO) / 2 : (a.gpu.ancho() - 640) / 2; }
+int y0(const App& a) { return a.cfg.ui_simple ? 50 : 0; }
 
 // Texto que se puede tocar (sobre el papel): true con un clic.
 bool vinculo(Graficos& g, const EntradaFrame& e, std::string_view t, int x, int y, u64 clave, bool activo) {
@@ -75,9 +76,9 @@ void draw_original_mail(App& a) {
     Correo& c = a.correo;
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    const int x = x0(a), y = y0();
+    const int x = x0(a), y = y0(a);
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 72), kf = clave_orden(CAPA_UI, 0);
-    TINTA = rgba(66, 66, 66), TINTA_SUAVE = rgba(105, 98, 88), TINTA_VIVA = rgba(150, 40, 20);  // ink 0x500510 = RGB555 0x2108
+    TINTA = rgba(65, 65, 65), TINTA_SUAVE = rgba(105, 98, 88), TINTA_VIVA = rgba(150, 40, 20);  // ink 0x500510 = RGB555 0x2108
     char buf[96];
     char txt[200];
     auto text = [&](std::string_view t, int tx, int ty, u32 col) {
@@ -87,19 +88,29 @@ void draw_original_mail(App& a) {
     if (c.escribiendo) {
         g.gpu().dibujar(g.img(IMG_PAPER_WRITE), x, y, kf);
         // The printed labels From / To / Subject sit at y 53 / 69 / 89; the entry fields run on their right.
-        text(c.al_clan ? "Pledge: 1000 adena each" : "50 adena", 85, 50, TINTA_SUAVE);
+        text(c.al_clan ? "Pledge: 1000 adena each" : "50 adena", 85, 46, TINTA_SUAVE);  // on the From row (the exe shows the own name)
         const char* rotulos[3] = {c.al_clan ? "Pledge" : "To", "Subject", "Text"};
         (void)rotulos;
         std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
         const size_t maximos[3] = {16, 40, 400};
-        const int fy[3] = {66, 86, 108}, fx[3] = {85, 85, 45}, fw[3] = {136, 136, 160};
+        // Paper 577 prints From / To / Subject at y 52 / 66 / 89; the To field is the exe's second edit (85,64) 136x16 (ctor
+        // 0x455800), the subject sits on the Subject row and the body fills (45,105) 192x160 (the exe has no subject edit:
+        // that window sends a different packet, so the l1j-en mail needs this extra field).
+        const int fy[3] = {64, 86, 105}, fx[3] = {85, 85, 45}, fw[3] = {136, 136, 192}, fh[3] = {16, 16, 160};
         for (int i = 0; i < 3; ++i) {
-            if (e.clic && ui::sobre(e, x + fx[i], y + fy[i], fw[i], 16)) c.foco = i;
-            g.gpu().rectangulo(x + fx[i], y + fy[i] + 15, fw[i], 1, kf + 1, c.foco == i ? TINTA_VIVA : TINTA_SUAVE);
-            ui::caja_texto(g, e, *campos[i], x + fx[i] + 2, y + fy[i] + 1, fw[i] - 4, c.foco == i, false, maximos[i]);
+            if (e.clic && ui::sobre(e, x + fx[i], y + fy[i], fw[i], fh[i])) c.foco = i;
+            if (i < 2) {
+                g.gpu().rectangulo(x + fx[i], y + fy[i] + 15, fw[i], 1, kf + 1, c.foco == i ? TINTA_VIVA : TINTA_SUAVE);
+                ui::caja_texto(g, e, *campos[i], x + fx[i] + 2, y + fy[i] + 1, fw[i] - 4, c.foco == i, false, maximos[i]);
+            }
         }
         if (e.tab) c.foco = (c.foco + 1) % 3;
-        texto_ajustado(g, c.cuerpo, x + 45, y + 130, 160, kt, TINTA, 9);
+        if (c.foco == 2) {  // the body is a multi-line area: ASCII and Backspace
+            for (int i = 0; i < e.ntexto; ++i)
+                if (e.texto[i] >= 0x20 && e.texto[i] < 0x7F && c.cuerpo.size() < maximos[2]) c.cuerpo.push_back(e.texto[i]);
+            if (e.retroceso && !c.cuerpo.empty()) c.cuerpo.pop_back();
+        }
+        texto_ajustado(g, c.cuerpo, x + 45, y + 105, 192, kt, TINTA, 10);
         if (vinculo(g, e, c.al_clan ? "To a character instead" : "To the pledge instead", x + 45, y + 276, kt, false))
             c.al_clan = !c.al_clan;
         if (!c.destino.empty() && !c.asunto.empty() && ui::boton(g, e, IMG_SEND, x + 97, y + 298)) {
@@ -151,13 +162,13 @@ void draw_original_mail(App& a) {
         if (over && e.clic) selected_row = i;
         const u32 col = m.leida ? TINTA_SUAVE : TINTA;
         if (selected_row == i) g.gpu().dibujar(g.img(IMG_LEIDA), x + 18, y + fy, kf + 2);
-        std::snprintf(txt, sizeof txt, "%d", static_cast<int>(m.id % 10000));
+        std::snprintf(txt, sizeof txt, "%04d", static_cast<int>(m.id % 10000));  // 0x500308 "%04d"
         text(clip(txt, 24, buf, sizeof buf), 30, fy, col);
         text(clip(m.otro, 72, buf, sizeof buf), 60, fy, col);
         const std::time_t f = static_cast<std::time_t>(m.fecha);
         char fecha[32] = "";
-        if (const std::tm* tm = std::localtime(&f)) std::strftime(fecha, sizeof fecha, "%m-%d %H:%M", tm);
-        text(clip(fecha, 80, buf, sizeof buf), 135, fy, TINTA_SUAVE);
+        if (const std::tm* tm = std::localtime(&f)) std::strftime(fecha, sizeof fecha, "%y/%m/%d", tm);
+        text(clip(fecha, 48, buf, sizeof buf), 135, fy, TINTA_SUAVE);  // the original keeps an 8-character yy/mm/dd string here
         text(clip(m.asunto, 160, buf, sizeof buf), 30, fy + 12, col);
     }
     if (ui::sobre(e, x, y, ANCHO, ALTO) && e.rueda) page = std::clamp(page - (e.rueda > 0 ? 1 : -1), 0, pages - 1);
@@ -226,7 +237,7 @@ void eventos_correo(App& a, const Evento& e) {
 
 bool sobre_correo(const App& a) {
     const Correo& c = a.correo;
-    return (c.abierto && ui::sobre(a.entrada, x0(a), y0(), ANCHO, ALTO)) || (c.nuevas > 0 && !c.abierto && ui::sobre(a.entrada, 8, 8, 56, 20));
+    return (c.abierto && ui::sobre(a.entrada, x0(a), y0(a), ANCHO, ALTO)) || (c.nuevas > 0 && !c.abierto && ui::sobre(a.entrada, 8, 8, 56, 20));
 }
 
 // El aviso de correo nuevo: un sobre arriba a la izquierda con la cantidad; un clic abre el correo.
@@ -263,7 +274,7 @@ void dibujar_correo(App& a) {
     if (!a.cfg.ui_simple && a.g->img(IMG_PAPEL).valida()) return draw_original_mail(a);
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    const int x = x0(a), y = y0();
+    const int x = x0(a), y = y0(a);
     // El papel del original (o un recuadro, con la UI simple o si no está).
     const RegionAtlas& papel = g.img(IMG_PAPEL);
     const bool simple = a.cfg.ui_simple || !papel.valida();

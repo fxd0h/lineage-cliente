@@ -769,7 +769,7 @@ bool correo(Lector& l, Evento& e) {
         e.id = l.d();
         e.s[1] = texto_utf16(l);
     } else if (t == 0x20 || t == 0x21) {
-        e.v[CO_OK] = l.c();
+        e.v[CO_OK] = l.quedan(1) ? l.c() : 0;  // l1j-en sends the bare type, and only when the mailbox is full
     } else if ((t >= 0x30 && t <= 0x32) || t == 0x40 || t == 0x41) {
         e.id = l.d();
     } else if (t == 0x50) {
@@ -1187,8 +1187,19 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             c.v[CO_LISTA] = 1;
             c.id = l.d();
             c.v[CO_LEIDA] = l.c();
-            c.v[CO_FECHA] = static_cast<i32>(l.d());
-            c.v[CO_ENVIADA] = l.c();
+            if (l.perfil.correo_ymd) {
+                // yy mm dd bytes -> seconds at 12:00 UTC of that day (the list shows only the date)
+                int y = 2000 + l.c();
+                const int mo = l.c(), d = l.c();
+                if (mo <= 2) --y;  // days_from_civil: the year starts in March
+                const int era = y / 400, yoe = y - era * 400;
+                const int doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+                const int days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;
+                c.v[CO_FECHA] = days * 86400 + 43200;
+            } else {
+                c.v[CO_FECHA] = static_cast<i32>(l.d());
+                c.v[CO_ENVIADA] = l.c();
+            }
             c.s[0] = l.s();
             c.s[1] = texto_utf16(l);
             if (!l.error) salida.push_back(c);
