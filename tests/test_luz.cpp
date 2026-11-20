@@ -228,3 +228,17 @@ TEST_CASE("Agua: 1416.img es azul arriba (B mayor que R)") {
     }
     CHECK(b > r);
 }
+
+TEST_CASE("Luz: day_phase splits the day at dawn and dusk and wraps the night over midnight") {
+    const DayPhase noon = day_phase(hm(12), 1);
+    CHECK_FALSE(noon.night);
+    CHECK(noon.elapsed > 0);
+    CHECK(noon.elapsed < noon.length);
+    const DayPhase midnight = day_phase(0, 1);
+    CHECK(midnight.night);
+    CHECK(midnight.elapsed > 0);
+    CHECK(midnight.elapsed < midnight.length);
+    const DayPhase late = day_phase(hm(23, 59), 1);
+    CHECK(late.night);
+    CHECK(late.elapsed < midnight.elapsed);  // the night starts at dusk, so 23:59 is earlier in it than 00:00
+}

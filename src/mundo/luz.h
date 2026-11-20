@@ -32,6 +32,14 @@ bool mapa_oscuro(MapId m);
 // clima de lluvia o nieve. Mapas con nivel fijo (ver luz.cpp) ignoran la hora.
 int nivel_ambiente(MapId m, int minuto, int dia_anio, bool lluvia);
 
+// Which half of the day the game clock is in and how far through it (original status-page gauge, 0x4b2e30): daylight
+// runs from dawn to dusk (the thresholds of nivel_ambiente), night is the rest. `elapsed` and `length` are in minutes.
+struct DayPhase {
+    bool night;
+    int elapsed, length;
+};
+DayPhase day_phase(int minute, int day_of_year);
+
 // Día del año (0 = 1 de enero) de una hora de juego de S_GameTime. El original la trata como una fecha
 // (segundos desde 1970, sub_4bad30): las estaciones siguen al reloj del juego, no al de la máquina.
 int dia_del_anio(i32 segundos);

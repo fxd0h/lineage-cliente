@@ -87,6 +87,16 @@ int nivel_ambiente(MapId m, int minuto, int dia_anio, bool lluvia) {
     return nivel;
 }
 
+DayPhase day_phase(int minute, int day_of_year) {
+    minute = std::clamp(minute, 0, MINUTOS_DIA - 1);
+    int dawn, dusk;
+    horas_de_luz(std::clamp(day_of_year, 0, 365), dawn, dusk);
+    if (minute >= dawn && minute <= dusk) return {false, minute - dawn, dusk - dawn};
+    // Night runs from dusk to the next dawn, across midnight.
+    const int length = MINUTOS_DIA - dusk + dawn;
+    return {true, (minute > dusk ? minute - dusk : minute + MINUTOS_DIA - dusk), length};
+}
+
 int dia_del_anio(i32 segundos) {
     int dias = std::max(segundos, 0) / 86400;
     for (int anio = 1970;; ++anio) {

@@ -213,13 +213,13 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| HP/MP/EXP gauge box (attributes page) | img 1263 at (69,46); EXP 1264 (69,46), HP 1265 (69,62), MP 1266 (69,77), clipped by % (0x4b3e8f, 0x4b4562, 0x4b3ff2) | not drawn | MISSING | original_window.cpp draw_attributes |
+| HP/MP/EXP gauge box (attributes page) | img 1263 at (69,46); EXP 1264 (69,46), HP 1265 (69,62), MP 1266 (69,77), clipped by % (0x4b3e8f, 0x4b4562, 0x4b3ff2) | box 1263 + fills 1264/1265/1266 clipped to width*value/max (EXP floored %) | MATCH | original_window.cpp draw_attributes |
 | Level / EXP text | `"%d"` at (100,50); `"%02d.%02d%%"` at (115,50) (0x4b459b, 0x6e4dbc) | `"%d  (%.2f%%)"` at (70,44) | MATCH (fixed; digits use the 4x6 bitmap font 0x431410, table 0x501410) | -
-| HP / MP text | `"%d/%d"` at (100,66) colour (246,189,246) / (100,80) colour (189,222,255) (0x4b4199) | `"%d / %d"` at (54,61)/(54,74), white | DIFFERENT | draw_attributes |
-| Weight / food | `" %d%%"` centred in x 107..150, y 94/107 | centred 109..156, y 92/105 | DIFFERENT | draw_attributes |
-| Bottom gauge 990-995 | 990 (76,233), 991 (83,232), marker 992 at (83+v,233) (0x4b3930) | not drawn | MISSING | meaning: U-C4 |
+| HP / MP text | `"%d/%d"` at (100,66) colour (246,189,246) / (100,80) colour (189,222,255) (0x4b4199) | `"%d/%d"` at (100,66)/(100,80), colours as the original | MATCH | draw_attributes |
+| Weight / food | `" %d%%"` centred in x 107..150, y 94/107 | centred in x 107..150, y 94/107 (class 3: 1 px up) | MATCH | draw_attributes |
+| Bottom gauge 990-995 | 990 (76,233), 991 (83,232), marker 992 at (83+v,233) (0x4b3930) | drawn from the game clock (luz.cpp `day_phase`; thresholds of the light level, time ranges still inferred) | MATCH (ranges U) | meaning: U-C4 |
 | Tab tooltips | strings 882 / 883 (0x4b48b6) | none | MISSING | |
-| Tab hit-rects | (22,245),(57,245) 34x17 | y 248, 35x18 | DIFFERENT | |
+| Tab hit-rects | (22,245),(57,245) 34x17 | hit rects (22,245),(57,245) 34x17; art stays at y 248 | MATCH | |
 | Equipment AC text | centre x 120.5, y 231 (0x4b3740) | centre 118, y 232 | DIFFERENT | equipo_ui.cpp |
 | Frame/bg per tab and sex | 0x4b4a00: tab!=0 (attributes) bg 982 (0x4b4a24), frame 0x5a1+0x4d = 1518 (0x4b4c20); equipment tab bg 1440, or 1516 (1440+0x4c) when [0x81b328] != 0, frame 1441. [0x81b328] is the sign-extended byte +0x1f of the selected char-list entry (0x470bbe), i.e. the SEX byte (+0x1e class, +0x27 level), not the class | 1516 when sex != 0 and the image exists, 1518 likewise, else 1440 / 983 | MATCH where the images exist; 1516/1518 are absent from every available install (juego= and juego_extra=), so the fallback shows | U-C2 |
 | Tab strip 985/986 (22,248); STR..CHA boxes; magic level/bonus; elements; AC; equipment slots table 0x8f0818 | 0x4b4bdd, 0x4b4291, 0x4b42e9, 0x483d44, 0x4b2f50 | same (<=1 px) | MATCH | - |

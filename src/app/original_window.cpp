@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include "app/app.h"
+#include "mundo/luz.h"
 
 namespace lin {
 
@@ -99,7 +100,13 @@ namespace {
 constexpr u32 IMG_EQUIPMENT = 1440, IMG_EQUIPMENT_FRAME = 1441, IMG_ATTRIBUTES = 982, IMG_ATTRIBUTES_FRAME = 983,
                 IMG_EQUIPMENT_FEMALE = 1516, IMG_ATTRIBUTES_FRAME_EXE = 1518;
 constexpr u32 IMG_STATUS_ORNAMENT = 984, IMG_STATUS_TABS = 985;  // 985 equipment selected, 986 attributes
-constexpr int STATUS_BG_X = 6, STATUS_BG_Y = 9, STATUS_TABS_X = 22, STATUS_TABS_Y = 248, STATUS_TAB_W = 35, STATUS_TAB_H = 18;
+constexpr u32 IMG_GAUGE_BOX = 1263, IMG_GAUGE_EXP = 1264, IMG_GAUGE_HP = 1265, IMG_GAUGE_MP = 1266;
+const u32 HP_TEXT = rgba(246, 189, 246), MP_TEXT = rgba(189, 222, 255);  // 0x4b4199
+constexpr u32 IMG_CLOCK_DAY = 990, IMG_CLOCK_NIGHT = 993;
+constexpr int GAUGE_X = 69, GAUGE_EXP_Y = 46, GAUGE_HP_Y = 62, GAUGE_MP_Y = 77;
+constexpr int STATUS_BG_X = 6, STATUS_BG_Y = 9, STATUS_TABS_X = 22, STATUS_TABS_Y = 248, STATUS_TAB_W = 35;
+// Hit rects of the tabs (0x4b48b6): (22,245) and (57,245), 34x17.
+constexpr int STATUS_TAB_HIT_Y = 245, STATUS_TAB_HIT_W = 34, STATUS_TAB_HIT_H = 17;
 
 // Magic level by class (prince to illusionist), as the server's L1*ClassFeature.getMagicLevel.
 int magic_level(int cls, int level) {
@@ -145,23 +152,52 @@ void draw_attributes(App& a, int x, int y) {
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 10);
     const u32 color = rgba(255, 255, 254);
     char t[48];
-    auto at = [&](int tx, int ty) { g.texto_sombra(t, static_cast<float>(x + tx), static_cast<float>(y + ty), kt, color); };
-    // Centered in the box [bx, bx + bw) whose top is by (boxes are 13 px tall).
+    const int cls = (a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) ? a.pjs[a.pj_sel].v[PJ_CLASE] : -1;
+    // 0x4b3740 / 0x4b38b0: class 3 (wizard) draws every number one pixel higher.
+    int lift = cls == 3 ? 1 : 0;
+    const int wx = x - STATUS_BG_X, wy = y - STATUS_BG_Y;  // window origin; the RE coordinates are relative to it
+    auto at = [&](int tx, int ty, u32 c) { g.texto_sombra(t, static_cast<float>(wx + tx), static_cast<float>(wy + ty), kt, c); };
+    // Centered in the box [bx, bx + bw) whose top is by (boxes are 13 px tall), in bg-relative coordinates.
     auto boxed = [&](int bx, int by, int bw) {
         const int w = ancho_texto(t, std::strlen(t));
-        at(bx + (bw - w) / 2, by + (13 - ALTO_GLIFO) / 2 + 1);
+        g.texto_sombra(t, static_cast<float>(x + bx + (bw - w) / 2), static_cast<float>(y + by + (13 - ALTO_GLIFO) / 2 + 1 - lift),
+                       kt, color);
     };
     auto num = [&](i32 v) { std::snprintf(t, sizeof t, "%d", v); };
-    std::snprintf(t, sizeof t, "%d  (%.2f%%)", j.nivel, porcentaje_exp(j.nivel, j.exp));
-    at(64, 35);
-    std::snprintf(t, sizeof t, "%d / %d", j.hp, j.hp_max);
-    at(48, 52);
-    std::snprintf(t, sizeof t, "%d / %d", j.mp, j.mp_max);
-    at(48, 65);
+    // Gauge box 1263 at (69,46) with the fills 1264 (EXP, y 46), 1265 (HP, 62) and 1266 (MP, 77) clipped to the value
+    // (0x4b4a00); a fill is drawn only when its maximum is positive. EXP uses the floored percentage.
+    const u64 kg = clave_orden(CAPA_UI, 12), kf = clave_orden(CAPA_UI, 13);
+    g.gpu().dibujar(g.img(IMG_GAUGE_BOX), wx + GAUGE_X, wy + GAUGE_EXP_Y, kg);
+    auto fill = [&](u32 image, int fy, i64 value, i64 max) {
+        RegionAtlas r = g.img(image);
+        if (max <= 0 || !r.valida()) return;
+        const int w = static_cast<int>(std::clamp<i64>(r.w * value / max, 0, r.w));
+        if (w <= 0) return;
+        r.w = static_cast<u16>(w);
+        g.gpu().dibujar(r, wx + GAUGE_X, wy + fy, kf);
+    };
+    const int exp_pct = static_cast<int>(porcentaje_exp(j.nivel, j.exp));
+    fill(IMG_GAUGE_EXP, GAUGE_EXP_Y, exp_pct, 100);
+    fill(IMG_GAUGE_HP, GAUGE_HP_Y, j.hp, j.hp_max);
+    fill(IMG_GAUGE_MP, GAUGE_MP_Y, j.mp, j.mp_max);
+    num(j.nivel);
+    at(100, 50, color);
+    const float exp_exact = porcentaje_exp(j.nivel, j.exp);
+    std::snprintf(t, sizeof t, "%02d.%02d%%", exp_pct, static_cast<int>((exp_exact - static_cast<float>(exp_pct)) * 100.0f));
+    at(115, 50, color);
+    std::snprintf(t, sizeof t, "%d/%d", j.hp, j.hp_max);
+    at(100, 66, HP_TEXT);
+    std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
+    at(100, 80, MP_TEXT);
+    // Weight and food percentages: centred in x 107..150 at y 94 / 107 (0x4b38b0).
+    auto centred = [&](int ty) {
+        const int w = ancho_texto(t, std::strlen(t));
+        g.texto_sombra(t, static_cast<float>(wx + 107 + (43 - w) / 2), static_cast<float>(wy + ty - lift), kt, color);
+    };
     std::snprintf(t, sizeof t, "%d%%", j.peso * 100 / 240);
-    boxed(103, 83, 47);
+    centred(94);
     std::snprintf(t, sizeof t, "%d%%", j.comida * 100 / 225);
-    boxed(103, 96, 47);
+    centred(107);
     const i32 left[] = {j.fue, j.des, j.con}, right[] = {j.int_, j.sab, j.car};
     for (int i = 0; i < 3; ++i) {
         num(left[i]);
@@ -169,7 +205,7 @@ void draw_attributes(App& a, int x, int y) {
         num(right[i]);
         boxed(112, 115 + i * 13, 38);
     }
-    const int cls = (a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) ? a.pjs[a.pj_sel].v[PJ_CLASE] : -1;
+    lift = 0;  // the pair, alignment and element numbers use other routines
     num(magic_level(cls, j.nivel));
     boxed(84, 160, 28);
     num(magic_bonus(j.int_));  // 0x4aa700: from INT only
@@ -192,6 +228,19 @@ void draw_attributes(App& a, int x, int y) {
         num(elements[i]);
         boxed(i < 2 ? 56 : 123, 195 + (i % 2) * 12, 20);
     }
+    // Day / night clock gauge (0x4b2e30): cap 990 / 993 at (76,233), bar 991 / 994 at (83,232) and the marker 992 / 995 at
+    // (83 + v, 233), v = elapsed fraction of the daylight or night period * 83, from the game clock.
+    {
+        const i32 clock = hora_de_juego(a);
+        const int seconds = static_cast<int>(((clock % 86400) + 86400) % 86400);
+        const DayPhase ph = day_phase(seconds / 60, dia_del_anio(clock));
+        const u32 base = ph.night ? IMG_CLOCK_NIGHT : IMG_CLOCK_DAY;
+        const int v = ph.length > 0 ? std::clamp(ph.elapsed * 83 / ph.length, 0, 83) : 0;
+        const u64 kc = clave_orden(CAPA_UI, 14);
+        g.gpu().dibujar(g.img(base), wx + 76, wy + 233, kc);
+        g.gpu().dibujar(g.img(base + 1), wx + 83, wy + 232, kc);
+        g.gpu().dibujar(g.img(base + 2), wx + 83 + v, wy + 233, kc);
+    }
 }
 
 }  // namespace
@@ -213,7 +262,7 @@ void draw_original_status(App& a, int x, int y) {
     // Tabs: equipment first, then attributes (one strip image per selected tab).
     g.gpu().dibujar(g.img(IMG_STATUS_TABS + (equipment ? 0 : 1)), x + STATUS_TABS_X, y + STATUS_TABS_Y, KEY_CONTROL);
     for (int i = 0; i < 2; ++i)
-        if (e.clic && ui::sobre(e, x + STATUS_TABS_X + i * STATUS_TAB_W, y + STATUS_TABS_Y, STATUS_TAB_W, STATUS_TAB_H))
+        if (e.clic && ui::sobre(e, x + STATUS_TABS_X + i * STATUS_TAB_W, y + STATUS_TAB_HIT_Y, STATUS_TAB_HIT_W, STATUS_TAB_HIT_H))
             a.pestana_estado = i == 0 ? 1 : 0;
     if (a.pestana_estado == 1) dibujar_equipo(a, x, y);
     else draw_attributes(a, x + STATUS_BG_X, y + STATUS_BG_Y);
