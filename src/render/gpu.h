@@ -64,7 +64,9 @@ public:
     // escala deseada (píxeles reales por píxel lógico; 0 = la mayor que entra, como el original).
     // Sin `ampliable`, el tamaño lógico es el mínimo y la imagen queda centrada.
     // `franja`: píxeles lógicos reservados arriba (la barra de la ventana); el contenido va debajo.
-    void ajustar_vista(bool ampliable, int zoom, int franja = 0);
+    // `solo_mundo`: el zoom cambia solo el mundo (capas por debajo de CAPA_UI); la interfaz queda con la
+    // escala mayor. El mundo se sigue dibujando en sus coordenadas lógicas (ver zoom_mundo).
+    void ajustar_vista(bool ampliable, int zoom, int franja = 0, bool solo_mundo = false);
     // Mayor escala con la que entra el tamaño mínimo en la ventana actual.
     int escala_maxima(int franja = 0) const;
     void cerrar();
@@ -122,6 +124,15 @@ public:
     int ancho() const { return ancho_; }
     // Píxeles reales por píxel lógico (la del último frame). Para redondear la cámara a 1/escala.
     int escala() const { return escala_; }
+    // Píxeles reales por píxel lógico del mundo, y el mundo respecto de la interfaz (escala_mundo /
+    // escala, <= 1): un punto del mundo (x, y) se ve en (x, y) × zoom_mundo de la interfaz, así que el
+    // mundo visible mide ancho() / zoom_mundo() × alto() / zoom_mundo().
+    int escala_mundo() const { return escala_mundo_; }
+    float zoom_mundo() const { return static_cast<float>(escala_mundo_) / static_cast<float>(escala_); }
+    // Mientras está activo, lo que se dibuja en las capas del mundo ya viene en coordenadas de la interfaz
+    // (textos sobre los personajes): no se le aplica el zoom del mundo.
+    void sin_zoom_mundo(bool v) { sin_zoom_mundo_ = v; }
+    bool sin_zoom_mundo() const { return sin_zoom_mundo_; }
     int alto() const { return alto_; }
     u32 llamadas_ultimo_frame() const { return llamadas_; }
     u32 instancias_ultimo_frame() const { return instancias_previas_; }
@@ -171,6 +182,8 @@ private:
     int origen_x_ = 0, origen_y_ = 0;     // dónde empieza el contenido dentro de la cuadrícula
     int ancho_min_ = 0, alto_min_ = 0;
     int escala_ = 1;
+    int escala_mundo_ = 1;
+    bool sin_zoom_mundo_ = false;
     int destino_w_ = 0, destino_h_ = 0;   // tamaño real de destino_
 
     EmpaquetadoAtlas empaquetado_{TAM_PAGINA, PAGINAS_ATLAS};

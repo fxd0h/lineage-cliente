@@ -52,6 +52,9 @@ public:
     int texto(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
     // Texto con sombra negra de 1 px (como los nombres sobre los personajes).
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
+    // Texto HD: los glifos se suavizan a la resolución real (ampliar_glifo_suave) en vez de agrandar cada
+    // píxel de la fuente. Mismo tamaño y posiciones que sin HD; sin efecto con escala 1.
+    void texto_hd(bool si) { texto_hd_ = si; }
 
     Gpu& gpu() { return gpu_; }
     // Al comienzo de cada frame: lo que terminó de traer la precarga, y olvidar la página del atlas que
@@ -66,7 +69,9 @@ public:
     u32 tomar_decodificados() { u32 v = decodificados_; decodificados_ = 0; return v; }
 
 private:
-    enum Tipo : u64 { T_IMG = 1, T_PNG, T_TILE, T_SPR, T_GLIFO, T_ICONO, T_EMBLEMA, T_ARCHIVO };
+    enum Tipo : u64 { T_IMG = 1, T_PNG, T_TILE, T_SPR, T_GLIFO, T_ICONO, T_EMBLEMA, T_ARCHIVO, T_GLIFO_HD };
+    // El glifo suavizado `k` veces más grande (texto HD).
+    const RegionAtlas& glifo_hd(u32 g, int k);
     static u64 clave(Tipo t, u64 v) { return (static_cast<u64>(t) << 56) | v; }
     enum class Carga { OK, FALLO, PENDIENTE };
     // Busca k; si no está, decodifica en tmp_ con `decodificar` (devuelve Carga) y lo sube al atlas.
@@ -97,6 +102,8 @@ private:
     std::vector<ArchivoSpr> sprs_;
     Precarga precarga_;
     ImagenRGBA tmp_;
+    ImagenRGBA glifo_base_;  // el glifo sin ampliar, para glifo_hd
+    bool texto_hd_ = false;
     std::vector<GlifoTexto> glifos_tmp_;
     double ms_decodificacion_ = 0;
 

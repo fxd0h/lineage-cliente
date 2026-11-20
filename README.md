@@ -165,7 +165,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `servidor`, `servidor_elegido` | Server list and the selected one |
 | `idioma` | Interface language; empty = the system's |
 | `ventana` | Window size (`WIDTHxHEIGHT`), saved on close |
-| `zoom` | Game scale; 0 = automatic |
+| `zoom` | Game scale; 0 = automatic. With the simple interface it scales only the map: the interface keeps its size |
 | `ui_simple` | `1` simple interface, `0` original panel (F2) |
 | `camara_a_saltos` | `1` camera follows the walking frames, like the original (F4) |
 | `sombra_personajes` | Darken characters standing in a tree's shadow (Shift+F4) |
@@ -179,6 +179,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `chat_con_enter` | `1` Enter opens the chat line, `0` always typing |
 | `barra_personaje` | HP/MP bar over your own character |
 | `texto_dano` | Floating damage and "Miss" over your character |
+| `texto_hd` | `1` (default) text smoothed at the screen's real resolution instead of enlarging each font pixel (also in Options: "HD text"), `0` the plain pixel font |
 | `globos_comic` | `1` speech and shouts in a rounded outline over the head (also in Options: "Speech balloons"), `0` plain text |
 | `compensar_ataque` | Show your swing at once, without waiting for the server's echo |
 | `logo` | PNG for the simple login screen, see below |
@@ -215,7 +216,8 @@ title is shown as text.
 - **Shift+F4:** darken characters standing in a tree's shadow (default) or not.
 - **Shift+F12:** saves `captura.bmp`.
 - **Shift+click on the world:** turns the character that way without walking (to face someone, e.g. to trade).
-- **Ctrl/⌘ + and Ctrl/⌘ −:** zoom in and out (integer scale; zooming out shows more map).
+- **Ctrl/⌘ + and Ctrl/⌘ −:** zoom in and out (integer scale; zooming out shows more map). With the simple
+  interface only the map zooms; the panel, windows and the names over characters keep their size.
 - **Ctrl/⌘ 0:** automatic zoom, the largest that fits 640×480.
 - **Game view:** adapts to the window. Enlarging it shows more map, with the panel centered at the
   bottom. The login and character screens stay at 640×480.

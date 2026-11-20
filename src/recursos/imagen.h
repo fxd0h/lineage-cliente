@@ -37,5 +37,10 @@ bool decodificar_img(Bytes datos, ImagenRGBA& salida);
 bool decodificar_png(Bytes datos, ImagenRGBA& salida, bool fondo_negro = true);
 // Negro puro -> transparente, y los oscuros unidos a él (resplandores) -> translúcidos (ver imagen.cpp).
 void quitar_fondo_negro(ImagenRGBA& img);
+// Glifo blanco con alfa (premultiplicado), `k` veces más grande y con los bordes suavizados: el alfa se
+// interpola entre los centros de los píxeles y se corta en la mitad con un borde de un píxel de salida. Las
+// diagonales en escalera quedan rectas y las curvas redondas, sin engordar los trazos de un píxel. Es el
+// texto "HD": dibujado a la resolución real de la pantalla en vez de agrandar cada píxel de la fuente.
+void ampliar_glifo_suave(const ImagenRGBA& entrada, int k, ImagenRGBA& salida);
 
 }  // namespace lin

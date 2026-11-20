@@ -204,11 +204,29 @@ const RegionAtlas& Graficos::glifo(u32 g) {
     return cargar(clave(T_GLIFO, g), [&] { return fuente_.rasterizar(g, tmp_) ? Carga::OK : Carga::FALLO; });
 }
 
+const RegionAtlas& Graficos::glifo_hd(u32 g, int k) {
+    return cargar(clave(T_GLIFO_HD, (static_cast<u64>(k) << 32) | g), [&] {
+        if (!fuente_.rasterizar(g, glifo_base_)) return Carga::FALLO;
+        ampliar_glifo_suave(glifo_base_, k, tmp_);
+        return Carga::OK;
+    });
+}
+
 int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 color) {
     glifos_de_texto(t.data(), t.size(), glifos_tmp_);
+    // Píxeles reales por píxel lógico donde cae el texto: los del mundo si va en sus capas (con zoom
+    // solo del mapa difieren de los de la interfaz).
+    const bool mundo = (clave_orden >> 56) < CAPA_UI && !gpu_.sin_zoom_mundo();
+    const int k = texto_hd_ ? (mundo ? gpu_.escala_mundo() : gpu_.escala()) : 1;
     int ancho = 0;
     for (const GlifoTexto& g : glifos_tmp_) {
-        gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
+        if (k > 1) {
+            const RegionAtlas& r = glifo_hd(g.glifo, k);
+            const float e = static_cast<float>(k);
+            gpu_.dibujar_escalado(r, x + ancho + r.ox / e, y + r.oy / e, r.w / e, r.h / e, clave_orden, color);
+        } else {
+            gpu_.dibujar_en(glifo(g.glifo), x + ancho, y, clave_orden, color);
+        }
         ancho += g.ancho;
     }
     return ancho;

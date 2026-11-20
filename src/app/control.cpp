@@ -219,7 +219,8 @@ void objetos(App& a, Conexion& c, int radio) {
         const char* sprite = "fuera";
         for (const App::ObjetoEnPantalla& r : a.en_pantalla)
             if (r.id == id) {
-                px = static_cast<int>((r.x0 + r.x1) / 2), py = static_cast<int>((r.y0 + r.y1) / 2);
+                // Los rectángulos están en el mundo; el clic, en la interfaz (zoom solo del mapa).
+                px = static_cast<int>((r.x0 + r.x1) / 2 * a.gpu.zoom_mundo()), py = static_cast<int>((r.y0 + r.y1) / 2 * a.gpu.zoom_mundo());
                 sprite = r.sprite == 0 ? "ok" : r.sprite == 1 ? "pendiente" : "falta";
             }
         // Para diagnosticar un bloque de color: el archivo que se busca y su acción de estar quieto.
@@ -444,7 +445,8 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             for (const App::ObjetoEnPantalla& e : a.en_pantalla)
                 if (e.id == id) r = &e;
             if (!r) return error("no se está dibujando");
-            clic(static_cast<int>((r->x0 + r->x1) / 2), static_cast<int>((r->y0 + r->y1) / 2), p.size() > 2 && p[2] == "der" ? 1 : 0);
+            const float z = a.gpu.zoom_mundo();  // de coordenadas del mundo a las de la interfaz
+            clic(static_cast<int>((r->x0 + r->x1) / 2 * z), static_cast<int>((r->y0 + r->y1) / 2 * z), p.size() > 2 && p[2] == "der" ? 1 : 0);
         } else {
             // Como un clic sobre él: se camina hasta el NPC y se le habla, o se lo ataca hasta que muera
             // (el ataque sostenido de la tecla A).
