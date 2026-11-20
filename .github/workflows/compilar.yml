@@ -3,12 +3,16 @@
 # Los shaders se compilan desde HLSL: glslang en Linux, glslang y spirv-cross en macOS,
 # dxc del SDK de Windows (cmake/shaders.cmake).
 # Las cinco plataformas tienen que pasar.
+# Solo corre si cambia algo que no sea documentación: Markdown (README, planes, AGENTS.md...), docs/ (con
+# las capturas) y LICENSE no compilan. Un PR solo de documentos no muestra los checks (main no los exige).
 name: Compilar
 
 on:
   push:
     branches: [main, "agente/*portado*", "agente/windows*", "agente/linux*"]
+    paths-ignore: ["**.md", "docs/**", "LICENSE"]
   pull_request:
+    paths-ignore: ["**.md", "docs/**", "LICENSE"]
   workflow_dispatch:
 
 concurrency:

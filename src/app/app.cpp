@@ -433,6 +433,16 @@ void bucle_app(App& a) {
         control_entrada(a);  // el mouse inyectado
 #endif
         procesar_red(a);
+        // Ajustes abiertos (modales): la pantalla de atrás sigue (red, mundo, dibujo) con una entrada vacía, y
+        // la del frame queda para los ajustes, que se dibujan encima.
+        const bool ajustes = a.ventana_ajustes && a.pantalla != Pantalla::ELEGIR_CARPETA;
+        const EntradaFrame entrada = a.entrada;
+        if (ajustes) {
+            EntradaFrame vacia;
+            vacia.ahora_ms = entrada.ahora_ms;
+            vacia.mx = vacia.my = -10000;
+            a.entrada = vacia;
+        }
         if (a.render.activo) {
             dibujar_captura(a);
         } else switch (a.pantalla) {
@@ -442,6 +452,10 @@ void bucle_app(App& a) {
         case Pantalla::CREAR: frame_crear(a); break;
         case Pantalla::CARGANDO:
         case Pantalla::JUEGO: frame_juego(a); break;
+        }
+        if (ajustes) {
+            a.entrada = entrada;
+            dibujar_ajustes(a);
         }
         actualizar_sonido(a, a.entrada.ahora_ms);
         ++a.frames_en_pantalla;

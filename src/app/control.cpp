@@ -177,7 +177,7 @@ bool* ventana(App& a, std::string_view n) {
     if (n == "inventario") return &a.ventana_inventario;
     if (n == "estado") return &a.ventana_estado;
     if (n == "hechizos") return &a.ventana_hechizos;
-    if (n == "opciones") return &a.ventana_opciones;
+    if (n == "ajustes" || n == "opciones") return &a.ventana_ajustes;
     if (n == "forma") return &a.ventana_forma;
     if (n == "social") return &a.ventana_social;
     if (n == "salida") return &a.ventana_salida;
@@ -199,7 +199,7 @@ bool abierta(const App& a, std::string_view n) {
     if (bool* v = ventana(const_cast<App&>(a), n)) return *v;
     return false;
 }
-constexpr const char* VENTANAS[] = {"inventario", "estado", "hechizos", "opciones", "social", "salida", "teclas", "npc", "tienda",
+constexpr const char* VENTANAS[] = {"inventario", "estado", "hechizos", "ajustes", "social", "salida", "teclas", "npc", "tienda",
                                     "tablon", "correo", "subastas", "mapa-casa", "intercambio", "pregunta", "cantidad",
                                     "menu-servidores"};
 
@@ -294,7 +294,7 @@ const char* AYUDA[] = {
     "hablar <objeto>   atacar <objeto>   parar   clic-objeto <objeto> [der]",
     "accion <vínculo de la página>   responder si|no|\"texto\"   cantidad <n>",
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
-    "abrir|cerrar inventario|estado|hechizos|opciones|social|salida|teclas",
+    "abrir|cerrar inventario|estado|hechizos|ajustes|social|salida|teclas",
     "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
     "clic <x> <y> [der|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
@@ -413,7 +413,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         // Dónde están las que se mueven (para hacer clic adentro): nombre=x,y,ancho,alto.
         static constexpr std::pair<const char*, IdVentana> MOVILES[] = {
             {"estado", IdVentana::ESTADO}, {"inventario", IdVentana::INVENTARIO}, {"hechizos", IdVentana::HECHIZOS},
-            {"npc", IdVentana::NPC}, {"opciones", IdVentana::OPCIONES}, {"intercambio", IdVentana::INTERCAMBIO}};
+            {"npc", IdVentana::NPC}, {"intercambio", IdVentana::INTERCAMBIO}};
         if (a.pantalla == Pantalla::JUEGO)
             for (const auto& [n, id] : MOVILES)
                 if (abierta(a, n)) {

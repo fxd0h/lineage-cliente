@@ -8,8 +8,8 @@ Uso
 ---
 1. Descomprimir esta carpeta donde se quiera (no hace falta instalar nada).
 2. Abrir lineage.exe. La primera vez pide la carpeta del juego.
-3. settings.exe cambia la configuración (carpeta del juego, servidores, interfaz, sonido) sin abrir
-   el juego.
+3. Ajustes (en el login, o Options en el juego) cambia la configuración: carpeta del juego,
+   servidores, interfaz y sonido.
 
 La configuración queda en %APPDATA%\Lineage\LineageCliente\settings.ini.
 
@@ -26,8 +26,8 @@ Lineage Client for Windows (English)
 ------------------------------------
 A new client for Lineage 1. The game is NOT included: you need an installation of the original
 game (the folder with Sprite.pak, Tile.pak, Text.pak and map\). Unzip anywhere and run
-lineage.exe; the first time it asks for the game folder. settings.exe changes the settings
-without opening the game. Settings are stored in %APPDATA%\Lineage\LineageCliente\settings.ini.
+lineage.exe; the first time it asks for the game folder. Settings (on the login screen, or Options
+in the game) changes the settings. Settings are stored in %APPDATA%\Lineage\LineageCliente\settings.ini.
 The game folder must be on a local disk (Windows cannot open the large .pak files over WebDAV).
 Requires Windows 10 or 11, 64-bit (x64 or arm64, matching the package), with DirectX 12.
 License: GPLv3 (LICENSE.txt).

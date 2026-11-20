@@ -200,7 +200,7 @@ std::string_view parte_de_valor(std::string_view valor, int n) {
 std::vector<std::string> personajes_con_datos(const Config& c) {
     std::vector<std::string> nombres;
     for (std::string_view opcion : {std::string_view{c.atajos}, std::string_view{c.barra}, std::string_view{c.autobuffs},
-                                    std::string_view{c.autopocion}}) {
+                                    std::string_view{c.autopocion}, std::string_view{c.inventario_orden}}) {
         while (!opcion.empty()) {
             std::string_view par = opcion.substr(0, opcion.find(';'));
             opcion = par.size() < opcion.size() ? opcion.substr(par.size() + 1) : std::string_view{};

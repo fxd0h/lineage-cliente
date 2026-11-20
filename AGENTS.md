@@ -36,6 +36,12 @@ código. El idioma del proyecto es el **español**: código (identificadores), c
 
    Un cambio hecho solo a mano en la base o en el servidor no existe para los demás.
 6. **Antes de cada push:** compila sin warnings y pasan los tests (sección 4).
+7. **Toda opción de `settings.ini` tiene su contraparte en la ventana de ajustes** (`src/app/ajustes_ui.cpp`).
+   Una clave nueva que el jugador elige (un efecto, un volumen, una ruta) no se agrega solo al archivo: va
+   también en su pestaña, con su texto en `src/i18n/catalogo.def` (cinco idiomas) y su fila en la tabla de
+   opciones del README. Ver la receta "agregar una opción de settings.ini" (sección 3). Los datos que guarda
+   el propio juego (posiciones de ventanas, barra, atajos, auto-buffs, orden del inventario) no son
+   opciones, pero la pestaña Personajes debe permitir borrarlos.
 
 ## 2. Puesta en marcha
 
@@ -137,6 +143,19 @@ Un archivo nuevo `src/app/<tema>_ui.cpp` (agregarlo a `CMakeLists.txt`). Luego:
 - llamar a su `dibujar_*` y `procesar_*` desde `pantalla_juego.cpp`.
 
 Mantener la lógica en el archivo propio; en los archivos compartidos, solo los enganches.
+
+### Receta: agregar una opción de settings.ini
+
+1. `src/plataforma/rutas.h`: el campo en `Config`, con su valor por omisión y un comentario con su clave.
+   `rutas.cpp`: leerla en `aplicar()` y escribirla en `escribir_config()`.
+2. `src/app/ajustes_ui.cpp`: su fila en la pestaña que corresponda (`si_no`, `campo` o `lista`); los
+   números se validan en `volcar()`.
+3. Si no se puede aplicar en vivo (se lee al arrancar), que `aplicar()` la compare y devuelva `true`:
+   el aviso le dice al jugador que vale al reiniciar el cliente. Si se aplica en vivo pero necesita algo
+   más que copiar `a.cfg` (llamar a SDL, al audio...), hacerlo en `aplicar()`.
+4. El texto de la etiqueta en `src/i18n/catalogo.def`, en los cinco idiomas; si es una etiqueta de la
+   columna izquierda, agregarla a la lista de `tests/test_textos.cpp` (cabe en 210 px).
+5. Su fila en la tabla de opciones del README.
 
 ## 4. Verificación
 
