@@ -364,7 +364,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-B11** Which windows' close buttons use the 0xee callbacks.
 - **U-C1** Whether inventory/status are draggable through their 0x47bcd0 handle even though 0x44d1b0 has no move code;
   and whether buttons fire on release (0x47b510) versus the fork's `e.clic`.
-- **U-C2** Images 1516 / 1518 (not in the src_ui manifest) and `[0x81b328]` (class or sex) — decode Sprite.pak.
+- **U-C2** Resolved: `[0x81b328]` is the sex byte; `1516.img` / `1518.img` are not in this installation, so the 1440 / 983 fallbacks are correct (see [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md)).
 - **U-C3** The alignment-image variant at (125,164) when `[0x702b7c]` is 3 or 5.
 - **U-C4** Meaning of the status-page gauge 990-995 (0x4b2e31, 0x4b2cc0).
 - **U-C5** Which spellbook strip group is shown and what a tab selects.
@@ -403,7 +403,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 ## Teleport destination window: images viewed and open items
 
 - Images viewed (verification crop of the picker, 20 bookmarks, scrolled): 978 (191x274, translucent background, drawn with the window opacity), 979 (207x289, ornate frame), 980 (203x251, ornament over the rows: the inner border and corner flourishes), 969 (13x13, close button), 971 (12x182 track) and 974/972/976 scroll arrows and thumb (the fork draws the identical-size 1206/1208/1211 set through `original_scrollbar`). Source: viewed in the picker crop; catalog rows in UI_IMAGES.tsv updated.
-- **U-F1** Unproven condition: the test `[0x81b534]==2 && [0x8f07f2]>=0x32 && [0x6f1e4a]!=0` (0x4096cd, 0x4ac8a4) also opens the picker without the ring; what those three globals are is not decoded (the fork only uses the ring, S_Ability 1).
-- **U-F2** With the ring and no bookmark the original opens an empty window (no Random row, no other way to teleport at random from the scroll); copied, but not seen in a live original.
-- **U-F3** Del/Backspace delete with the prompt string 0x34e and `/bookmark` without a name (bookmark list as a plain window) are not implemented; the old right-click delete exists only in the simple-UI picker.
+- **U-F1** Decoded: the extra condition is class 2 (elf), level >= 50 and the `/telcon` toggle `[0x6f1e4a]` (see [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md)).
+- **U-F2** Confirmed: with no row selected the confirm does nothing, so an empty window is inert.
+- **U-F3** Decoded (implementation pending): Del/Backspace -> prompt 0x34e, `y` sends `cs 0x80, name`; `/bookmark` takes no argument and opens a name prompt (0x246). See [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md).
 - **U-F4** Exact scroll-bar internals (0x47cd80 thumb travel, callback 0x418ff0 sets the first row = bar value) are modelled with the shared `original_scrollbar`; default window position is the party window's (not decoded, see U-D1). The random branch should send the current map (`[0x6ddf94]`) instead of 0 (the server ignores it).
