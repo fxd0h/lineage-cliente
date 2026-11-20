@@ -114,3 +114,25 @@ Tags: [C] confirmed from decompile, [I] inferred. Coordinates are relative to th
 - **Inventory overlays (C):** desc-e entries 9 "Armed" and 117 "Worn": items whose name contains them get overlay 2700
   then 2701 at (+1,+1) (not item types 0x1d1/0x1d2). 2702 at (+24,+24) marks a sealed item (item+0x80, set when the
   status byte gains 0x80, message string-e 1004 "%s was sealed.", cleared with 1015).
+
+## Round 2 implementation notes
+
+- **Spellbook:** `spellbook_skill_id(class, slot)` / `spellbook_max_scroll` in recursos/hechizos.h; hechizos_ui.cpp draws 6 grid
+  rows from the scroll row; the scroll bar range is 0..max (19 / 21 / 13 / 9). Verified in a test instance (tab 2 click
+  scrolls to row 2 and highlights tab 2).
+- **Buffs:** mundo/tabla_buffs.h embeds only the numeric columns (tooltip idx, end idx, group) and the effect -> slot map
+  (derived from the packet handlers; Shield / Shadow Armor slots 4 / 5 inferred). Exclusion groups act in
+  `poner_efecto_activo` for known slots. The end message is queued on expiry or removal and printed one second later
+  unless the server sent the same text meanwhile (l1j-en sends `sysmsgID_stop` of the skill row for some skills, e.g. 308
+  for Enchant Weapon, and nothing for others). Original UI only. Effects the fork does not map to a slot (spell-registered
+  EA_HECHIZO, most class buffs) have no tooltip / end message: TODO.
+- **Close button:** (168,18) for inventory and status.
+- **Quantity prompts:** drop 119 / give 140 / pick up 121 in the chat line; the %u is the stack size.
+- **Emotes:** `Cli::EXTCOMMAND` (s3ep1 wire 38); l1j-en C_ExtraCommand rebroadcasts S_DoActionGFX to the others, so the
+  own sprite plays the action locally. Non-human sprite action table (0x456b30) not done.
+- **Overlays:** 2700 / 2701 at (+1,+1) for names containing " ($9)" / " ($117)" (the existing `item_equipado`), skipped for
+  icons 0x1d1 / 0x1d2; 2702 at (+24,+24) when the bless byte has 0x80. The exact blend of 2700 is not decoded: additive
+  is used (a normal blit covered the item with an opaque disc).
+- **Hold-to-walk:** already equivalent (no timer, per-frame decision after each step).
+- **Panel buttons:** already pressed = hover = base+1.
+

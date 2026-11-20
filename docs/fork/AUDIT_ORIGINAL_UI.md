@@ -57,14 +57,14 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | F-key box origin | (502+34c, 389+34r), 4x2 (0x4b23e5, pitch 0x22) | (502,389) pitch 34 | MATCH | - |
 | F-key overlays (cooldown shade, seconds countdown, MP-short dim, count) | no such draw found in 0x4b2260 (contents drawn by 0x4aad90 / 0x445fd0) | drawn | EXTRA | `dibujar_teclas_f`: gate on `ui_simple` (see UNKNOWN U-A10 for item count) |
 | Panel buttons (8 at y=460) | help 491 (1017/1018), mail 507 (1585/1586), status 527, magic 544, inventory 563, social 580, options 601, quit 618 (0x459595..0x45980a, ctor 0x47c6d0) | same x, y=460 | MATCH | - |
-| Panel button rest/hover art | draw 0x47c760: rest = FIRST id (odd, e.g. 1005); hover = 2nd ctor id; pressed = id+1; all via 0x4b7fb0 with flag 0x8003 (blend not decoded) | rest = id+1 converted to sepia mono and drawn 1 px lower; hover = id+1 in colour ("fitted" to a screenshot, ventanas.cpp `boton_panel`) | DIFFERENT | ventanas.cpp `boton_panel`: draw id n at rest; decode flag 0x8003 (U-A1) (done: rest = 1st image, hover = 2nd, pressed = 2nd (3rd id unknown)) |
+| Panel button rest/hover art | draw 0x47c760: rest = FIRST id (odd, e.g. 1005); hover = 2nd ctor id; pressed = id+1; all via 0x4b7fb0 with flag 0x8003 (blend not decoded) | rest = id+1 converted to sepia mono and drawn 1 px lower; hover = id+1 in colour ("fitted" to a screenshot, ventanas.cpp `boton_panel`) | DIFFERENT | ventanas.cpp `boton_panel`: draw id n at rest; decode flag 0x8003 (U-A1) (done: rest = 1st image, hover = 2nd, pressed = 2nd (3rd id unknown)) Round 2: pressed = hover = base+1 (no third image), which is what the fork draws: MATCH. |
 | Panel button tooltips ("Help (Ctrl+H)" ...) | no tooltip in button class 0x47c760 | black box + white tooltip | EXTRA | ventanas.cpp: remove in original mode |
 | "A" chat-mode button 1041 / scroll-to-bottom 1045 | 1041 at (136,464) (0x459b30); 1045 at (470,463), hover 1281, callback 0x421430 (0x4594d8) | drawn at those coordinates, inert, no hover | DIFFERENT | pantalla_juego.cpp: wire up 0x421430 / 0x474a47 behaviour (U-A11) |
 | Chat scroll bar | track 1047 (470,401), arrows 974/972, thumb 976; ctor 0x47cd80 cb 0x41f650 | implemented at those positions | MATCH | - |
 | Colour palette (Ctrl+O) | 0x456dc3, 16 swatches 2x8 | implemented | MATCH | - |
 | Buff icons, top right | 32x32 at y=5, x = 638-35*n with the FIRST buff rightmost and newer ones to the left; wraps to y=40 when x<0 (0x47df7c..0x47df97) | y=4, x from W-36, first at left, newest at right | DIFFERENT | hechizos_ui.cpp `dibujar_efectos_activos` (done: x = W-2-35n, y 5, wrap to y 40) |
 | Buff icon blend | screen blend (0x47e6f0 -> 0x49d420, table 0x4a03b0) | PANTALLA blend | MATCH | - |
-| Buff icon hover | message-table text for the slot (`[0x6e1020+slot*20]`), box by 0x498b10, no timer (0x47e6f0..0x47e817) | name + "m:ss" | DIFFERENT | `dibujar_efectos_activos`: table text only (partly done: no timer, colour (189,222,255); slot-table message index (0x6e1020 +0xc) not in the fork, the effect name is shown) |
+| Buff icon hover | message-table text for the slot (`[0x6e1020+slot*20]`), box by 0x498b10, no timer (0x47e6f0..0x47e817) | message-table text of the slot, no timer; unknown slot: name only | MATCH (round 2) | `dibujar_efectos_activos`: string-e line of the slot (`ranura_de_efecto_activo` + `BUFF_MSG`, mundo/tabla_buffs.h); effects with no known slot keep the spell name |
 | Buff icon ids marked "Inferred" | slot table 0x6e1020 | holy weapon 5248, decrease weight 5291, EDEX 5247, EStr 5246, Holy Walk 5243 guessed (hechizos_ui.cpp:668) | DIFFERENT | finish the 0x6e1020 table |
 | Pet panel ("Bag") and party list drawn at left | not in the window set built by 0x458640..0x459dce; the original uses windows 1170/1197 | party list (`dibujar_grupo`) now only in the simple UI (MATCH); `dibujar_mascotas` still always drawn | party: MATCH; pet: MATCH (the panel is simple-UI only; the original UI has the 1170 window, mascotas_ui.cpp) | done |
 | Auto-buff / auto-potion / shortcut bar / minimap | absent | hidden in original mode | MATCH | - |
@@ -120,7 +120,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | Item drop hold time | dropping on the world needs a hold of >=384 ms (`[0x816550]`, 0x469867), otherwise it counts as a click | drop on release | DIFFERENT | inventario_ui.cpp |
 | Shift+click turns in place | Shift only matters for right click (0x469630/0x468c20) | Shift+click turns | EXTRA | pantalla_juego.cpp `mover_jugador` |
 | Ctrl+click attack, cursor changes on Ctrl | `[0x702dd6]`, cursor 6; Ctrl+Alt 7 (0x469fb1..0x469fe7) | Ctrl+click attacks | MATCH | - |
-| Hold left button to keep walking/attacking | WM_MOUSEMOVE + MK_LBUTTON -> 0x468c20 | yes | MATCH | - |
+| Hold left button to keep walking/attacking | WM_MOUSEMOVE + MK_LBUTTON -> 0x468c20 | yes, decision rerun on arrival with the current pointer | MATCH (round 2) | pantalla_juego.cpp `mover_jugador`: no timer; the decision is re-evaluated each frame once the previous step ended (the pointer position is the live one), which equals re-running 0x468c20 on arrival. Mid-step mouse moves are not re-run (the exe ignores them while moving) |
 | Left double click | same as single click (0x469630 handles 0x203 like 0x201) | same | MATCH | - |
 | Right double click (GM) | sends opcode 0x28 with map coords; closes window `[0x82467c]` (0x4699bc) | none | MISSING | GM only |
 
@@ -138,7 +138,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | Tab | same char as Ctrl+I: inventory (0x456cd4) | only mail/board focus | MISSING | app.cpp SDLK_TAB |
 | Alt+X | exit window, same as Ctrl+Q (0x8058) | not mapped | MISSING | app.cpp |
 | Alt+C | chat size cycle, same as Ctrl+T (0x8043 -> 0x421330) | ignored in original mode | MISSING | app.cpp |
-| Alt+1..4 emotes | 0x40e0d0 -> anim 0x4c96c0 + opcode 0x26 `cc`, per-gfx action table 0x456b30 | none | MISSING | new command + table |
+| Alt+1..4 emotes | 0x40e0d0 -> anim 0x4c96c0 + opcode 0x26 `cc`, per-gfx action table 0x456b30 | Alt+1/2/3 implemented | PARTLY (round 2) | barra_ui.cpp `procesar_barra`: Alt+1/2/3 send C_ExtraCommand 0x44/0x45/0x43 (s3ep1 only, not polymorphed) and play the action at once; Alt+4 and the per-gfx table 0x456b30 for non-human sprites are not done |
 | Arrow-key walking | arrows only go to the chat edit (0x456ba0 / 0x45b087) | arrows walk | EXTRA | U-B3 before removing |
 | Shift+F5 filter, Shift+F3 fps, Shift+F12 shot, Ctrl +/-/0 zoom, Alt+Enter, Shift+F4 shadow | no handler in 0x456ba0 / 0x45b087 / 0x45b475 | present | EXTRA | keep as platform keys or move behind a dev flag |
 | Ctrl+I/A/S/Q/T/O, Ctrl+1..8, F4, F5-F12, Alt+F10, Ctrl+Y/Z | 0x456ba0 jump tables 0x45755c/0x4575a0, 0x45b2fd, 0x4087c0, 0x4b1ae0 | implemented | MATCH | - |
@@ -168,11 +168,11 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Close button position (inventory, status) | img 969/1061 at (168,18) (0x44cd4d, 0x4b4754); ref `inventory_1.png` "x" centre ~(174,24) | (164,6) | DIFFERENT | original_window.cpp `CLOSE_X/CLOSE_Y` |
+| Close button position (inventory, status) | img 969/1061 at (168,18) (0x44cd4d, 0x4b4754); ref `inventory_1.png` "x" centre ~(174,24) | (168,18) | MATCH (round 2) | original_window.cpp / inventario_ui.cpp: (168,18); checked on a 640x480 capture (cross centre at (174,24)) |
 | Close button position (spellbook) | (181,18) (0x4aed78) | (181,18) | MATCH | hechizos_ui.cpp: pass 181,18 |
 | Close button art | rest 1061; 1062 only while the mouse is held on it (draw 0x47c350, 0x47b4e0/0x47b510) | always 1062, grey tint unless hovered | DIFFERENT | original_window.cpp |
 | Close position (trade, shop, quit, NPC, mail) | trade/shop (174,18), quit (108,11), NPC (226,15), mail (209,305)/(213,297) | same | MATCH | - |
-| Hover/pressed art, text buttons (0x47c6d0) | hover = 2nd ctor id (quit 1278/1279/1280, shop OK 1291, Cancel 1288); pressed = id+1 (0x47c760) | shows id+1 (the pressed art) on hover | DIFFERENT | original_window.cpp `draw_original_button` |
+| Hover/pressed art, text buttons (0x47c6d0) | hover = 2nd ctor id (quit 1278/1279/1280, shop OK 1291, Cancel 1288); pressed = id+1 (0x47c760) | shows id+1 (the pressed art) on hover | DIFFERENT | original_window.cpp `draw_original_button` Round 2: pressed = hover = base+1; the fork's hover art equals it: MATCH. |
 | Plain image buttons (0x47c2d0: trade OK/Cancel, mail) | no hover art; id+1 only while pressed | id+1 on hover | DIFFERENT | same |
 | Window dragging | inventory handler 0x44d1b0 has no move code; only z-order 0x4d0ed0 | inventory/status/spellbook/trade only by the 0x47bcd0 handle rects (original UI); other windows unchanged | MATCH (listed windows) | note: inventory/status ctors also build a drag handle 0x47bcd0 (0,5,191,25), see U-C1 |
 | Drag region (where one exists) | rect (0,5,w,25) (0x47bcd0) | handle rects (0,5,191,25), trade 199 wide, spellbook (6,9,197,29), minus the close button; dragging clamped to the view | MATCH (listed windows) | ventanas.cpp |
@@ -192,7 +192,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Tab tooltips | strings 878-881 "All", "Equipment", "Quest", "Miscellaneous" (ctor 0x44cfc8) | "Potions and food", ... | DIFFERENT | `TAB_NAMES` |
 | Equipped marker | img 536 (35x35) at (x-1,y-1) behind the icon (0x44e22b..0x44e291) | img 536 at (x-1,y-1) behind the icon (the tint box only remains when 536 is missing) | MATCH | inventario_ui.cpp |
 | Item order | list order; no Sort button, no drag-to-reorder, no multi-select in handler 0x44d1b0 (tabs, scroll, trash, close only) | worn items first; Sort / drag-reorder / Shift+click only in the simple UI (upstream feature) | DIFFERENT | `orden_inventario` |
-| Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a) | none | MISSING | meaning: U-C6 |
+| Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a) | drawn | MATCH (round 2, blend inferred) | inventario_ui.cpp: 2700 (additive: orange disc, the dagger stays visible) + 2701 ("E") at (+1,+1) for worn/armed (not gfx 0x1d1/0x1d2), 2702 at (+24,+24) for sealed (bless byte 0x80) |
 | Icon position | cell origin (21+34c, 42+34r) (0x445fd0) | +1 px | DIFFERENT | `draw_item_icon` |
 | Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 19+35i | MATCH | 1 px |
 | Scroll bar | up 974 (161,48), track 971 (161,56), down 972 (162,235), thumb 976 | x=162 everywhere, up y=41, down 233 | DIFFERENT | Grid scroll constants |
@@ -230,7 +230,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Tab strips | 4 strip groups at (16,38), LEFT of the grid: 936-946 (11 frames), 947-953 (7), 954-958 (5), 959-968 (10) (0x47e860 calls at 0x4aec58..0x4aed4a) | strip at (16,38) by class (elf 936 x11, prince 947 x7, dark elf 954 x5, others 959 x10), 19 px slots; one tab per spell level counted from the class's first level (inferred, hechizos_ui.cpp `tab_strip`) | MATCH (art and position); tab contents U-C5 | hechizos_ui.cpp `PESTANAS_X/Y` (logic: U-C5) |
+| Tab strips | 4 strip groups at (16,38), LEFT of the grid: 936-946 (11 frames), 947-953 (7), 954-958 (5), 959-968 (10) (0x47e860 calls at 0x4aec58..0x4aed4a) | strip at (16,38) by class (elf 936 x11, prince 947 x7, dark elf 954 x5, others 959 x10), 19 px slots; one tab per spell level counted from the class's first level (inferred, hechizos_ui.cpp `tab_strip`) | MATCH (art and position); tab contents U-C5 | hechizos_ui.cpp `PESTANAS_X/Y` (logic: U-C5) Round 2: spells now sit by the class slot tables (8 per tab, 2 rows of 4), a tab click scrolls to row 2*i and the highlighted tab follows row/2: MATCH. |
 | Grid origin | (37,43) (0x458a10, 0x4aaef0 args) | (37,43) | MATCH | `GRILLA_X/Y` |
 | SP text centre | x 83 (0x4ae4f7) | 85.5 | DIFFERENT | `SP_BOX_X` |
 | Close | (181,18) | (181,18) | MATCH | see section 7 |
@@ -250,7 +250,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
 | Yes/No question | bottom-screen bar: img 701 (320x32) drawn by 0x41fe30, "YES" at (361,447), "NO" at (401,447), no title (ctor 0x4d1cd0 x2, strings 0x6e5288/0x6e5284) | bar 701 at x 137 of the 640x480 block, y 437 (bar y chosen so YES/NO at 447 are centred; U), two outlined lines from y+4, YES/NO at x+224/x+264; the house-name prompt keeps the dialog (needs a text box). Verified with a temporary fake question | MATCH (bar y inferred) | social_ui.cpp (bar x: U-D4) |
-| Quantity / text input | input box 0x4cfa90: img 895 (134x93) + edit field, buttons 916/917, 918/919, 920/921; NOT used by the NPC lists (they step the amount with the row arrows) | generic 260x112 window with -/+ | DIFFERENT | cantidad_ui.cpp `dibujar_cantidad` |
+| Quantity / text input | input box 0x4cfa90: img 895 (134x93) + edit field, buttons 916/917, 918/919, 920/921; NOT used by the NPC lists (they step the amount with the row arrows) | chat-line prompts for drop / give / pick up; -/+ window for the rest | PARTLY (round 2) | social_ui.cpp `pedir_soltar` / `pedir_dar` / `pedir_recoger`: drop (119), give (140), pick up (121) prompt in the chat line, Enter = all, Esc cancels; the -/+ window stays for the simple UI and for server-driven S_InputAmount / delete (the 0x4cfa90 keypad is the warehouse password pad, not done) |
 
 ## 14. Mail (list 0x417a90 / draw 0x417d50, letters 0x413500, 0x413a80, 0x416b50, 0x417320, compose 0x455800)
 
@@ -359,7 +359,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-B6** Double click and right click on an inventory item (use/other) — decode the inventory slot handler.
 - **U-B7** (settled: default is 1, initial byte of 0x6da618; the wheel handler is analysed in U-D8 and left open)
 - **U-B8** Esc side effect `[0x8f0e22]`.
-- **U-B9** Hold-to-walk repeat timing.
+- **U-B9** Hold-to-walk repeat timing. RESOLVED (round 2): no timer, see the hold row.
 - **U-B10** Sounds 0x11b7/0x11b8 (spell target), 0x120b, 0xb14, 0xd1, item sounds from map 0x700ab0; error beeps.
 - **U-B11** Which windows' close buttons use the 0xee callbacks.
 - **U-C1** Whether inventory/status are draggable through their 0x47bcd0 handle even though 0x44d1b0 has no move code;
@@ -367,7 +367,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-C2** Resolved: `[0x81b328]` is the sex byte; `1516.img` / `1518.img` are not in this installation, so the 1440 / 983 fallbacks are correct (see [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md)).
 - **U-C3** The alignment-image variant at (125,164) when `[0x702b7c]` is 3 or 5.
 - **U-C4** Meaning of the status-page gauge 990-995 (0x4b2e31, 0x4b2cc0).
-- **U-C5** Which spellbook strip group is shown and what a tab selects.
+- **U-C5** Which spellbook strip group is shown and what a tab selects. RESOLVED (round 2): class slot tables (`spellbook_skill_id`), tab click = scroll row 2*i.
 - **U-C6** Inventory hover popup (0x44be70 / 0x44bdf0), overlays 2700-2702, stack count, item name colours.
 - **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40.
 - **U-C8** NPC text rect; default positions of status, NPC, shop and trade (no code in their ctors; possibly a saved
