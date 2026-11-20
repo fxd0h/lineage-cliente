@@ -1,5 +1,7 @@
-// Sprites instanciados: una llamada de dibujo para todo el frame (ver render/gpu.cpp).
-// Es la fuente de SPIR-V (Linux), DXIL (Windows) y MSL (macOS, vía SPIR-V y spirv-cross).
+// Instanced sprites: one draw call for the whole frame (see render/gpu.cpp).
+// HLSL source compiled to DXIL for Windows/D3D12 (cmake/shaders.cmake). Linux/Vulkan uses the GLSL twins
+// (sprite.vert/sprite.frag, SPIR-V embedded by herramientas/compilar_shaders.sh) and macOS/Metal the MSL in
+// gpu.cpp: keep the three in sync.
 //
 // Recursos según la convención de SDL_GPU (SDL_CreateGPUShader): en el vértice, storage buffers en
 // t[n]/space0 (set 0 en SPIR-V) y uniformes en b[n]/space1 (set 1); en el fragmento, texturas y
@@ -25,11 +27,13 @@ struct Instancia {
 StructuredBuffer<Instancia> instancias : register(t0, space0);
 [[vk::binding(0, 1)]] cbuffer Uniformes : register(b0, space1) {
     float2 pantalla;
-    float2 base;  // x: primera instancia de esta llamada
+    float2 base;  // x: first instance of this draw; y: pass mode (0 normal blends, 1 screen blend, 2 HD text layer)
 };
 
 [[vk::binding(0, 2)]] Texture2DArray<float4> atlas : register(t0, space2);
 [[vk::binding(0, 2)]] SamplerState muestreo : register(s0, space2);
+[[vk::binding(1, 2)]] Texture2DArray<float4> atlas_lin : register(t1, space2);  // same pages, bilinear (HD images)
+[[vk::binding(1, 2)]] SamplerState muestreo_lin : register(s1, space2);
 
 struct Salida {
     float4 pos : SV_Position;
@@ -52,6 +56,14 @@ Salida vs_sprite(uint vid : SV_VertexID, uint iid : SV_InstanceID) {
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
     o.pos = float4(p.x / pantalla.x * 2.0 - 1.0, 1.0 - p.y / pantalla.y * 2.0, 0.0, 1.0);
+    // Pass filter: mode 0 = normal blends, 1 = screen blend (bit 3 of mezcla), 2 = HD text layer (text, plus every
+    // non-additive instance as an attenuator of the text under it). Hidden instances are moved out of the clip volume.
+    const uint modo = uint(base.y + 0.5);
+    const bool texto = (i.mezcla & 64u) != 0u;
+    bool oculto;
+    if (modo == 2u) oculto = !texto && (i.mezcla & 9u) != 0u;
+    else oculto = texto || (((i.mezcla & 8u) != 0u) != (modo == 1u));
+    if (oculto) o.pos = float4(2.0, 2.0, 2.0, 1.0);
     o.uv = lerp(i.uv.xy, i.uv.zw, e);
     o.color = desempacar(i.color);
     o.pagina = i.pagina;
@@ -60,8 +72,19 @@ Salida vs_sprite(uint vid : SV_VertexID, uint iid : SV_InstanceID) {
 }
 
 float4 fs_sprite(Salida i) : SV_Target0 {
-    float4 c = atlas.Sample(muestreo, float3(i.uv, i.pagina)) * i.color;
+    float4 t;
+    if ((i.mezcla & 4u) != 0u) {
+        // Bit 2 = HD pack image: premultiplied texels, bilinear; back to straight alpha for the common path.
+        t = atlas_lin.Sample(muestreo_lin, float3(i.uv, float(i.pagina)));
+        t.rgb = t.a > 0.0 ? t.rgb / t.a : float3(0.0, 0.0, 0.0);
+    } else {
+        t = atlas.Sample(muestreo, float3(i.uv, float(i.pagina)));
+    }
+    // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
+    float4 c = (i.mezcla & 2u) != 0u ? float4(i.color.rgb, t.a * i.color.a) : t * i.color;
+    // Bit 5 = grey: the texture's luminance times the tint (monochrome HUD icons).
+    if ((i.mezcla & 32u) != 0u) c.rgb = dot(t.rgb, float3(0.299, 0.587, 0.114)) * i.color.rgb;
     if (c.a <= 0.0) discard;
-    // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
-    return float4(c.rgb * c.a, i.mezcla == 1 ? 0.0 : c.a);
+    // Premultiplied alpha: with alpha 0 the colour is added to the background without covering it (additive blend).
+    return float4(c.rgb * c.a, (i.mezcla & 9u) != 0u ? 0.0 : c.a);
 }

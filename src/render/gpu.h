@@ -197,6 +197,7 @@ private:
     bool mailbox_ = false;          // present mode MAILBOX: the loop is paced by pace_frame()
     Uint64 next_frame_ns_ = 0;
     void pace_frame();
+    bool usar_dxil_ = false;   // Windows (D3D12): DXIL compiled from shaders/*.hlsl (cmake/shaders.cmake)
     bool usar_spirv_ = false;  // Vulkan (Linux): shaders SPIR-V de render/shaders
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors

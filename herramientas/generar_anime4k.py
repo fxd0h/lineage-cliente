@@ -4,7 +4,7 @@
 Source: https://github.com/bloc97/Anime4K  glsl/Upscale/Anime4K_Upscale_CNN_x2_S.glsl  (MIT License,
 Copyright (c) 2019-2021 bloc97). The weights are copied verbatim; only the texture fetch plumbing is replaced.
 Usage: generar_anime4k.py <path to Anime4K_Upscale_CNN_x2_S.glsl>
-Outputs: src/render/shaders/anime4k_c{1..4}.frag and src/render/shaders_msl_anime4k.h (conv part).
+Outputs: src/render/shaders/anime4k_c{1..4}.frag, anime4k_c{1..4}.hlsl (Windows/D3D12) and src/render/shaders_msl_anime4k.h (conv part).
 """
 import re
 import sys
@@ -62,6 +62,29 @@ for i, (defs, body) in enumerate(convs, 1):
     code = glsl_head % (LICENSE, i, i, d) + "    " + body.strip().replace("vec4 result = ", "result = ", 1) + \
         "\n    salida = result;\n}\n"
     (root / "src/render/shaders" / f"anime4k_c{i}.frag").write_text(code)
+
+    # HLSL (Windows/D3D12): GLSL mat4(a0..a15) * v is column-major, i.e. result_k = sum_j a[4j+k] v_j. HLSL
+    # float4x4(a0..a15) is row-major and mul(v, M) gives result_k = sum_i v_i M[i][k] = sum_i v_i a[4i+k]: same thing.
+    hbody = re.sub(r"(result\s*\+?=\s*)mat4\((.*?)\)\s*\*\s*(go_\d\(.*?\));", r"\1mul(\3, float4x4(\2));", body.strip())
+    hbody = hbody.replace("vec4 result = ", "float4 result = ", 1).replace("result = vec4(", "result = float4(").replace("+= vec4(", "+= float4(")
+    assert "mat4" not in hbody and "vec" not in hbody, hbody[:300]
+    hdefs = "\n".join(x.replace("vec2(", "float2(").replace(", 0.0))", ", float4(0.0, 0.0, 0.0, 0.0)))") for x in defs)
+    (root / "src/render/shaders" / f"anime4k_c{i}.hlsl").write_text(
+        LICENSE.replace("(MIT License)\n", "(MIT License)\n", 1) +
+        f"// Conv pass {i} of 4. u.xy = logical grid size, u.z = integer scale of the sampled image (1 for\n"
+        "// intermediates; destino_ holds each logical pixel as a z*z block, tap at its centre).\n"
+        f"// HLSL twin of anime4k_c{i}.frag (Windows/D3D12); vertex stage: vs_mundo (mundo.hlsl). The texture is only read\n"
+        "// with Load, so no sampler is declared. Resource convention: see sprite.hlsl.\n"
+        "[[vk::binding(0, 2)]] Texture2D<float4> src : register(t0, space2);\n"
+        "[[vk::binding(0, 3)]] cbuffer Params : register(b0, space3) {\n    float4 u;\n};\n"
+        "struct Salida {\n    float4 pos : SV_Position;\n    float2 uv : TEXCOORD0;\n};\n"
+        "static int2 P;\n"
+        "float4 tex_off(float2 o) {\n"
+        "    int2 q = clamp(P + int2(o), int2(0, 0), int2(u.xy) - 1);\n"
+        "    return src.Load(int3(q * int(u.z) + int(u.z) / 2, 0));\n}\n"
+        f"{hdefs}\n"
+        f"float4 fs_anime4k_c{i}(Salida in_) : SV_Target0 {{\n    P = int2(in_.pos.xy);\n"
+        f"    {hbody}\n    return result;\n}}\n")
 
     mbody = body.strip().replace("mat4(", "float4x4(").replace("vec4(", "float4(").replace("vec2(", "float2(")
     mbody = mbody.replace("vec4 result = ", "float4 result = ", 1)

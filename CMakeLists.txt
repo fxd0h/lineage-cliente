@@ -123,6 +123,12 @@ add_library(lin_render STATIC
     src/render/graficos.cpp
     src/render/icon_aura.cpp)
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
+if(WIN32)
+    # D3D12 shaders: HLSL -> DXIL (dxc) -> generado/shaders.h (cmake/shaders.cmake).
+    include(cmake/shaders.cmake)
+    target_sources(lin_render PRIVATE ${LIN_SHADERS_H})
+    target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
+endif()
 
 add_library(lin_audio STATIC
     src/audio/audio.cpp)
