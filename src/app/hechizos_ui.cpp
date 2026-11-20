@@ -483,25 +483,50 @@ void dibujar_teclas_f(App& a, int x, int y) {
 // Fila de la ventana bajo el puntero -> hechizo (0 si no hay).
 // Original UI spellbook (2009 client, 0x4af3a0): background 933 at (8,10), frame 934, the spell
 // icons in a 4 x 6 grid of 34 px cells, ornaments 935 at (2,10) on top and the S.power / M.resist
-// values in the boxes printed on 935. The tab strip 936..939 (one image per selected tab, four tabs
-// of about 19 px at its top) sits in the free column right of the grid. Positions measured on the images.
-// Tabs are spell level groups: levels 1-3, 4-6, 7-9 and the rest (level 10 and class skills); the
-// mouse wheel scrolls a page by rows when it has more than 24 spells.
-constexpr u32 IMG_SPELL_BG = 933, IMG_SPELL_FRAME = 934, IMG_SPELL_ORNAMENT = 935, IMG_SPELL_TABS = 936;
+// values in the boxes printed on 935. The tab strip (0x47e860, at (16,38) left of the grid) has one image per
+// selected tab, chosen by class: elf 936 (11 tabs), prince 947 (7), dark elf 954 (5), the rest 959 (10); each tab is
+// a 19 px slot. The tab -> spell mapping is inferred (U-C5): one tab per spell level, counted from the class's
+// first spell level. The grid is at (37,43), the scroll bar at (175,45) (up 974, track 971, down 972, thumb 976).
+constexpr u32 IMG_SPELL_BG = 933, IMG_SPELL_FRAME = 934, IMG_SPELL_ORNAMENT = 935;
 constexpr int SPELL_BG_X = 8, SPELL_BG_Y = 10;
-constexpr int GRILLA_X = 36, GRILLA_Y = 42, CELDA = 34, COLUMNAS = 4, FILAS_GRILLA = 6;
-constexpr int PESTANAS = 4, ALTO_PESTANA = 19, PESTANAS_X = 173, PESTANAS_Y = 38;
+constexpr int GRILLA_X = 37, GRILLA_Y = 43, CELDA = 34, COLUMNAS = 4, FILAS_GRILLA = 6;
+constexpr int ALTO_PESTANA = 19, ANCHO_PESTANA = 19, PESTANAS_X = 16, PESTANAS_Y = 38;
+constexpr int SPELL_CLOSE_X = 181, SPELL_CLOSE_Y = 18;
+constexpr int SPELL_SCROLL_X = 175, SPELL_SCROLL_Y = 45, SPELL_SCROLL_H = 199;  // up 45, track from 53, down at 232 + 12
+
+// Tab strip of a class: first image and number of tabs (0x4aebe0). Classes: 0 prince, 1 knight, 2 elf, 3 wizard,
+// 4 dark elf, 5 dragon knight, 6 illusionist.
+struct TabStrip {
+    u32 base;
+    int count;
+    int first_level;  // spell level (S_AddSkill row + 1) shown by tab 0; inferred from the server's skill id ranges
+};
+static TabStrip tab_strip(int cls) {
+    switch (cls) {
+    case 0: return {947, 7, 15};
+    case 2: return {936, 11, 17};
+    case 4: return {954, 5, 13};
+    case 1: return {959, 10, 11};
+    case 5: return {959, 10, 23};
+    case 6: return {959, 10, 26};
+    default: return {959, 10, 1};
+    }
+}
+static int spellbook_class(const App& a) {
+    return a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
+}
 constexpr int SP_BOX_X = 76, SP_BOX_W = 19, MR_BOX_X = 147, MR_BOX_W = 22, STAT_BOX_Y = 260, STAT_BOX_H = 12;
 
 static bool ventana_original(const App& a) { return uses_original_frame(a, IdVentana::HECHIZOS); }
 
 // Known spells of the current tab (S_AddSkill row = (id - 1) / 8 = spell level - 1).
 static int hechizos_pestana(const App& a, u16* ids, int cap) {
+    const TabStrip ts = tab_strip(spellbook_class(a));
     int n = 0;
     for (u32 id = 1; id <= CANTIDAD_HECHIZOS && n < cap; ++id) {
         if (!a.mundo.jugador.sabe(id) || !a.hechizos[id].existe()) continue;
         const int fila = static_cast<int>((id - 1) / 8);
-        if (std::min(fila / 3, PESTANAS - 1) == a.hechizos_pestana) ids[n++] = static_cast<u16>(id);
+        if (std::clamp(fila + 1 - ts.first_level, 0, ts.count - 1) == a.hechizos_pestana) ids[n++] = static_cast<u16>(id);
     }
     return n;
 }
@@ -537,21 +562,29 @@ u32 hechizo_bajo_puntero(const App& a) {
 static void dibujar_original(App& a, int x0, int y0) {
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    if (draw_original_frame(a, x0, y0, IMG_SPELL_BG, SPELL_BG_X, SPELL_BG_Y, IMG_SPELL_FRAME)) a.ventana_hechizos = false;
-    // Tabs: one strip image per selected tab.
-    g.gpu().dibujar(g.img(IMG_SPELL_TABS + static_cast<u32>(a.hechizos_pestana)), x0 + PESTANAS_X, y0 + PESTANAS_Y,
+    if (draw_original_frame(a, x0, y0, IMG_SPELL_BG, SPELL_BG_X, SPELL_BG_Y, IMG_SPELL_FRAME, SPELL_CLOSE_X, SPELL_CLOSE_Y))
+        a.ventana_hechizos = false;
+    // Tabs: one strip image per selected tab, by class.
+    const TabStrip ts = tab_strip(spellbook_class(a));
+    a.hechizos_pestana = std::clamp(a.hechizos_pestana, 0, ts.count - 1);
+    g.gpu().dibujar(g.img(ts.base + static_cast<u32>(a.hechizos_pestana)), x0 + PESTANAS_X, y0 + PESTANAS_Y,
                     clave_orden(CAPA_UI, 16));
-    for (int p = 0; p < PESTANAS; ++p)
+    for (int p = 0; p < ts.count; ++p)
         if (e.clic && !a.arrastrando_hechizo && p != a.hechizos_pestana &&
-            ui::sobre(e, x0 + PESTANAS_X, y0 + PESTANAS_Y + p * ALTO_PESTANA, 19, ALTO_PESTANA)) {
+            ui::sobre(e, x0 + PESTANAS_X, y0 + PESTANAS_Y + p * ALTO_PESTANA, ANCHO_PESTANA, ALTO_PESTANA)) {
             a.hechizos_pestana = p;
             a.hechizos_desplazamiento = 0;
         }
     u16 ids[CANTIDAD_HECHIZOS];
     const int n = hechizos_pestana(a, ids, CANTIDAD_HECHIZOS);
     const int filas = (n + COLUMNAS - 1) / COLUMNAS;
-    if (e.rueda && sobre_hechizos(a))
-        a.hechizos_desplazamiento = static_cast<u32>(std::clamp(primera_fila(a, n) - e.rueda, 0, std::max(0, filas - FILAS_GRILLA)));
+    {
+        // Scroll bar (0x47cd80 art 974 / 971 / 972 / 976); it also takes the wheel over the window.
+        u32 pos = static_cast<u32>(primera_fila(a, n));
+        original_scrollbar(a, a.scroll.hechizos, x0 + SPELL_SCROLL_X, y0 + SPELL_SCROLL_Y, SPELL_SCROLL_H, static_cast<u32>(filas),
+                           FILAS_GRILLA, pos, sobre_hechizos(a), 0, -2);
+        a.hechizos_desplazamiento = pos;
+    }
     const int first = primera_fila(a, n);
     const u32 bajo = hechizo_bajo_puntero(a);
     const u64 ki = clave_orden(CAPA_UI, 12), kt = clave_orden(CAPA_UI_TEXTO, 12);

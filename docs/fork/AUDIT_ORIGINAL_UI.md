@@ -169,7 +169,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
 | Close button position (inventory, status) | img 969/1061 at (168,18) (0x44cd4d, 0x4b4754); ref `inventory_1.png` "x" centre ~(174,24) | (164,6) | DIFFERENT | original_window.cpp `CLOSE_X/CLOSE_Y` |
-| Close button position (spellbook) | (181,18) (0x4aed78) | (164,6) | DIFFERENT | hechizos_ui.cpp: pass 181,18 |
+| Close button position (spellbook) | (181,18) (0x4aed78) | (181,18) | MATCH | hechizos_ui.cpp: pass 181,18 |
 | Close button art | rest 1061; 1062 only while the mouse is held on it (draw 0x47c350, 0x47b4e0/0x47b510) | always 1062, grey tint unless hovered | DIFFERENT | original_window.cpp |
 | Close position (trade, shop, quit, NPC, mail) | trade/shop (174,18), quit (108,11), NPC (226,15), mail (209,305)/(213,297) | same | MATCH | - |
 | Hover/pressed art, text buttons (0x47c6d0) | hover = 2nd ctor id (quit 1278/1279/1280, shop OK 1291, Cancel 1288); pressed = id+1 (0x47c760) | shows id+1 (the pressed art) on hover | DIFFERENT | original_window.cpp `draw_original_button` |
@@ -230,10 +230,10 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Tab strips | 4 strip groups at (16,38), LEFT of the grid: 936-946 (11 frames), 947-953 (7), 954-958 (5), 959-968 (10) (0x47e860 calls at 0x4aec58..0x4aed4a) | one strip 936+tab at (173,38), right of the grid; grouping by 3 levels (README: inferred) | DIFFERENT | hechizos_ui.cpp `PESTANAS_X/Y` (logic: U-C5) |
-| Grid origin | (37,43) (0x458a10, 0x4aaef0 args) | (36,42) | DIFFERENT | `GRILLA_X/Y` |
+| Tab strips | 4 strip groups at (16,38), LEFT of the grid: 936-946 (11 frames), 947-953 (7), 954-958 (5), 959-968 (10) (0x47e860 calls at 0x4aec58..0x4aed4a) | strip at (16,38) by class (elf 936 x11, prince 947 x7, dark elf 954 x5, others 959 x10), 19 px slots; one tab per spell level counted from the class's first level (inferred, hechizos_ui.cpp `tab_strip`) | MATCH (art and position); tab contents U-C5 | hechizos_ui.cpp `PESTANAS_X/Y` (logic: U-C5) |
+| Grid origin | (37,43) (0x458a10, 0x4aaef0 args) | (37,43) | MATCH | `GRILLA_X/Y` |
 | SP text centre | x 83 (0x4ae4f7) | 85.5 | DIFFERENT | `SP_BOX_X` |
-| Close | (181,18) | (164,6) | DIFFERENT | see section 7 |
+| Close | (181,18) | (181,18) | MATCH | see section 7 |
 | bg/frame/ornament, MR centre 157, y 260 | 0x4af5c4, 0x4ae583 | same | MATCH | - |
 
 ## 12. NPC dialog (ctor 0x43f130, draw 0x43f7f0); the window of ctor 0x42dc30 is the private shop
