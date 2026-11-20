@@ -138,7 +138,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | Tab | same char as Ctrl+I: inventory (0x456cd4) | only mail/board focus | MISSING | app.cpp SDLK_TAB |
 | Alt+X | exit window, same as Ctrl+Q (0x8058) | not mapped | MISSING | app.cpp |
 | Alt+C | chat size cycle, same as Ctrl+T (0x8043 -> 0x421330) | ignored in original mode | MISSING | app.cpp |
-| Alt+1..4 emotes | 0x40e0d0 -> anim 0x4c96c0 + opcode 0x26 `cc`, per-gfx action table 0x456b30 | Alt+1/2/3 implemented | PARTLY (round 2) | barra_ui.cpp `procesar_barra`: Alt+1/2/3 send C_ExtraCommand 0x44/0x45/0x43 (s3ep1 only, not polymorphed) and play the action at once; Alt+4 and the per-gfx table 0x456b30 for non-human sprites are not done |
+| Alt+1..4 emotes | 0x40e0d0 -> anim 0x4c96c0 + opcode 0x26 `cc`, per-gfx action table 0x456b30 | Alt+1..4 by own sprite | MATCH (round 3, standard / special sets from RE_ROUND3.md) | barra_ui.cpp `accion_emote`: standard sprites 68/69/67/66, special set 67/68/69, Alt+1-only sprites 0xea6/0xebf/0xf12, others nothing; "standard" = not polymorphed (proxy for the exe's 0x456b30 list, whose contents are not extracted) or in the 0x1aa6-0x1aeb / 0x1be3-0x1bfe ranges |
 | Arrow-key walking | arrows only go to the chat edit (0x456ba0 / 0x45b087) | arrows walk | EXTRA | U-B3 before removing |
 | Shift+F5 filter, Shift+F3 fps, Shift+F12 shot, Ctrl +/-/0 zoom, Alt+Enter, Shift+F4 shadow | no handler in 0x456ba0 / 0x45b087 / 0x45b475 | present | EXTRA | keep as platform keys or move behind a dev flag |
 | Ctrl+I/A/S/Q/T/O, Ctrl+1..8, F4, F5-F12, Alt+F10, Ctrl+Y/Z | 0x456ba0 jump tables 0x45755c/0x4575a0, 0x45b2fd, 0x4087c0, 0x4b1ae0 | implemented | MATCH | - |
@@ -192,7 +192,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Tab tooltips | strings 878-881 "All", "Equipment", "Quest", "Miscellaneous" (ctor 0x44cfc8) | "Potions and food", ... | DIFFERENT | `TAB_NAMES` |
 | Equipped marker | img 536 (35x35) at (x-1,y-1) behind the icon (0x44e22b..0x44e291) | img 536 at (x-1,y-1) behind the icon (the tint box only remains when 536 is missing) | MATCH | inventario_ui.cpp |
 | Item order | list order; no Sort button, no drag-to-reorder, no multi-select in handler 0x44d1b0 (tabs, scroll, trash, close only) | worn items first; Sort / drag-reorder / Shift+click only in the simple UI (upstream feature) | DIFFERENT | `orden_inventario` |
-| Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a) | drawn | MATCH (round 2, blend inferred) | inventario_ui.cpp: 2700 (additive: orange disc, the dagger stays visible) + 2701 ("E") at (+1,+1) for worn/armed (not gfx 0x1d1/0x1d2), 2702 at (+24,+24) for sealed (bless byte 0x80) |
+| Icon overlays 2700/2701/2702 | drawn by name/flag conditions (0x44e131..0x44e39a), opaque RLE copy | drawn | MATCH (round 3) | inventario_ui.cpp: 2700 opaque under the hover tint, marker 536 and icon at the cell, 2701 at (+1,+1) after the icon, 2702 at (+24,+24) when sealed |
 | Icon position | cell origin (21+34c, 42+34r) (0x445fd0) | +1 px | DIFFERENT | `draw_item_icon` |
 | Tab hit-rect | (19+35i, 249) 35x17 (0x47ede0) | 19+35i | MATCH | 1 px |
 | Scroll bar | up 974 (161,48), track 971 (161,56), down 972 (162,235), thumb 976 | x=162 everywhere, up y=41, down 233 | DIFFERENT | Grid scroll constants |
@@ -407,3 +407,9 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-F2** Confirmed: with no row selected the confirm does nothing, so an empty window is inert.
 - **U-F3** Decoded (implementation pending): Del/Backspace -> prompt 0x34e, `y` sends `cs 0x80, name`; `/bookmark` takes no argument and opens a name prompt (0x246). See [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md).
 - **U-F4** Exact scroll-bar internals (0x47cd80 thumb travel, callback 0x418ff0 sets the first row = bar value) are modelled with the shared `original_scrollbar`; default window position is the party window's (not decoded, see U-D1). The random branch should send the current map (`[0x6ddf94]`) instead of 0 (the server ignores it).
+
+
+## Round 3 (RE_ROUND3.md)
+- Buff slots: S_SkillBrave type 4 by class (elf 0x18, wizard 0x2a, others 0x25), type 0 clears; S_Paralysis stun / bind (0x3e / 0x3d); S_ServerMessage 0x11e / 0x120 / 0x99 (0x3f); own S_SkillSound graphics -> slots (`ranura_de_skillsound`), durations from the slot table (`BUFF_SEG`). Slots are keyed: a second packet for the same slot replaces the first. Icons of slots without a thin-frame twin use the classic icon (`BUFF_ICONO`). TODO: gfx 0xbe (slot by player sprite) and the 0x1130 / 0x16c1 variants (0x42) need globals not yet identified; PacketBox 44 / 60 / 74 and opcode 0x11 not mapped.
+- Roof groups: .s32 roof records parsed (`SegmentoMapa::techos`); the groups of the local player's cell fade (kind 0 to level 16/32, kind 1 to hidden, 4 per 50 ms) in the original UI. The older `jugador_tapado` heuristic and silhouette are now simple-UI only. Group ids are per segment, so a house spanning two segments fades only the part in the player's segment.
+- See-invisible: needs S_Ability index 3 in 1..3, no pending teleport (`destino.enviado`) and the Ring of Sayha. l1j-en never sends index 3, so invisible others stay hidden there, as in the exe.

@@ -56,3 +56,11 @@ Other sprites: nothing. [C]
 ## Light flash
 - Effects (class 0x4507d0) at frame index 2 force light level 15 while active (counter 0x7026d0); which effects really
   flash is unresolved. [C/U]
+
+## Implementation notes (fork)
+- Overlays: 2700 opaque below the marker and icon (`inventario_ui.cpp`). Buff slots: `mundo/tabla_buffs.h` (`ranura_de_skillsound`, `BUFF_SEG`, `BUFF_ICONO`, `tipo_brave`), applied in `mundo.cpp` (`poner_ranura`).
+- PacketBox 20 (ICONS1): l1j-en defines the constant but never sends it (no use in `servidor_classic/l1jen/src`), so it is not implemented; the login spell icons come from the S_PacketBox 21 / S_SkillIcon* packets the fork already decodes.
+- S_Ability: tracked per index (`EstadoJugador::habilidad`). l1j-en sends only indices 1 and 5, so the see-invisible gate (index 3) never opens there.
+- Roof groups: `SegmentoMapa::techos` + `techos_en`; fade state in `App::techos_fade` (`actualizar_techos`). Verified on a Giran house: the house next to the player turns translucent and the others stay opaque; moving away restores it.
+- Emotes: `accion_emote` in `barra_ui.cpp`. The 0x456b30 sprite list itself was not extracted, so "standard" is approximated.
+- Not done: gfx 0xbe slot choice, 0x1130 / 0x16c1 -> 0x42 variants, PacketBox 44 / 60 / 74, opcode 0x11, light flash.
