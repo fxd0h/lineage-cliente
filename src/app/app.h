@@ -520,6 +520,7 @@ struct App {
     // Render no interactivo a PNG (LIN_RENDER=id,x,y,salida.bmp): dibuja el mapa y sale. Ver app.cpp.
     struct { bool activo = false; MapId mapa = 0; int x = 0, y = 0; std::string salida; } render;
     PromptChat chat_prompt;
+    bool telcon = false;               // /telcon: elves of level 50+ get the bookmark picker without the ring (0x409690)
     bool invitando = false;            // invite party: the next click in the world picks the target (0x402490, message 0xb3)
     bool ventana_social = false;
     // Original party / pledge / buddy list window (lista_ui.cpp; S_ShowHTML pages "party", "pledge", "buddy").
@@ -844,6 +845,9 @@ void eventos_marcadores(App& a, const Evento& e);
 void eventos_hechizos(App& a, const Evento& e);
 // "/bookmark nombre" y "/delbookmark nombre"; true si era uno de esos.
 bool comando_marcador(App& a, std::string_view orden, std::string_view nombre);
+void abrir_prompt_marcador(App& a);                        // social_ui.cpp: /bookmark without a name (string 0x246)
+void marcar_lugar_aqui(App& a, std::string_view nombre);  // checks name length / map, then C_AddBookmark
+int clase_personaje(const App& a);                          // class byte of the selected character (0 prince, 2 elf)
 bool es_hechizo_teleport(u32 id);
 // Abre el diálogo de destino (si hay marcadores) para un pergamino o un hechizo de teleport;
 // false si no hay ninguno (se usa como siempre).

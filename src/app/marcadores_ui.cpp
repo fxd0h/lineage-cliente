@@ -62,10 +62,28 @@ void eventos_marcadores(App& a, const Evento& e) {
     it->nombre.assign(e.s[0]);
 }
 
+static void aviso_cadena(App& a, int id) {
+    a.chat.agregar(a.mensajes.linea(static_cast<size_t>(id)), rgba(255, 230, 120), CHAT_SISTEMA);
+}
+
+// Maps where bookmarks are refused (0x406df0): string 0xd6.
+static bool mapa_sin_marcadores(u32 m) {
+    return m == 2 || m == 5 || m == 6 || m == 0x53 || m == 0x54 || m == 0x1be || m == 0x1bf || (m >= 8 && m <= 0xf) || m == 0x12 ||
+           m == 0x14 || m == 0x15;
+}
+
+void marcar_lugar_aqui(App& a, std::string_view nombre) {
+    if (nombre.empty()) return;
+    if (nombre.size() > 27) return aviso_cadena(a, 0xcc);
+    if (mapa_sin_marcadores(a.mundo.mapa)) return aviso_cadena(a, 0xd6);
+    enviar(a, cmd::marcar_lugar(a.op, nombre));
+}
+
 bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
     if (igual_sin_mayusculas(orden, "bookmark")) {
-        if (nombre.empty()) a.chat.agregar("/bookmark <name>: remembers this place for teleporting.", rgba(255, 230, 120), CHAT_SISTEMA);
-        else enviar(a, cmd::marcar_lugar(a.op, nombre));
+        // No name: the original opens its text prompt (string 0x246, callback 0x40d240); the typed name takes the same path.
+        if (nombre.empty()) abrir_prompt_marcador(a);
+        else marcar_lugar_aqui(a, nombre);
         return true;
     }
     if (igual_sin_mayusculas(orden, "delbookmark")) {
@@ -84,7 +102,9 @@ bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
 bool elegir_destino(App& a, ObjId item, u32 hechizo) {
     // Only with the Ring of Teleport Control on (S_Ability 1, bit 1 of jugador.anillos); otherwise random.
     // The original client (0x409690, 0x4ac830) opens its bookmark window whenever the ring is on, even with no bookmarks.
-    if (!(a.mundo.jugador.anillos & 2) || (a.marcadores.empty() && a.cfg.ui_simple)) return false;
+    // Also open for an elf of level 50+ with /telcon on (0x409690: class == 2 && level >= 50 && telcon).
+    const bool control = (a.mundo.jugador.anillos & 2) || (a.telcon && clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50);
+    if (!control || (a.marcadores.empty() && a.cfg.ui_simple)) return false;
     a.destino = ElegirDestino{};
     a.destino.abierto = true;
     a.destino.item = item;

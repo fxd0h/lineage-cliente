@@ -184,6 +184,7 @@ void eventos_personajes(App& a, const Evento& e) {
     case Ev::ENTRAR_JUEGO:
         a.mascotas.clear();  // las de esta sesión llegan con S_PetCtrlMenu (y los marcadores, con S_Bookmarks)
         a.marcadores.clear();
+        if (clase_personaje(a) != 2) a.telcon = false;  // /telcon survives a login only for elves
         a.mascota_eligiendo = 0;
         a.es_gm = hay_elegido(a) && a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_GM] != 0;
         a.gm_apuntando = 0;

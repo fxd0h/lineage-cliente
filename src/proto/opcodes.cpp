@@ -68,6 +68,7 @@ constexpr ParCli JP363_CLI[] = {
     {Cli::BOARDDELETE, 12},   {Cli::MAIL, 22},
     {Cli::WAR, 235},          {Cli::TAXRATE, 200},      {Cli::DEPOSIT, 35},       {Cli::DRAWAL, 192},
     {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},    {Cli::RANK, 78},
+    {Cli::PROPOSE, 185},           {Cli::FIGHT, 47},              {Cli::CHECKPK, 137},
 };
 
 // L1J 3.80C de Taiwán: internal/net/packet/opcodes.go de L1JGO-Whale (commit 9a19405), por nombre.
@@ -123,6 +124,7 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::BOARD, 23},          {Cli::BOARDREAD, 114},    {Cli::BOARDWRITE, 141},   {Cli::BOARDDELETE, 153},
     {Cli::MAIL, 87},           {Cli::WAR, 227},          {Cli::TAXRATE, 19},       {Cli::DEPOSIT, 56},
     {Cli::DRAWAL, 44},         {Cli::RANK, 63},
+    {Cli::PROPOSE, 50},        {Cli::FIGHT, 5},          {Cli::CHECKPK, 51},  // Whale: C_OPCODE_MARRIAGE / DUEL / CHECK_PK
 };
 
 // L1J 3.0 English / US 2009 (S3EP1): encryptions/Opcodes.java de l1j-en/classic, por nombre. El
@@ -181,6 +183,7 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::TAXRATE, 110}, {Cli::DEPOSIT, 68}, {Cli::DRAWAL, 42}, {Cli::CHANGEWARTIME, 98},
     {Cli::SHIP, 33},
     {Cli::RANK, 78},  // C_Rank: sub 1 rank, 2 / 3 / 4 alliance list / join / leave (0x4053b3..0x4053e3: `cc` 0x4e sub)
+    {Cli::PROPOSE, 22}, {Cli::FIGHT, 3}, {Cli::CHECKPK, 70},  // /propose, /duel, /checkpk
     {Cli::LOGINTOSERVEROK, 25},  // the client sends it as `ccc` 0x19 from the chat toggles (0x406abb, 0x406bbb, 0x406cbb)
 };
 

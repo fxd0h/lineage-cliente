@@ -48,12 +48,12 @@ void aviso(App& a, std::string_view t) { a.chat.agregar(t, rgba(255, 230, 120), 
 
 }  // namespace
 
-namespace {
-
 // Class byte of the selected character (char-list record +0x1e, [0x81b534]): 0 is the prince.
 int clase_personaje(const App& a) {
     return a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
 }
+
+namespace {
 
 // Client string table line as a std::string (the table is the US string-e.tbl).
 std::string cadena(const App& a, int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); }
@@ -131,6 +131,8 @@ bool dijo_si(std::string_view t) { return !t.empty() && (t[0] == 'y' || t[0] == 
 
 }  // namespace
 
+void abrir_prompt_marcador(App& a) { abrir_prompt(a, cadena(a, 0x246), "bookmark"); }
+
 void cancelar_prompt(App& a) {
     a.chat_prompt = {};
 }
@@ -157,6 +159,8 @@ void confirmar_prompt(App& a, std::string_view texto) {
         if (dijo_si(texto)) enviar(a, cmd::dejar_clan(a.op));
     } else if (texto.empty()) {
         return;
+    } else if (accion == "bookmark") {  // 0x40d240: the typed name goes through the normal add-bookmark path
+        marcar_lugar_aqui(a, texto);
     } else if (accion == "banish") {
         enviar(a, cmd::echar_del_grupo(a.op, texto));
     } else if (accion == "ban") {
@@ -526,23 +530,58 @@ bool comando_social(App& a, std::string_view linea) {
         else aviso(a, "/invite: that character is not in sight.");
     } else if (igual_sin_mayusculas(orden, "party")) {
         enviar(a, cmd::ver_grupo(a.op));
-    } else if (igual_sin_mayusculas(orden, "leave")) {
+    } else if (igual_sin_mayusculas(orden, "leave") || igual_sin_mayusculas(orden, "outparty")) {
         enviar(a, cmd::dejar_grupo(a.op));
-    } else if (igual_sin_mayusculas(orden, "kick")) {
-        enviar(a, cmd::echar_del_grupo(a.op, arg));
+    } else if (igual_sin_mayusculas(orden, "kick") || igual_sin_mayusculas(orden, "banish")) {
+        if (arg.empty()) accion_comunidad(a, "banish");  // no name: the original asks for it (string 409)
+        else enviar(a, cmd::echar_del_grupo(a.op, arg));
     } else if (igual_sin_mayusculas(orden, "trade")) {
         enviar(a, cmd::pedir_intercambio(a.op));
     } else if (igual_sin_mayusculas(orden, "pledge")) {
         enviar(a, cmd::ver_clan(a.op));
     } else if (igual_sin_mayusculas(orden, "join")) {
         enviar(a, cmd::entrar_clan(a.op));
-    } else if (igual_sin_mayusculas(orden, "leaveclan")) {
+    } else if (igual_sin_mayusculas(orden, "leaveclan") || igual_sin_mayusculas(orden, "pledgeleave") ||
+               igual_sin_mayusculas(orden, "leavepledge")) {
         enviar(a, cmd::dejar_clan(a.op));
     } else if (igual_sin_mayusculas(orden, "clan")) {
         if (arg.empty()) aviso(a, "/clan <name>: create a blood pledge (princes; 30000 adena).");
         else enviar(a, cmd::crear_clan(a.op, arg));
-    } else if (igual_sin_mayusculas(orden, "banclan")) {
-        enviar(a, cmd::echar_del_clan(a.op, arg));
+    } else if (igual_sin_mayusculas(orden, "banclan") || igual_sin_mayusculas(orden, "ban")) {
+        if (arg.empty()) accion_comunidad(a, "ban");  // no name: the original asks for it (string 107)
+        else enviar(a, cmd::echar_del_clan(a.op, arg));
+    } else if (igual_sin_mayusculas(orden, "rank")) {  // /rank <rank 1..3> <name> (C_Rank sub 1)
+        const size_t sp = arg.find(' ');
+        int rango = 0;
+        std::string_view quien = sp == std::string_view::npos ? std::string_view{} : arg.substr(sp + 1);
+        while (!quien.empty() && quien.front() == ' ') quien.remove_prefix(1);
+        const auto r = std::from_chars(arg.data(), arg.data() + std::min(sp, arg.size()), rango);
+        if (sp == std::string_view::npos || r.ec != std::errc{} || rango < 1 || rango > 3 || quien.empty())
+            aviso(a, "/rank <1-3> <name>: sets a pledge member's rank (princes).");
+        else enviar(a, cmd::rango_clan(a.op, static_cast<u8>(rango), quien));
+    } else if (igual_sin_mayusculas(orden, "propose")) {
+        enviar(a, cmd::proponer(a.op, false));
+    } else if (igual_sin_mayusculas(orden, "divorce")) {
+        enviar(a, cmd::proponer(a.op, true));
+    } else if (igual_sin_mayusculas(orden, "duel")) {
+        enviar(a, cmd::duelo(a.op));
+    } else if (igual_sin_mayusculas(orden, "checkpk")) {
+        enviar(a, cmd::ver_pk(a.op));
+    } else if (igual_sin_mayusculas(orden, "alliancelist") || igual_sin_mayusculas(orden, "alliancejoin") ||
+               igual_sin_mayusculas(orden, "allianceleave")) {
+        accion_comunidad(a, igual_sin_mayusculas(orden, "alliancelist") ? "alliancelist"
+                            : igual_sin_mayusculas(orden, "alliancejoin") ? "alliancejoin" : "allianceleave");
+    } else if (igual_sin_mayusculas(orden, "chatinvite")) {
+        if (arg.empty()) aviso(a, "/chatinvite <name>: invites a character to your chat party.");
+        else enviar(a, cmd::invitar_chat(a.op, arg));
+    } else if (igual_sin_mayusculas(orden, "loc")) {  // 0x405e90
+        char t[48];
+        const Slot s = a.mundo.objetos.buscar(a.mundo.jugador.id);
+        std::snprintf(t, sizeof t, "location (%d, %d)", s != SIN_SLOT ? static_cast<int>(a.mundo.objetos.col<O_X>()[s]) : 0,
+                      s != SIN_SLOT ? static_cast<int>(a.mundo.objetos.col<O_Y>()[s]) : 0);
+        aviso(a, t);
+    } else if (igual_sin_mayusculas(orden, "telcon")) {  // elves of level 50+ only; otherwise the flag is forced off (0x40a100)
+        a.telcon = clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50 && !a.telcon;
     } else if (igual_sin_mayusculas(orden, "title")) {
         // /title <título> (el propio) o /title <personaje> <título> (príncipe a su clan).
         std::string_view primero = arg.substr(0, arg.find(' '));

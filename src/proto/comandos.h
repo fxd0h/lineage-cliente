@@ -199,6 +199,27 @@ inline Escritor alianza(const TablaOpcodes& t, u8 sub, std::string_view clan = {
     if (t.perfil.bytes_numero_pregunta) e.c(0).s(clan);  // the US 2009 client sends only `cc` (join = face to face)
     return e;
 }
+// C_Rank sub 1 (/rank): c 1, c rank, s name.
+inline Escritor rango_clan(const TablaOpcodes& t, u8 rango, std::string_view nombre) {
+    Escritor e(t, Cli::RANK);
+    e.c(1).c(rango).s(nombre);
+    return e;
+}
+// C_Propose: c 0 proposes to the character you face, c 1 divorces.
+inline Escritor proponer(const TablaOpcodes& t, bool divorcio) {
+    Escritor e(t, Cli::PROPOSE);
+    e.c(divorcio ? 1 : 0);
+    return e;
+}
+// C_Fight (/duel, the character you face) and C_CheckPK (/checkpk): opcode only.
+inline Escritor duelo(const TablaOpcodes& t) { return Escritor(t, Cli::FIGHT); }
+inline Escritor ver_pk(const TablaOpcodes& t) { return Escritor(t, Cli::CHECKPK); }
+// C_CreateParty type 2 (/chatinvite): s name (invites to the chat party).
+inline Escritor invitar_chat(const TablaOpcodes& t, std::string_view nombre) {
+    Escritor e(t, Cli::CREATEPARTY);
+    e.c(2).s(nombre);
+    return e;
+}
 // C_TaxRate: d personaje, c tasa (10–50).
 inline Escritor tasa_castillo(const TablaOpcodes& t, u32 personaje, u8 tasa) {
     Escritor e(t, Cli::TAXRATE);

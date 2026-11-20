@@ -724,6 +724,12 @@ TEST_CASE("Reparar armas, marcadores y cambiar de personaje: decodificar y coman
     igual(cmd::cambiar_personaje(t), {237});
     igual(cmd::armas_a_reparar(t), {106});
     igual(cmd::reparar_arma(t, 0x10015307, 0x1003fa8b), {238, 0x07, 0x53, 0x01, 0x10, 0x8b, 0xfa, 0x03, 0x10});
+    igual(cmd::rango_clan(t, 2, "Ana"), {78, 1, 2, 'A', 'n', 'a', 0});
+    igual(cmd::proponer(t, false), {185, 0});
+    igual(cmd::proponer(t, true), {185, 1});
+    igual(cmd::duelo(t), {47});
+    igual(cmd::ver_pk(t), {137});
+    igual(cmd::invitar_chat(t, "Ana"), {166, 2, 'A', 'n', 'a', 0});
     igual(cmd::marcar_lugar(t, "Plaza"), {134, 'P', 'l', 'a', 'z', 'a', 0});
     igual(cmd::borrar_marcador(t, "Plaza"), {223, 'P', 'l', 'a', 'z', 'a', 0});
     igual(cmd::usar_teleport(t, 9, 4, 1), {44, 9, 0, 0, 0, 4, 0, 1, 0, 0, 0});
@@ -774,6 +780,16 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         REQUIRE(ev.size() == 1);
         CHECK(ev[0].tipo == Ev::USAR_MAPA);
         CHECK(ev[0].v[0] == 16);
+        auto igual_us = [](Escritor w, std::vector<u8> esperado) {
+            REQUIRE(w.cuerpo().size() >= esperado.size());
+            CHECK(std::memcmp(w.cuerpo().data(), esperado.data(), esperado.size()) == 0);
+        };
+        igual_us(cmd::rango_clan(us, 3, "Ana"), {78, 1, 3, 'A', 'n', 'a', 0});
+        igual_us(cmd::proponer(us, false), {22, 0});
+        igual_us(cmd::proponer(us, true), {22, 1});
+        igual_us(cmd::duelo(us), {3});
+        igual_us(cmd::ver_pk(us), {70});
+        igual_us(cmd::invitar_chat(us, "Ana"), {130, 2, 'A', 'n', 'a', 0});
     }
     // S_War 1: "A" declara la guerra a "B". S_CastleMaster: castillo 1, personaje 5.
     ev.clear();
