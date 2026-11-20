@@ -106,6 +106,16 @@ los px, lógicos (640×480 en el original).
   - `elegir_accion`: las formas sin "quieto" (darkelf) usan el quieto de otra arma.
   - Siguen sin dibujarse los polymorphs `re *` (8781–8868), y los `young *` y `awake *` tienen archivos
     pero no fila, por lo que no se animan.
+- **Tabla real en texto plano (2026-11-20):** el cliente de Reborn (TW13032701, 2013) trae `TW13032701.txt`,
+  la tabla del cliente en claro: 12.411 gfx hasta el 12413, con acciones, alias y atributos (formato de
+  `lista_sprites.cpp`, el mismo que `list.spz` descifrado). Los `.spr` son los mismos que los de esta
+  instalación. Se carga sola si está en la carpeta del juego (o con `lista_sprites=`) y **agrega** lo que
+  `sprite_table.txt` no tiene, validado contra los `.pak`: 2156 gfx con acciones y 1384 solo con atributos
+  (tipo, sombra, alias). Las filas que ya teníamos no se tocan (los parches de arriba siguen). Sin ella, un
+  gfx sin fila se dibuja quieto (primer frame de `N-0.spr`) y uno que usa los archivos de otro, magenta.
+- **Muerte rotada:** la tabla lista cada acción con el último frame del archivo primero. En la muerte eso
+  hacía que el cuerpo empezara tirado, se levantara y volviera a caer; `poner_cadaver_al_final` lo corrige
+  (las dos tablas). Del fork fxd0h/lineage-cliente, como el lector de la tabla.
 - **Gfx que no existen en esta instalación:** 30 de los monstruos de la base (islas nuevas, Depraved
   Soul) y algunos NPCs (el almacén de Talking Island, gfx 10669) no están ni en la tabla ni en los
   `.pak`. Se dibujan como un bloque magenta del tamaño de un cuerpo (ver §6).

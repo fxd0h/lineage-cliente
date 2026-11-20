@@ -89,6 +89,7 @@ add_library(lin_recursos STATIC
     src/recursos/tiles.cpp
     src/recursos/sprites.cpp
     src/recursos/tabla_sprites.cpp
+    src/recursos/lista_sprites.cpp
     src/recursos/mapa.cpp
     src/recursos/fuente.cpp
     src/recursos/fuente_ttf.cpp
@@ -213,6 +214,7 @@ if(LIN_TESTS)
         tests/test_des.cpp
         tests/test_proto.cpp
         tests/test_recursos.cpp
+        tests/test_lista_sprites.cpp
         tests/test_mundo.cpp
         tests/test_chat.cpp
         tests/test_atlas.cpp

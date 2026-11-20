@@ -13,7 +13,9 @@
 // Diseño orientado a datos: todos los frames de todas las acciones van en un solo arreglo y
 // una tabla hash (gfx, acción) -> rango.
 #pragma once
+#include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "core/mapa_hash.h"
 
@@ -42,10 +44,32 @@ enum TipoGfx : u8 { TIPO_PERSONAJE = 5, TIPO_ITEM = 9, TIPO_MONSTRUO = 10 };
 // variante por arma: acción + código de arma (4 espada, 11 hacha, 20 arco...); morir no.
 enum Accion : u8 { ACC_CAMINAR = 0, ACC_ATACAR = 1, ACC_DANADO = 2, ACC_QUIETO = 3, ACC_MORIR = 8 };
 
+// Pasa al final la primera entrada de una fila de muerte (el último frame del archivo); ver tabla_sprites.cpp.
+void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r);
+
+// Resultado de fusionar la tabla del cliente (lista_sprites.cpp) con la cargada.
+struct ResumenLista {
+    u32 nuevos = 0;        // gfx con acciones que no tenían fila en sprite_table.txt
+    u32 reemplazados = 0;  // gfx que ya estaban: se queda la fila de sprite_table.txt
+    u32 omitidos = 0;      // entradas que ya estaban sin acciones, o sin ningún archivo
+    u32 atributos = 0;     // gfx nuevos sin acciones (ítems del suelo, objetos): solo tipo, sombra, alias...
+    u32 sin_archivo = 0;   // gfx nuevos cuyo alias no tiene archivos: redirigidos a los propios u omitidos
+    u32 recortados = 0;    // gfx nuevos a los que se les quitaron frames que no están en los .pak
+};
+
+// Cantidad de imágenes del archivo "<gfx>-<sub>.spr" de la instalación; 0 si no existe.
+using ContadorFrames = std::function<u32(GfxId gfx, u16 sub)>;
+
 class TablaSprites {
 public:
     bool cargar(const std::vector<u8>& texto);
     bool cargar_archivo(const std::string& ruta);
+    // Agrega la tabla en texto plano del cliente (TW13032701.txt, list.spz descifrado): los gfx que no tienen
+    // fila. Después de cargar(). false si el texto no tiene ninguna entrada útil. Con `contador`, cada fila
+    // nueva se valida contra los .pak (ver validar_entrada en lista_sprites.cpp).
+    bool fusionar_lista(std::string_view texto, ResumenLista& resumen, const ContadorFrames* contador = nullptr);
+    bool fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen,
+                                const ContadorFrames* contador = nullptr);
 
     const RangoAccion* accion(GfxId gfx, u8 accion) const;
     const FrameAccion& frame(u32 i) const { return frames_[i]; }

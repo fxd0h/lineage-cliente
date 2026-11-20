@@ -198,6 +198,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `chat_con_enter` | `1` Enter opens the chat line, `0` always typing |
 | `barra_personaje` | HP/MP bar over your own character |
 | `texto_dano` | Floating damage and "Miss" over your character |
+| `lista_sprites` | The game client's own sprite table in plain text (`TW13032701.txt` of the Taiwanese client, or a decrypted `list.spz`). Empty (default): looked up in the game folder. It adds the gfx `datos/sprite_table.txt` lacks (it stops at 8682), checked against the `.pak` files; without it those show still or as a magenta block |
 | `texto_hd` | `1` (default) text smoothed at the screen's real resolution instead of enlarging each font pixel (also in Options: "HD text"), `0` the plain pixel font |
 | `globos_comic` | `1` speech and shouts in a rounded outline over the head (also in Options: "Speech balloons"), `0` plain text |
 | `compensar_ataque` | Show your swing at once, without waiting for the server's echo |

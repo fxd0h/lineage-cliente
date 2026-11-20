@@ -1,7 +1,11 @@
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include "app/app.h"
+#include "recursos/sprites.h"
 #include "i18n/textos.h"
 #include "core/asignaciones.h"
 
@@ -26,6 +30,48 @@ void SDLCALL al_elegir_carpeta(void*, const char* const* lista, int) {
     }
 }
 
+// Tabla de sprites del cliente (texto plano): lista_sprites= de settings.ini o, si no, la de la carpeta del juego:
+// list.spz, spritelist/list.spz o un .txt de la raíz que empiece con el encabezado de la lista ("12414 0 41211" o
+// "S21972 0 41210": TW13032701.txt del cliente taiwanés). Agrega los gfx que sprite_table.txt no tiene (llega
+// al 8682), validados contra los .pak: sin ella esos se dibujan quietos o como bloque magenta.
+static std::string buscar_lista_sprites(const App& a) {
+    namespace fs = std::filesystem;
+    if (!a.cfg.lista_sprites.empty()) return a.cfg.lista_sprites;
+    const std::string& j = a.cfg.carpeta_juego;
+    for (const char* rel : {"list.spz", "spritelist/list.spz"})
+        if (const std::string r = ruta_real(j + rel); fs::exists(r)) return r;
+    std::error_code ec;
+    std::vector<std::string> txt;
+    for (const auto& e : fs::directory_iterator(j, ec)) {
+        if (!e.is_regular_file(ec) || e.path().extension() != ".txt") continue;
+        std::ifstream f(e.path(), std::ios::binary);
+        std::string l;
+        unsigned x = 0, y = 0, z = 0;
+        if (f && std::getline(f, l) &&
+            (std::sscanf(l.c_str(), "S%u %u %u", &x, &y, &z) == 3 || std::sscanf(l.c_str(), "%u %u %u", &x, &y, &z) == 3))
+            txt.push_back(e.path().string());
+    }
+    std::sort(txt.begin(), txt.end());
+    return txt.empty() ? std::string{} : txt.front();
+}
+
+static void cargar_lista_sprites(App& a) {
+    const std::string ruta = buscar_lista_sprites(a);
+    if (ruta.empty()) return;
+    const ContadorFrames contador = [&a](GfxId g, u16 sub) {
+        char n[32];
+        std::snprintf(n, sizeof n, "%u-%u.spr", g, sub);
+        return contar_frames_spr(a.rec.sprite(n));
+    };
+    ResumenLista r;
+    if (!a.sprites.fusionar_lista_archivo(ruta, r, &contador)) {
+        LIN_LOG("Tabla de sprites: %s no tiene entradas útiles", ruta.c_str());
+        return;
+    }
+    LIN_LOG("Tabla de sprites: %s agrega %u gfx con acciones y %u solo con atributos (%u ya estaban, %u omitidos, %u con "
+            "frames quitados)", ruta.c_str(), r.nuevos, r.atributos, r.reemplazados, r.omitidos, r.recortados);
+}
+
 bool cargar_recursos(App& a) {
     if (!a.rec.abrir(a.cfg.carpeta_juego)) {
         LIN_LOG("No se pudieron abrir los .pak en %s", a.cfg.carpeta_juego.c_str());
@@ -40,6 +86,7 @@ bool cargar_recursos(App& a) {
     std::string ruta = std::string(base ? base : "") + "datos/sprite_table.txt";
     if (!a.sprites.cargar_archivo(ruta) && !a.sprites.cargar_archivo("datos/sprite_table.txt"))
         LIN_LOG("Aviso: no se encontró datos/sprite_table.txt (los personajes no se animarán)");
+    cargar_lista_sprites(a);
     a.mundo.sprites = &a.sprites;
     if (!cargar_formas(a)) LIN_LOG("Aviso: no se encontró datos/formas.txt ni polymorph.tbl (sugerencias de polymorph)");
     if (!a.hechizos.cargar(a.rec)) LIN_LOG("Aviso: no se encontró spelldesc-e.tbl (nombres de los hechizos)");
