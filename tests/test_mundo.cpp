@@ -536,3 +536,18 @@ TEST_CASE("icono_de_caja: S_PacketBox buff icons pick their slot from the sprite
     icono_de_caja(j, 59, 0, nada, 0, 0, 0);
     CHECK_FALSE(tiene(0x87));
 }
+
+TEST_CASE("S_ChangeName renames the object") {
+    Mundo m;
+    std::vector<Evento> ev{poner(5, 1, 1, "Old")};
+    aplicar_eventos(m, ev, 0);
+    Evento e{};
+    e.tipo = Ev::CAMBIO_NOMBRE;
+    e.id = 5;
+    e.s[0] = "$1234";
+    ev = {e};
+    aplicar_eventos(m, ev, 0);
+    const Slot s = m.objetos.buscar(5);
+    REQUIRE(s != SIN_SLOT);
+    CHECK(texto(m, m.objetos.col<O_NOMBRE>()[s]) == "$1234");
+}

@@ -23,6 +23,7 @@ enum class Ev : u8 {
     CASAS, CASA, CASA_MAPA, GUERRA, ASEDIO, SENOR_CASTILLO, CASTILLO_FONDOS, FECHA_ASEDIO,
     USAR_MAPA, CLAN_EMBLEMA_OBJETO,
     DUELO, VOLVER_PERSONAJES,  // S_PacketBox 5 (id = the opponent) and 42
+    CAMBIO_NOMBRE,             // S_ChangeName: id = object, s[0] = the new name
     IGNORADO,
 };
 

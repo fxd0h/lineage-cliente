@@ -159,6 +159,8 @@ constexpr ParSrv S3EP1_SRV[] = {
     {115, Srv::PRIVATESHOPLIST}, {93, Srv::BOARD}, {91, Srv::BOARDREAD}, {127, Srv::MAIL},
     {72, Srv::HOUSELIST}, {113, Srv::HOUSEMAP}, {94, Srv::WAR}, {111, Srv::CASTLEMASTER},
     {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::WARTIME},
+    {38, Srv::CHANGENAME},  // S_ChangeName: d id, s name
+    {27, Srv::PETCTRL},     // S_CharReset: classic has no S_PetCtrlMenu, so 27 is only the char reset
     {14, Srv::USEMAP},  // S_UseMap: handler 0x48e0b0 of S3EP1U.bin, format "dc"
 };
 constexpr ParCli S3EP1_CLI[] = {

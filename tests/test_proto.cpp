@@ -805,6 +805,16 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
             ev.clear();
             REQUIRE(decodificar(b, us, arena, ev));
         };
+        // S_ChangeName (38): d id, s name; S_CharReset (27) subtype 3: c elixir points left.
+        caja_us({38, 4, 3, 2, 1, '$', '1', '2', '3', '4', 0});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::CAMBIO_NOMBRE);
+        CHECK(ev[0].id == 0x01020304);
+        CHECK(ev[0].s[0] == "$1234");
+        caja_us({27, 3, 7});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::REINICIO);
+        CHECK(ev[0].v[RE_PUNTOS] == 7);
         caja_us({62, 43});
         REQUIRE(ev.size() == 1);
         CHECK(ev[0].tipo == Ev::MENSAJE_SERVIDOR);

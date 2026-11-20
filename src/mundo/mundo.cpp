@@ -444,6 +444,11 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (s != SIN_SLOT) o.col<O_LEGAL>()[s] = static_cast<i16>(e.v[0]);
             break;
         }
+        case Ev::CAMBIO_NOMBRE: {
+            Slot s = o.buscar(e.id);
+            if (s != SIN_SLOT) o.col<O_NOMBRE>()[s] = guardar_texto(m, e.s[0]);
+            break;
+        }
         case Ev::TITULO: {
             Slot s = o.buscar(e.id);
             if (s != SIN_SLOT) o.col<O_TITULO>()[s] = guardar_texto(m, e.s[0]);

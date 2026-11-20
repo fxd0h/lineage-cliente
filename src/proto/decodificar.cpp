@@ -534,6 +534,13 @@ bool intercambio_fin(Lector& l, Evento& e) {
     return true;
 }
 // S_CharTitle: d personaje, s título
+// S_ChangeName: d object id, s name (may be "$nnnn", resolved at draw time like every object name)
+bool cambio_nombre(Lector& l, Evento& e) {
+    e.tipo = Ev::CAMBIO_NOMBRE;
+    e.id = l.d();
+    e.s[0] = l.s();
+    return true;
+}
 bool titulo(Lector& l, Evento& e) {
     e.tipo = Ev::TITULO;
     e.id = l.d();
@@ -944,7 +951,7 @@ constexpr Decodificador TABLA[] = {
     mensaje,        // REDMESSAGE
     ignorar,        // CLANNAME
     ignorar,        // CLANATTENTION
-    ignorar,        // CHANGENAME
+    cambio_nombre,  // CHANGENAME
     tiempo_guerra,  // WARTIME
 };
 static_assert(sizeof(TABLA) / sizeof(TABLA[0]) == static_cast<size_t>(Srv::CANTIDAD));
