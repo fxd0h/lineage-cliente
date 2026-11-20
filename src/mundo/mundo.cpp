@@ -4,6 +4,7 @@
 #include <filesystem>
 #include "mundo/mundo.h"
 #include "mundo/subida_nivel.h"
+#include "mundo/tabla_buffs.h"
 
 namespace lin {
 
@@ -85,21 +86,47 @@ void agregar_efecto(Mundo& m, const EfectoVisual& e) {
     m.siguiente_efecto = (m.siguiente_efecto + 1) % MAX_EFECTOS_VISUALES;
 }
 
+// Queue the end-of-effect message of a slot (original client: table +0x10), shown a second later (see eventos_hechizos).
+static void encolar_fin(EstadoJugador& j, const EfectoActivo& ef, u64 ahora) {
+    const int r = ranura_de_efecto_activo(ef.clase, ef.tipo);
+    if (r < 0 || !BUFF_FIN_MSG[r] || j.n_fin_pendientes == MAX_FIN_PENDIENTES) return;
+    j.fin_pendientes[j.n_fin_pendientes++] = {BUFF_FIN_MSG[r], ahora + 1000};
+}
+
 void vencer_efectos(EstadoJugador& j, u64 ahora) {
     for (u32 i = 0; i < j.n_efectos;) {
-        if (j.efectos[i].fin <= ahora) j.efectos[i] = j.efectos[--j.n_efectos];
-        else ++i;
+        if (j.efectos[i].fin <= ahora) {
+            encolar_fin(j, j.efectos[i], ahora);
+            j.efectos[i] = j.efectos[--j.n_efectos];
+        } else {
+            ++i;
+        }
     }
 }
 
 void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 ahora) {
     // Haste, brave, fuerza y destreza son uno de cada clase, sea cual sea el tipo (la poción de
     // fuerza termina con otro tipo que el que empezó); los demás, uno por tipo.
-    bool unico = clase == EA_HASTE || clase == EA_BRAVE || clase == EA_FUERZA || clase == EA_DESTREZA;
+    const bool unico = clase == EA_HASTE || clase == EA_BRAVE || clase == EA_FUERZA || clase == EA_DESTREZA;
+    auto es_este = [&](const EfectoActivo& e) { return e.clase == clase && (unico || e.tipo == tipo); };
+    if (segundos > 0) {
+        // Exclusion groups of the buff table (+8): the new effect removes the other active slots of its non-zero group.
+        const int nueva = ranura_de_efecto_activo(clase, tipo);
+        if (nueva >= 0 && BUFF_GRUPO[nueva]) {
+            for (u32 k = 0; k < j.n_efectos;) {
+                const int r = ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo);
+                if (r >= 0 && r != nueva && BUFF_GRUPO[r] == BUFF_GRUPO[nueva] && !es_este(j.efectos[k])) j.efectos[k] = j.efectos[--j.n_efectos];
+                else ++k;
+            }
+        }
+    }
     u32 i = 0;
-    while (i < j.n_efectos && !(j.efectos[i].clase == clase && (unico || j.efectos[i].tipo == tipo))) ++i;
+    while (i < j.n_efectos && !es_este(j.efectos[i])) ++i;
     if (segundos <= 0) {
-        if (i < j.n_efectos) j.efectos[i] = j.efectos[--j.n_efectos];
+        if (i < j.n_efectos) {
+            encolar_fin(j, j.efectos[i], ahora);
+            j.efectos[i] = j.efectos[--j.n_efectos];
+        }
         return;
     }
     if (i == j.n_efectos) {

@@ -358,3 +358,16 @@ TEST_CASE("Hechizos: spellbook slot tables of the original client") {
     CHECK(spellbook_skill_id(6, 19) == 220);
     CHECK(spellbook_max_scroll(2) == 21);
 }
+
+TEST_CASE("Hechizos: buff exclusion groups and end messages") {
+    EstadoJugador j;
+    poner_efecto_activo(j, EA_ESCUDO, 5, 100, 0);   // slot 4, group 5
+    poner_efecto_activo(j, EA_ESCUDO, 6, 100, 0);   // slot 6, same group: replaces
+    CHECK(j.n_efectos == 1);
+    CHECK(j.efectos[0].tipo == 6);
+    poner_efecto_activo(j, EA_AURA, 147, 100, 0);   // slot 18, group 1: unrelated
+    CHECK(j.n_efectos == 2);
+    poner_efecto_activo(j, EA_AURA, 147, 0, 1000);  // removal queues its end message (slot 18 -> idx 723)
+    CHECK(j.n_fin_pendientes == 1);
+    CHECK(j.fin_pendientes[0].msg == 723);
+}

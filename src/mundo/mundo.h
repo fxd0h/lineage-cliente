@@ -54,6 +54,12 @@ struct EfectoActivo {
     u64 fin;  // ms
 };
 constexpr u32 MAX_EFECTOS_ACTIVOS = 24;
+// End-of-effect chat message (buff table +0x10) waiting its turn: printed `due` ms unless the server sent the same text.
+struct FinEfectoPendiente {
+    u16 msg;
+    u64 due;
+};
+constexpr u32 MAX_FIN_PENDIENTES = 6;
 
 // Estado del propio personaje (módulo "Player" del plan). Lo actualizan S_OwnCharStatus y los
 // paquetes parciales (HP, MP, EXP, alineamiento, SP/MR, defensa, atributos, peso, comida).
@@ -78,6 +84,8 @@ struct EstadoJugador {
     u8 ceguera = 0;   // S_CurseBlind: 0 ve, 1 ciego, 2 ciego con Floating Eye
     EfectoActivo efectos[MAX_EFECTOS_ACTIVOS];
     u32 n_efectos = 0;
+    FinEfectoPendiente fin_pendientes[MAX_FIN_PENDIENTES] = {};
+    u32 n_fin_pendientes = 0;
 
     bool sabe(u32 hechizo) const {
         return hechizo >= 1 && hechizo <= FILAS_HECHIZOS * 8u && ((hechizos[(hechizo - 1) / 8] >> ((hechizo - 1) % 8)) & 1);

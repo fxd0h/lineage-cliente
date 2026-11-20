@@ -405,6 +405,9 @@ struct App {
     u32 hechizo_apuntando = 0;
     u32 hechizo_pendiente = 0;
     ObjId objetivo_hechizo = 0;
+    u16 msgs_recientes[8] = {};       // last S_ServerMessage ids (ring) and their times: dedupes end-of-effect texts
+    u64 msgs_recientes_ms[8] = {};
+    u8 msgs_recientes_n = 0;
     u64 fin_demora_hechizo = 0;       // useDelay del último hechizo
     // Espera hasta el próximo hechizo (la animación del lanzado o su useDelay, la mayor): se
     // muestra sobre los casilleros de hechizos.

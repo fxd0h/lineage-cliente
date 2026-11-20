@@ -8,6 +8,7 @@
 #include <charconv>
 #include <cstring>
 #include "mundo/ataque.h"
+#include "mundo/tabla_buffs.h"
 #include "app/app.h"
 
 namespace lin {
@@ -224,6 +225,11 @@ static void dibujar_area(App& a, const Evento& e) {
 }
 
 void eventos_hechizos(App& a, const Evento& e) {
+    if (e.tipo == Ev::MENSAJE_SERVIDOR) {
+        const u8 k = a.msgs_recientes_n++ % 8;
+        a.msgs_recientes[k] = static_cast<u16>(e.v[MS_ID]);
+        a.msgs_recientes_ms[k] = a.entrada.ahora_ms;
+    }
     if (e.tipo == Ev::ICONO_EFECTO && e.v[IE_CLASE] == IE_CONTEXTO) {  // S_PacketBox buff icons (see icono_de_caja)
         const TablaObjetos& o = a.mundo.objetos;
         const Slot s = o.buscar(a.mundo.jugador.id);
@@ -337,6 +343,29 @@ void procesar_hechizos(App& a, u64 ahora) {
     EntradaFrame& e = a.entrada;
     if (a.atajos_de != nombre_personaje(a)) cargar_atajos(a);
     vencer_efectos(a.mundo.jugador, ahora);
+    // End-of-effect messages of the original client's buff table, unless the server already printed the same text.
+    for (u32 i = 0; i < a.mundo.jugador.n_fin_pendientes;) {
+        EstadoJugador& j = a.mundo.jugador;
+        if (j.fin_pendientes[i].due > ahora) {
+            ++i;
+            continue;
+        }
+        const u16 msg = j.fin_pendientes[i].msg;
+        j.fin_pendientes[i] = j.fin_pendientes[--j.n_fin_pendientes];
+        if (a.cfg.ui_simple) continue;
+        const std::string_view texto = a.mensajes.linea(msg);
+        bool repetido = texto.empty();
+        for (int k = 0; k < 8 && !repetido; ++k)
+            repetido = a.msgs_recientes[k] && ahora - a.msgs_recientes_ms[k] < 3000 && a.mensajes.linea(a.msgs_recientes[k]) == texto;
+        if (repetido) continue;
+        Evento m{};
+        m.tipo = Ev::MENSAJE_SERVIDOR;
+        m.v[MS_ID] = msg;
+        char buf[256];
+        u32 color = 0;
+        const size_t n = formatear_mensaje(a.mensajes, a.desc, m, buf, sizeof buf, color);
+        a.chat.agregar({buf, n}, color, CHAT_MENSAJE);
+    }
     if (e.alt_s) a.ventana_hechizos = !a.ventana_hechizos;
     if (!e.presionado) a.clic_consumido = false;
 
@@ -881,6 +910,11 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         if (ui::sobre(a.entrada, x, Y, 32, 32 + ALTO_GLIFO)) {
             char t[96];
             size_t m = nombre_efecto_activo(a, ef, t, 64);
+            if (original) {  // message table text of the buff slot (+0xc) when the slot is known
+                const int rs = ranura_de_efecto_activo(ef.clase, ef.tipo);
+                const std::string_view tt = rs >= 0 ? a.mensajes.linea(BUFF_MSG[rs]) : std::string_view();
+                if (!tt.empty()) m = std::min(tt.size(), sizeof t - 1), std::memcpy(t, tt.data(), m), t[m] = 0;
+            }
             if (!original)  // original: the message-table text only, no timer
                 std::snprintf(t + m, sizeof t - m, "  %llu:%02llu", static_cast<unsigned long long>(resta / 60),
                               static_cast<unsigned long long>(resta % 60));
