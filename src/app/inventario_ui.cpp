@@ -30,6 +30,7 @@ constexpr Grid SIMPLE_GRID = {6, 7, 36, 14, 30, 14 + 6 * 36 - 22, 30 + 7 * 36 + 
 constexpr Grid ORIGINAL_GRID = {4, 6, 34, 20, 41, 163, 252, 162};
 constexpr int BASURA_W = 20, BASURA_H = 18;
 constexpr u64 MS_DOBLE_CLIC = 400;
+constexpr u32 ICON_ARMED_A = 2700, ICON_ARMED_B = 2701, ICON_SEALED = 2702;  // icon-table overlays (0x44e131..0x44e39a)
 constexpr u32 IMG_EQUIPPED_MARK = 536;  // behind an equipped icon at (x-1, y-1) (0x44e010)
 constexpr int DRAG_START_PX = 25;       // the original starts a drag after the pointer moved 25 px (0x44f240)
 constexpr u32 IMG_INV_BACKGROUND = 996, IMG_INV_FRAME = 997, IMG_INV_ORNAMENT = 998, IMG_INV_TABS = 999;
@@ -297,6 +298,16 @@ void dibujar_inventario(App& a) {
         }
         if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        if (original) {
+            // Overlays of the 2009 inventory: worn / armed items get 2700 then 2701 at (+1,+1) (not icons 0x1d1 / 0x1d2);
+            // a sealed item (status bit 0x80) gets 2702 at (+24,+24).
+            const u32 gfx = t.col<I_GFX>()[s];
+            if (equipado && gfx != 0x1d1 && gfx != 0x1d2) {
+                g.gpu().dibujar(g.icono(ICON_ARMED_A), x + 1, y + 1, ki + 4);
+                g.gpu().dibujar(g.icono(ICON_ARMED_B), x + 1, y + 1, ki + 5);
+            }
+            if (t.col<I_BENDICION>()[s] & BLESS_SEALED_FLAG) g.gpu().dibujar(g.icono(ICON_SEALED), x + 24, y + 24, ki + 6);
+        }
         if (equipado && !original) g.texto("E", x + 1, y + 1, kt, rgba(255, 230, 90));
         if (u32 n = t.col<I_CANTIDAD>()[s]; n > 1) {
             char cant[16];
