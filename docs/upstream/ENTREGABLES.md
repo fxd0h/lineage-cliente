@@ -1,17 +1,12 @@
-> **Upstream history.** Deliverable-by-deliverable status tracker of [javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente)
-> (Spanish), preserved for reference and not maintained in this fork. It is accurate for upstream's JP 3.63c / macOS
-> state, with the simple interface as default; the fork's current state is in the [root README](../../README.md) and
-> [docs/fork/](../fork/README.md).
-
 # Entregables 1–10: estado y verificación
 
 Todo se probó en macOS 26.5 (Apple Silicon, pantalla de 120 Hz) contra el servidor L1J-JP 3.63c
 local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas están en
-`../capturas/` y se generaron con las opciones de automatización del README.
+`docs/capturas/` y se generaron con las opciones de automatización del README.
 
 ## Entregable 1: Pantalla de login ✅
 
-![Login](../capturas/1_login.png)
+![Login](docs/capturas/1_login.png)
 
 **Funciona:**
 - Fondo `814.png`: viene ofuscado (`\x89PNX` + XOR encadenado) en `Sprite00.pak`, que se elige por el hash del nombre.
@@ -36,11 +31,11 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 **UI simple del login** (con `ui_simple=1`, la de siempre; F2 vuelve a la original):
 - Fondo oscuro, logo arriba y un recuadro con Account, Password, Login y Quit; abajo, el servidor.
 - **Logo propio:** `logo=` en `settings.ini` (o `--logo=`): un PNG con alfa de hasta 2048×2048, ruta absoluta o relativa a la carpeta de `settings.ini`, achicado para entrar en 560×190. Sin logo, o si no se puede leer, "LINEAGE" en texto (y un aviso en el registro).
-- Capturas: `../capturas/1_login_simple.png` y `1_login_logo.png`.
+- Capturas: `docs/capturas/1_login_simple.png` y `1_login_logo.png`.
 
 ## Entregable 2: Selección y creación de personaje ✅
 
-![Selección](../capturas/2_seleccion.png) ![Creación](../capturas/2_creacion.png)
+![Selección](docs/capturas/2_seleccion.png) ![Creación](docs/capturas/2_creacion.png)
 
 **Funciona:**
 - **Selección:**
@@ -66,7 +61,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 **UI simple** (con `ui_simple=1`; F2 vuelve a la original):
 - **Selección:** lista de todos los personajes (nombre, nivel, clase, clan) y "+ New character" en las ranuras libres; a la derecha, la animación y los datos del elegido; Enter, Delete (pide un segundo clic: "Sure?") y Back.
 - **Creación:** clase y sexo a la izquierda; atributos con −/+, puntos libres, nombre y la animación a la derecha; Create y Back.
-- Capturas: `../capturas/2_seleccion_simple.png` y `2_crear_simple.png`.
+- Capturas: `docs/capturas/2_seleccion_simple.png` y `2_crear_simple.png`.
 
 **Pendiente:**
 - Las flechas de página (`1765/1767.img`) no se ven con esta instalación: falta buscar sus nombres nuevos.
@@ -75,7 +70,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 
 ## Entregable 3: Dentro del juego, moverse ✅
 
-![Juego](../capturas/3_juego.png) ![Caminando](../capturas/3_juego_caminando_depuracion.png)
+![Juego](docs/capturas/3_juego.png) ![Caminando](docs/capturas/3_juego_caminando_depuracion.png)
 
 **Funciona:**
 - **Mapa:**
@@ -144,7 +139,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
   - Leyendo "y exterior, x interior", las combinaciones quedan limpias: tile transitable 31 ↔ atributos 4/4 en 63 341 celdas, y tiles bloqueados 0/16 ↔ atributos con el bit 0 activo.
   - La orientación opuesta mezcla transitables con bloqueados.
   - El test `Mapa 2005` exige al menos 95 % de coincidencia en el segmento inicial.
-- **Ancla de los sprites:** calibrada con el explorador; los pies quedan en el centro del rombo (`../capturas/explorador_gfx0.png`).
+- **Ancla de los sprites:** calibrada con el explorador; los pies quedan en el centro del rombo (`docs/capturas/explorador_gfx0.png`).
 - **Rendimiento (Release, overlay F3):**
   - **0,50 ms de CPU por frame** con 2088 instancias, frente a los 2 ms presupuestados;
   - **1 llamada de dibujo por frame**;
@@ -163,14 +158,14 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
   - **Ahora:** esos tiles se decodifican con alfa 50 % (`ALFA_TRANSLUCIDO`) y se mezclan con el suelo.
   - **Personajes en la sombra:** dibujar la sombra encima del personaje lo oscurecería también donde el cuerpo sube por encima de ella. En su lugar, el personaje cuya celda tiene una sombra se dibuja oscurecido (×150/255). F5 lo apaga (`sombra_personajes` en `settings.ini`). No hay forma de compararlo con el original desde los datos.
   - **Verificado:** capturas con F5 encendido y apagado junto al árbol del punto de inicio: el personaje en la sombra se oscurece y fuera de ella queda igual. Hay un test con el `.s32` real.
-- Luz y noche: hechas después, ver [PLAN_LUZ_AGUA.md](../analisis/PLAN_LUZ_AGUA.md) (noche, mazmorras, luces, agua, visión de elfo y borrachera).
+- Luz y noche: hechas después, ver [PLAN_LUZ_AGUA.md](docs/analisis/PLAN_LUZ_AGUA.md) (noche, mazmorras, luces, agua, visión de elfo y borrachera).
   Costo de la oscuridad contra `efecto_luz=0`, vista de 2560×1654 a zoom 1, CPU por frame: de noche en un lugar poblado (37 240 instancias), 2,08 contra 1,69 ms en optimizado y 9,13 contra 6,18 en `debug`; en mazmorra, 2,98 contra 2,80 y 5,44 contra 4,30. Sin asignaciones por frame. Cinco muestras de un segundo: la base varía entre corridas, así que vale la diferencia. Contador de fps en pantalla: Shift+F3 (`luz_contador_fps.png`).
 - Las acciones puntuales (ataque, daño) se guardan y animan, pero el combate es el entregable 5.
 - Rendimiento: ver la sección [Rendimiento](#rendimiento) (precarga en un hilo, reemplazo LRU del atlas y test de cero allocations).
 
 ## Entregable 4: Chat y estado ✅
 
-![Chat](../capturas/4_chat.png) ![Estado](../capturas/4_estado.png)
+![Chat](docs/capturas/4_chat.png) ![Estado](docs/capturas/4_estado.png)
 
 **Funciona:**
 - **Panel inferior original:** `1028.img` (barras), `1042.img` (chat), `1019.img` (teclas F5–F12) y `1039.img` (entrada), en las posiciones de l1j-client.
@@ -208,7 +203,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 **UI simple (por defecto; F2 alterna con el panel original):**
 - **Qué muestra:** una franja oscura de ancho completo abajo, solo con texto: 5 líneas de chat, la entrada `> ` y una línea de estado con barras ASCII (`Lv 1 [--------] 0.00%  HP [########] 14/14  MP [...]  AC  Lawful  Weight  Food`). La ventana de estado (Alt+C) es un recuadro de texto con `[x]`.
 - **Lo que se comparte:** el chat (registro, desplazamiento, entrada, prefijos) y el contenido de la ventana de estado son los mismos en los dos modos; solo cambia dónde y cómo se dibujan (`AreaChat`, `Vista::panel_y`). La franja ocupa menos que el panel original, así que el área de juego crece.
-- **Verificado** contra el servidor en 853×551 y en 640×480: la línea de estado entra con valores altos (nivel 12, HP 34/142), y el panel original sigue igual con `--ui_simple=0`. Captura: `../capturas/4_ui_simple.png`.
+- **Verificado** contra el servidor en 853×551 y en 640×480: la línea de estado entra con valores altos (nivel 12, HP 34/142), y el panel original sigue igual con `--ui_simple=0`. Captura: `docs/capturas/4_ui_simple.png`.
 
 **Para repetir la prueba:**
 - En el servidor local, `Charla` (cuenta `prueba2`) quedó como GM: `characters.access_level = 200`. Así se puede usar `.level`.
@@ -233,7 +228,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 
 ## Entregable 5: Combate ✅
 
-![Combate](../capturas/5_combate.png) ![Muerte](../capturas/5_muerte.png)
+![Combate](docs/capturas/5_combate.png) ![Muerte](docs/capturas/5_muerte.png)
 
 **Funciona:**
 - **Atacar:**
@@ -274,7 +269,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 
 ## Entregable 6: Inventario e ítems ✅
 
-![Inventario](../capturas/6_inventario.png) ![Botín](../capturas/6_botin.png)
+![Inventario](docs/capturas/6_inventario.png) ![Botín](docs/capturas/6_botin.png)
 
 **Funciona:**
 - **Inventario (`Inventario` en `mundo/inventario.h`, tabla columnar por id):**
@@ -315,7 +310,7 @@ local (`servidor_local/`), con la instalación de Lineage Justice. Las capturas 
 
 ## Entregable 6.5: Hechizos y habilidades ✅
 
-![Ventana de hechizos](../capturas/6.5_ventana_hechizos.png) ![Energy Bolt](../capturas/6.5_energy_bolt.png) ![Haste](../capturas/6.5_haste.png) ![Barra de atajos](../capturas/6.5_barra_atajos.png)
+![Ventana de hechizos](docs/capturas/6.5_ventana_hechizos.png) ![Energy Bolt](docs/capturas/6.5_energy_bolt.png) ![Haste](docs/capturas/6.5_haste.png) ![Barra de atajos](docs/capturas/6.5_barra_atajos.png)
 
 Adelanta la parte de uso del entregable 8 del plan: lanzar hechizos, sus efectos visuales, los efectos activos y la velocidad con haste y brave. Quedan para el 8 el arte original de la ventana y los íconos.
 
@@ -358,8 +353,8 @@ Adelanta la parte de uso del entregable 8 del plan: lanzar hechizos, sus efectos
   - se guarda por personaje en `settings.ini` (`barra=`);
   - clic del medio sobre un casillero lo elige (marco dorado; se guarda con un `*` en `barra=`) y el botón del medio sobre el mundo usa el elegido sobre lo que hay bajo el puntero, como en el original. Un hechizo con objetivo sin nada bajo el puntero no se lanza. El usuario lo probó en vivo;
   - **mantenido, repite:** un hechizo, en cuanto termina la espera (y no hay otro en camino), sobre lo que esté bajo el puntero en ese momento; un ítem, cada 500 ms. Verificado con `--medio=322,205,600` y Lesser Heal sobre Charla: 4 `C_UseSkill` en 5 s (uno al apretar y uno cada ~1,3 s), aceptados por el servidor ("You feel better"), y ninguno después de soltar;
-  - **1–0 sin Alt y chat con Enter:** con el chat cerrado (lo normal), las teclas son acciones y 1–0 usan la barra; Enter abre la línea del chat, Enter envía y la cierra, Esc la vacía y la cierra (y no cierra ventanas). En Options, "Chat: Always typing" vuelve al modo anterior (`chat_con_enter=0`). Verificado inyectando teclas (`--pulsar`): "1" lanzó Shield; "1#hola1#" abrió el chat y envió "hola1" sin que el "1" usara la barra; "#abc~" no envió nada; con `chat_con_enter=0`, "hey1#" envió "hey1". Captura: `../capturas/4_chat_con_enter.png`;
-  - **espera entre hechizos:** el servidor (L1J) tiene una sola espera para todos los hechizos (`reuse_delay`: 10 ms o 0 en casi todos, 1 s en unos pocos como Fireball) y no avisa al cliente: un hechizo durante la espera se ignora en silencio. Lo que más pesa es la animación del lanzado, que el servidor también controla. El cliente toma la mayor de las dos y la muestra en los casilleros de hechizos (barra y F5–F12): una sombra que se vacía de arriba abajo y los segundos con centésimas. Captura: `../capturas/8_espera_hechizos.png`;
+  - **1–0 sin Alt y chat con Enter:** con el chat cerrado (lo normal), las teclas son acciones y 1–0 usan la barra; Enter abre la línea del chat, Enter envía y la cierra, Esc la vacía y la cierra (y no cierra ventanas). En Options, "Chat: Always typing" vuelve al modo anterior (`chat_con_enter=0`). Verificado inyectando teclas (`--pulsar`): "1" lanzó Shield; "1#hola1#" abrió el chat y envió "hola1" sin que el "1" usara la barra; "#abc~" no envió nada; con `chat_con_enter=0`, "hey1#" envió "hey1". Captura: `docs/capturas/4_chat_con_enter.png`;
+  - **espera entre hechizos:** el servidor (L1J) tiene una sola espera para todos los hechizos (`reuse_delay`: 10 ms o 0 en casi todos, 1 s en unos pocos como Fireball) y no avisa al cliente: un hechizo durante la espera se ignora en silencio. Lo que más pesa es la animación del lanzado, que el servidor también controla. El cliente toma la mayor de las dos y la muestra en los casilleros de hechizos (barra y F5–F12): una sombra que se vacía de arriba abajo y los segundos con centésimas. Captura: `docs/capturas/8_espera_hechizos.png`;
   - en algunos teclados Alt con un número escribe un carácter (Option+2 = "@" en el teclado español del Mac): si sale un carácter ASCII se toma como texto, no como atajo.
 - **F5–F12** siguen como atajos solo de hechizos.
 - **Efectos activos:** arriba a la izquierda, con lo que les queda ("Shield 29:57", "Haste 4:49").
@@ -408,7 +403,7 @@ Adelanta la parte de uso del entregable 8 del plan: lanzar hechizos, sus efectos
 
 ## Entregable 6.6: Polymorph ✅
 
-![Diálogo](../capturas/6.6_polymorph_dialogo.png) ![Pergamino: death knight](../capturas/6.6_polymorph_pergamino.png) ![.allbuff](../capturas/6.6_polymorph_allbuff.png)
+![Diálogo](docs/capturas/6.6_polymorph_dialogo.png) ![Pergamino: death knight](docs/capturas/6.6_polymorph_pergamino.png) ![.allbuff](docs/capturas/6.6_polymorph_allbuff.png)
 
 **Antes:**
 - **`S_ChangeShape` se ignoraba:** quien se transformaba seguía con su sprite.
@@ -445,7 +440,7 @@ Adelanta la parte de uso del entregable 8 del plan: lanzar hechizos, sus efectos
 
 ## Entregable 7: NPCs y comercio ✅
 
-![Diálogo](../capturas/7_dialogo_npc.png) ![Comprar](../capturas/7_comprar.png) ![Vender](../capturas/7_vender.png) ![Almacén](../capturas/7_almacen.png) ![Teletransporte](../capturas/7_teletransporte.png)
+![Diálogo](docs/capturas/7_dialogo_npc.png) ![Comprar](docs/capturas/7_comprar.png) ![Vender](docs/capturas/7_vender.png) ![Almacén](docs/capturas/7_almacen.png) ![Teletransporte](docs/capturas/7_teletransporte.png)
 
 **Hablar con NPCs:**
 - **Clic sobre un NPC** (no monstruo, ítem ni personaje): se camina hasta 2 celdas y se le habla (`C_NPCTalk`), aunque se suelte el botón. Ctrl+clic sigue atacando.
@@ -517,7 +512,7 @@ Adelanta la parte de uso del entregable 8 del plan: lanzar hechizos, sus efectos
 
 ## Entregable 8: Magia y habilidades ✅
 
-![Íconos de efectos](../capturas/8_iconos_efectos.png) ![Ventana de magia original](../capturas/8_ventana_magia_original.png) ![Caballero con haste](../capturas/8_caballero_haste.png)
+![Íconos de efectos](docs/capturas/8_iconos_efectos.png) ![Ventana de magia original](docs/capturas/8_ventana_magia_original.png) ![Caballero con haste](docs/capturas/8_caballero_haste.png)
 
 Completa lo que el paso 6.5 había adelantado (lanzar, efectos visuales y aditivos, velocidad con haste y brave).
 
@@ -552,7 +547,7 @@ Completa lo que el paso 6.5 había adelantado (lanzar, efectos visuales y aditiv
 
 ## Entregable 9: Social ✅
 
-![Grupo e intercambio](../capturas/9_grupo_intercambio.png) ![Clan creado y título](../capturas/9_clan_titulo.png) ![Página del clan y emblema](../capturas/9_clan_emblema.png)
+![Grupo e intercambio](docs/capturas/9_grupo_intercambio.png) ![Clan creado y título](docs/capturas/9_clan_titulo.png) ![Página del clan y emblema](docs/capturas/9_clan_emblema.png)
 
 **Preguntas del servidor** (`S_MessageYN`): el texto sale de string-e.tbl con sus argumentos, con botones Yes/No (Enter/Escape). La respuesta va en `C_Attr` (h 0, d número, h tipo, h 1/0).
 
@@ -591,7 +586,7 @@ Completa lo que el paso 6.5 había adelantado (lanzar, efectos visuales y aditiv
 
 ## Entregable 10: Mundo completo ✅
 
-![Lluvia](../capturas/10_lluvia.png) ![Giran con nieve](../capturas/10_giran_nieve.png) ![Portal a la mazmorra](../capturas/10_portal_mazmorra.png) ![Opciones con volumen](../capturas/10_opciones_volumen.png)
+![Lluvia](docs/capturas/10_lluvia.png) ![Giran con nieve](docs/capturas/10_giran_nieve.png) ![Portal a la mazmorra](docs/capturas/10_portal_mazmorra.png) ![Opciones con volumen](docs/capturas/10_opciones_volumen.png)
 
 **Audio** (módulo nuevo `src/audio`, sobre SDL3):
 - **Arquitectura:** un dispositivo y varios streams que SDL mezcla: música, ambiente y 16 para efectos. Si todos los de efectos están ocupados, se corta el más viejo.
@@ -633,13 +628,13 @@ Completa lo que el paso 6.5 había adelantado (lanzar, efectos visuales y aditiv
 - **Qué son:** 30 de los monstruos de la base de esta versión usan un gfx que falta en la tabla de sprites y en los `.pak` (Depraved Soul, gfx 8457, y los de las islas nuevas). Se dibujan como un bloque magenta.
 - **Antes:** el bloque era de 8×8 y no se podía elegir. Además, como su gfx no tiene tipo (atributo 102), se lo trataba como un NPC: el clic caminaba hasta él para hablarle.
 - **Ahora:** el bloque es del tamaño de un cuerpo (24×36), entra en la lista de cosas clicables, y un gfx sin acciones en la tabla cuenta como monstruo: el clic lo ataca y el cursor es la espada. Los jugadores (nombre propio y nivel 0) siguen siendo personajes.
-- **Verificado:** `.spawn 46186` junto a Charla y un clic simulado (`--arrastrar`): caminó hasta él y atacó (3 efectos de ataque). Captura: `../capturas/10_monstruo_sin_sprite.png`.
+- **Verificado:** `.spawn 46186` junto a Charla y un clic simulado (`--arrastrar`): caminó hasta él y atacó (3 efectos de ataque). Captura: `docs/capturas/10_monstruo_sin_sprite.png`.
 
 **Techos y árboles translúcidos** (`dibujar_objetos_mapa` en `app/pantalla_juego.cpp`):
 - **Qué hace:** si una pieza de un objeto del mapa (casa, árbol, muro) está delante del personaje y le cubre el centro del cuerpo, todo lo que ese objeto tiene delante del personaje se dibuja translúcido (alfa 110). El interior y la pared de atrás siguen opacos: al entrar a una casa se ve adentro.
 - **Silueta:** cuando algo lo tapa, el personaje se dibuja otra vez encima de todo con alfa 120. Varias piezas translúcidas superpuestas casi lo escondían.
 - **Objetos:** el `.s32` trae las piezas agrupadas por objeto. Al cargar el segmento se guarda, por objeto, su rango de piezas y su rectángulo de celdas (`ObjetoMapa`).
-- **Verificado:** dentro de la posada de Talking Island (32600, 32928) y detrás de una palmera (32589, 32940). Capturas: `../capturas/10_techo_posada.png` y `10_arbol_translucido.png`.
+- **Verificado:** dentro de la posada de Talking Island (32600, 32928) y detrás de una palmera (32589, 32940). Capturas: `docs/capturas/10_techo_posada.png` y `10_arbol_translucido.png`.
 
 **Pendiente o conocido:**
 - **Paneo:** los efectos no se panean a izquierda o derecha.
@@ -658,12 +653,12 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
   - una puerta llega como cualquier objeto (`S_CharPack`, gfx de tipo 8) con su estado: 28 abierta, 29 cerrada. Se dibuja quieta en el último frame de esa acción, y `S_DoActionGFX` 28/29 la cambia;
   - `S_Door` dice si la celda de la puerta (y las de su ancho) se puede pasar: las cerradas quedan en `Mundo::puertas_cerradas` y `celda_pasable` las bloquea;
   - clic sobre una puerta: se camina hasta 2 celdas y se manda `C_Door` (las de llave la consumen en el servidor);
-  - **verificado:** la puerta de la posada de Talking Island (32597, 32934): `C_Door`, el servidor responde con la acción 28 y `S_Door` pasable, y se ve abierta (`../capturas/11_puerta_abierta.png`).
+  - **verificado:** la puerta de la posada de Talking Island (32597, 32934): `C_Door`, el servidor responde con la acción 28 y `S_Door` pasable, y se ve abierta (`docs/capturas/11_puerta_abierta.png`).
 - **Estados alterados:**
   - `S_Paralysis`: parálisis, sueño, congelado, aturdido y atado. Mientras dura, el personaje no se mueve ni actúa y arriba se lee el estado. El fin solo quita el estado que empezó;
   - `S_Poison` (y los flags de `S_CharPack`): verde si está envenenado, gris si congelado, para cualquier personaje o monstruo;
   - `S_CurseBlind`: velo negro sobre el mundo (con Floating Eye, menos), sin nombres, y el propio personaje encima;
-  - **verificado:** la ceguera en vivo con una Blinding Potion (`../capturas/11_ceguera.png`); parálisis y veneno con bytes en `tests/test_proto.cpp`.
+  - **verificado:** la ceguera en vivo con una Blinding Potion (`docs/capturas/11_ceguera.png`); parálisis y veneno con bytes en `tests/test_proto.cpp`.
 - **Diálogo de cantidad** (`S_InputAmount`, `C_Amount`; `app/cantidad_ui.cpp`): número con el teclado, −/+, la rueda y "Max"; con precio, el total. Responde con la acción que mandó el servidor. **Verificado:** en la posada, "room" pidió cantidad (300 adena cada llave, 1 a 8); con 2, el servidor cobró 600 y dio 2 llaves.
 - **Dar ítems** (`C_GiveItem`): soltar un ítem del inventario sobre un NPC, monstruo o mascota se lo da; de una pila, el diálogo pregunta cuántos. **Verificado:** 5 de adena a una invocación (39.295 → 39.290), y aparecen en su bolsa.
 - **Mascotas** (`app/mascotas_ui.cpp`):
@@ -671,9 +666,9 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
   - clic en el nombre le habla (menú del servidor: atacar, defender, quedarse, dispersar...); "Bag" pide su inventario (`C_PetMenu` → `S_PetInventory`, que llega como lista de almacén con tipo 0x0b), y un clic en un ítem lo usa o equipa (`C_UsePetItem`);
   - "Attack" hace que el servidor mande `S_SelectTarget`: el próximo clic elige el objetivo (`C_SelectTarget`); clic derecho o Esc cancelan;
   - `S_TrueTarget`: una marca roja y el mensaje sobre el objetivo, 16 s;
-  - **verificado** con `.summon 45034` (Shepherd): la lista, su menú, `S_SelectTarget` → `C_SelectTarget`, y la bolsa con lo que se le dio (`../capturas/11_mascota_menu.png`, `11_mascota_bolsa.png`), también con ASan.
-- **Domesticar** (lo pidió el usuario): darle Floating Eye Meat (40057) a un animal domesticable con menos de un tercio de su vida. **Verificado** con Aprendiz (mago nivel 1, cuenta GM) contra un oso invocado (45040) en la plaza de Talking Island: Energy Bolt cada 3 s y la carne cada 2 s con `--dar="Eye Meat@Bear" --cantidad=1`. Tras varios "You failed to tame it", el servidor dio el amuleto ("Pet Amulet [Lv.5 Bear]") y `S_PetCtrlMenu` lo agregó a la lista (`../capturas/11_mascota_domesticada.png`). Dos lecciones: junto a la casa de Gereng los hechizos no salían (el servidor exige línea de vista: `glanceCheck`), y con lobos de pruebas anteriores `--dar` elegía al más cercano, no al herido.
-- **Summon Monster y el anillo de control** (Ring of Summon Control, 20284): sin el anillo, el servidor invoca una criatura según el nivel; con él, manda la página "summonlist" con el id del propio personaje (imágenes por nivel 28–72 que llevan a subpáginas con las criaturas). Elegir una manda `C_NPCAction` con su número y el servidor la invoca si el nivel y el carisma alcanzan (8 por criatura). No hizo falta código nuevo: el visor de HTML ya tenía imágenes con `link`, `action` y `tooltip`. **Verificado** con Aprendiz (subido a nivel 30 con `.level`, curado con `.ress` porque el hechizo cuesta HP): "Level 28" → Hobgoblin, acción "7", y el Hobgoblin aparece a su lado y en la lista de mascotas (`../capturas/11_summon_lista.png`, `11_summon_hobgoblin.png`). `--npc-accion` no sirve en esta página (ignora a propósito las que llegan con el id del propio personaje, como RaiseAttr); se recorrió con clics simulados.
+  - **verificado** con `.summon 45034` (Shepherd): la lista, su menú, `S_SelectTarget` → `C_SelectTarget`, y la bolsa con lo que se le dio (`docs/capturas/11_mascota_menu.png`, `11_mascota_bolsa.png`), también con ASan.
+- **Domesticar** (lo pidió el usuario): darle Floating Eye Meat (40057) a un animal domesticable con menos de un tercio de su vida. **Verificado** con Aprendiz (mago nivel 1, cuenta GM) contra un oso invocado (45040) en la plaza de Talking Island: Energy Bolt cada 3 s y la carne cada 2 s con `--dar="Eye Meat@Bear" --cantidad=1`. Tras varios "You failed to tame it", el servidor dio el amuleto ("Pet Amulet [Lv.5 Bear]") y `S_PetCtrlMenu` lo agregó a la lista (`docs/capturas/11_mascota_domesticada.png`). Dos lecciones: junto a la casa de Gereng los hechizos no salían (el servidor exige línea de vista: `glanceCheck`), y con lobos de pruebas anteriores `--dar` elegía al más cercano, no al herido.
+- **Summon Monster y el anillo de control** (Ring of Summon Control, 20284): sin el anillo, el servidor invoca una criatura según el nivel; con él, manda la página "summonlist" con el id del propio personaje (imágenes por nivel 28–72 que llevan a subpáginas con las criaturas). Elegir una manda `C_NPCAction` con su número y el servidor la invoca si el nivel y el carisma alcanzan (8 por criatura). No hizo falta código nuevo: el visor de HTML ya tenía imágenes con `link`, `action` y `tooltip`. **Verificado** con Aprendiz (subido a nivel 30 con `.level`, curado con `.ress` porque el hechizo cuesta HP): "Level 28" → Hobgoblin, acción "7", y el Hobgoblin aparece a su lado y en la lista de mascotas (`docs/capturas/11_summon_lista.png`, `11_summon_hobgoblin.png`). `--npc-accion` no sirve en esta página (ignora a propósito las que llegan con el id del propio personaje, como RaiseAttr); se recorrió con clics simulados.
 - **Corregido de paso:** dos accesos fuera de rango que el tipo nuevo de lista habría disparado (el arreglo de tipos de tienda y el de títulos de la ventana), ahora con `static_assert`.
 
 **Pendiente o conocido:**
@@ -685,8 +680,8 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Reparar armas, marcadores y cambiar de personaje
 
-- **Reparar armas** (`S_SelectList`, `C_FixWeaponList`, `C_SelectList`): el vínculo `action="fix"` de los herreros (está en las páginas del juego: kuen1, randith1, cuse1, batr1...) pide la lista (`C_FixWeaponList`); `S_FixWeaponList` llega como una lista de tienda (`LISTA_REPARAR`) y la ventana del NPC muestra cada arma dañada con su daño y costo (200 adena por punto). Un clic la repara (`C_SelectList`: arma y herrero, a 3 celdas o menos). **Verificado:** con la daga de Charla en daño 3 (puesto en la base), Blacksmith Kuehn en Gludio (32633, 32801): la ventana "Repair" ("Damage 3: 600 adena"), el clic, 600 adena menos y daño 0 en la base (`../capturas/11_reparar.png`).
-- **Volver a la selección de personaje** (`C_ChangeChar`): botón "Character select" en la ventana Exit. El servidor saca al personaje (`S_PacketBox` 42) y manda la lista de personajes; el cliente limpia el mundo al recibirla. **Verificado:** salir y volver a entrar con Charla (`../capturas/11_cambiar_personaje.png`).
+- **Reparar armas** (`S_SelectList`, `C_FixWeaponList`, `C_SelectList`): el vínculo `action="fix"` de los herreros (está en las páginas del juego: kuen1, randith1, cuse1, batr1...) pide la lista (`C_FixWeaponList`); `S_FixWeaponList` llega como una lista de tienda (`LISTA_REPARAR`) y la ventana del NPC muestra cada arma dañada con su daño y costo (200 adena por punto). Un clic la repara (`C_SelectList`: arma y herrero, a 3 celdas o menos). **Verificado:** con la daga de Charla en daño 3 (puesto en la base), Blacksmith Kuehn en Gludio (32633, 32801): la ventana "Repair" ("Damage 3: 600 adena"), el clic, 600 adena menos y daño 0 en la base (`docs/capturas/11_reparar.png`).
+- **Volver a la selección de personaje** (`C_ChangeChar`): botón "Character select" en la ventana Exit. El servidor saca al personaje (`S_PacketBox` 42) y manda la lista de personajes; el cliente limpia el mundo al recibirla. **Verificado:** salir y volver a entrar con Charla (`docs/capturas/11_cambiar_personaje.png`).
 - **Marcadores** (`S_Bookmarks`, `C_AddBookmark`, `C_DeleteBookmark`; `app/marcadores_ui.cpp`): "/bookmark nombre" en el chat guarda el lugar, "/delbookmark nombre" lo borra. Con marcadores, el pergamino de teleport (usos 6 y 29: `C_UseItem` con mapa y marcador) y los hechizos Teleport y Mass Teleport (`C_UseSkill` con mapa y marcador) abren la lista de destinos ("Random" o un marcador; clic derecho borra uno). Sin marcadores, el pergamino va al azar como antes (antes se mandaba sin mapa ni marcador).
   - **El servidor de pruebas no los permite:** ningún mapa de la base tiene `markable` = 1 ("You cannot bookmark this location", también para un GM), y `C_LoginToServer.bookmarks()`, que manda los guardados al entrar, existe pero nunca se llama. Se verificó en vivo que "/bookmark" manda `C_AddBookmark` y que el pergamino sin marcadores teletransporta al azar; el decodificador y los comandos, con tests.
 
@@ -706,11 +701,11 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 - **Almacén (regresión):** el NPC del almacén de Talking Island (Storage^Dorin, gfx 10669) no está en la tabla de sprites, y desde el cambio de los monstruos sin sprite contaba como monstruo: el clic lo atacaba. Ahora un gfx desconocido cuenta como monstruo salvo que el nombre sea "Oficio^Nombre", como el de los NPCs de los pueblos (ningún monstruo sin sprite de esta base lo tiene). **Verificado:** el clic le habla y abre su página.
 - **Forzar ataque (Ctrl+clic, también ⌘):** ya estaba; verificado con `--ctrl` sobre el almacén: `C_Attack` aceptado por el servidor (gastó una flecha y respondió el ataque).
-- **Modo PK** ("/pk", del cliente: el servidor no tiene ese comando): el clic sobre otro jugador lo ataca sin Ctrl (también la tecla A), con el cursor de espada e indicador "PK". **Verificado** con dos clientes en el mapa 2005: Prueba en segundo plano y Charla con "/pk" y un clic sobre él: 2 ataques (sin daño: zona segura) (`../capturas/9_modo_pk.png`).
+- **Modo PK** ("/pk", del cliente: el servidor no tiene ese comando): el clic sobre otro jugador lo ataca sin Ctrl (también la tecla A), con el cursor de espada e indicador "PK". **Verificado** con dos clientes en el mapa 2005: Prueba en segundo plano y Charla con "/pk" y un clic sobre él: 2 ataques (sin daño: zona segura) (`docs/capturas/9_modo_pk.png`).
 
 ## Aprender magia: maestros y libros
 
-![Lista del maestro de magia](../capturas/8_aprender_magia.png)
+![Lista del maestro de magia](docs/capturas/8_aprender_magia.png)
 
 **Maestro de magia** (Gereng en Talking Island, Siriss, Sedia...):
 - **Por qué no andaba:** sus páginas tienen el vínculo `action="buyspell"`, que el cliente original no manda como `C_NPCAction` (el servidor lo ignora) sino como `C_SkillBuy` (d NPC).
@@ -735,7 +730,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Ataques con arco
 
-![Flecha en vuelo](../capturas/5_flecha.png)
+![Flecha en vuelo](docs/capturas/5_flecha.png)
 
 - **Alcance por arma** (`alcance_ataque` en `mundo.h`): el arma sale del estado visual de `S_CharPack` / `S_CharVisualUpdate`, que es el tipo de arma de L1J.
   - **Arco (20) y guantelete (62):** disparan a lo que esté "en pantalla" para el servidor (`L1Attack.calcHit` → `Point.isInScreen`: 18 celdas), sin acercarse.
@@ -759,7 +754,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Basurero, detalle de los ítems e identificar
 
-![Ítem identificado](../capturas/item_identificado.png) ![Basurero](../capturas/basurero.png)
+![Ítem identificado](docs/capturas/item_identificado.png) ![Basurero](docs/capturas/basurero.png)
 
 - **Basurero** (`C_DeleteInventoryItem`; `app/inventario_ui.cpp`, `app/cantidad_ui.cpp`): ícono abajo a la derecha del inventario. Arrastrar un ítem encima lo elimina, también lo que no se puede soltar ni vender. Siempre pregunta, con el diálogo de cantidad: cuántos de una pila, o confirmar si es uno. El servidor rechaza lo equipado, lo que no se puede borrar y lo sellado (con su mensaje). **Verificado:** una pila de 5 Potion of Bravery de Charla quedó en 3 (`S_ItemAmount` y la base); arrastrar al basurero abre la confirmación.
 - **Detalle de un ítem:** al pasar el mouse, el nombre y, si está identificado, sus atributos, uno por línea: daño o AC, material, peso, encantamiento, dos manos, clases que lo usan, acierto y daño (también con arco), FUE…CAR, HP, MP, SP, MR, resistencias a elementos y a estados, regeneración, bono de experiencia, robo de HP o MP. Si no está identificado, "Unidentified". Los atributos (`getStatusBytes` del servidor) llegan en `S_AddItem`, `S_InvList` y `S_ItemStatus`; antes el decodificador los saltaba. Se guardan por ítem (`I_ATRIBUTOS`) y `describir_atributos` (`mundo/inventario.cpp`) los pasa a texto.
@@ -775,11 +770,11 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 - **Selección con Shift+clic:** marca o desmarca (marco celeste); un clic sin Shift la limpia. Arrastrar un ítem marcado lleva todos: al suelo, al intercambio, a otra celda, a un NPC o mascota (pilas enteras, sin preguntar: `dar_items`) o al basurero (una sola confirmación, pilas enteras: `borrar_items`). Los atajos y los casilleros Auto reciben solo el ítem arrastrado.
 - **Verificado:** `herramientas/pruebas/inventario_orden.py` (Charla, 50 ítems): Sort deja el orden esperado, Shift+clic marca dos y arrastrarlos a la primera celda los pone al principio. Tests de `reordenar` y `mover_items`.
 - **Orden guardado:** el servidor no guarda posiciones, así que el orden queda en settings.ini por personaje (`inventario_orden`: los ids de los ítems) al usar Sort o mover un ítem, y vuelve tras `S_InvList` (`ordenar_por_ids`). **Verificado:** la prueba en vivo reinicia el cliente y el orden se mantiene.
-- **Pendiente o conocido:** un ítem nuevo va al final; el programa de configuración no tiene botón para borrar el orden guardado. Soltar varios al suelo o al basurero no se probó en vivo (es el mismo camino que uno, en un bucle).
+- **Pendiente o conocido:** un ítem nuevo va al final; el orden guardado se borra en Ajustes > Personajes ("Quitar orden"). Soltar varios al suelo o al basurero no se probó en vivo (es el mismo camino que uno, en un bucle).
 
 ## Invisibilidad, resucitar, modo espectador y volver al login
 
-![Resucitado](../capturas/resucitar.png)
+![Resucitado](docs/capturas/resucitar.png)
 
 - **Invisible** (`S_Invis`: d id, c 1/0): el servidor se lo manda al propio personaje (capa de invisibilidad, hechizo, `.invisible` de GM); a los demás les llega `S_RemoveObject`. El personaje se dibuja translúcido (`FLAG_INVISIBLE`, el mismo flag de `S_CharPack`, así que un GM ve igual a los invisibles). **Verificado:** `.invisible` con Charla: `S_Invis` 1 y el personaje translúcido.
 - **Resucitar** (`S_Resurrection`: d quién, c tipo, d quién lo revivió, d clase): va al resucitado y a quienes lo ven. El cadáver vuelve a estar vivo (sin la acción de morir) y, si es el jugador, desaparece el cuadro "You have died". **Verificado** con dos clientes: Prueba (no GM) con `--aceptar` y Charla con `.recall Prueba`, `.death Prueba` y, unos segundos después, `.ress`: la pregunta 322, el sí (`C_Attr`), `S_Resurrection` y Prueba de pie con 89/89.
@@ -796,18 +791,18 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Buffs: íconos y encantar arma o armadura
 
-![Íconos de buffs](../capturas/buffs_iconos.png)
+![Íconos de buffs](docs/capturas/buffs_iconos.png)
 
 - **Íconos que faltaban:** Enchant Strength (Mighty) y Enchant Dexterity, y los de elfo (Dress Mighty/Dexterity), llegan en `S_Strup` (120) y `S_Dexup` (28), que no se decodificaban. Ahora son efectos activos con el ícono del hechizo (tipo 5 mago, 2 elfo; las pociones, "STR"/"DEX").
 - **Bless Weapon, Holy Weapon, Enchant Weapon, Blessed Armor, Shadow Fang:** el servidor no manda ícono, solo el mensaje 161 ("... brilla"). El cliente registra el efecto al recibirlo después de lanzarlo, con la duración de `spells` (`duration=`).
 - **Enchant Weapon y Blessed Armor no funcionaban:** el servidor lee en `C_UseSkill`, en el lugar del objetivo, el ítem a encantar (`_itemobjid`), y el cliente no lo mandaba (respondía 79, "no pasó nada"). Ahora manda el arma o la armadura (cuerpo) equipada; la clase de `spells` dice cuál (`SpellEnchantWeapon`, `SpellBlessedArmor`; `SpellEnchantCurrentWeapon` usa la equipada sin indicarla).
 - **Verificado** con Aprendiz (maga) y la daga equipada: Enchant Strength (`S_Strup` 1200 s), Bless Weapon (161), Enchant Dexterity (`S_Dexup`) y Enchant Weapon (con el id de la daga: 161) muestran sus cuatro íconos (20m, 20m, 20m, 30m). Blessed Armor sin armadura equipada: 79, como corresponde.
-- **Buffs sin paquete de ícono** (Advance Spirit, Light, Counter Magic, muchos de elfo, caballero y elfo oscuro): el cliente original trae en `spells` la duración de cada uno, así que lleva el tiempo él mismo. Ahora, al lanzar un buff sobre sí mismo, el ícono se pone cuando llega su gráfico (`S_SkillSound` con el `graphic=` de `spells`) sobre el personaje en los 3 s siguientes; sin `graphic=` (Light), vale el primero que llegue en 1,5 s. Si el servidor también manda el suyo (Holy Walk, Shield...), se dibuja uno solo. **Verificado** con Aprendiz: Advance Spirit (20m), Light (60m) y Holy Walk (59s, una sola vez) (`../capturas/buffs_propios.png`); con Cloud (caballero, nivel y vida subidos solo para la prueba y después restaurados): Reduction Armor y Solid Carriage quedan registrados.
+- **Buffs sin paquete de ícono** (Advance Spirit, Light, Counter Magic, muchos de elfo, caballero y elfo oscuro): el cliente original trae en `spells` la duración de cada uno, así que lleva el tiempo él mismo. Ahora, al lanzar un buff sobre sí mismo, el ícono se pone cuando llega su gráfico (`S_SkillSound` con el `graphic=` de `spells`) sobre el personaje en los 3 s siguientes; sin `graphic=` (Light), vale el primero que llegue en 1,5 s. Si el servidor también manda el suyo (Holy Walk, Shield...), se dibuja uno solo. **Verificado** con Aprendiz: Advance Spirit (20m), Light (60m) y Holy Walk (59s, una sola vez) (`docs/capturas/buffs_propios.png`); con Cloud (caballero, nivel y vida subidos solo para la prueba y después restaurados): Reduction Armor y Solid Carriage quedan registrados.
 - **Magias sin ícono en los datos:** `spellicon.idx` tiene 168 entradas y en 0 las de caballero (Shock Stun, Reduction Armor, Bounce Attack, Solid Carriage, Counter Barrier), Armor Break, Avatar, Triple Arrow, Elemental Falldown, Counter Mirror, Aqua Protect, las de elfo 169–176 y Bloodlust; las de caballero dragón (181–195) e ilusionista (201–220) quedan fuera del archivo. Se ven como un recuadro con las primeras letras del nombre. Hay una serie de íconos de estado (1576–1600, el estilo del de Holy Walk, 1578) que probablemente son esos, pero ningún archivo de datos legible dice cuál es cuál: esa tabla debe estar en `lin.bin` (cifrado). Pendiente: asignarlos a mano, comparando con el original.
 
 ## Hechizos de área alrededor del lanzador
 
-![Tornado](../capturas/area_tornado.png) ![Blizzard](../capturas/area_blizzard.png)
+![Tornado](docs/capturas/area_tornado.png) ![Blizzard](docs/capturas/area_blizzard.png)
 
 - **Sin objetivo:** Tornado, Fire Storm, Blizzard y Freezing Blizzard afectan el área alrededor del lanzador (en el servidor, objetivo "none" con área 4, 3, 10 y 10). La ficha dice "Area of Effect Within N cells", igual que Lightning Storm y Meteor Strike, que sí van sobre un objetivo; la diferencia está en `spells`: las primeras no tienen `range=`. Ahora se lanzan al instante, sin pedir objetivo.
 - **El gráfico:** llega en `S_RangeSkill` tipo 0 con la lista de afectados; el cliente lo ponía sobre cada monstruo (y sin monstruos, no se veía nada). Ahora va en la celda del lanzador y se reparte según la clase de `spells`: `SpellTornado`, 4 copias (arriba, abajo, izquierda y derecha en pantalla, a la mitad del área); `SpellBlizzard`, una cada 3 celdas en todo el círculo del área (10 celdas: toda la pantalla original). Los sprites (758, 1819, 757, 3933) son de un solo cuadro de efecto: el original arma la composición en el ejecutable, así que la disposición es aproximada.
@@ -816,7 +811,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Colores de los nombres: PK y nivel de los monstruos
 
-![Nivel](../capturas/nombres_nivel.png) ![Rosa](../capturas/nombre_rosa.png)
+![Nivel](docs/capturas/nombres_nivel.png) ![Rosa](docs/capturas/nombre_rosa.png)
 
 - **Nombre rosa** (`S_PinkName`: d id, d segundos): quien ataca a otro jugador legal en zona normal queda rosa 180 s (a él y a quienes lo ven); con 0 segundos, termina. Se guarda por objeto (`O_ROSA`). **Verificado** con dos clientes en un campo del mapa 4: Charla con Ctrl ataca a Prueba; llega `S_PinkName` 180 a los dos y Charla se ve rosa. (Después, los dos de vuelta en Talking Island.)
 - **Monstruos según su nivel:** `S_NPCPack` trae el nivel del monstruo (el segundo byte después del HP; en los personajes es 0). El nombre va blanco si es mucho más bajo que el jugador (≤ −10), verde si es parecido, amarillo si es algo más alto (≥ +5) y rojo si es mucho más alto (≥ +10) (`nivel_relativo`, `DIF_*` en `mundo/mundo.h`). Los NPC siguen en celeste. **Verificado** con Aprendiz (nivel 30): Rock Golem (5) blanco, Scorpion (26) verde, Elekkadom (35) amarillo, Jack-O-Lantern (45) rojo.
@@ -824,7 +819,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Pociones de FUE y DES, otros efectos y reiniciar atributos
 
-![Reiniciar atributos](../capturas/reiniciar_atributos.png) ![Poción de FUE](../capturas/pocion_fue.png)
+![Reiniciar atributos](docs/capturas/reiniciar_atributos.png) ![Poción de FUE](docs/capturas/pocion_fue.png)
 
 - **Pociones de FUE y DES** (Flora, estímulo, talento): llegan como `S_Strup`/`S_Dexup` con el aumento en el lugar del tipo (6), así que no se distinguen de las magias por el paquete; el ícono es el del ítem recién usado. **Verificado** con Aprendiz y la poción 40922: `S_Strup` 300 s y el ícono de la poción (5m).
 - **`S_Liquor`:** 1 borracho (la pantalla se mece hasta el 0), 8 tercer acelerador: todas las acciones × 0,87 (como en el `AcceleratorChecker` del servidor) y su efecto en la barra (600 s; el paquete no trae el tiempo). **`S_SkillIconBlessOfEva`:** respirar bajo el agua, con su tiempo. **`S_Ability`:** anillos de control de teletransporte e invocación; se guardan (el cliente ya pregunta el destino del teleport y la invocación llega como página del servidor).
@@ -837,7 +832,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Grupo, bloqueados, amigos y sonidos del servidor
 
-![Panel del grupo](../capturas/grupo_panel.png)
+![Panel del grupo](docs/capturas/grupo_panel.png)
 
 - **Panel del grupo** (`dibujar_grupo`, `app/social_ui.cpp`): `S_PacketBox` 104 trae la lista con el líder y la vida de cada uno (al que se une), 105 el que se une (a los demás), 106 el líder nuevo; la vida se actualiza con `S_HpMeter`, que el servidor manda a todo el grupo aunque estén lejos. Se vacía con los mensajes 418 (disuelto), 419 (echado) o 420 con el propio nombre. A la izquierda, a media altura, los otros miembros con su barra de vida y el líder con "*". **Verificado** con dos clientes en el mapa 2005: Charla `/invite Prueba`, Prueba con `--aceptar`: a Prueba le llega 104 y ve "* Charla" con su vida; a Charla, 105 y "Prueba entered the party".
   - El servidor manda la vida de la lista 104 como 0 o 100 (calcula `(int)(hp/max) * 100`); la real llega enseguida con `S_HpMeter`.
@@ -848,7 +843,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Tienda de jugadores
 
-![Tienda](../capturas/tienda_jugador.png)
+![Tienda](docs/capturas/tienda_jugador.png)
 
 - **Dónde:** solo en las salas del mercado (mapas 340, 350, 360 y 370; fuera, el servidor responde el mensaje 876).
 - **Vendedores** (`app/tienda_ui.cpp`): `S_DoActionGFX` con la acción 70 trae el título de la tienda (también a quien llega después). Se los dibuja sentados (el último cuadro de la acción 70) con el título sin fondo y con sus colores sobre el nombre. Un clic camina hasta 2 celdas y pide la lista (`C_ShopList`); `S_PrivateShop` tipo 0 trae lo que vende (orden, bendición, ícono, cantidad, precio y nombre) y tipo 1 lo que compra, solo con los ítems propios que le sirven.
@@ -859,7 +854,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Tablón de los pueblos y correo
 
-![Tablón](../capturas/tablon.png) ![Correo](../capturas/correo.png) ![Correo nuevo](../capturas/correo_sobre.png)
+![Tablón](docs/capturas/tablon.png) ![Correo](docs/capturas/correo.png) ![Correo nuevo](docs/capturas/correo_sobre.png)
 
 - **Tablón** (`app/tablon_ui.cpp`; gfx 1544, 1546, 1557, 1559, 2205, 2207): un clic camina hasta él y manda `C_Board` (antes iba `C_NPCTalk`, que el servidor no responde para el tablón). `S_Board` trae una página de hasta 8 temas (id, autor, fecha, título; la primera además el costo, 300); "Next" pide la siguiente con el último tema (`C_BoardBack`); un clic lee el tema (`C_BoardRead` / `S_BoardRead`); "Write" (título y texto) publica (`C_BoardWrite`) y el autor puede borrar el suyo (`C_BoardDelete`). El servidor cobra las 300 adena sin revisar que alcancen: el cliente no deja publicar sin ellas.
 - **Correo** (`app/correo_ui.cpp`): `/mail` abre la bandeja (Inbox, Clan, Saved: `C_Mail` 0–2); un clic lee la carta (0x10+), "Delete" (0x30+) y "Keep" (0x40, a guardadas). "Write" escribe a un personaje (50 adena) o a todo el clan (1000 por miembro): destinatario, asunto y texto. El asunto y el texto van en UTF-16LE (asunto, 0 0, texto, 0 0); el cliente escribe y muestra solo ASCII (lo demás, "?"). Una carta nueva (`S_Mail` 0x50) avisa en el chat. El servidor manda la bandeja al entrar al juego.
@@ -870,7 +865,7 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Equipo del personaje
 
-![Equipo](../capturas/equipo.png) ![Equipo, UI simple](../capturas/equipo_simple.png) ![Correo, UI simple](../capturas/correo_simple.png)
+![Equipo](docs/capturas/equipo.png) ![Equipo, UI simple](docs/capturas/equipo_simple.png) ![Correo, UI simple](docs/capturas/correo_simple.png)
 
 - **Pestañas en la ventana de estado** (Alt+C): "Status" (los atributos, como antes) y "Equipment" (`app/equipo_ui.cpp`), como el original, que los muestra en la misma ventana.
 - **La imagen del original:** 981 de `Sprite.pak` (179×275), encontrada en las hojas de miniaturas junto a la página de estado (982) y el marco (983/984): la silueta con un recuadro por parte del cuerpo y "Armor Class". En cada recuadro, el ícono de lo equipado: la parte sale del tipo de uso del ítem (1 arma, 2 armadura, 18 camiseta, 19 capa, 20 guantes, 21 botas, 22 casco, 24 collar, 25 escudo, 37 cinturón, 40 aro) y "equipado" del sufijo del nombre. Los anillos (23) no tienen recuadro: van más chicos en el espacio libre de abajo a la derecha. Con el puntero encima, el nombre y los atributos del ítem. La AC va en su campo. Sin la imagen, recuadros oscuros en el mismo lugar.
@@ -880,11 +875,11 @@ Primera tanda de la revisión de opcodes (`docs/analisis/OPCODES_PENDIENTES.md`)
 
 ## Casas y castillos
 
-![Subasta](../capturas/casas_subasta.png) ![Mapa de la casa](../capturas/casas_mapa.png) ![Nombre de la casa](../capturas/casas_nombre.png) ![Puerta](../capturas/casas_puerta.png)
-![Torre](../capturas/asedio_torre.png) ![Corona](../capturas/asedio_corona.png) ![Castillo tomado](../capturas/asedio_tomado.png) ![Impuesto](../capturas/castillo_impuesto.png) ![Fecha del asedio](../capturas/castillo_fecha.png)
-![Guerra declarada](../capturas/guerra_declarada.png) ![Al entrar](../capturas/guerra_al_entrar.png) ![Rendición](../capturas/guerra_rendicion.png)
+![Subasta](docs/capturas/casas_subasta.png) ![Mapa de la casa](docs/capturas/casas_mapa.png) ![Nombre de la casa](docs/capturas/casas_nombre.png) ![Puerta](docs/capturas/casas_puerta.png)
+![Torre](docs/capturas/asedio_torre.png) ![Corona](docs/capturas/asedio_corona.png) ![Castillo tomado](docs/capturas/asedio_tomado.png) ![Impuesto](docs/capturas/castillo_impuesto.png) ![Fecha del asedio](docs/capturas/castillo_fecha.png)
+![Guerra declarada](docs/capturas/guerra_declarada.png) ![Al entrar](docs/capturas/guerra_al_entrar.png) ![Rendición](docs/capturas/guerra_rendicion.png)
 
-Plan: [docs/analisis/PLAN_CASTILLOS_CASAS.md](../analisis/PLAN_CASTILLOS_CASAS.md).
+Plan: [docs/analisis/PLAN_CASTILLOS_CASAS.md](docs/analisis/PLAN_CASTILLOS_CASAS.md).
 
 **Protocolo** (tests de bytes en `tests/test_proto.cpp`):
 - `S_HouseList`, `S_HouseMap`, `S_War`, `S_CastleMaster`, `S_TaxRate`, `S_Deposit`, `S_Drawal`;
@@ -944,9 +939,9 @@ Plan: [docs/analisis/PLAN_CASTILLOS_CASAS.md](../analisis/PLAN_CASTILLOS_CASAS.m
 
 ## Sin parámetros: servidores en el login y control en vivo
 
-![Login con servidores](../capturas/login_servidores_simple.png) ![Menú abierto](../capturas/login_menu_servidores.png) ![Interfaz original](../capturas/login_servidores_original.png)
+![Login con servidores](docs/capturas/login_servidores_simple.png) ![Menú abierto](docs/capturas/login_menu_servidores.png) ![Interfaz original](docs/capturas/login_servidores_original.png)
 
-Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](../analisis/PLAN_CONTROL_VIVO.md).
+Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](docs/analisis/PLAN_CONTROL_VIVO.md).
 
 - **El cliente no tiene parámetros:**
   - se quitaron los 53 `--algo`, la estructura `Automatizacion` y sus ~114 usos en 16 archivos;
@@ -985,7 +980,7 @@ Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](../analisis/PLAN_CONTROL_VIVO.md).
 
 ## Servidor 3.80C (L1JGO-Whale)
 
-![Entrar](../capturas/380_entrar.png) ![NPC](../capturas/380_npc.png) ![Combate](../capturas/380_combate.png)
+![Entrar](docs/capturas/380_entrar.png) ![NPC](docs/capturas/380_npc.png) ![Combate](docs/capturas/380_combate.png)
 
 - **El servidor:** [L1JGO-Whale](https://github.com/r0ptik/L1JGO-Whale), un servidor 3.80C de Taiwán en Go con PostgreSQL. `servidor_380/instalar.sh` lo deja local:
   - commit fijo, Go y PostgreSQL de Homebrew;
@@ -1015,7 +1010,7 @@ Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](../analisis/PLAN_CONTROL_VIVO.md).
 
 ## Interfaz: ventanas móviles, transparencia y botones
 
-![UI simple](../capturas/ui_ventanas_simple.png) ![UI original](../capturas/ui_ventanas_original.png)
+![UI simple](docs/capturas/ui_ventanas_simple.png) ![UI original](docs/capturas/ui_ventanas_original.png)
 
 - **Mover las ventanas** (`app/ventanas.cpp`):
   - estado, inventario, hechizos, diálogo de NPC y opciones se arrastran por la barra de título;
@@ -1035,7 +1030,7 @@ Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](../analisis/PLAN_CONTROL_VIVO.md).
 - **Verificado:**
   - arrastrar el inventario con `--arrastrar=1100,45,700,300` lo mueve, guarda `ventanas=inventario:626,291` y el estado ocupa el lugar que dejó;
   - capturas con las dos interfaces;
-  - cinco ventanas abiertas a la vez con 1600×900 lógicos: ninguna se solapa (`../capturas/ui_ventanas_sin_solapar.png`); con 1008×552 no entran y se apilan con fondo opaco, y un clic simulado en una parte visible de Opciones la trae adelante (`ui_ventanas_al_frente.png`).
+  - cinco ventanas abiertas a la vez con 1600×900 lógicos: ninguna se solapa (`docs/capturas/ui_ventanas_sin_solapar.png`); con 1008×552 no entran y se apilan con fondo opaco, y un clic simulado en una parte visible de Opciones la trae adelante (`ui_ventanas_al_frente.png`).
 - **Pendiente o conocido:**
   - **Ventana que se abre:** se ve un frame en su lugar de siempre antes de pasar al lugar libre (se detecta al frame siguiente).
   - **Botones del panel original:** su lugar es aproximado (la franja libre del panel). Los otros tres botones de la serie (salir 1013, grupo/intercambio 1015, ayuda 1017) llegan con sus funciones.
@@ -1043,7 +1038,7 @@ Plan: [docs/analisis/PLAN_CONTROL_VIVO.md](../analisis/PLAN_CONTROL_VIVO.md).
 
 ## Interfaz: cursores
 
-![Cursores](../capturas/cursores.png)
+![Cursores](docs/capturas/cursores.png)
 
 - **Cuándo cambia** (`app/cursores.cpp`):
   - **mano:** para moverse y sobre la interfaz;

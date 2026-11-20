@@ -166,7 +166,7 @@ void alternar_pagina(App& a, std::string_view pagina) {
 }  // namespace
 
 void alternar_opciones(App& a) {
-    if (a.cfg.ui_simple) a.ventana_opciones = !a.ventana_opciones;
+    if (a.cfg.ui_simple) a.ventana_ajustes = !a.ventana_ajustes;
     else alternar_pagina(a, "option1");
 }
 
@@ -681,7 +681,8 @@ void dibujar_tienda(App& a, int x0, int y0) {
         g.gpu().rectangulo(x, y, w, FILA_TIENDA - 2, kf, f.elegido ? rgba(80, 64, 20, 230) : encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
         draw_item_icon(g.gpu(), g.icono(f.gfx), x + 1, y, ki, f.bendicion);
         size_t m = nombre_fila(a, f, buf, sizeof buf);
-        const u32 color = rgba(255, 255, 254);
+        const u8 b = bless_kind(f.bendicion);
+        u32 color = b == BLESS_BLESSED ? rgba(255, 230, 120) : b == BLESS_CURSED ? rgba(255, 110, 100) : rgba(255, 255, 254);
         // El nombre en una línea (cortado si no entra) y debajo precio y cantidad elegida.
         while (m > 0 && ancho_texto(buf, m) > w - 40) --m;
         g.texto({buf, m}, static_cast<float>(x + 38), static_cast<float>(y + 3), kt, color);

@@ -78,8 +78,8 @@ struct EstadoJugador {
     EfectoActivo efectos[MAX_EFECTOS_ACTIVOS];
     u32 n_efectos = 0;
 
-    bool sabe(u32 id) const {
-        return id >= 1 && id <= FILAS_HECHIZOS * 8u && ((hechizos[(id - 1) / 8] >> ((id - 1) % 8)) & 1);
+    bool sabe(u32 hechizo) const {
+        return hechizo >= 1 && hechizo <= FILAS_HECHIZOS * 8u && ((hechizos[(hechizo - 1) / 8] >> ((hechizo - 1) % 8)) & 1);
     }
 };
 

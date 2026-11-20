@@ -7,13 +7,61 @@ con su verificación y lo pendiente, está en [ENTREGABLES.md](ENTREGABLES.md).
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
-## Sin publicar
+## v0.1.5 (2026-11-20)
+
+### Agregado
+- **Tabla real de sprites del cliente:** se lee `TW13032701.txt` (o un `list.spz` descifrado) de la carpeta del
+  juego, o la que indique `lista_sprites=`, y agrega los gfx que `sprite_table.txt` no tiene (llega al 8682),
+  validados contra los `.pak`. Con la del cliente de Reborn: 2156 gfx con animaciones y 1384 con atributos.
+  Antes se veían quietos o como un bloque magenta (#47).
+- **Ventana de ajustes en el juego:** el formulario de configuración (Juego, Interfaz, Audio, Servidores,
+  Personajes) se abre desde el login (Ajustes, u Options en la interfaz original) y en el juego (Options).
+  Guardar aplica los cambios en el momento; la carpeta del juego y la tabla de sprites avisan que valen al
+  reiniciar el cliente. Suma Texto HD, globos con recuadro, tabla de sprites y quitar el orden del
+  inventario de un personaje (#48).
+
+### Cambiado
+- **Opciones y "Lineage Settings":** la ventana Options y el programa aparte de ajustes se reemplazan por la
+  ventana de ajustes; el `.dmg` y el `.zip` de Windows traen solo el juego (#48).
+- **CI:** no compila cuando un cambio es solo de documentación (Markdown, `docs/`, `LICENSE`) (#48).
+
+### Corregido
+- **Muertes:** el cuerpo ya no se levanta y vuelve a caer al morir; la caída termina en el cadáver (#47).
+
+## v0.1.4 (2026-11-19)
+
+### Agregado
+- **Windows (x64 y arm64):** el cliente compila con Visual Studio y dibuja con D3D12 (Winsock2, archivos
+  mapeados con `MapViewOfFile` y rutas UTF-16, control en vivo por TCP). La release trae un `.zip` por
+  arquitectura con ícono, versión y el runtime de C++ estático. Probado en Windows 11 arm64 en una VM (#20).
+- **Linux (x64 y arm64):** compila y pasa los tests (Vulkan); los archivos del juego se buscan sin distinguir
+  mayúsculas (`Sprite.pak`, `Map/`, `Music1012.mp3`). Falta probar el juego completo en Linux (#20).
+- **Texto HD** (`texto_hd=1`, Options "HD text"): los glifos se suavizan a la resolución real de la
+  pantalla en vez de agrandar cada píxel de la fuente (#44).
+
+### Cambiado
+- **Shaders:** una sola fuente en HLSL, compilada a SPIR-V, DXIL y MSL. En macOS hace falta
+  `brew install glslang spirv-cross` para compilar (#20).
+- **Zoom con la UI simple:** Ctrl −/+ cambia solo el mapa; el panel, las ventanas y los nombres sobre los
+  personajes quedan del mismo tamaño (#44).
+- **CI:** compila y corre los tests en macOS, Windows y Linux (x64 y arm64), sin avisos de MSVC `/W4` y con
+  los avisos como errores (#20).
+
+### Corregido
+- **Ítems:** el byte de bendición se leía al revés (0 es bendito, 1 normal) y los ítems normales salían
+  en amarillo, como benditos (#44).
+- **CA** por debajo de -128 se mostraba positiva (#44).
+
+## v0.1.3 (2026-11-18)
+
+### Agregado
+- `CHANGES.md` con los cambios entre versiones (#40).
 
 ### Corregido
 - **Inventario:** el orden (Sort o mover a otra celda) se guarda por personaje en settings.ini y se
-  mantiene al reiniciar el cliente.
+  mantiene al reiniciar el cliente (#41).
 - **Mapas negros:** se leen los segmentos en el formato viejo `.seg`, que algunas zonas tienen en vez de
-  `.s32` (el Chaotic Temple, alrededor de Gludio y partes del mapa 371).
+  `.s32` (el Chaotic Temple, alrededor de Gludio y partes del mapa 371) (#42).
 
 ## v0.1.2 (2026-11-17)
 

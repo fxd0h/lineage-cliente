@@ -91,6 +91,24 @@ Vista vista(const App& a) {
     return v;
 }
 
+// La misma vista en píxeles lógicos del mundo. Con el zoom solo del mapa (UI simple) el mundo tiene su
+// propia escala y la GPU lo lleva a la interfaz multiplicando por zoom_mundo: así un zoom menor muestra más
+// mapa sin achicar la interfaz. Sin ese zoom es igual a vista(a).
+Vista vista_mundo(const App& a) {
+    Vista v = vista(a);
+    const float z = a.gpu.zoom_mundo();
+    if (z == 1.0f) return v;
+    auto m = [z](int x) { return static_cast<int>(std::lround(x / z)); };
+    v.w = static_cast<int>(std::ceil(v.w / z));
+    v.h = static_cast<int>(std::ceil(v.h / z));
+    v.hx = m(v.hx), v.hy = m(v.hy), v.panel_y = m(v.panel_y), v.panel_x0 = m(v.panel_x0), v.panel_x1 = m(v.panel_x1);
+    v.cx = m(v.cx), v.cy = m(v.cy);
+    return v;
+}
+// El puntero en píxeles lógicos del mundo (para compararlo con lo que se dibujó en el mundo).
+float raton_mundo_x(const App& a) { return a.entrada.mx / a.gpu.zoom_mundo(); }
+float raton_mundo_y(const App& a) { return a.entrada.my / a.gpu.zoom_mundo(); }
+
 // Profundidad de dibujo en la capa del mundo (32 bits): fila de pantalla del pie (23 bits, en
 // cuartos de píxel), orden dentro de esa fila (6 bits: piezas de objetos de arriba hacia abajo y
 // al final los personajes) y subcapa (3 bits).
@@ -157,7 +175,7 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     // si no hay, parado en el primer cuadro de caminar, no dando pasos en el lugar. Los objetos sin
     // quieto (los braseros, por ejemplo) sí se animan con caminar.
     if (!v.rango && base == ACC_QUIETO && !muerto && tipo_objeto(a, s) == TIPO_PERSONAJE) {
-        for (u8 otra_arma : {4, 11, 20, 24, 40, 46, 50, 54, 58, 62})
+        for (int otra_arma : {4, 11, 20, 24, 40, 46, 50, 54, 58, 62})
             if (!v.rango) v.rango = a.sprites.accion(gfx, static_cast<u8>(ACC_QUIETO + otra_arma));
         if (!v.rango) {
             v.rango = a.sprites.accion(gfx, ACC_CAMINAR);
@@ -206,7 +224,7 @@ void dibujar_suelo(App& a, double cam_x, double cam_y, double ox, double oy) {
     u64 k = clave_orden(CAPA_SUELO, 0);
     // Recorrido en coordenadas de pantalla: u = dx + dy (columnas de 24 px), v = dy - dx (filas
     // de 12 px), con margen para los rombos que entran a medias por los bordes.
-    const Vista vi = vista(a);
+    const Vista vi = vista_mundo(a);
     const int u_max = vi.w / 2 / 24 + 3, v_min = -(vi.cy / 12 + 4), v_max = (vi.h - vi.cy) / 12 + 4;
     for (int v = v_min; v <= v_max; ++v) {
         for (int u = -u_max; u <= u_max; ++u) {
@@ -250,7 +268,7 @@ Mezcla mezcla_tile(Graficos& g, u32 tile) {
 void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double oy) {
     Graficos& g = *a.g;
     int cx = static_cast<int>(cam_x), cy = static_cast<int>(cam_y);
-    const Vista vi = vista(a);
+    const Vista vi = vista_mundo(a);
     const App::ObjetoEnPantalla* yo = nullptr;
     a.jugador_tapado = false;
     for (const App::ObjetoEnPantalla& r : a.en_pantalla)
@@ -389,7 +407,8 @@ void dibujar_emblema(App& a, u32 clan, float x, float y) {
 void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
     Graficos& g = *a.g;
     TablaObjetos& o = a.mundo.objetos;
-    const Vista vi = vista(a);
+    const Vista vi = vista_mundo(a);
+    const float mx = raton_mundo_x(a), my = raton_mundo_y(a);
     a.en_pantalla.clear();
     a.luces.clear();
     for (Slot s = 0; s < o.tamano(); ++s) {
@@ -504,7 +523,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, 0xFFFFFFFEu), rgba(255, 255, 255, ALFA_SILUETA));  // bajo la lluvia, sobre el resto
             top = py + rg.oy - desfase_y;
             const float x0 = px + rg.ox, y0 = py + rg.oy, x1 = x0 + rg.w, y1 = y0 + rg.h;
-            bajo_puntero = a.entrada.mx >= x0 && a.entrada.mx < x1 && a.entrada.my >= y0 && a.entrada.my < y1;
+            bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});
         } else {
             // Sin sprite: un bloque del tamaño de un cuerpo, que se puede elegir con el clic. Mientras
@@ -516,8 +535,18 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (!rg_pendiente && !frame_vacio)
                 g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), rgba(255, 0, 255, 170));
             top = y0;
-            bajo_puntero = a.entrada.mx >= x0 && a.entrada.mx < x1 && a.entrada.my >= y0 && a.entrada.my < y1;
+            bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
+        }
+        // Con zoom solo del mapa, lo de encima de la cabeza (barras, nombre, título, globo, daño) va al tamaño
+        // de la interfaz para que se lea: el ancla pasa a coordenadas de la interfaz y la GPU no lo escala.
+        const float z = g.gpu().zoom_mundo();
+        if (z != 1.0f) {
+            sx = (sx + 24) * z - 24;
+            ex = (ex + 24) * z - 24;
+            sy *= z;
+            top *= z;
+            g.gpu().sin_zoom_mundo(true);
         }
         // Barra de vida si el servidor la da (S_HpMeter: grupo y mascotas; el % de S_CharPack es
         // 0xFF para los monstruos en L1J-JP) y nombre; el objetivo del ataque, en amarillo.
@@ -610,16 +639,17 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         }
         // Without a name label the emblem floats above the head (0x462d60): tile anchor + (17, -52).
         if (nombre.empty() && o.col<O_CLAN>()[s] && !(o.col<O_FLAGS>()[s] & FLAG_INVISIBLE)) {
-            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) : sy;
+            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) * z : sy;
             dibujar_emblema(a, o.col<O_CLAN>()[s], ex + 17, ay - 52);
         }
         // checkbmp: the checked bitmap floats above the character for 10 s (0x4669d1).
         if (soy_yo && ahora < a.t_vista_emblema) {
-            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) : sy;
+            const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) * z : sy;
             const RegionAtlas& em = g.emblema(Graficos::CLAN_VISTA);
             if (em.valida()) g.gpu().dibujar_en(em, ex - 32, ay - 86, clave_orden(CAPA_EFECTOS, 0));
         }
         dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
+        g.gpu().sin_zoom_mundo(false);
     }
 }
 
@@ -744,8 +774,8 @@ bool intento_portal(App& a, int nx, int ny, int dir, bool teclado, u64 ahora) {
     if (celda == a.celda_intento_portal && ahora < a.t_intento_portal + 1000) return false;
     if (!teclado) {
         // ¿El puntero está sobre esa celda? (inversa de mundo_px / mundo_py desde el centro del personaje)
-        const Vista vi = vista(a);
-        const double rx = (a.entrada.mx - vi.cx) / 24.0, ry = (a.entrada.my - vi.cy) / 12.0;
+        const Vista vi = vista_mundo(a);
+        const double rx = (raton_mundo_x(a) - vi.cx) / 24.0, ry = (raton_mundo_y(a) - vi.cy) / 12.0;
         const int cx = static_cast<int>(std::lround((rx - ry) / 2)), cy = static_cast<int>(std::lround((rx + ry) / 2));
         if (cx != DIR_DX[dir] || cy != DIR_DY[dir]) return false;
     }
@@ -1573,7 +1603,7 @@ void dibujar_ventanas(App& a) {
     EntradaFrame& e = a.entrada;
     const int mx = e.mx, my = e.my;
     const bool arrastre = a.arrastrando || a.arrastrando_hechizo || a.arrastrando_atajo >= 0 || a.ventana_arrastrada >= 0;
-    // Esc cierra todas las ventanas. NPC, Social y Opciones ya lo hacen al dibujarse; los diálogos, el
+    // Esc cierra todas las ventanas. NPC y Social ya lo hacen al dibujarse (los ajustes son modales: app.cpp); los diálogos, el
     // chat y un hechizo o mascota eligiendo objetivo se lo quedan antes. Con un pergamino esperando su
     // objetivo, Esc solo cancela eso (inventario_ui.cpp). Arrastrando algo no cierra: soltarlo lo
     // resuelve la ventana de donde salió. El intercambio tampoco: dejaría el trade abierto.
@@ -1588,7 +1618,6 @@ void dibujar_ventanas(App& a) {
         case IdVentana::INVENTARIO: if (a.ventana_inventario) dibujar_inventario(a); break;
         case IdVentana::HECHIZOS: if (a.ventana_hechizos) dibujar_hechizos(a); break;
         case IdVentana::NPC: dibujar_npc(a); break;
-        case IdVentana::OPCIONES: dibujar_opciones(a); break;
         case IdVentana::SALIDA: dibujar_salida(a); break;
         case IdVentana::SOCIAL: dibujar_social(a); break;
         case IdVentana::INTERCAMBIO: dibujar_intercambio(a); break;
@@ -1609,8 +1638,10 @@ void dibujar_ventanas(App& a) {
 // Ceguera y el aviso de parálisis, sueño, congelamiento... (arriba al centro del mundo).
 void dibujar_estados_alterados(App& a, int w, int h) {
     const EstadoJugador& j = a.mundo.jugador;
-    if (j.ceguera)
-        a.g->gpu().rectangulo(0, 0, w, h, clave_orden(CAPA_EFECTOS, PROF_CEGUERA), rgba(0, 0, 0, j.ceguera == 2 ? 200 : 245));
+    if (j.ceguera) {  // el velo va en el mundo: con zoom solo del mapa, en sus píxeles lógicos
+        const float z = a.gpu.zoom_mundo();
+        a.g->gpu().rectangulo(0, 0, static_cast<int>(std::ceil(w / z)), static_cast<int>(std::ceil(h / z)), clave_orden(CAPA_EFECTOS, PROF_CEGUERA), rgba(0, 0, 0, j.ceguera == 2 ? 200 : 245));
+    }
     const char* t = nullptr;
     switch (j.inmovil) {
     case PARALISIS: case PARALISIS_2: t = "Paralyzed"; break;
@@ -1716,10 +1747,10 @@ void reiniciar(App& a) {
 // Objeto vivo bajo el puntero (el de adelante si hay varios), con los rectángulos del frame
 // anterior.
 ObjId objeto_bajo_puntero(const App& a, bool incluir_propio) {
-    const EntradaFrame& e = a.entrada;
+    const float mx = raton_mundo_x(a), my = raton_mundo_y(a);  // los rectángulos están en el mundo
     const App::ObjetoEnPantalla* mejor = nullptr;
     for (const App::ObjetoEnPantalla& r : a.en_pantalla) {
-        if ((r.id == a.mundo.jugador.id && !incluir_propio) || e.mx < r.x0 || e.mx >= r.x1 || e.my < r.y0 || e.my >= r.y1) continue;
+        if ((r.id == a.mundo.jugador.id && !incluir_propio) || mx < r.x0 || mx >= r.x1 || my < r.y0 || my >= r.y1) continue;
         if (!mejor || r.profundidad > mejor->profundidad) mejor = &r;
     }
     return mejor ? mejor->id : 0;
@@ -1738,7 +1769,7 @@ int direccion_de(int dx, int dy) {
 void dibujar_captura(App& a) {
     // Render no interactivo (LIN_RENDER): dibuja el mapa centrado en la celda pedida y, pasados unos
     // frames (para que el atlas transmita los tiles, como el explorador), guarda el PNG y sale.
-    const Vista vi = vista(a);
+    const Vista vi = vista_mundo(a);
     const double cam_x = a.render.x, cam_y = a.render.y;
     segmento(a.mundo, a.rec, a.render.x, a.render.y);  // fuerza el segmento central (síncrono) ya en el 1er frame
     const double ox = vi.cx - 24 - mundo_px(cam_x, cam_y);
@@ -1848,16 +1879,17 @@ void frame_juego(App& a) {
     }
     // Desplazamiento mundo -> pantalla, fraccionario: la GPU lo lleva al píxel real más cercano
     // (1/escala de píxel lógico), así la cámara se mueve suave y todo el mundo se desplaza junto.
-    double ox = vi.cx - 24 - mundo_px(cam_x, cam_y);
-    double oy = vi.cy - 12 - mundo_py(cam_x, cam_y);
+    const Vista vm = vista_mundo(a);  // el mundo, en sus píxeles lógicos (zoom solo del mapa)
+    double ox = vm.cx - 24 - mundo_px(cam_x, cam_y);
+    double oy = vm.cy - 12 - mundo_py(cam_x, cam_y);
 
-    actualizar_segmentos(a.mundo, static_cast<int>(cam_x), static_cast<int>(cam_y), radio_segmentos(vi));
+    actualizar_segmentos(a.mundo, static_cast<int>(cam_x), static_cast<int>(cam_y), radio_segmentos(vm));
     dibujar_suelo(a, cam_x, cam_y, ox, oy);
     dibujar_objetos_mapa(a, cam_x, cam_y, ox, oy);
     dibujar_personajes(a, ahora, ox, oy);
     dibujar_efectos(a, ahora, ox, oy);
     aplicar_luz(a, ahora);
-    dibujar_clima(a, vi.w, vi.panel_y, ahora);
+    dibujar_clima(a, vm.w, vm.panel_y, ahora);
     dibujar_estados_alterados(a, vi.w, vi.h);
     a.teclas_f_y = -1;  // dibujar_panel los ubica si se dibuja el panel original
     if (a.cfg.ui_simple) {

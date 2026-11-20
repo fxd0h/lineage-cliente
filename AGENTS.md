@@ -27,7 +27,10 @@ Guide for people and coding agents working on this fork. Read it before touching
 6. **Server changes must be reproducible:** steps in the server's `instalar.sh`, server files as its
    `*.patch` (`servidor_classic/patches/`), database fixes in its `corregir_db.sql` (idempotent). A change made
    only by hand doesn't exist.
-7. **Before every commit:** zero warnings and all tests passing (section 4).
+7. **Every `settings.ini` option the player picks has a row in the Settings window** (`src/app/ajustes_ui.cpp`, simple UI):
+   field in `Config` (`plataforma/rutas.h`, read in `rutas.cpp`), its row in the tab, its text in
+   `src/i18n/catalogo.def` (five languages) and its row in the README options table.
+8. **Before every commit:** zero warnings and all tests passing (section 4).
 
 ## 2. Setup
 

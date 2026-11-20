@@ -125,7 +125,7 @@ void frame_login(App& a) {
     if (simple) {
         g.gpu().rectangulo(0, 0, g.gpu().ancho(), g.gpu().alto(), clave_orden(CAPA_FONDO, 0), ui::COLOR_FONDO_SIMPLE);
         dibujar_logo(a, 40, 24, 560, 190);
-        ui::recuadro(g, 190, 222, 260, 138);
+        ui::recuadro(g, 190, 222, 260, 168);  // con lugar para Ajustes y el aviso debajo
         // Etiquetas pegadas a la izquierda de su caja (no en un x fijo): "Mot de passe" no toca el campo.
         auto etiqueta = [&](Tx clave, int y) {
             const std::string_view t = tr(clave);
@@ -185,10 +185,11 @@ void frame_login(App& a) {
     if (simple) {
         login |= ui::boton_texto(g, e, tr(Tx::LOGIN_ENTRAR), 206, 326, 108, 20);
         if (ui::boton_texto(g, e, tr(Tx::LOGIN_SALIR), 326, 326, 108, 20)) a.salir = true;
+        if (ui::boton_texto(g, e, tr(Tx::UI_AJUSTES), 266, 350, 108, 20)) a.ventana_ajustes = true;
     } else {
         login |= ui::boton(g, e, 53, X_BOTONES, 0x183);
         ui::boton(g, e, 65, X_BOTONES, 0x195);  // nueva cuenta: L1J las crea solas al primer login
-        ui::boton(g, e, 55, X_BOTONES, 0x1a8);  // opciones (entregable 10)
+        ui::boton(g, e, 55, X_BOTONES, 0x1a8);  // options: no-op like the 2009 login (settings window is simple-UI only)
         if (ui::boton(g, e, 57, X_BOTONES, 0x1c2)) a.salir = true;
     }
     if (e.escape && !a.mostrando_noticias) a.salir = true;

@@ -6,14 +6,15 @@
 
 using namespace lin;
 
-// Etiquetas del editor de ajustes (la columna izquierda mide 210 px: ver tools/settings.cpp). Si una
+// Etiquetas de los ajustes (la columna izquierda mide 210 px: ver app/ajustes_ui.cpp). Si una
 // traducción es más ancha, se mete debajo del campo.
-TEST_CASE("editor de ajustes: las etiquetas caben en 210 px en los cinco idiomas") {
+TEST_CASE("ajustes: las etiquetas caben en 210 px en los cinco idiomas") {
     const Tx etiquetas[] = {Tx::AJ_CARPETA, Tx::AJ_CAMARA, Tx::AJ_CHAT_ENTER, Tx::AJ_SOMBRA, Tx::AJ_COMPENSAR,
                             Tx::AJ_TEXTO_DANO, Tx::AJ_BARRA_PJ, Tx::AJ_UI_SIMPLE, Tx::AJ_OPACIDAD, Tx::AJ_LOGO,
                             Tx::AJ_VENTANA_ANCHO, Tx::AJ_VENTANA_ALTO, Tx::AJ_ZOOM, Tx::AJ_IDIOMA, Tx::AJ_MUSICA,
                             Tx::AJ_EFECTOS, Tx::AJ_SERVIDOR_EDITAR, Tx::AJ_NOMBRE, Tx::AJ_HOST, Tx::AJ_PUERTO,
-                            Tx::AJ_PROTOCOLO, Tx::AJ_CUENTA, Tx::AJ_SERVIDOR_ENTRAR, Tx::AJ_PERSONAJE};
+                            Tx::AJ_PROTOCOLO, Tx::AJ_CUENTA, Tx::AJ_SERVIDOR_ENTRAR, Tx::AJ_PERSONAJE, Tx::AJ_TEXTO_HD,
+                            Tx::AJ_GLOBOS, Tx::AJ_LISTA_SPRITES, Tx::AJ_PANTALLA_COMPLETA};
     for (Tx k : etiquetas)
         for (size_t i = 0; i < static_cast<size_t>(Idioma::CANTIDAD); ++i) {
             const char* s = tr_en(k, static_cast<Idioma>(i));

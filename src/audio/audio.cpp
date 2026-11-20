@@ -1,4 +1,5 @@
 #include "audio/audio.h"
+#include "plataforma/archivo_mapeado.h"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <cstdio>

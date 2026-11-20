@@ -32,8 +32,9 @@ void traer_a_memoria(Bytes tramo);
 // Lee un archivo pequeño completo (fuentes, mapas). Devuelve vacío si no existe.
 bool leer_archivo(const std::string& ruta, std::vector<u8>& salida);
 
-// Resuelve una ruta sin distinguir mayúsculas (Linux): si existe tal cual, la devuelve; si no, busca
-// cada componente en su carpeta. Si no se resuelve, devuelve la original. Segura entre hilos.
+// En Linux, si `ruta` no existe tal cual, la busca sin distinguir mayúsculas componente por componente
+// (la instalación original mezcla "Sprite.pak", "map/", "Music1012.mp3"). Si no la encuentra, o en macOS
+// y Windows (que no las distinguen), devuelve `ruta`. Segura entre hilos. abrir y leer_archivo ya la usan.
 std::string ruta_real(const std::string& ruta);
 
 }  // namespace lin

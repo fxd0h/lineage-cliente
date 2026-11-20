@@ -67,7 +67,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_LEGAL] = static_cast<i16>(l.h());
     e.v[PJ_HP] = l.h();
     e.v[PJ_MP] = l.h();
-    e.v[PJ_CA] = static_cast<i8>(l.c());
+    e.v[PJ_CA] = ca_original(l.c());
     e.v[PJ_NIVEL] = l.c();
     e.v[PJ_FUE] = l.c();
     e.v[PJ_DES] = l.c();
@@ -957,6 +957,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             if (e.origen == Srv::SHOWSHOPBUYLIST) {
                 it.v[IT_GFX] = l.h();
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
+                it.v[IT_BENDICION] = 1;  // la tienda no lo manda: normal (0 sería bendito)
                 it.s[0] = l.s();
                 it.s[1] = atributos_item(l);  // the status bytes: the tooltip's property lines
             } else if (e.origen == Srv::SHOWSHOPSELLLIST) {

@@ -12,7 +12,7 @@ u32 contar_frames_spr(Bytes spr) {
     }
     if (i >= spr.size()) return 0;
     i8 n = static_cast<i8>(spr[i++]);
-    if (n < 0) {
+    if (n < 0) {  // con paleta: cantidad de colores (0 = 256) y 2 bytes por color
         if (i >= spr.size()) return 0;
         const size_t entradas = spr[i] == 0 ? 256 : spr[i];
         i += 1 + entradas * 2;

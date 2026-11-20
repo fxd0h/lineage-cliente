@@ -7,6 +7,7 @@
 #include <ctime>
 #include "app/app.h"
 #include "mundo/ataque.h"
+#include "recursos/sprites.h"
 #include "i18n/textos.h"
 #include "core/asignaciones.h"
 
@@ -57,15 +58,33 @@ static std::vector<std::string> listas_de_extra(const std::string& carpeta) {
     return v;
 }
 
+static std::string lista_de_juego(const App& a) {
+    namespace fs = std::filesystem;
+    if (!a.cfg.lista_sprites.empty()) return a.cfg.lista_sprites;
+    const std::string& j = a.cfg.carpeta_juego;
+    for (const char* rel : {"list.spz", "spritelist/list.spz"})
+        if (const std::string r = ruta_real(j + rel); fs::exists(r)) return r;
+    std::error_code ec;
+    std::vector<std::string> txt;
+    for (const auto& e : fs::directory_iterator(j, ec)) {
+        if (!e.is_regular_file(ec) || e.path().extension() != ".txt") continue;
+        std::ifstream f(e.path(), std::ios::binary);
+        std::string l;
+        unsigned x = 0, y = 0, z = 0;
+        if (f && std::getline(f, l) &&
+            (std::sscanf(l.c_str(), "S%u %u %u", &x, &y, &z) == 3 || std::sscanf(l.c_str(), "%u %u %u", &x, &y, &z) == 3))
+            txt.push_back(e.path().string());
+    }
+    std::sort(txt.begin(), txt.end());
+    return txt.empty() ? std::string{} : txt.front();
+}
+
 static void cargar_lista_sprites(App& a) {
     LIN_LOG("Sprite table: %u gfx from sprite_table.txt", a.sprites.gfx_de_tabla());
     std::vector<std::string> rutas;
-    if (!a.cfg.lista_sprites.empty()) {
-        rutas.push_back(a.cfg.lista_sprites);
-        if (!std::filesystem::exists(rutas[0])) LIN_LOG("Sprite table: lista_sprites=%s does not exist", rutas[0].c_str());
-    } else {
-        for (const char* rel : {"list.spz", "spritelist/list.spz"})
-            if (std::filesystem::exists(a.cfg.carpeta_juego + rel)) { rutas.push_back(a.cfg.carpeta_juego + rel); break; }
+    if (const std::string p = lista_de_juego(a); !p.empty()) {
+        rutas.push_back(p);
+        if (!a.cfg.lista_sprites.empty() && !std::filesystem::exists(p)) LIN_LOG("Sprite table: lista_sprites=%s does not exist", p.c_str());
     }
     for (const std::string& e : a.cfg.carpetas_extra)
         for (std::string& r : listas_de_extra(e)) rutas.push_back(std::move(r));
@@ -78,9 +97,9 @@ static void cargar_lista_sprites(App& a) {
     for (const std::string& ruta : rutas) {
         ResumenLista r;
         if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
-            LIN_LOG("Sprite table: %u gfx from %s (%u new, %u already known kept, %u without actions or files skipped; "
-                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos, ruta.c_str(), r.nuevos, r.reemplazados,
-                    r.omitidos, r.sin_archivo, r.recortados);
+            LIN_LOG("Sprite table: %u gfx from %s (%u new with actions, %u attribute-only, %u already known kept, %u skipped; "
+                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos + r.atributos, ruta.c_str(), r.nuevos, r.atributos,
+                    r.reemplazados, r.omitidos, r.sin_archivo, r.recortados);
         else
             LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
     }
@@ -512,11 +531,13 @@ void bucle_app(App& a) {
         u64 asign0 = asignaciones_hilo();
         a.cursor = Cursor::MANO;
         if (a.g) a.g->nuevo_frame();
-        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480.
+        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. With the simple UI the
+        // zoom is for the map only: the interface keeps its size.
         a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
         a.gpu.fijar_texto_hd(a.cfg.texto_hd);
         a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");
-        a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a));
+        a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a),
+                            a.cfg.ui_simple);
 #if LIN_CONTROL
         control_frame(a);  // comandos del socket: antes de leer la entrada (las teclas van como eventos de SDL)
 #endif
@@ -525,6 +546,16 @@ void bucle_app(App& a) {
         control_entrada(a);  // el mouse inyectado
 #endif
         procesar_red(a);
+        // Ajustes abiertos (modales): la pantalla de atrás sigue (red, mundo, dibujo) con una entrada vacía, y
+        // la del frame queda para los ajustes, que se dibujan encima.
+        const bool ajustes = a.ventana_ajustes && a.pantalla != Pantalla::ELEGIR_CARPETA;
+        const EntradaFrame entrada = a.entrada;
+        if (ajustes) {
+            EntradaFrame vacia;
+            vacia.ahora_ms = entrada.ahora_ms;
+            vacia.mx = vacia.my = -10000;
+            a.entrada = vacia;
+        }
         if (a.render.activo) {
             dibujar_captura(a);
         } else switch (a.pantalla) {
@@ -536,6 +567,10 @@ void bucle_app(App& a) {
         case Pantalla::JUEGO: frame_juego(a); break;
         }
         barco_llegada(a);
+        if (ajustes) {
+            a.entrada = entrada;
+            dibujar_ajustes(a);
+        }
         actualizar_sonido(a, a.entrada.ahora_ms);
         emblemas_guardar(a, a.entrada.ahora_ms, false);
         ++a.frames_en_pantalla;

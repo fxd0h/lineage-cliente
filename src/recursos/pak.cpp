@@ -17,10 +17,16 @@ u64 hash_nombre(std::string_view nombre) {
     return h;
 }
 
-bool Pak::abrir(const std::string& base, bool indice_cifrado) {
+bool Pak::abrir(const std::string& base, bool indice_cifrado, bool avisar) {
     std::vector<u8> idx;
-    if (!leer_archivo(base + ".idx", idx) || idx.size() < 4) return false;
-    if (!datos_.abrir(base + ".pak")) return false;
+    if (!leer_archivo(base + ".idx", idx) || idx.size() < 4) {
+        if (avisar) LIN_LOG("No se pudo leer %s.idx", base.c_str());
+        return false;
+    }
+    if (!datos_.abrir(base + ".pak")) {
+        if (avisar) LIN_LOG("No se pudo abrir %s.pak", base.c_str());
+        return false;
+    }
     LectorBinario l{idx};
     u32 n = l.u32_();
     if (static_cast<size_t>(n) * 28 + 4 > idx.size()) return false;
@@ -64,13 +70,13 @@ bool Recursos::abrir(const std::string& carpeta, const std::vector<std::string>&
     auto agregar = [&](const std::string& c, bool primaria) {
         auto f = std::make_unique<Fuente>();
         f->carpeta = c;
-        bool bien = f->sprite_base.abrir(c + "Sprite", false);
-        bien = f->tile.abrir(c + "Tile", false) && bien;
-        bien = f->texto.abrir(c + "Text", true) && bien;
+        bool bien = f->sprite_base.abrir(c + "Sprite", false, primaria);
+        bien = f->tile.abrir(c + "Tile", false, primaria) && bien;
+        bien = f->texto.abrir(c + "Text", true, primaria) && bien;
         char nombre[16];
         for (int i = 0; i < 16; ++i) {
             std::snprintf(nombre, sizeof nombre, "Sprite%02d", i);
-            f->sprite_hash[i].abrir(c + nombre, false);  // opcionales: instalaciones viejas no los tienen
+            f->sprite_hash[i].abrir(c + nombre, false, false);  // opcionales: instalaciones viejas no los tienen
         }
         if (primaria) ok = bien;
         fuentes_.push_back(std::move(f));  // an extra without paks still serves its loose files

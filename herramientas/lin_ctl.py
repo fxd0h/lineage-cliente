@@ -5,6 +5,8 @@ En la terminal:
     lin_ctl.py <socket> estado            un comando
     lin_ctl.py <socket>                   interactivo: una línea por comando ("ayuda" los lista)
 
+<socket> es la ruta del socket de archivo o, por TCP (Windows), "tcp:<puerto>" o "tcp:127.0.0.1:<puerto>".
+
 Como módulo, para escribir pruebas:
     from lin_ctl import Control
     c = Control.arrancar(config="/tmp/prueba.ini")   # lanza build/debug/lineage
@@ -25,40 +27,68 @@ import tempfile
 import time
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-BINARIO = os.path.join(AQUI, "..", "build", "debug", "lineage")
+BINARIO = os.path.join(AQUI, "..", "build", "debug", "lineage.exe" if os.name == "nt" else "lineage")
 
 
 class ErrorControl(Exception):
     pass
 
 
+def _conectar(ruta):
+    """Socket conectado a `ruta`: un socket de archivo o "tcp:[127.0.0.1:]<puerto>"."""
+    if ruta.startswith("tcp:"):
+        puerto = int(ruta.rsplit(":", 1)[1])
+        return socket.create_connection(("127.0.0.1", puerto), timeout=5)
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(ruta)
+    return s
+
+
+def _puerto_libre():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 class Control:
     lanzados = 0
 
-    def __init__(self, ruta, proceso=None):
+    def __init__(self, ruta, proceso=None, sock=None):
         self.ruta = ruta
         self.proceso = proceso
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(ruta)
+        self.sock = sock or _conectar(ruta)
         self.resto = b""
 
     @classmethod
-    def arrancar(cls, config, binario=BINARIO, plazo=30, entorno=None, registro=None):
+    def arrancar(cls, config, binario=BINARIO, plazo=30, entorno=None, registro=None, tcp=None):
         """Lanza el cliente con su propio settings.ini y socket, y se conecta. `registro`: archivo
-        donde queda su salida (la traza de "traza on", por ejemplo)."""
+        donde queda su salida (la traza de "traza on", por ejemplo). `tcp`: control por TCP en
+        127.0.0.1 en lugar de un socket de archivo; por omisión solo en Windows, donde Python no
+        tiene AF_UNIX."""
         cls.lanzados += 1  # varios clientes desde el mismo script: un socket cada uno
-        ruta = os.path.join(tempfile.gettempdir(), "lineage-control-py-%d-%d.sock" % (os.getpid(), cls.lanzados))
+        if tcp is None:
+            tcp = os.name == "nt"
+        if tcp:
+            ruta = "tcp:%d" % _puerto_libre()
+        else:
+            ruta = os.path.join(tempfile.gettempdir(), "lineage-control-py-%d-%d.sock" % (os.getpid(), cls.lanzados))
+            if os.path.exists(ruta):
+                os.unlink(ruta)
         env = dict(os.environ, LIN_CONFIG=config, LIN_CONTROL=ruta, **(entorno or {}))
-        if os.path.exists(ruta):
-            os.unlink(ruta)
         salida = open(registro, "w") if registro else subprocess.DEVNULL
         proceso = subprocess.Popen([binario], env=env, stdout=salida, stderr=subprocess.STDOUT)
         fin = time.time() + plazo
-        while not os.path.exists(ruta):
+        while True:
+            # Por TCP no hay archivo que mirar: se reintenta la conexión hasta que el cliente escucha.
+            if tcp or os.path.exists(ruta):
+                try:
+                    return cls(ruta, proceso, _conectar(ruta))
+                except OSError:
+                    if not tcp:
+                        raise
             if proceso.poll() is not None or time.time() > fin:
-                raise ErrorControl("el cliente no abrió el socket %s" % ruta)
+                raise ErrorControl("el cliente no abrió el control en %s" % ruta)
             time.sleep(0.1)
-        return cls(ruta, proceso)
 
     def __call__(self, linea, plazo=60):
         """Manda un comando y devuelve las líneas de la respuesta."""

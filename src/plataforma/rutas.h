@@ -96,7 +96,7 @@ struct Config {
 // Valores por personaje dentro de una opción ("Nombre:valor;Otro:valor").
 std::string_view valor_de_personaje(std::string_view opcion, std::string_view personaje);
 void poner_valor_de_personaje(std::string& opcion, std::string_view personaje, std::string_view valor);
-// Quita las entradas de un personaje de una opción (el editor de ajustes las borra con esto).
+// Quita las entradas de un personaje de una opción (los ajustes las borran con esto).
 void quitar_valor_de_personaje(std::string& opcion, std::string_view personaje);
 // Auto-poción de un personaje: sin entrada, apagada con 60 %. El umbral va de 10 a 95, de a 5.
 constexpr int UMBRAL_POCION_DEFECTO = 60, UMBRAL_POCION_MIN = 10, UMBRAL_POCION_MAX = 95;
@@ -116,7 +116,7 @@ std::vector<std::string> personajes_con_datos(const Config& c);
 // MULTIPLATAFORMA: SDL_GetPrefPath ya devuelve %APPDATA% en Windows y ~/.local/share en Linux.
 std::string ruta_configuracion();
 
-// Carga y guarda settings.ini (el del usuario, o el de la ruta dada: lo usa el editor de ajustes).
+// Carga y guarda settings.ini (el del usuario, o el de la ruta dada).
 Config cargar_config();
 Config cargar_config_de(const std::string& ruta);
 bool guardar_config(const Config& c);

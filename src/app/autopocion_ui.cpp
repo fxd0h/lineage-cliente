@@ -1,7 +1,7 @@
 // Auto-poción (PLAN_JUGABILIDAD.md, punto 5): con el HP por debajo del umbral, toma la poción de
 // curación que corresponde (elegir_pocion: familia y color según lo que falta) en cuanto pasa la
 // demora de la anterior. Por personaje: encendida (apagada por defecto) y umbral (60 %), en
-// settings.ini ("autopocion=Nombre:1,60"), en Opciones y en el programa de configuración. Es una macro
+// settings.ini ("autopocion=Nombre:1,60"), en los Ajustes (pestaña Personajes). Es una macro
 // del lado del cliente: el mismo C_UseItem que un doble clic. Encendida, un indicador junto al HP
 // (rojo si no queda ninguna poción de curación).
 #include <cstring>

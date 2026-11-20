@@ -1,4 +1,7 @@
 #include <doctest/doctest.h>
+#include <filesystem>
+#include <fstream>
+#include "plataforma/archivo_mapeado.h"
 #include "plataforma/rutas.h"
 
 using namespace lin;
@@ -31,6 +34,16 @@ TEST_CASE("personajes_con_datos: también los que solo tienen auto-buffs") {
     const std::vector<std::string> n = personajes_con_datos(c);
     REQUIRE(n.size() == 2);
     CHECK(n[1] == "Eva");
+}
+
+TEST_CASE("personajes_con_datos: también los que solo tienen el orden del inventario") {
+    Config c;
+    c.inventario_orden = "Ana:12,7,9;";
+    const std::vector<std::string> n = personajes_con_datos(c);
+    REQUIRE(n.size() == 1);
+    CHECK(n[0] == "Ana");
+    quitar_valor_de_personaje(c.inventario_orden, "Ana");  // lo que hace "Quitar orden" en los ajustes
+    CHECK(c.inventario_orden.empty());
 }
 
 TEST_CASE("personajes_con_datos: sin datos devuelve lista vacía") {
@@ -120,4 +133,23 @@ TEST_CASE("usar_autobuffs y usar_autopocion: encendidos por defecto y de ida y v
     CHECK_FALSE(d.usar_autobuffs);
     CHECK(d.usar_autopocion);
     CHECK_FALSE(leer_config("usar_autopocion=0\n").usar_autopocion);
+}
+
+TEST_CASE("ruta_real: en Linux encuentra el archivo aunque difieran las mayúsculas") {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path base = fs::temp_directory_path(ec) / "lin-test-ruta-real";
+    fs::remove_all(base, ec);
+    fs::create_directories(base / "MAP" / "4", ec);
+    std::ofstream(base / "MAP" / "4" / "7fff8000.s32") << "x";
+    const std::string b = base.generic_string() + "/";
+    const std::string exacta = b + "MAP/4/7fff8000.s32";
+    CHECK(ruta_real(exacta) == exacta);
+    CHECK(ruta_real(b + "falta/7fff8000.s32") == b + "falta/7fff8000.s32");  // sin encontrar: la misma
+#if defined(__linux__)
+    CHECK(ruta_real(b + "map/4/7FFF8000.S32") == exacta);
+#endif
+    std::vector<u8> d;
+    CHECK(leer_archivo(b + "map/4/7fff8000.s32", d));  // en macOS y Windows, porque no distinguen
+    fs::remove_all(base, ec);
 }

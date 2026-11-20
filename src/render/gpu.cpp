@@ -325,16 +325,28 @@ bool Gpu::iniciar(SDL_Window* ventana, int ancho_logico, int alto_logico) {
         return false;
     }
     usar_spirv_ = !(SDL_GetGPUShaderFormats(dev_) & SDL_GPU_SHADERFORMAT_MSL);
-    LIN_LOG("GPU: %s (%s)", SDL_GetGPUDeviceDriver(dev_), usar_spirv_ ? "SPIR-V" : "MSL");
+    {
+        // Which adapter and driver SDL picked (on D3D12, "Microsoft Basic Render Driver" is WARP, software).
+        const SDL_PropertiesID pr = SDL_GetGPUDeviceProperties(dev_);
+        LIN_LOG("GPU: %s (%s), %s (driver %s %s)", SDL_GetGPUDeviceDriver(dev_), usar_spirv_ ? "SPIR-V" : "MSL",
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_NAME_STRING, "?"),
+                SDL_GetStringProperty(pr, SDL_PROP_GPU_DEVICE_DRIVER_VERSION_STRING, ""));
+    }
     if (!SDL_ClaimWindowForGPUDevice(dev_, ventana_)) {
         LIN_LOG("SDL_ClaimWindowForGPUDevice: %s", SDL_GetError());
         return false;
     }
     // Prefer MAILBOX (no tearing, but never blocks): with VSYNC (FIFO) on Wayland the frame loop stalls
     // while the window is hidden or occluded, which also stalls the live-control socket.
-    const SDL_GPUPresentMode modo = SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_MAILBOX)
-                                         ? SDL_GPU_PRESENTMODE_MAILBOX
-                                         : SDL_GPU_PRESENTMODE_VSYNC;
+    // LIN_VSYNC=0 prefers IMMEDIATE (no wait for the refresh) to measure what the GPU gives without the monitor's cap.
+    SDL_GPUPresentMode modo = SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_MAILBOX)
+                                  ? SDL_GPU_PRESENTMODE_MAILBOX
+                                  : SDL_GPU_PRESENTMODE_VSYNC;
+    if (const char* v = std::getenv("LIN_VSYNC"); v && v[0] == '0') {
+        if (SDL_WindowSupportsGPUPresentMode(dev_, ventana_, SDL_GPU_PRESENTMODE_IMMEDIATE)) modo = SDL_GPU_PRESENTMODE_IMMEDIATE;
+        LIN_LOG("LIN_VSYNC=0: present mode %s", modo == SDL_GPU_PRESENTMODE_IMMEDIATE ? "immediate" : "unchanged (no immediate)");
+    }
     SDL_SetGPUSwapchainParameters(dev_, ventana_, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, modo);
     mailbox_ = modo == SDL_GPU_PRESENTMODE_MAILBOX;
     if (!crear_pipeline()) return false;
@@ -805,6 +817,13 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
         }
         return;
     }
+    if (capa_pedida < CAPA_UI && escala_mundo_ != escala_ && !sin_zoom_mundo_) {  // el mundo, con su propio zoom
+        const float z = zoom_mundo();
+        x *= z;
+        y *= z;
+        w *= z;
+        h *= z;
+    }
     // El contenido va desplazado por su origen; se recorta contra la cuadrícula de la ventana.
     x += origen_x_;
     y += origen_y_;
@@ -938,7 +957,7 @@ int Gpu::escala_maxima(int franja) const {
     return std::max(1, std::min(pw / ancho_min_, ph / alto_min_));
 }
 
-void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
+void Gpu::ajustar_vista(bool ampliable, int zoom, int franja, bool solo_mundo) {
     int pw = 0, ph = 0;
     SDL_GetWindowSizeInPixels(ventana_, &pw, &ph);
     if (vista_fija_) {
@@ -953,11 +972,14 @@ void Gpu::ajustar_vista(bool ampliable, int zoom, int franja) {
         ventana_ph_ = std::max(1, ph);
         const float fit = factor_ajuste(ventana_pw_, ventana_ph_, grid_w_, grid_h_);
         escala_ = escala_interna(fit, entero);
+        escala_mundo_ = escala_;  // map-only zoom (simple UI) applies to the dynamic view only
         rect_ = rect_vista(ventana_pw_, ventana_ph_, grid_w_, grid_h_, entero);
         return;
     }
     const int maxima = escala_maxima(franja);
     escala_ = ampliable && zoom > 0 ? std::min(zoom, maxima) : maxima;
+    escala_mundo_ = escala_;
+    if (ampliable && solo_mundo) escala_ = maxima;
     grid_w_ = std::max(ancho_min_, pw / escala_);
     grid_h_ = std::max(alto_min_, ph / escala_);
     if (ampliable) {
@@ -1152,7 +1174,8 @@ void Gpu::presentar() {
         SDL_BindGPUGraphicsPipeline(pase, pipeline_mundo_);
         SDL_GPUTextureSamplerBinding csb{copia_, muestreo_};
         SDL_BindGPUFragmentSamplers(pase, 0, &csb, 1);
-        float p[8] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_), static_cast<float>(reemplazo_fase_),
+        const float z = zoom_mundo();  // la ola y la borrachera van por columnas y filas del mundo
+        float p[8] = {grid_w_ / z, grid_h_ / z, static_cast<float>(reemplazo_fase_),
                       static_cast<float>(reemplazo_modo_), static_cast<float>(reemplazo_fase_b_), AMPLITUD_BORRACHO, 0, 0};
         SDL_PushGPUFragmentUniformData(cmd, 0, p, sizeof p);
         SDL_DrawGPUPrimitives(pase, 6, 1, 0, 0);
@@ -1168,7 +1191,8 @@ void Gpu::presentar() {
         SDL_BindGPUFragmentSamplers(pase, 0, lsb, 2);
         const float celda = static_cast<float>(brillo_celda_);
         // 0.9999: que el borde derecho e inferior caiga dentro de la última celda, no fuera.
-        float escala[4] = {grid_w_ / (celda * luz_w_) * 0.9999f, grid_h_ / (celda * luz_h_) * 0.9999f,
+        const float z = zoom_mundo();  // las celdas de brillo están en píxeles lógicos del mundo
+        float escala[4] = {grid_w_ / z / (celda * luz_w_) * 0.9999f, grid_h_ / z / (celda * luz_h_) * 0.9999f,
                            static_cast<float>(brillo_filas_.size()) / FILAS_TAM * 0.9999f, 0};
         SDL_PushGPUVertexUniformData(cmd, 0, escala, sizeof escala);
         const u32 t = brillo_tinte_;

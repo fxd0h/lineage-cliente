@@ -1,7 +1,9 @@
 // Control en vivo para pruebas (solo con LIN_CONTROL; la versión final no lo compila).
 //
 // Un socket de archivo (Unix domain socket) en $LIN_CONTROL o $TMPDIR/lineage-control-<pid>.sock,
-// solo para el usuario. Cada línea es un comando; la respuesta son líneas que terminan con "ok" o
+// solo para el usuario. Con LIN_CONTROL=tcp:<puerto>, TCP en 127.0.0.1 (en Windows es lo único: Python
+// no tiene AF_UNIX ahí; sin LIN_CONTROL usa un puerto libre, que sale en el log). El transporte está
+// en plataforma/socket.cpp. Cada línea es un comando; la respuesta son líneas que terminan con "ok" o
 // "error <motivo>". Se revisa una vez por frame en el hilo principal (sin hilos ni locks): los
 // comandos llaman a las mismas funciones que la interfaz. Los que esperan algo ("esperar", "login",
 // "personaje", "captura") dejan la conexión en espera y responden en el frame en que se cumple o
@@ -11,19 +13,15 @@
 //
 // Comandos: "ayuda" (AYUDA) y docs/analisis/PLAN_CONTROL_VIVO.md. Herramienta: herramientas/lin_ctl.py.
 // Los textos van en CP949, como los del juego (nombres coreanos incluidos); ASCII es igual.
-// MULTIPLATAFORMA: AF_UNIX existe en Windows 10 1803+ (afunix.h, closesocket, ioctlsocket); falta.
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <cerrno>
+#if !defined(_WIN32)
+#include <unistd.h>  // getpid
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include "app/app.h"
+#include "plataforma/socket.h"
 
 namespace lin {
 
@@ -56,7 +54,7 @@ struct Espera {
 };
 
 struct Conexion {
-    int fd = -1;
+    DescLocal fd = SIN_DESC;
     std::string entrada, salida;
     Espera espera;
     // Paquetes recibidos y líneas de chat al empezar el comando anterior y el actual: "esperar
@@ -74,7 +72,7 @@ struct PasoMouse {
 };
 
 struct Control {
-    int escucha = -1;
+    DescLocal escucha = SIN_DESC;
     std::string ruta;
     std::vector<Conexion> conexiones;
     std::deque<PasoMouse> mouse;
@@ -179,7 +177,7 @@ bool* ventana(App& a, std::string_view n) {
     if (n == "inventario") return &a.ventana_inventario;
     if (n == "estado") return &a.ventana_estado;
     if (n == "hechizos") return &a.ventana_hechizos;
-    if (n == "opciones") return &a.ventana_opciones;
+    if (n == "ajustes" || n == "opciones") return &a.ventana_ajustes;
     if (n == "forma") return &a.ventana_forma;
     if (n == "social") return &a.ventana_social;
     if (n == "salida") return &a.ventana_salida;
@@ -202,7 +200,7 @@ bool abierta(const App& a, std::string_view n) {
     if (bool* v = ventana(const_cast<App&>(a), n)) return *v;
     return false;
 }
-constexpr const char* VENTANAS[] = {"inventario", "estado", "hechizos", "opciones", "social", "salida", "teclas", "npc", "tienda",
+constexpr const char* VENTANAS[] = {"inventario", "estado", "hechizos", "ajustes", "social", "salida", "teclas", "npc", "tienda",
                                     "tablon", "correo", "subastas", "mapa-casa", "intercambio", "pregunta", "cantidad",
                                     "menu-servidores"};
 
@@ -220,7 +218,8 @@ void objetos(App& a, Conexion& c, int radio) {
         const char* sprite = "fuera";
         for (const App::ObjetoEnPantalla& r : a.en_pantalla)
             if (r.id == id) {
-                px = static_cast<int>((r.x0 + r.x1) / 2), py = static_cast<int>((r.y0 + r.y1) / 2);
+                // Los rectángulos están en el mundo; el clic, en la interfaz (zoom solo del mapa).
+                px = static_cast<int>((r.x0 + r.x1) / 2 * a.gpu.zoom_mundo()), py = static_cast<int>((r.y0 + r.y1) / 2 * a.gpu.zoom_mundo());
                 sprite = r.sprite == 0 ? "ok" : r.sprite == 1 ? "pendiente" : "falta";
             }
         // Para diagnosticar un bloque de color: el archivo que se busca y su acción de estar quieto.
@@ -296,7 +295,7 @@ const char* AYUDA[] = {
     "hablar <objeto>   atacar <objeto>   parar   clic-objeto <objeto> [der]",
     "accion <vínculo de la página>   responder si|no|\"texto\"   cantidad <n>",
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
-    "abrir|cerrar inventario|estado|hechizos|opciones|social|salida|teclas",
+    "abrir|cerrar inventario|estado|hechizos|ajustes|social|salida|teclas",
     "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
     "mover <x> <y> <frames> (puntero sin botón)   clic <x> <y> [der|dder|dizq|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
@@ -453,7 +452,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         // Dónde están las que se mueven (para hacer clic adentro): nombre=x,y,ancho,alto.
         static constexpr std::pair<const char*, IdVentana> MOVILES[] = {
             {"estado", IdVentana::ESTADO}, {"inventario", IdVentana::INVENTARIO}, {"hechizos", IdVentana::HECHIZOS},
-            {"npc", IdVentana::NPC}, {"opciones", IdVentana::OPCIONES}, {"intercambio", IdVentana::INTERCAMBIO}};
+            {"npc", IdVentana::NPC}, {"intercambio", IdVentana::INTERCAMBIO}};
         if (a.pantalla == Pantalla::JUEGO)
             for (const auto& [n, id] : MOVILES)
                 if (abierta(a, n)) {
@@ -483,7 +482,8 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             for (const App::ObjetoEnPantalla& e : a.en_pantalla)
                 if (e.id == id) r = &e;
             if (!r) return error("no se está dibujando");
-            clic(static_cast<int>((r->x0 + r->x1) / 2), static_cast<int>((r->y0 + r->y1) / 2), p.size() > 2 && p[2] == "der" ? 1 : 0);
+            const float z = a.gpu.zoom_mundo();  // de coordenadas del mundo a las de la interfaz
+            clic(static_cast<int>((r->x0 + r->x1) / 2 * z), static_cast<int>((r->y0 + r->y1) / 2 * z), p.size() > 2 && p[2] == "der" ? 1 : 0);
         } else {
             // Como un clic sobre él: se camina hasta el NPC y se le habla, o se lo ataca hasta que muera
             // (el ataque sostenido de la tecla A).
@@ -624,34 +624,34 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         if (p.size() < 2) return error("uso: escalado entero|xbr|fsr|crt");
         a.cfg.escalado = nombre_escalado(escalado_desde(p[1]));
     } else if (cmd == "esperar") {
-        if (std::string_view v = opcion(p, "pantalla"); !v.empty()) {
+        if (std::string_view v_pantalla = opcion(p, "pantalla"); !v_pantalla.empty()) {
             es.tipo = Espera::PANTALLA;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "paquete"); !v.empty()) {
+            es.texto = v_pantalla;
+        } else if (std::string_view v_paquete = opcion(p, "paquete"); !v_paquete.empty()) {
             es.tipo = Espera::PAQUETE;
-            es.texto = v;
+            es.texto = v_paquete;
             for (u32 i = std::max(c.paquetes_antes, g.n_recientes - std::min(g.n_recientes, Control::RECIENTES)); i < g.n_recientes; ++i)
                 es.visto |= es.texto == nombre_srv(g.recientes[i % Control::RECIENTES]);
-        } else if (std::string_view v = opcion(p, "html"); !v.empty()) {
+        } else if (std::string_view v_html = opcion(p, "html"); !v_html.empty()) {
             es.tipo = Espera::HTML;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "ventana"); !v.empty()) {
+            es.texto = v_html;
+        } else if (std::string_view v_ventana = opcion(p, "ventana"); !v_ventana.empty()) {
             es.tipo = Espera::VENTANA;
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "dialogo"); !v.empty()) {
+            es.texto = v_ventana;
+        } else if (std::string_view v_dialogo = opcion(p, "dialogo"); !v_dialogo.empty()) {
             es.tipo = Espera::VENTANA;  // "pregunta" o "cantidad": son ventanas que se abren solas
-            es.texto = v;
-        } else if (std::string_view v = opcion(p, "chat"); !v.empty()) {
+            es.texto = v_dialogo;
+        } else if (std::string_view v_chat = opcion(p, "chat"); !v_chat.empty()) {
             es.tipo = Espera::CHAT;
-            es.texto = v;
+            es.texto = v_chat;
             es.chat_desde = c.chat_antes;
-        } else if (std::string_view v = opcion(p, "ms"); !v.empty()) {
+        } else if (std::string_view v_ms = opcion(p, "ms"); !v_ms.empty()) {
             es.tipo = Espera::MS;  // tiempo real (los frames dependen de los fps)
-            es.frame = ahora + std::strtoull(std::string(v).c_str(), nullptr, 10);
+            es.frame = ahora + std::strtoull(std::string(v_ms).c_str(), nullptr, 10);
             es.vence_ms = std::max(es.vence_ms, es.frame + 1000);
-        } else if (std::string_view v = opcion(p, "frames"); !v.empty()) {
+        } else if (std::string_view v_frames = opcion(p, "frames"); !v_frames.empty()) {
             es.tipo = Espera::FRAMES;
-            es.frame = a.frame + std::strtoull(std::string(v).c_str(), nullptr, 10);
+            es.frame = a.frame + std::strtoull(std::string(v_frames).c_str(), nullptr, 10);
         } else {
             return error("uso: esperar pantalla=|paquete=|html=|ventana=|dialogo=|chat=|frames=|ms= [plazo=ms]");
         }
@@ -710,8 +710,8 @@ void revisar_espera(App& a, Conexion& c) {
 }
 
 void cerrar_conexion(Conexion& c) {
-    ::close(c.fd);
-    c.fd = -1;
+    local_cerrar(c.fd);
+    c.fd = SIN_DESC;
 }
 
 }  // namespace
@@ -721,57 +721,38 @@ void control_iniciar(App&) {
     if (e && *e) {
         g.ruta = e;
     } else {
+#if defined(_WIN32)
+        g.ruta = "tcp:0";
+#else
         const char* tmp = std::getenv("TMPDIR");
         std::string dir = tmp && *tmp ? tmp : "/tmp/";
         if (dir.back() != '/') dir += '/';
         g.ruta = dir + "lineage-control-" + std::to_string(::getpid()) + ".sock";
+#endif
     }
-    sockaddr_un dir{};
-    dir.sun_family = AF_UNIX;
-    if (g.ruta.size() >= sizeof dir.sun_path) {
-        LIN_LOG("Control en vivo: la ruta es demasiado larga (%zu bytes): %s", g.ruta.size(), g.ruta.c_str());
-        return;
-    }
-    std::memcpy(dir.sun_path, g.ruta.c_str(), g.ruta.size() + 1);
-    ::unlink(g.ruta.c_str());
-    g.escucha = ::socket(AF_UNIX, SOCK_STREAM, 0);
-    const mode_t antes = ::umask(0077);  // solo el usuario
-    const bool ok = g.escucha >= 0 && ::bind(g.escucha, reinterpret_cast<sockaddr*>(&dir), sizeof dir) == 0 &&
-                    ::listen(g.escucha, MAX_CONEXIONES) == 0;
-    ::umask(antes);
-    if (!ok) {
-        LIN_LOG("Control en vivo: no se pudo abrir %s (%s)", g.ruta.c_str(), std::strerror(errno));
-        if (g.escucha >= 0) ::close(g.escucha);
-        g.escucha = -1;
-        return;
-    }
-    ::fcntl(g.escucha, F_SETFL, O_NONBLOCK);
-    LIN_LOG("Control en vivo: %s", g.ruta.c_str());
+    std::string donde;
+    g.escucha = local_escuchar(g.ruta, MAX_CONEXIONES, donde);
+    // "lineage-control-" también es la marca que busca cmake/sin_control.cmake en las versiones finales.
+    // Si falló, `donde` tiene el motivo.
+    LIN_LOG("Control en vivo (lineage-control-): %s", donde.c_str());
 }
 
 void control_frame(App& a) {
-    if (g.escucha < 0) return;
+    if (g.escucha == SIN_DESC) return;
     // Conexiones nuevas.
-    for (int fd; static_cast<int>(g.conexiones.size()) < MAX_CONEXIONES && (fd = ::accept(g.escucha, nullptr, nullptr)) >= 0;) {
-        ::fcntl(fd, F_SETFL, O_NONBLOCK);
+    for (DescLocal fd; static_cast<int>(g.conexiones.size()) < MAX_CONEXIONES && (fd = local_aceptar(g.escucha)) != SIN_DESC;)
         g.conexiones.push_back({fd, {}, {}, {}});
-    }
     for (Conexion& c : g.conexiones) {
         // Leer lo que llegó.
         char buf[4096];
-        for (ssize_t n;;) {
-            n = ::recv(c.fd, buf, sizeof buf, 0);
-            if (n == 0) {  // peer closed: free the slot (MAX_CONEXIONES), or new clients wait forever
-                cerrar_conexion(c);
-                break;
-            }
+        for (i64 n; (n = local_recibir(c.fd, buf, sizeof buf)) != 0;) {
             if (n < 0) {
-                if (errno != EAGAIN && errno != EWOULDBLOCK) cerrar_conexion(c);
+                cerrar_conexion(c);
                 break;
             }
             c.entrada.append(buf, static_cast<size_t>(n));
         }
-        if (c.fd < 0) continue;
+        if (c.fd == SIN_DESC) continue;
         // Un comando a la vez: el siguiente espera a que el anterior responda.
         revisar_espera(a, c);
         for (size_t fin; c.espera.tipo == Espera::NADA && (fin = c.entrada.find('\n')) != std::string::npos;) {
@@ -782,12 +763,12 @@ void control_frame(App& a) {
         }
         // Escribir las respuestas.
         while (!c.salida.empty()) {
-            const ssize_t n = ::send(c.fd, c.salida.data(), c.salida.size(), 0);
+            const i64 n = local_enviar(c.fd, c.salida.data(), c.salida.size());
             if (n <= 0) break;
             c.salida.erase(0, static_cast<size_t>(n));
         }
     }
-    std::erase_if(g.conexiones, [](const Conexion& c) { return c.fd < 0; });
+    std::erase_if(g.conexiones, [](const Conexion& c) { return c.fd == SIN_DESC; });
     // Texto inyectado: uno por frame (SDL guarda el puntero hasta leer el evento).
     if (!g.textos.empty()) {
         g.texto_actual = std::move(g.textos.front());
@@ -834,13 +815,10 @@ void control_paquete(Srv s) {
 }
 
 void control_cerrar() {
-    for (Conexion& c : g.conexiones) ::close(c.fd);
+    for (Conexion& c : g.conexiones) local_cerrar(c.fd);
     g.conexiones.clear();
-    if (g.escucha >= 0) {
-        ::close(g.escucha);
-        ::unlink(g.ruta.c_str());
-    }
-    g.escucha = -1;
+    local_dejar_de_escuchar(g.escucha, g.ruta);
+    g.escucha = SIN_DESC;
 }
 
 }  // namespace lin

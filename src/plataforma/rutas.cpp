@@ -89,11 +89,11 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "chat_con_enter") c.chat_con_enter = valor != "0";
     else if (clave == "barra_personaje") c.barra_personaje = valor == "1";
     else if (clave == "texto_hd") c.texto_hd = valor == "1";
+    else if (clave == "lista_sprites") c.lista_sprites = valor;
     else if (clave == "fuente_original") c.fuente_original = valor == "1";
     else if (clave == "texto_dano") c.texto_dano = valor == "1";
     else if (clave == "globos_comic") c.globos_comic = valor == "1";
     else if (clave == "compensar_ataque") c.compensar_ataque = valor != "0";
-    else if (clave == "lista_sprites") c.lista_sprites = valor;
     else if (clave == "ventana") {
         const size_t x = valor.find('x');
         const int w = std::atoi(std::string(valor.substr(0, x)).c_str());
@@ -209,7 +209,7 @@ std::string_view parte_de_valor(std::string_view valor, int n) {
 std::vector<std::string> personajes_con_datos(const Config& c) {
     std::vector<std::string> nombres;
     for (std::string_view opcion : {std::string_view{c.atajos}, std::string_view{c.barra}, std::string_view{c.autobuffs},
-                                    std::string_view{c.autopocion}}) {
+                                    std::string_view{c.autopocion}, std::string_view{c.inventario_orden}}) {
         while (!opcion.empty()) {
             std::string_view par = opcion.substr(0, opcion.find(';'));
             opcion = par.size() < opcion.size() ? opcion.substr(par.size() + 1) : std::string_view{};
@@ -271,8 +271,8 @@ std::string escribir_config(const Config& c) {
     linea("fuente_original", c.fuente_original ? "1" : "0");
     linea("texto_dano", c.texto_dano ? "1" : "0");
     linea("globos_comic", c.globos_comic ? "1" : "0");
-    linea("compensar_ataque", c.compensar_ataque ? "1" : "0");
     linea("lista_sprites", c.lista_sprites);
+    linea("compensar_ataque", c.compensar_ataque ? "1" : "0");
     linea("ventana", std::to_string(c.ventana_ancho) + 'x' + std::to_string(c.ventana_alto));
     return t;
 }
@@ -289,9 +289,12 @@ bool guardar_config_en(const std::string& ruta, const Config& c) {
 
 bool carpeta_juego_valida(const std::string& carpeta) {
     // En Linux el sistema de archivos distingue mayúsculas y la instalación original las mezcla
-    // ("Sprite.pak", "map/"): ruta_real busca los nombres sin distinguirlas.
+    // ("Sprite.pak", "map/"): ruta_real las busca sin distinguirlas.
     for (const char* f : {"Sprite.idx", "Sprite.pak", "Tile.idx", "Tile.pak", "Text.idx", "Text.pak"}) {
-        if (!SDL_GetPathInfo(ruta_real(carpeta + f).c_str(), nullptr)) return false;
+        if (!SDL_GetPathInfo(ruta_real(carpeta + f).c_str(), nullptr)) {
+            LIN_LOG("Carpeta del juego: no se encontró %s%s (%s)", carpeta.c_str(), f, SDL_GetError());
+            return false;
+        }
     }
     return true;
 }

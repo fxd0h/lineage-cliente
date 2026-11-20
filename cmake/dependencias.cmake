@@ -43,4 +43,6 @@ target_include_directories(dr_mp3 SYSTEM INTERFACE ${dr_libs_src_SOURCE_DIR})
 # doctest: solo header; con -fno-exceptions se activa su modo sin ellas
 add_library(doctest INTERFACE)
 target_include_directories(doctest SYSTEM INTERFACE ${doctest_src_SOURCE_DIR})
-target_compile_definitions(doctest INTERFACE DOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS)
+# USE_STD_HEADERS: incluir <ostream> en lugar de declararlo; MSVC lo necesita para imprimir
+# std::string_view en un CHECK (con libc++ en macOS doctest ya lo hace solo).
+target_compile_definitions(doctest INTERFACE DOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS DOCTEST_CONFIG_USE_STD_HEADERS)

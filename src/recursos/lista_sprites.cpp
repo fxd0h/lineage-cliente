@@ -1,15 +1,18 @@
-// Plaintext sprite list (list.spz), the user's own copy of the game's sprite table. Never shipped.
+// Tabla de sprites en texto plano: la del propio cliente del usuario (TW13032701.txt del cliente
+// taiwanés, o list.spz descifrado). No se distribuye: se lee de la instalación (ver app.cpp).
 //
-//   S<count> <a> <b>                       header line, ignored
-//   #<gfx> <subsprites>[=<file gfx>][$] <name>     one entry per gfx, '#' at the start of a line
-//   <id>.<name>(<dir> <n>,<sub>.<frame>:<ticks>[suffix] ...)       action (id < 100 or >= 121)
-//   <id>.<name>(<value> ...)                       attribute (100-120): 101 shadow, 102 type,
-//                                                  104 attr, 109 "n gfx" next gfx, 110 framerate
-// Suffixes glued to a frame: ! hit, [N or <N sound, ]N frame effect, ^ > { } others (ignored).
-// Entry layout varies: tab/space/no indent, several actions on one line, "1 10.8.9:4" for "1 10,8.9:4".
-// The parser therefore scans tokens instead of lines. Frames are listed like in sprite_table.txt (the
-// sprite file's last frame first), so death rows get the same rotation.
-#include <cctype>
+//   <cantidad> <a> <b>  o  S<cantidad> <a> <b>        encabezado, se ignora
+//   #<gfx> <subsprites>[=<gfx de archivos>][$] <nombre>   una entrada por gfx, '#' al principio de la línea
+//   <id>.<nombre>(<dir> <n>,<sub>.<frame>:<ticks>[sufijo] ...)   acción (id < 100 o >= 121)
+//   <id>.<nombre>(<valor> ...)                   atributo (100-120): 101 sombra, 102 tipo, 104 atributo,
+//                                                109 "n gfx" gráfico siguiente, 110 velocidad
+// Sufijos pegados a un frame: ! impacto, [N o <N sonido; ]N ^ > { } se ignoran.
+// El formato varía (tabulador, espacios o nada; varias acciones en una línea; "1 10.8.9:4" por
+// "1 10,8.9:4"), así que se recorren tokens y no líneas. Los frames vienen como en sprite_table.txt (el
+// último frame del archivo primero), así que la muerte se rota igual (poner_cadaver_al_final).
+//
+// Lector tomado del fork fxd0h/lineage-cliente (lista_sprites.cpp).
+#include <cstring>
 #include "plataforma/archivo_mapeado.h"
 #include "recursos/tabla_sprites.h"
 
@@ -42,7 +45,7 @@ struct Lector {
     }
 };
 
-// One gfx entry as read from the text, before it is merged.
+// Una entrada (un gfx) tal como viene en el texto, antes de fusionarla.
 struct Entrada {
     GfxId gfx = 0;
     GfxId archivos = 0;
@@ -50,17 +53,17 @@ struct Entrada {
     u8 tipo = 0;
     u16 atributos = 0;
     GfxId siguiente = 0;
-    std::vector<std::pair<u8, RangoAccion>> acciones;  // action id -> range into `frames`
+    std::vector<std::pair<u8, RangoAccion>> acciones;  // id de la acción -> rango en `frames`
     std::vector<FrameAccion> frames;
 };
 
-// Parses the frames of one action body ("1 8,0.0:2 0.1:2<478 ..."); `r.primer` indexes `frames`.
+// Los frames del cuerpo de una acción ("1 8,0.0:2 0.1:2<478 ..."); `r.primer` indexa `frames`.
 void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
     c.saltar_espacios();
     r.direccional = static_cast<u8>(c.numero());
     c.saltar_espacios();
-    c.numero();  // declared count; the frames actually present decide
-    if (c.p < c.fin && !es_espacio(*c.p)) ++c.p;  // ',' (or a stray '.')
+    c.numero();  // cantidad declarada: mandan los frames que hay
+    if (c.p < c.fin && !es_espacio(*c.p)) ++c.p;  // ',' (o un '.' suelto)
     for (;;) {
         c.saltar_espacios();
         if (!c.digito()) break;
@@ -81,7 +84,6 @@ void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
                 const bool hay = c.digito();
                 const int n = c.numero();
                 if (hay && (s == '[' || s == '<')) f.sonido = static_cast<i16>(n);
-                else if (hay && s == ']') f.efecto = static_cast<u16>(n);
             }
         }
         frames.push_back(f);
@@ -89,11 +91,11 @@ void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
     }
 }
 
-// Tokens "<id>.<name>(<body>)" of one entry's text (everything after the header numbers).
+// Los tokens "<id>.<nombre>(<cuerpo>)" de una entrada (lo que sigue a los números del encabezado).
 void leer_entrada(const char* p, const char* fin, Entrada& e) {
     u8 velocidad = 24;
     while (p < fin) {
-        // A token starts with digits at the start of the text or after whitespace, then '.'.
+        // Un token empieza con dígitos al principio del texto o después de un espacio, y sigue un '.'.
         if (!es_digito(*p) || (p[-1] != '\n' && !es_espacio(p[-1]))) { ++p; continue; }
         Lector c{p, fin};
         const int id = c.numero();
@@ -135,11 +137,11 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
     }
 }
 
-// Checks an entry against our sprite files. Picks the file gfx (the alias, else the gfx itself when the alias has
-// no files), then drops every frame whose image we lack in some heading it can be drawn with. Actions left empty
-// are removed. Returns false when no file of the entry exists at all.
+// Compara una entrada con los .spr de la instalación. Elige el gfx de archivos (el alias, o el propio gfx si el
+// alias no tiene archivos) y quita los frames cuya imagen falta en alguna dirección con la que se dibuja. Las
+// acciones que quedan vacías se quitan. false si no existe ningún archivo de la entrada.
 bool validar_entrada(Entrada& e, const ContadorFrames& contador, bool& recortada) {
-    std::vector<std::pair<u32, u32>> cache;  // (file gfx << 16 | sub) -> image count
+    std::vector<std::pair<u32, u32>> cache;  // (gfx de archivos << 16 | sub) -> cantidad de imágenes
     auto cuenta = [&](GfxId g, u16 sub) {
         const u32 k = (static_cast<u32>(g) << 16) | sub;
         for (const auto& [kk, n] : cache)
@@ -148,7 +150,7 @@ bool validar_entrada(Entrada& e, const ContadorFrames& contador, bool& recortada
         cache.emplace_back(k, n);
         return n;
     };
-    // Does `g` hold any file used by the entry's actions?
+    // ¿`g` tiene algún archivo de los que usan las acciones de la entrada?
     auto tiene_archivos = [&](GfxId g) {
         for (const auto& [id, r] : e.acciones)
             for (u32 i = 0; i < r.cantidad; ++i) {
@@ -174,7 +176,7 @@ bool validar_entrada(Entrada& e, const ContadorFrames& contador, bool& recortada
             for (u16 d = 0; d < (r.direccional ? 8 : 1); ++d) {
                 const u32 c = cuenta(e.archivos, static_cast<u16>(f.sub + d));
                 alguno |= c > 0;
-                if (c > 0 && f.frame >= c) ok = false;  // a missing heading file is not this frame's fault
+                if (c > 0 && f.frame >= c) ok = false;  // si falta el archivo de una dirección, no es culpa del frame
             }
             if (ok && alguno) {
                 nuevos.push_back(f);
@@ -192,9 +194,10 @@ bool validar_entrada(Entrada& e, const ContadorFrames& contador, bool& recortada
 }  // namespace
 
 bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen, const ContadorFrames* contador) {
+    const size_t gfx_tabla = alias_.size();  // los gfx que sprite_table.txt ya trae (con o sin acciones)
     const char* p = texto.data();
     const char* fin = p + texto.size();
-    // Entry boundaries: lines that begin with '#' and a digit.
+    // Cada entrada empieza en una línea con '#' y un dígito.
     auto inicio_entrada = [&](const char* q) { return *q == '#' && q + 1 < fin && es_digito(q[1]); };
     while (p < fin && !inicio_entrada(p)) {
         const char* nl = static_cast<const char*>(std::memchr(p, '\n', fin - p));
@@ -213,29 +216,40 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
         e.gfx = static_cast<GfxId>(c.numero());
         e.archivos = e.gfx;
         c.saltar_espacios();
-        c.numero();  // sub-sprite count
+        c.numero();  // cantidad de sub-sprites
         if (c.p < c.fin && *c.p == '=') {
             ++c.p;
             e.archivos = static_cast<GfxId>(c.numero());
         }
         leer_entrada(c.p, sig, e);
+        if (e.gfx >= alias_.size()) {
+            const size_t n = static_cast<size_t>(e.gfx) + 1;
+            for (size_t g = alias_.size(); g < n; ++g) alias_.push_back(static_cast<GfxId>(g));
+            sombra_.resize(n, -1);
+            tipo_.resize(n, 0);
+            atributos_.resize(n, 0);
+            siguiente_.resize(n, 0);
+        }
         if (e.acciones.empty()) {
-            ++resumen.omitidos;
-        } else {
-            if (e.gfx >= alias_.size()) {
-                const size_t n = static_cast<size_t>(e.gfx) + 1;
-                for (size_t g = alias_.size(); g < n; ++g) alias_.push_back(static_cast<GfxId>(g));
-                sombra_.resize(n, -1);
-                tipo_.resize(n, 0);
-                atributos_.resize(n, 0);
-                siguiente_.resize(n, 0);
+            // Sin acciones (ítems del suelo, objetos): sus atributos, si sprite_table.txt no tiene el gfx. El tipo
+            // decide, por ejemplo, que un ítem del suelo se recoja con un clic. El alias, solo si tiene archivo.
+            if (e.gfx >= gfx_tabla) {
+                if (!contador || (*contador)(e.archivos, 0) > 0) alias_[e.gfx] = e.archivos;
+                sombra_[e.gfx] = e.sombra;
+                tipo_[e.gfx] = e.tipo;
+                atributos_[e.gfx] = e.atributos;
+                siguiente_[e.gfx] = e.siguiente;
+                ++resumen.atributos;
+            } else {
+                ++resumen.omitidos;
             }
-            // Only fill gfx that sprite_table.txt lacks: list.spz comes from a much newer client, and its rows for
-            // gfx we already have can name frames or action ids our 3.63c Sprite.pak doesn't match.
+        } else {
+            // Solo los gfx que sprite_table.txt no tiene: la lista puede venir de un cliente más nuevo y sus filas
+            // de gfx que ya tenemos pueden nombrar frames o acciones que nuestro Sprite.pak no tiene.
             bool existia = false;
             for (u64 a = 0; a < 256 && !existia; ++a) existia = indice_.buscar((static_cast<u64>(e.gfx) << 8) | a);
             if (existia) {
-                ++resumen.reemplazados;  // kept from sprite_table.txt
+                ++resumen.reemplazados;  // se queda la de sprite_table.txt
                 p = sig;
                 continue;
             }

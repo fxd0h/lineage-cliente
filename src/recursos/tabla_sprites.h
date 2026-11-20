@@ -52,7 +52,8 @@ void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion&
 struct ResumenLista {
     u32 nuevos = 0;        // gfx with actions that had no row in sprite_table.txt
     u32 reemplazados = 0;  // gfx already in sprite_table.txt: kept, the list.spz rows are ignored
-    u32 omitidos = 0;      // entries without any action (attribute-only), left alone
+    u32 omitidos = 0;      // entries already without actions, or without any file, left alone
+    u32 atributos = 0;     // new gfx without actions (ground items, objects): only type, shadow, alias...
     u32 sin_archivo = 0;   // new gfx whose sprite file (alias) is missing from our paks: redirected or left out
     u32 recortados = 0;    // new gfx with frames (or whole actions) dropped because our paks lack those images
 };

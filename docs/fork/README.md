@@ -139,14 +139,19 @@ client. The front page is the [root README](../../README.md).
 
 ### Upstream merges
 
-- **Last merged: `origin/main` cabd99e (2026-11-19)** as a real merge commit; the next sync starts at
-  `git log HEAD..origin/main`. Brought in: `.seg` map segments (Chaotic Temple, north Gludio), pets/summons talk on
-  click, common turn and 200 ms spacing for auto-buffs and auto-potion, inventory sort (Sort button, drag to another
-  cell, Shift+click multi-select, per-character order in settings.ini). Upstream's `CHANGES.md` is in
-  `docs/upstream/CHANGES.md`. Fork resolutions: auto-buffs and auto-potion stay simple-UI only
-  (the 2009 client has none); inventory sorting, multi-select and the saved order are simple-UI only too, because
-  the 2009 inventory (handler 0x44d1b0) only has tabs, scroll bar, trash and close, and shows the list order
-  with worn items first.
+- **Last merged: `origin/main` 436670c (2026-11-20, v0.1.5)** as a real merge commit; the next sync starts at
+  `git log HEAD..origin/main`. Previous: cabd99e (2026-11-19). Brought in: Windows support (Winsock2 and TCP live
+  control via `LIN_CONTROL=tcp:<port>`, `MapViewOfFile`, MSVC /W4 fixes, packaging zip, `.ico`/version resource, CI
+  for five platforms), the Settings window (`ajustes_ui.cpp`, replaces the simple UI's Options window and the
+  `settings` tool; the original UI keeps its option1 page and its login Options button stays inert), item blessing
+  decode (same as our `bless_kind`), case-insensitive game files (identical to our `ruta_real`), GPU/driver log line,
+  `LIN_VSYNC=0`, the real sprite table reader (one `lista_sprites.cpp`, theirs, plus our `juego_extra=` list lookup in
+  `app.cpp`), map-only zoom (simple UI with the dynamic view only). Fork resolutions: our HD text (glyph fields,
+  `fs_texto_comp`) wins; upstream's `texto_hd` (`ampliar_glifo_suave`, `glifo_hd(g, k)`) was dropped. Our GLSL ->
+  SPIR-V shaders and hand-written MSL stay; upstream's HLSL sources (`src/render/shaders/*.hlsl`,
+  `cmake/shaders.cmake`, DXIL) are kept in the tree but NOT built: they only cover sprite, brillo and mundo, so a
+  Windows build still needs the rest of our shaders (text, scalers, anime4k) ported to HLSL. Upstream's
+  `CHANGES.md` and `ENTREGABLES.md` are in `docs/upstream/`.
 - Upstream `main` is merged from time to time (last: auto-buff potions and NPC shop stack quantity,
   2026-11-15). Upstream's experimental branches (`agente/modelos-3d`, `agente/plan-portado`) are not merged.
 

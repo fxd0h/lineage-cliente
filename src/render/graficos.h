@@ -9,6 +9,7 @@
 #include <deque>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 #include "core/mapa_hash.h"
 #include "recursos/fuente.h"
@@ -77,6 +78,19 @@ public:
     int texto_html(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO, bool negrita = false);
     // Texto con sombra negra de 1 px (como los nombres sobre los personajes).
     int texto_sombra(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO);
+    // Las mismas con coordenadas enteras o mezcladas (la interfaz trabaja en píxeles enteros): se pasan
+    // a float acá y no con un static_cast en cada llamada. Plantillas y no sobrecargas con int, para que
+    // una llamada con un float y un int no sea ambigua.
+    template <class X, class Y>
+        requires std::is_arithmetic_v<X> && std::is_arithmetic_v<Y>
+    int texto(std::string_view t, X x, Y y, u64 clave, u32 color = BLANCO) {
+        return texto(t, static_cast<float>(x), static_cast<float>(y), clave, color);
+    }
+    template <class X, class Y>
+        requires std::is_arithmetic_v<X> && std::is_arithmetic_v<Y>
+    int texto_sombra(std::string_view t, X x, Y y, u64 clave, u32 color = BLANCO) {
+        return texto_sombra(t, static_cast<float>(x), static_cast<float>(y), clave, color);
+    }
 
     // eng.fnt text with the 1 px 4-way outline of 0x4334f0 (colour `color`, outline `contorno`, default black 0x5004f0).
     int texto_contorno(std::string_view t, float x, float y, u64 clave, u32 color = BLANCO, u32 contorno = 0xFF000000u);

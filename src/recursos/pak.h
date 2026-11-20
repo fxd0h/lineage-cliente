@@ -19,7 +19,7 @@ namespace lin {
 
 class Pak {
 public:
-    bool abrir(const std::string& ruta_sin_extension, bool indice_cifrado);
+    bool abrir(const std::string& ruta_sin_extension, bool indice_cifrado, bool avisar = true);  // avisar: al log si falla
     // Devuelve el contenido (vista al archivo mapeado) o vacío si no existe. Nombre en minúsculas.
     Bytes buscar(std::string_view nombre) const;
     size_t cantidad() const { return entradas_.size(); }

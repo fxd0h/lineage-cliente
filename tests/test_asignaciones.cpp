@@ -80,5 +80,6 @@ TEST_CASE("Sin allocations en régimen: red, mundo, chat, precarga y atlas") {
     antes = asignaciones_hilo();
     std::vector<int> v(1000, 1);
     CHECK(v[999] == 1);
-    CHECK(asignaciones_hilo() - antes == 1);
+    // >= 1: en Debug, MSVC (_ITERATOR_DEBUG_LEVEL=2) reserva además el proxy de iteradores del vector.
+    CHECK(asignaciones_hilo() - antes >= 1);
 }

@@ -1,5 +1,6 @@
 // Ventanas del juego: dónde está cada una, moverlas arrastrando la barra de título (la posición se
-// guarda en settings.ini, "ventanas="), los botones para abrirlas y la ventana de opciones.
+// guarda en settings.ini, "ventanas="), los botones para abrirlas (Options abre los ajustes,
+// ajustes_ui.cpp).
 //  - Sin moverlas, cada una va en su lugar de siempre: inventario contra el borde derecho, estado y
 //    hechizos a su izquierda (según cuáles estén abiertas) y el diálogo del NPC a la izquierda.
 //  - Botones: con la UI original, los del panel (1005–1012.img: magia, estado, opciones,
@@ -15,11 +16,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "opciones", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 13, "App::orden_ventanas se inicializa con 0..12");
-// Doce filas de ALTO_GLIFO + 12 px, más el título y el margen: 352 px. Con 276 (y luego 300) la última quedaba afuera.
-constexpr int ANCHO_OPCIONES = 320, ALTO_OPCIONES = 300;  // 10 filas a la vista; el resto, con scroll
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 12, "App::orden_ventanas se inicializa con 0..11");
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
 // Original exit window (client draw at 0x4a1570, built at 0x4a1180): background 1058 at (7,7), frame 1059, ornaments
 // 1060 at (0,6), close button at (108,11), buttons Restart 1063 / Quit 1065 / Cancel 1067 (hover +1) at x 31, y 34/52/70.
@@ -80,7 +79,6 @@ Rect por_defecto(const App& a, IdVentana v) {
             return {MARGEN, y, nw, nh};
         }
         return {MARGEN, y, w, h};
-    case IdVentana::OPCIONES: return {(a.gpu.ancho() - ANCHO_OPCIONES) / 2, y + 28, ANCHO_OPCIONES, ALTO_OPCIONES};
     case IdVentana::SALIDA:
         if (!a.cfg.ui_simple) return {(a.gpu.ancho() - EXIT_W) / 2, a.gpu.alto() / 3, EXIT_W, EXIT_H};
         return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
@@ -101,7 +99,6 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::INVENTARIO: return a.ventana_inventario;
     case IdVentana::HECHIZOS: return a.ventana_hechizos;
     case IdVentana::NPC: return a.npc || a.tienda != TipoTienda::NINGUNA;
-    case IdVentana::OPCIONES: return a.ventana_opciones;
     case IdVentana::SALIDA: return a.ventana_salida;
     case IdVentana::SOCIAL: return a.ventana_social;
     case IdVentana::INTERCAMBIO: return a.intercambio.abierto;
@@ -229,7 +226,7 @@ void arrastrar_ventana(App& a, IdVentana v) {
     }
 }
 
-// La de las opciones; opaca para la ventana que se está dibujando si tapa a otra (se leería el
+// La de los ajustes; opaca para la ventana que se está dibujando si tapa a otra (se leería el
 // texto de la de abajo a través de su fondo).
 u8 opacidad_ventanas(const App& a) {
     if (!a.cfg.ui_simple) {  // original: option [0x6e1008] = 31, 20, 13 or 7 (of 31), set by the Options page "alpha" action
@@ -297,7 +294,7 @@ static bool* boton_inf_abierta(App& a, int i) {
     case 1: return &a.ventana_estado;
     case 2: return &a.ventana_inventario;
     case 3: return &a.ventana_social;
-    case 4: return &a.ventana_opciones;
+    case 4: return &a.ventana_ajustes;
     default: return &a.ventana_salida;
     }
 }
@@ -323,7 +320,7 @@ int dibujar_botones_texto(App& a, int x_der, int y_top) {
     return x0;
 }
 
-// Recuadro con título y "[x]" para las ventanas chicas (opciones, salida). Devuelve true al cerrar.
+// Recuadro con título y "[x]" para las ventanas chicas (teclas, salida). Devuelve true al cerrar.
 static bool recuadro(App& a, Rect r, std::string_view titulo) {
     Graficos& g = *a.g;
     const u8 op = opacidad_ventanas(a);
@@ -334,120 +331,6 @@ static bool recuadro(App& a, Rect r, std::string_view titulo) {
     g.texto(titulo, static_cast<float>(r.x + 8), static_cast<float>(r.y + 6), kt, rgba(214, 190, 140));
     g.texto("[x]", static_cast<float>(r.x + r.w - 26), static_cast<float>(r.y + 6), kt, rgba(255, 255, 254));
     return (a.entrada.clic && ui::sobre(a.entrada, r.x + r.w - 28, r.y + 2, 26, 20)) || a.entrada.escape;
-}
-
-void dibujar_opciones(App& a) {
-    if (!a.ventana_opciones) return;
-    Graficos& g = *a.g;
-    const EntradaFrame& e = a.entrada;
-    arrastrar_ventana(a, IdVentana::OPCIONES);
-    Rect r = rect_ventana(a, IdVentana::OPCIONES);
-    // ui::ventana tiene el alto fijo de las demás: aquí se dibuja un recuadro propio del alto justo.
-    if (recuadro(a, r, "Options")) a.ventana_opciones = false;
-    const u64 kt = clave_orden(CAPA_UI_TEXTO, 10);
-
-    // Una fila por opción: el nombre y un botón con el valor (clic lo cambia). Las filas fuera de la
-    // parte visible no se dibujan ni reciben clics; la barra y la rueda recorren la lista.
-    char t[48];
-    const int paso = ALTO_GLIFO + 12, top = r.y + ui::ALTO_TITULO + 8;
-    const u32 visibles = static_cast<u32>((r.h - ui::ALTO_TITULO - 8 - 6) / paso);
-    u32& primera = a.scroll.opciones_pos;
-    barra_scroll_ventana(a, a.scroll.opciones, r.x + r.w - 14, top, static_cast<int>(visibles) * paso, a.scroll.opciones_filas,
-                         visibles, primera, clave_orden(CAPA_UI, 14), sobre_ventana(a, IdVentana::OPCIONES));
-    u32 contador = 0;
-    auto fila = [&](std::string_view nombre, std::string_view valor) {
-        const u32 k = contador++;
-        if (k < primera || k >= primera + visibles) return false;
-        const int y = top + static_cast<int>(k - primera) * paso;
-        g.texto(nombre, static_cast<float>(r.x + 10), static_cast<float>(y + 3), kt, rgba(230, 220, 190));
-        // El botón de valor tiene 120 px: "Enter to type" y sus parecidos no se salen; la etiqueta, a la izquierda.
-        return ui::boton_texto(g, e, valor, r.x + r.w - 140, y, 120, ALTO_GLIFO + 6);
-    };
-    bool cambio = false;
-    if (fila("Interface (F2)", a.cfg.ui_simple ? "Simple" : "Original")) a.cfg.ui_simple = !a.cfg.ui_simple, cambio = true;
-    if (fila("Camera (F4)", a.cfg.camara_a_saltos ? "Steps" : "Smooth")) a.cfg.camara_a_saltos = !a.cfg.camara_a_saltos, cambio = true;
-    if (fila("Shade in shadows", a.cfg.sombra_personajes ? "On" : "Off"))
-        a.cfg.sombra_personajes = !a.cfg.sombra_personajes, cambio = true;
-    if (fila("FPS (Shift+F3)", a.cfg.mostrar_fps ? "On" : "Off")) a.cfg.mostrar_fps = !a.cfg.mostrar_fps, cambio = true;
-    const int opacidad = std::clamp(a.cfg.opacidad_ventanas, 60, 255);  // la configurada, no la de esta ventana
-    std::snprintf(t, sizeof t, "%d%%", opacidad * 100 / 255);
-    if (fila("Window opacity", t)) {  // 40 % -> 55 % -> 70 % -> 85 % -> 100 % -> 40 %
-        int o = opacidad + 38;
-        a.cfg.opacidad_ventanas = o > 255 ? 102 : o;
-        cambio = true;
-    }
-    if (fila("Chat", a.cfg.chat_con_enter ? "Enter to type" : "Always typing")) {
-        a.cfg.chat_con_enter = !a.cfg.chat_con_enter;
-        a.escribiendo_chat = false;
-        cambio = true;
-    }
-    std::snprintf(t, sizeof t, "%d", a.cfg.paginas_barra);
-    if (fila("Hotbar pages", t)) {  // 1 -> 2 ... -> 9 -> 1; las que dejan de verse se conservan
-        a.cfg.paginas_barra = a.cfg.paginas_barra % PAGINAS_BARRA_MAX + 1;
-        cambio = true;
-    }
-    std::snprintf(t, sizeof t, "%d ms", a.cfg.ms_mantener_tecla);
-    if (fila("Hold 1-0 to self-cast", t)) {  // 150 -> 200 -> 300 -> 400 -> 500 -> 700 -> 1000 -> 150
-        static constexpr int VALORES[] = {150, 200, 300, 400, 500, 700, 1000};
-        int sig = VALORES[0];
-        for (int v : VALORES)
-            if (v > a.cfg.ms_mantener_tecla) { sig = v; break; }
-        a.cfg.ms_mantener_tecla = sig;
-        cambio = true;
-    }
-    // Auto-poción del personaje con el que se juega (la carga procesar_autopocion).
-    if (a.cfg.usar_autopocion && !a.autopocion.de.empty()) {
-        char n[64];
-        std::snprintf(n, sizeof n, "Auto potion (%s)", a.autopocion.de.c_str());
-        if (fila(n, a.autopocion.op.encendida ? "On" : "Off")) {
-            a.autopocion.op.encendida = !a.autopocion.op.encendida;
-            guardar_autopocion(a);
-        }
-        std::snprintf(t, sizeof t, "below %d%% HP", a.autopocion.op.umbral);
-        if (fila("Auto potion when", t)) {  // 10 -> 15 ... -> 95 -> 10
-            int& u = a.autopocion.op.umbral;
-            u = u >= UMBRAL_POCION_MAX ? UMBRAL_POCION_MIN : u + 5;
-            guardar_autopocion(a);
-        }
-    }
-    if (fila("HP/MP bar over char", a.cfg.barra_personaje ? "On" : "Off"))
-        a.cfg.barra_personaje = !a.cfg.barra_personaje, cambio = true;
-    if (fila("Damage numbers", a.cfg.texto_dano ? "On" : "Off"))
-        a.cfg.texto_dano = !a.cfg.texto_dano, cambio = true;
-    if (fila("Speech balloons", a.cfg.globos_comic ? "Comic" : "Text"))
-        a.cfg.globos_comic = !a.cfg.globos_comic, cambio = true;
-    if (fila("Attack compensation", a.cfg.compensar_ataque ? "On" : "Off"))
-        a.cfg.compensar_ataque = !a.cfg.compensar_ataque, cambio = true;
-    if (fila("Night and dungeons",a.cfg.efecto_luz ? "On" : "Off")) a.cfg.efecto_luz = !a.cfg.efecto_luz, cambio = true;
-    if (fila("Underwater tint", a.cfg.efecto_agua_tinte ? "On" : "Off")) a.cfg.efecto_agua_tinte = !a.cfg.efecto_agua_tinte, cambio = true;
-    if (fila("Underwater wave", a.cfg.efecto_agua_ola ? "On" : "Off")) a.cfg.efecto_agua_ola = !a.cfg.efecto_agua_ola, cambio = true;
-    if (fila("Elf vision", a.cfg.efecto_infravision ? "On" : "Off")) a.cfg.efecto_infravision = !a.cfg.efecto_infravision, cambio = true;
-    if (fila("Full screen (Alt+Enter)", a.cfg.pantalla_completa ? "On" : "Off")) alternar_pantalla_completa(a), cambio = true;
-    if (!a.gpu.vista_fija()) {
-        std::snprintf(t, sizeof t, a.cfg.zoom ? "x%d" : "Auto", a.cfg.zoom);
-        if (fila("Zoom (Ctrl +/-)", t)) {  // Auto -> x1 -> x2 ... -> máxima -> Auto
-            a.cfg.zoom = a.cfg.zoom >= a.gpu.escala_maxima() ? 0 : a.cfg.zoom + 1;
-            cambio = true;
-        }
-    }
-    // Volúmenes: 0 -> 20 -> ... -> 100 -> 0 (Off).
-    auto volumen = [&](std::string_view nombre, int& v) {
-        std::snprintf(t, sizeof t, v ? "%d%%" : "Off", v);
-        if (fila(nombre, t)) {
-            v = v >= 100 ? 0 : (v / 20 + 1) * 20;
-            aplicar_volumenes(a);
-            cambio = true;
-        }
-    };
-    volumen("Music", a.cfg.volumen_musica);
-    volumen("Sound effects", a.cfg.volumen_efectos);
-    if (fila("Window positions", "Reset")) {
-        for (PosVentana& p : a.pos_ventanas) p = {};
-        a.cfg.ventanas.clear();
-        cambio = true;
-    }
-    a.scroll.opciones_filas = contador;
-    if (cambio) guardar_config(a.cfg);
 }
 
 void dibujar_ayuda_teclas(App& a) {
@@ -498,7 +381,7 @@ void dibujar_ayuda_teclas(App& a) {
     col_tecla += 16;
     const int ancho_desc = std::clamp(std::min(col_desc, a.gpu.ancho() - 20 - col_tecla - 24), 160, 300);
     const int ancho_total = col_tecla + ancho_desc + 24;
-    constexpr int ALTO_LINEA = ALTO_GLIFO + 4, SEPARACION = 4;
+    constexpr int ALTO_LINEA = ALTO_GLIFO + 4, ENTRE_FILAS = 4;
     int renglones_total = 0;
     for (int i = 0; i < n; ++i) {
         int lineas = 0;
@@ -506,7 +389,7 @@ void dibujar_ayuda_teclas(App& a) {
         renglones_total += std::max(1, lineas);
     }
     Rect r{(a.gpu.ancho() - ancho_total) / 2, 60, ancho_total,
-           ui::ALTO_TITULO + 14 + renglones_total * ALTO_LINEA + n * SEPARACION};
+           ui::ALTO_TITULO + 14 + renglones_total * ALTO_LINEA + n * ENTRE_FILAS};
     if (recuadro(a, r, "Keys (F1)") || a.entrada.escape) {
         a.ayuda_teclas = false;
         return;
@@ -516,7 +399,7 @@ void dibujar_ayuda_teclas(App& a) {
     for (int i = 0; i < n; ++i) {
         const int primera = linea;
         partir(FILAS[i][1], ancho_desc, [&](std::string_view t) {
-            const float y = static_cast<float>(r.y + ui::ALTO_TITULO + 8 + linea * ALTO_LINEA + i * SEPARACION);
+            const float y = static_cast<float>(r.y + ui::ALTO_TITULO + 8 + linea * ALTO_LINEA + i * ENTRE_FILAS);
             if (linea == primera) a.g->texto(FILAS[i][0], static_cast<float>(r.x + 12), y, kt, rgba(255, 230, 120));
             a.g->texto(t, static_cast<float>(r.x + 12 + col_tecla), y, kt, rgba(230, 220, 190));
             ++linea;
