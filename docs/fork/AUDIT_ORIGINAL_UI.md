@@ -249,7 +249,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Yes/No question | bottom-screen bar: img 701 (320x32) drawn by 0x41fe30, "YES" at (361,447), "NO" at (401,447), no title (ctor 0x4d1cd0 x2, strings 0x6e5288/0x6e5284) | boxed 300x92 dialog with title (social_ui.cpp `dibujar_pregunta`) | DIFFERENT | social_ui.cpp (bar x: U-D4) |
+| Yes/No question | bottom-screen bar: img 701 (320x32) drawn by 0x41fe30, "YES" at (361,447), "NO" at (401,447), no title (ctor 0x4d1cd0 x2, strings 0x6e5288/0x6e5284) | bar 701 at x 137 of the 640x480 block, y 437 (bar y chosen so YES/NO at 447 are centred; U), two outlined lines from y+4, YES/NO at x+224/x+264; the house-name prompt keeps the dialog (needs a text box). Verified with a temporary fake question | MATCH (bar y inferred) | social_ui.cpp (bar x: U-D4) |
 | Quantity / text input | input box 0x4cfa90: img 895 (134x93) + edit field, buttons 916/917, 918/919, 920/921; NOT used by the NPC lists (they step the amount with the row arrows) | generic 260x112 window with -/+ | DIFFERENT | cantidad_ui.cpp `dibujar_cantidad` |
 
 ## 14. Mail (list 0x417a90 / draw 0x417d50, letters 0x413500, 0x413a80, 0x416b50, 0x417320, compose 0x455800)
@@ -269,8 +269,8 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 
 | item | original (evidence) | fork | status | fix hint (file/function) |
 |---|---|---|---|---|
-| Name labels | two white lines at (43,31) and (43,159) (0x42d4e4) | "%s offers" at (27,159) only | DIFFERENT | social_ui.cpp `dibujar_intercambio` |
-| Scroll bars | two bars at x=168, y 54 and 183, imgs 1206/1208/1210/1212 (0x42c327, 0x42c3bd) | none; only the first 12 items visible | MISSING | `dibujar_intercambio` |
+| Name labels | two white lines at (43,31) and (43,159) (0x42d4e4) | own name at (43,31), partner's at (43,159), white, left-aligned on the plates printed on the frame | MATCH | social_ui.cpp `dibujar_intercambio` |
+| Scroll bars | two bars at x=168, y 54 and 183, imgs 1206/1208/1210/1212 (0x42c327, 0x42c3bd) | two bars at x 168 (up 46/175, track 1212, down +93), 3 rows visible, scroll by rows | MATCH (thumb art 1211 = 1210 size) | `dibujar_intercambio` |
 | OK/Cancel hover | no hover art (0x47c2d0) | 1203/1205 on hover | DIFFERENT | section 7 |
 | Frame 1199/1201/1200, close (174,18), OK (53,282), Cancel (100,282) | 0x42c0c9, 0x42c13a | same | MATCH | - |
 

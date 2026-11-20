@@ -27,6 +27,7 @@ constexpr int CELDA = 36, COLUMNAS = 6, FILAS = 3;
 // the one you offer at y 47 and the other side's at y 175.
 constexpr int TRADE_W = 200, TRADE_H = 308, TRADE_CELL = 34, TRADE_COLS = 4, TRADE_ROWS = 3, TRADE_X = 27;
 constexpr int TRADE_MINE_Y = 47, TRADE_OTHER_Y = 175;
+constexpr int TRADE_SCROLL_X = 168, TRADE_SCROLL_H = 105;
 constexpr int ANCHO_SOCIAL = 220, ALTO_SOCIAL = 230;
 
 bool igual_sin_mayusculas(std::string_view a, std::string_view b) {
@@ -382,7 +383,7 @@ bool marco(App& a, Rect r, std::string_view titulo, bool con_cierre = true) {
 }
 
 // Grilla de ítems ofrecidos en el intercambio; devuelve el índice bajo el puntero o -1.
-int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0, bool original = false) {
+int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0, bool original = false, int first = 0) {
     Graficos& g = *a.g;
     int bajo = -1;
     const int cols = original ? TRADE_COLS : COLUMNAS, cell = original ? TRADE_CELL : CELDA;
@@ -394,9 +395,10 @@ int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0, bo
         } else {
             g.gpu().rectangulo(x, y, cell - 2, cell - 2, clave_orden(CAPA_UI, 12), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
         }
-        if (c >= static_cast<int>(items.size())) continue;
-        draw_item_icon(g.gpu(), g.icono(items[c].gfx), x + 1, y + 1, clave_orden(CAPA_UI, 13), items[c].bendicion);
-        if (encima) bajo = c;
+        const int idx = first + c;  // `first` = items scrolled past (whole rows)
+        if (idx >= static_cast<int>(items.size())) continue;
+        draw_item_icon(g.gpu(), g.icono(items[idx].gfx), x + 1, y + 1, clave_orden(CAPA_UI, 13), items[idx].bendicion);
+        if (encima) bajo = idx;
     }
     return bajo;
 }
@@ -631,10 +633,59 @@ bool comando_social(App& a, std::string_view linea) {
     return true;
 }
 
+// Splits `t` into at most two lines that fit `max_w` pixels (word wrap); returns the byte lengths in `n`.
+static void partir_pregunta(std::string_view t, int max_w, char (&lineas)[2][128], size_t (&n)[2]) {
+    n[0] = n[1] = 0;
+    int linea = 0;
+    for (size_t i = 0; i < t.size() && linea < 2;) {
+        const size_t fin = t.find(' ', i);
+        const std::string_view palabra = t.substr(i, (fin == std::string_view::npos ? t.size() : fin) - i);
+        if (n[linea] && ancho_texto(lineas[linea], n[linea]) + ancho_texto(palabra.data(), palabra.size()) + 4 > max_w) ++linea;
+        if (linea >= 2) break;
+        if (n[linea] && n[linea] < 126) lineas[linea][n[linea]++] = ' ';
+        const size_t m = std::min(palabra.size(), sizeof lineas[0] - 1 - n[linea]);
+        std::memcpy(lineas[linea] + n[linea], palabra.data(), m);
+        n[linea] += m;
+        i = fin == std::string_view::npos ? t.size() : fin + 1;
+    }
+}
+
+static void dibujar_pregunta_original(App& a) {
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    constexpr int BAR_X = 137, BAR_Y = 437, YES_DX = 224, NO_DX = 264, TEXT_PAD = 8, TEXT_W = 210;
+    const int bx = (a.gpu.ancho() - 640) / 2 + BAR_X, by = a.gpu.alto() - 480 + BAR_Y;
+    const u64 kb = clave_orden(CAPA_UI, 20), kt = clave_orden(CAPA_UI_TEXTO, 20);
+    g.gpu().dibujar(g.img(701), bx, by, kb);
+    char lineas[2][128];
+    size_t n[2];
+    partir_pregunta(a.preguntas.front().texto, TEXT_W, lineas, n);
+    for (int k = 0; k < 2; ++k) g.texto_contorno({lineas[k], n[k]}, static_cast<float>(bx + TEXT_PAD), static_cast<float>(by + 4 + 12 * k), kt, BLANCO);
+    bool si = e.enter, no = e.escape;
+    const int ty = by + (32 - ALTO_GLIFO) / 2;
+    auto boton = [&](std::string_view t, int dx) {
+        const int w = ancho_texto(t.data(), t.size());
+        const bool encima = ui::sobre(e, bx + dx - 2, ty - 2, w + 4, ALTO_GLIFO + 4);
+        g.texto_contorno(t, static_cast<float>(bx + dx), static_cast<float>(ty), kt, encima ? rgba(255, 230, 120) : BLANCO);
+        if (encima && e.clic) a.clic_consumido = true;
+        return encima && e.clic;
+    };
+    si = boton("YES", YES_DX) || si;
+    no = boton("NO", NO_DX) || no;
+    if (si || no) {
+        responder_pregunta(a, si && !no);
+        e.enter = e.escape = false;  // no van al chat
+    }
+}
+
 void dibujar_pregunta(App& a) {
     if (a.preguntas.empty()) return;
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
+    // Original UI (0x41fe30): a parchment bar (image 701) at x 137 of the 640x480 block with the question on up to two
+    // lines (12 px pitch from y + 4) and YES / NO at x + 224 / x + 264, vertically centred. A house-name prompt still
+    // needs its text box, so it keeps the dialog below.
+    if (!a.cfg.ui_simple && a.preguntas.front().tipo != PREGUNTA_NOMBRE_CASA) return dibujar_pregunta_original(a);
     const Rect r{(a.gpu.ancho() - ANCHO_PREGUNTA) / 2, a.gpu.alto() / 4, ANCHO_PREGUNTA, ALTO_PREGUNTA};
     marco(a, r, "Question", false);
     // El mensaje en hasta 2 líneas.
@@ -681,8 +732,19 @@ void dibujar_intercambio(App& a) {
     if (!a.cfg.ui_simple) {
         if (draw_original_frame(a, r.x, r.y, 1199, 7, 10, 1201, 174, 18)) enviar(a, cmd::cancelar_intercambio(a.op));
         draw_original_overlay(a, r.x + 2, r.y + 12, 1200);
-        const int bajo_propio = grilla(a, a.intercambio.propio, r.x + TRADE_X + 1, r.y + TRADE_MINE_Y + 1, true);
-        const int bajo_otro = grilla(a, a.intercambio.otro, r.x + TRADE_X + 1, r.y + TRADE_OTHER_Y + 1, true);
+        // Scroll bars at x 168 (0x42c327, 0x42c3bd): up at y 46 / 175, track 1212 from y + 8, down at y + 93; the grids
+        // show 3 rows of 4 and scroll by whole rows.
+        Intercambio& tr = a.intercambio;
+        const bool sobre_tr = sobre_ventana(a, IdVentana::INTERCAMBIO);
+        const std::vector<ItemIntercambio>* listas[2] = {&tr.propio, &tr.otro};
+        const int sy[2] = {TRADE_MINE_Y - 1, TRADE_OTHER_Y};
+        for (int k = 0; k < 2; ++k)
+            original_scrollbar(a, tr.barra[k], r.x + TRADE_SCROLL_X, r.y + sy[k], TRADE_SCROLL_H,
+                               static_cast<u32>((listas[k]->size() + TRADE_COLS - 1) / TRADE_COLS), TRADE_ROWS, tr.desplaza[k],
+                               sobre_tr && ui::sobre(a.entrada, r.x + TRADE_X, r.y + sy[k], TRADE_SCROLL_X + 12 - TRADE_X, TRADE_SCROLL_H),
+                               1212, -2);
+        const int bajo_propio = grilla(a, tr.propio, r.x + TRADE_X + 1, r.y + TRADE_MINE_Y + 1, true, static_cast<int>(tr.desplaza[0]) * TRADE_COLS);
+        const int bajo_otro = grilla(a, tr.otro, r.x + TRADE_X + 1, r.y + TRADE_OTHER_Y + 1, true, static_cast<int>(tr.desplaza[1]) * TRADE_COLS);
         const ItemIntercambio* it = bajo_propio >= 0 ? &a.intercambio.propio[bajo_propio]
                                     : bajo_otro >= 0 ? &a.intercambio.otro[bajo_otro] : nullptr;
         if (it) {
@@ -692,9 +754,11 @@ void dibujar_intercambio(App& a) {
             g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
             g.texto({buf, m}, static_cast<float>(e.mx + 14), static_cast<float>(e.my + 17), clave_orden(CAPA_UI_TEXTO, 30));
         }
-        std::snprintf(titulo, sizeof titulo, "%s offers", a.intercambio.con.c_str());
-        g.texto_sombra(titulo, static_cast<float>(r.x + TRADE_X), static_cast<float>(r.y + TRADE_OTHER_Y - ALTO_GLIFO - 4),
-                       clave_orden(CAPA_UI_TEXTO, 14), rgba(255, 255, 254));
+        // Name plates printed on the frame: own name at (43,31), the partner's at (43,159), white (0x42d4e4).
+        g.texto_sombra(nombre_personaje(a), static_cast<float>(r.x + 43), static_cast<float>(r.y + 31), clave_orden(CAPA_UI_TEXTO, 14),
+                       rgba(255, 255, 254));
+        g.texto_sombra(tr.con, static_cast<float>(r.x + 43), static_cast<float>(r.y + 159), clave_orden(CAPA_UI_TEXTO, 14),
+                       rgba(255, 255, 254));
         if (a.intercambio.ok) {
             g.texto_sombra("Waiting...", static_cast<float>(r.x + 53), static_cast<float>(r.y + 284), clave_orden(CAPA_UI_TEXTO, 14),
                            rgba(170, 230, 255));

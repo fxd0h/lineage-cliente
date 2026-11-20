@@ -276,6 +276,8 @@ struct Intercambio {
     std::string con;
     std::vector<ItemIntercambio> propio, otro;
     bool ok = false;  // ya se mandó C_TradeOK
+    ui::BarraScroll barra[2];  // original UI scroll bars of the own / partner grids
+    u32 desplaza[2] = {0, 0};  // first visible row of each
 };
 
 // Cursor del mouse (cursores.cpp): mano, espada sobre un monstruo, círculo al elegir objetivo.
