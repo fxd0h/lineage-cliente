@@ -226,23 +226,17 @@ void cambiar_pagina_barra(App& a, int pagina) {
     a.pagina_barra = (pagina % n + n) % n;
 }
 
-// Polymorph icon active (S_PacketBox slots 0x27 / 0x4b / 0x6d / 0x70 / 0x73): the sprite is not the standard human one.
-static bool transformado(const App& a) {
-    const EstadoJugador& j = a.mundo.jugador;
-    for (u32 i = 0; i < j.n_efectos; ++i)
-        if (j.efectos[i].clase == EA_ICONO)
-            for (int r : {0x27, 0x4b, 0x6d, 0x70, 0x73})
-                if (j.efectos[i].tipo == EFECTO_RANURA + r) return true;
-    return false;
-}
-
 // Emote action (C_ExtraCommand 66 Think, 67 Aggress, 68 Salute, 69 Cheer) of Alt+n for the own sprite, 0 = none.
 // Standard sprites: Alt+1..4 -> 68, 69, 67, 66; the special set: Alt+1..3 -> 67, 68, 69. Others do nothing.
-static int accion_emote(int n, u32 gfx, bool transformado) {
+static int accion_emote(int n, u32 gfx) {
+    // Standard human sprites (exe 0x456b30) and the two sprite ranges the key handler adds.
+    static constexpr u32 HUMANOS[] = {0, 1, 0x3d, 0x30, 0x8a, 0x25, 0xae2, 0xaec, 0x2de, 0x4a2, 0x1a02, 0x1a05, 0x1a0f, 0x19fa};
+    bool humano = (gfx >= 0x1aa6 && gfx <= 0x1aeb) || (gfx >= 0x1be3 && gfx <= 0x1bfe);
+    for (u32 h : HUMANOS) humano = humano || gfx == h;
     const bool solo_alt1 = gfx == 0xea6 || gfx == 0xebf || gfx == 0xf12;
     const bool especial = gfx == 0x17ce || gfx == 0x17c0 || gfx == 0x1a57 || gfx == 0x1a58 || gfx == 0x1a5a || gfx == 0x1a5b ||
                           gfx == 0x1a5d || gfx == 0x1a5e || gfx == 0x1a60 || gfx == 0x1a61;
-    const bool estandar = (!transformado && !especial) || (gfx >= 0x1aa6 && gfx <= 0x1aeb) || (gfx >= 0x1be3 && gfx <= 0x1bfe) || solo_alt1;
+    const bool estandar = humano;
     if (solo_alt1) return n == 1 ? 68 : 0;
     if (especial) return n <= 3 ? 66 + n : 0;
     if (!estandar) return 0;
@@ -264,7 +258,7 @@ void procesar_barra(App& a) {
         const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
         if (n >= 1 && n <= 4 && yo != SIN_SLOT && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto) {
             const u32 gfx = a.mundo.objetos.col<O_GFX>()[yo];
-            const int accion = accion_emote(n, gfx, transformado(a));
+            const int accion = accion_emote(n, gfx);
             if (accion) {
                 enviar(a, cmd::emote(a.op, static_cast<u8>(accion)));
                 a.mundo.objetos.col<O_ACCION>()[yo] = static_cast<u8>(accion);
