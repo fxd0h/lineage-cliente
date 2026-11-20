@@ -164,7 +164,10 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             m.submarino = e.v[1] != 0;
             break;
         case Ev::PONER_OBJETO: {
+            const bool existia = o.buscar(e.id) != SIN_SLOT;
             Slot s = o.insertar(e.id);
+            const u8 accion_previa = existia ? o.col<O_ACCION>()[s] : u8{0xFF};
+            const u64 t_previa = existia ? o.col<O_TACCION>()[s] : 0;
             o.col<O_X>()[s] = static_cast<u16>(e.v[OB_X]);
             o.col<O_Y>()[s] = static_cast<u16>(e.v[OB_Y]);
             o.col<O_XANT>()[s] = o.col<O_X>()[s];
@@ -183,6 +186,12 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // Muerto al aparecer (un cadáver en el suelo): directamente el último frame de morir.
             o.col<O_ACCION>()[s] = e.v[OB_ESTADO] == ESTADO_MUERTO ? ACC_MORIR : 0xFF;
             o.col<O_TACCION>()[s] = 0;
+            // The server sends S_DoActionGFX (appear / hide) right before the S_NPCPack with the new status:
+            // keep that fresh action playing instead of cutting it.
+            if (existia && e.v[OB_ESTADO] != ESTADO_MUERTO && accion_previa != 0xFF && ahora - t_previa < 1500) {
+                o.col<O_ACCION>()[s] = accion_previa;
+                o.col<O_TACCION>()[s] = t_previa;
+            }
             if (e.id == m.jugador.id) m.jugador.muerto = e.v[OB_ESTADO] == ESTADO_MUERTO;
             // Tres gfx traen siempre luz 14, mande lo que mande el servidor (4ccf04 del original).
             const i32 gfx_luz = e.v[OB_GFX];

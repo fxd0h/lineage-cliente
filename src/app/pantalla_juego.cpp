@@ -168,6 +168,17 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         base = ACC_QUIETO;
     }
     v.rango = a.sprites.accion(gfx, static_cast<u8>(base + arma));
+    // A monster's status byte (S_NPCPack) is the action it rests in: the exe stores it as the current action
+    // and, when status + 3 (idle) has no table, keeps showing that action's first entry (the hidden pose, e.g.
+    // Antharas 20, sunk undead 13). Without this a sunk monster drew the standing idle.
+    if (!v.rango && base == ACC_QUIETO && arma > ACC_QUIETO && !muerto && tipo_objeto(a, s) != TIPO_PERSONAJE) {
+        if (const RangoAccion* r = a.sprites.accion(gfx, arma)) {
+            v.rango = r;
+            v.inicio = ahora;
+            v.bucle = false;
+            return v;
+        }
+    }
     if (!v.rango) v.rango = a.sprites.accion(gfx, base);
     // TODO(PARCHE PROVISIONAL): la tabla que tenemos no trae el "quieto" de estas formas; la real (list.spz,
     // ver TablaSprites::copiar_filas_faltantes) diría qué cuadros y tiempos usar.
