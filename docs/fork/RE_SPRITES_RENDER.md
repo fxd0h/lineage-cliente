@@ -97,3 +97,18 @@ There is no `1516.img` / `1518.img` in this installation (only unrelated monster
 - `/bookmark` takes no argument: opens a name prompt (string 0x246), then `cs 0x00, name`; name over 27 chars ->
   string 0xcc; refused maps (above plus 8..0xf, 0x12, 0x14, 0x15 and four rectangles on map 4) -> string 0xd6. (C)
 - Scroll bar internals and default position: not decoded (U).
+
+## Implementation status in the fork
+
+- Blend (`recursos/modo_mezcla.h`): attribute 104 -> hidden / screen / 50% average / multiply / additive in the exe's order,
+  for bodies, clothes layers (the 0x80 ones are no longer skipped) and effects. Tile type byte: 0x10 screen, 0x04 average
+  (baked alpha 128, shadows), 0x20 multiply (no longer baked). Multiply is a third pipeline (DST_COLOR / ZERO) whose shader
+  outputs white for transparent texels. Not implemented: 0x40, 0x20 (pulse), 0x200 (tint), 0xc00 (fade), the body-flag
+  ORs of `FUN_004cc980`. Screen and multiply instances are still drawn after the normal ones of their call (world and
+  upper layers are split), so a multiply disc can darken a sprite drawn later on top of it; per-run ordering is a TODO.
+- Frame suffixes: `<N`, `[N`, `^N` keep up to 3 ids per frame (random pick each time); `<` may overlap, `[` only starts
+  if the id is not playing. Distance gain is still applied to all three (the exe's rule for `<`/`[` is not confirmed).
+  `]N` now also works in list.spz rows. `{`, `}` and `>` are skipped.
+- Attribute 113: `TablaSprites::morfo`; `CAMBIO_FORMA` spawns that effect at the object when its gfx changes.
+- Attribute 100 (extra blocked tiles): TODO. `celda_pasable` only knows static map cells plus the door set
+  (`puertas_cerradas`, no reference count); marking cells per object needs add/remove/move hooks.

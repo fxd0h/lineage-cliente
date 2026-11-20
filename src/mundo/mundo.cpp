@@ -281,7 +281,17 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // anti-acelerador, que mide con el sprite de la forma actual).
             Slot s = o.buscar(e.id);
             if (s == SIN_SLOT) break;
+            const GfxId anterior = o.col<O_GFX>()[s];
             o.col<O_GFX>()[s] = static_cast<GfxId>(e.v[CF_GFX]);
+            // Attribute 113: the new gfx names an effect that plays at the object when it morphs into it.
+            if (m.sprites && anterior != o.col<O_GFX>()[s])
+                if (const GfxId morfo = m.sprites->morfo(o.col<O_GFX>()[s])) {
+                    EfectoVisual ef;
+                    ef.gfx = morfo;
+                    ef.objeto = e.id;
+                    ef.inicio = ahora;
+                    agregar_efecto(m, ef);
+                }
             if (!e.v[CF_ARMA] && o.col<O_ESTADO>()[s] != ESTADO_MUERTO) o.col<O_ESTADO>()[s] = 0;
             if (!moviendose(m, s, ahora))
                 o.col<O_DURMOV>()[s] = duracion_paso(m, o.col<O_GFX>()[s], o.col<O_ESTADO>()[s], o.col<O_VEL>()[s]);

@@ -47,7 +47,7 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
         "\t0.walk(1 2,0.0:2 0.1:3<478<479)\n"
         "\t3.breath(1 10.8.9:4 8.0:4)\n"  // en algunas filas la coma es un '.'
         "\t8.death(1 3,40.2:5 40.0:5[191 40.1:5)\n"
-        "\t101.shadow(9)\n\t102.type(10)\n"
+        "\t101.shadow(9)\n\t102.type(10)\n\t113.morph(5000)\n"
         "#8 1 misma linea 0.walk(1 1,0.0:2!) 110.framerate(12) 1.attack(1 1,8.0:3]77)\n"
         "#9 1 solo atributos\n\t102.type(0)\n";
     CHECK(t.fusionar_lista(txt, r));
@@ -57,6 +57,8 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
     CHECK(t.gfx_archivos(7) == 5);
     CHECK(t.sombra(7) == 9);
     CHECK(t.tipo(7) == 10);
+    CHECK(t.morfo(7) == 5000);
+    CHECK(t.morfo(8) == 0);
     const RangoAccion* w = t.accion(7, ACC_CAMINAR);
     REQUIRE(w);
     CHECK(w->cantidad == 2);

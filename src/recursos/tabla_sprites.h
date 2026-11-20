@@ -114,6 +114,11 @@ public:
     std::span<const GfxId> ropa(GfxId gfx) const {
         return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
     }
+    // Attribute 113 (morph effect, S3EP1U 0x488f60): effect gfx spawned at an object that changes into this gfx; 0 if none.
+    GfxId morfo(GfxId gfx) const {
+        const u32* i = morfo_.buscar(gfx);
+        return i ? static_cast<GfxId>(*i) : 0;
+    }
     // Atributo 109: gráfico que sigue a este al terminar (la explosión de Energy Bolt al llegar); 0 si no hay.
     GfxId siguiente(GfxId gfx) const { return gfx < siguiente_.size() ? siguiente_[gfx] : 0; }
     // Duración total de una acción en ms (suma de los frames × ms por tick); 0 si no existe. Para
@@ -143,6 +148,7 @@ private:
     std::vector<u8> tipo_;
     std::vector<u16> atributos_;
     std::vector<GfxId> siguiente_;
+    MapaHash morfo_;  // gfx -> morph effect gfx (attribute 113), only the gfx that have one
 };
 
 }  // namespace lin

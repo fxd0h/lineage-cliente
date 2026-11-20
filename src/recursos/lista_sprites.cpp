@@ -55,6 +55,7 @@ struct Entrada {
     u16 atributos = 0;
     GfxId siguiente = 0;
     bool zancada = false;
+    GfxId morfo = 0;  // attribute 113
     std::vector<GfxId> ropa;
     std::vector<std::pair<u8, RangoAccion>> acciones;  // id de la acción -> rango en `frames`
     std::vector<FrameAccion> frames;
@@ -128,6 +129,11 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
                 b.numero_con_signo();
                 const int g = b.numero_con_signo();
                 e.siguiente = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
+                break;
+            }
+            case 113: {
+                const int g = b.numero_con_signo();
+                e.morfo = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
                 break;
             }
             case 111: e.zancada = b.numero_con_signo() != 0; break;
@@ -257,6 +263,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
                 siguiente_[e.gfx] = e.siguiente;
                 zancada_[e.gfx] = e.zancada;
                 ropa_[e.gfx] = e.ropa;
+                if (e.morfo) morfo_.poner(e.gfx, e.morfo);
                 ++resumen.atributos;
             } else {
                 ++resumen.omitidos;
@@ -291,6 +298,7 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             siguiente_[e.gfx] = e.siguiente;
             zancada_[e.gfx] = e.zancada;
             ropa_[e.gfx] = e.ropa;
+            if (e.morfo) morfo_.poner(e.gfx, e.morfo);
             const u32 base = static_cast<u32>(frames_.size());
             frames_.insert(frames_.end(), e.frames.begin(), e.frames.end());
             for (auto& [id, r] : e.acciones) {

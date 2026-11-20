@@ -64,6 +64,7 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     siguiente_.clear();
     zancada_.clear();
     ropa_.clear();
+    morfo_.limpiar();
     gfx_de_tabla_ = 0;
     const char* p = reinterpret_cast<const char*>(texto.data());
     const char* fin = p + texto.size();
@@ -98,7 +99,10 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
             case 102: tipo_.back() = static_cast<u8>(c.numero()); break;
             case 104: atributos_.back() = static_cast<u16>(c.numero()); break;
             case 111: zancada_.back() = c.numero() != 0; break;
-            case 103: case 108: case 112: case 113: case 114: c.numero(); break;
+            case 113:  // morph effect: gfx spawned when an object changes into this one
+                if (const int g = c.numero(); g > 0 && g < 0xFFFF) morfo_.poner(gfx, static_cast<u32>(g));
+                break;
+            case 103: case 108: case 112: case 114: c.numero(); break;
             case 105: {  // clothes: n gfx drawn over the body
                 int n = c.numero();
                 for (int i = 0; i < n && c.hay_numero(); ++i) ropa_.back().push_back(static_cast<GfxId>(c.numero()));
