@@ -103,6 +103,7 @@ void dar_item(App& a, ObjId objetivo, ObjId item) {
     d.item = item;
     d.precio = 0;
     const i32 n = static_cast<i32>(t.col<I_CANTIDAD>()[s]);
+    if (!a.cfg.ui_simple && n > 1) return pedir_dar(a, objetivo, item, static_cast<u32>(n));  // original UI: chat-line prompt
     char titulo[256];
     const size_t m = expandir_desc(a.desc, nombre_item(a.mundo.inventario, s), titulo, sizeof titulo);
     abrir(a, std::string_view(titulo, m), 1, std::max(n, 1), std::max(n, 1));

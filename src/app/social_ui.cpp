@@ -150,6 +150,25 @@ void confirmar_prompt(App& a, std::string_view texto) {
     const std::string accion = a.chat_prompt.accion;
     const PromptChat p = a.chat_prompt;
     cancelar_prompt(a);
+    if (accion == "soltar" || accion == "dar") {  // like pick up: empty = the whole stack, 0 or more than it = nothing
+        u32 n = p.maximo;
+        if (!texto.empty()) {
+            long v = 0;
+            std::from_chars(texto.data(), texto.data() + texto.size(), v);
+            n = v > 0 ? static_cast<u32>(v) : 0;
+        }
+        if (n == 0 || n > p.maximo) return;
+        if (accion == "soltar") {
+            const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+            if (yo != SIN_SLOT && a.mundo.inventario.items.buscar(p.id) != SIN_SLOT)
+                enviar(a, cmd::soltar(a.op, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo], p.id, n));
+        } else if (const Slot so = a.mundo.objetos.buscar(p.objetivo);
+                   so != SIN_SLOT && a.mundo.inventario.items.buscar(p.id) != SIN_SLOT) {
+            const TablaObjetos& o = a.mundo.objetos;
+            enviar(a, cmd::dar_item(a.op, p.objetivo, static_cast<u16>(o.col<O_X>()[so]), static_cast<u16>(o.col<O_Y>()[so]), p.id, n));
+        }
+        return;
+    }
     if (accion == "recoger") {  // 0x4086f0: nothing typed = the whole stack; 0 or more than the stack = nothing
         u32 n = p.maximo;
         if (!texto.empty()) {
@@ -204,6 +223,30 @@ void confirmar_prompt(App& a, std::string_view texto) {
         while (!titulo.empty() && titulo.front() == ' ') titulo.remove_prefix(1);
         if (!titulo.empty()) enviar(a, cmd::poner_titulo(a.op, texto.substr(0, sp), titulo));
     }
+}
+
+// Prompt text with its "%u" (or "%d") replaced by the stack size.
+static std::string texto_con_maximo(const App& a, int id, u32 maximo) {
+    std::string t = cadena(a, id);
+    for (const char* f : {"%u", "%d"})
+        if (const size_t k = t.find(f); k != std::string::npos) {
+            t.replace(k, 2, std::to_string(maximo));
+            break;
+        }
+    return t;
+}
+
+// Drop a stack (string 119) and give a stack (string 140): the chat line is the prompt, as in pick up.
+void pedir_soltar(App& a, ObjId item, u32 cantidad) {
+    if (a.chat_prompt.activo) return;
+    abrir_prompt(a, texto_con_maximo(a, 119, cantidad), "soltar");
+    a.chat_prompt.id = item, a.chat_prompt.maximo = cantidad;
+}
+
+void pedir_dar(App& a, ObjId objetivo, ObjId item, u32 cantidad) {
+    if (a.chat_prompt.activo) return;
+    abrir_prompt(a, texto_con_maximo(a, 140, cantidad), "dar");
+    a.chat_prompt.id = item, a.chat_prompt.objetivo = objetivo, a.chat_prompt.maximo = cantidad;
 }
 
 // Pick up: a stack asks how many unless the "getall" option is on (0x408529 -> 0x408670, prompt string 0x79).

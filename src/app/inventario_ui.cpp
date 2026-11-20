@@ -197,10 +197,11 @@ void usar_item(App& a, ObjId item) {
 }
 
 // Al suelo, en la celda propia y con toda la cantidad.
-void soltar_item(App& a, ObjId item) {
+void soltar_item(App& a, ObjId item, bool preguntar) {
     Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
     Slot s = a.mundo.inventario.items.buscar(item);
     if (yo == SIN_SLOT || s == SIN_SLOT) return;
+    if (preguntar && !a.cfg.ui_simple && a.mundo.inventario.items.col<I_CANTIDAD>()[s] > 1) return pedir_soltar(a, item, a.mundo.inventario.items.col<I_CANTIDAD>()[s]);
     enviar(a, cmd::soltar(a.op, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo], item,
                           a.mundo.inventario.items.col<I_CANTIDAD>()[s]));
 }
@@ -223,7 +224,7 @@ void dibujar_inventario(App& a) {
     const bool original = uses_original_frame(a, IdVentana::INVENTARIO);
     const Grid& gr = original ? ORIGINAL_GRID : SIMPLE_GRID;
     if (original) {
-        if (draw_original_frame(a, x0, y0, IMG_INV_BACKGROUND, 6, 8, IMG_INV_FRAME)) a.ventana_inventario = false;
+        if (draw_original_frame(a, x0, y0, IMG_INV_BACKGROUND, 6, 8, IMG_INV_FRAME, 168, 18)) a.ventana_inventario = false;
         draw_original_ornament(a, x0, y0, IMG_INV_ORNAMENT);
         // Category tabs: one image per selected tab.
         g.gpu().dibujar(g.img(IMG_INV_TABS + a.inventory_tab), x0 + TABS_X, y0 + TABS_Y, clave_orden(CAPA_UI, 12));
@@ -456,7 +457,7 @@ void dibujar_inventario(App& a) {
             const Slot so = obj ? a.mundo.objetos.buscar(obj) : SIN_SLOT;
             const u8 tipo = so != SIN_SLOT ? tipo_objeto(a, so) : 0;
             if (so != SIN_SLOT && tipo != TIPO_PERSONAJE && tipo != TIPO_ITEM && tipo != TIPO_PUERTA) dar_items(a, obj, arrastrados);
-            else for (ObjId id : arrastrados) soltar_item(a, id);
+            else for (ObjId id : arrastrados) soltar_item(a, id, arrastrados.size() == 1);
         } else if (!original && a.arrastrando && bajo >= 0 && slot_bajo != SIN_SLOT && t.ids()[slot_bajo] != a.arrastrando) {
             mover_items(a.mundo.inventario, arrastrados, t.ids()[slot_bajo]);  // a otra celda
             guardar_orden(a);

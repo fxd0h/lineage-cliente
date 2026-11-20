@@ -256,7 +256,7 @@ void draw_original_status(App& a, int x, int y) {
     const u32 eq_bg = female && g.img(IMG_EQUIPMENT_FEMALE).valida() ? IMG_EQUIPMENT_FEMALE : IMG_EQUIPMENT;
     const u32 attr_frame = g.img(IMG_ATTRIBUTES_FRAME_EXE).valida() ? IMG_ATTRIBUTES_FRAME_EXE : IMG_ATTRIBUTES_FRAME;
     if (draw_original_frame(a, x, y, equipment ? eq_bg : IMG_ATTRIBUTES, STATUS_BG_X, STATUS_BG_Y,
-                            equipment ? IMG_EQUIPMENT_FRAME : attr_frame))
+                            equipment ? IMG_EQUIPMENT_FRAME : attr_frame, 168, 18))
         a.ventana_estado = false;
     draw_original_ornament(a, x, y, IMG_STATUS_ORNAMENT);
     // Tabs: equipment first, then attributes (one strip image per selected tab).

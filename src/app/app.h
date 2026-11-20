@@ -246,7 +246,8 @@ struct PromptChat {
     std::string accion;       // what the typed text is for (social_ui.cpp: confirmar_prompt)
     i32 x = 0, y = 0;         // pickup: tile
     ObjId id = 0;             // pickup: item
-    u32 maximo = 0;           // pickup: stack size
+    u32 maximo = 0;           // pickup / drop / give: stack size
+    ObjId objetivo = 0;       // give: the receiving object
 };
 
 struct PosVentana {
@@ -706,7 +707,7 @@ void avisar_mapa(App& a, MapId mapa);
 bool sobre_inventario(const App& a);
 void dibujar_inventario(App& a);
 void usar_item(App& a, ObjId item);
-void soltar_item(App& a, ObjId item);
+void soltar_item(App& a, ObjId item, bool preguntar = true);  // original UI asks how many of a stack in the chat line
 // Al basurero: pregunta cuántos (o confirma, si es uno) y lo elimina (cantidad_ui.cpp).
 void borrar_item(App& a, ObjId item);
 // Varios a la vez (la selección con Shift): una sola confirmación y la pila entera de cada uno.
@@ -753,6 +754,8 @@ void emblemas_abrir(App& a);                            // social_ui.cpp: pick t
 void emblemas_guardar(App& a, u64 ahora, bool ya);      // social_ui.cpp: write it when it changed (ya = now)
 void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
 void cancelar_prompt(App& a);
+void pedir_soltar(App& a, ObjId item, u32 cantidad);  // original UI: drop a stack asking how many in the chat line (string 119)
+void pedir_dar(App& a, ObjId objetivo, ObjId item, u32 cantidad);  // same for giving (string 140)
 void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`
 void elegir_invitado(App& a);  // click in the world while `invitando`
 std::string datos_opciones(const App& a);  // social_ui.cpp: `<var src="#N">` values of the option pages
