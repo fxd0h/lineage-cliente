@@ -15,6 +15,11 @@ client. The front page is the [root README](../../README.md).
 | [SERVER_L1JEN_EVALUATION.md](SERVER_L1JEN_EVALUATION.md) | l1j-en classic (US 2009, `s3ep1`, port 2002) evaluation and feature matrix |
 | [SERVER_380_EVALUATION.md](SERVER_380_EVALUATION.md) | L1JGO-Whale (TW 3.80C/3.81C, `tw380`, port 7001) evaluation |
 | [DATA_COVERAGE_381.md](DATA_COVERAGE_381.md) | 3.81C data coverage of Whale against the available game installs |
+| [RE_SPRITES_RENDER.md](RE_SPRITES_RENDER.md) | Reverse-engineered sprite attributes, blend flags, draw order, bookmark picker |
+| [RE_PROTOCOL.md](RE_PROTOCOL.md) | Reverse-engineered S_PacketBox subtypes and server opcodes |
+| [RE_WINDOWS.md](RE_WINDOWS.md) | Reverse-engineered window management and window layouts |
+| [RE_HUD.md](RE_HUD.md) | Reverse-engineered chat colours, names, bubbles, buff row, cursors |
+| [RE_ROUND3.md](RE_ROUND3.md) | Overlay blits, packet-to-buff-slot map, roof groups in .s32, emotes, S_Ability |
 | [../upstream/](../upstream/README.md) | Upstream's README and ENTREGABLES tracker (history, not maintained) |
 
 ## Conventions
@@ -121,6 +126,11 @@ client. The front page is the [root README](../../README.md).
   from a much newer client whose rows may not match our 3.63c Sprite.pak; the startup log counts both). It covers newer gfx the old table lacks (e.g. 8913 young gilian). The file is third-party data:
   keep it out of the repo. Like the table, it lists each action's last frame first, so death rows get
   the same rotation.
+
+- **From the 2009 exe (2026-11-20):** stride walks (attr 111) and clothes layers (attr 105); attr 104 blend flags
+  (screen, multiply, 50% average, hidden) with blends kept in painter order; attr 100 see-through houses; attr 113
+  morph effects; frame sound suffixes; poison pulse and invisibility rules; roof groups from `.s32` fading on the
+  player's cell. See the RE_*.md docs.
 
 ### Local servers
 
