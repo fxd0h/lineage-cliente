@@ -131,6 +131,12 @@ bool dijo_si(std::string_view t) { return !t.empty() && (t[0] == 'y' || t[0] == 
 
 }  // namespace
 
+// Del / Backspace on a selected bookmark row (0x418f70): the yes/no text prompt with string 0x34e; `y` deletes it.
+void abrir_prompt_borrar_marcador(App& a, ObjId marcador) {
+    abrir_prompt(a, cadena(a, 0x34e), "delbookmark");
+    a.chat_prompt.id = marcador;
+}
+
 void abrir_prompt_marcador(App& a) { abrir_prompt(a, cadena(a, 0x246), "bookmark"); }
 
 void cancelar_prompt(App& a) {
@@ -157,6 +163,13 @@ void confirmar_prompt(App& a, std::string_view texto) {
         if (dijo_si(texto)) enviar(a, cmd::entrar_clan(a.op));
     } else if (accion == "leave") {
         if (dijo_si(texto)) enviar(a, cmd::dejar_clan(a.op));
+    } else if (accion == "delbookmark") {  // C_DeleteBookmark by name (0x80), then the row goes away
+        if (!dijo_si(texto)) return;
+        auto it = std::find_if(a.marcadores.begin(), a.marcadores.end(), [&](const Marcador& m) { return m.id == p.id; });
+        if (it == a.marcadores.end()) return;
+        enviar(a, cmd::borrar_marcador(a.op, it->nombre));
+        a.destino.sel = -1;
+        a.marcadores.erase(it);
     } else if (texto.empty()) {
         return;
     } else if (accion == "bookmark") {  // 0x40d240: the typed name goes through the normal add-bookmark path

@@ -34,7 +34,8 @@ void ir(App& a, const Marcador* m) {
     ElegirDestino& d = a.destino;
     if (!a.cfg.ui_simple) d.enviado = true;  // the window stays up until the teleport happens (0x418d84, closed at 0x4623aa)
     else d.abierto = false;
-    const u16 mapa = m ? m->mapa : 0;
+    // A row without coordinates (x = y = 0, what l1j-en sends) goes out with the current map (0x418b50).
+    const u16 mapa = m ? (m->x == 0 && m->y == 0 ? static_cast<u16>(a.mundo.mapa) : m->mapa) : 0;
     const u32 id = m ? m->id : 0;
     if (d.item) {
         enviar(a, cmd::usar_teleport(a.op, d.item, mapa, id));
@@ -223,6 +224,14 @@ void dibujar_destino_orig(App& a) {
         return;
     }
     const u32 total = static_cast<u32>(a.marcadores.size());
+    // Del / Backspace on the selected row (else the one under the pointer) asks to delete it (string 0x34e).
+    if ((e.suprimir || e.retroceso) && !a.escribiendo_chat && !d.enviado) {
+        int fila = d.sel;
+        if (fila < 0 && ui::sobre(e, r.x + HIT_L, r.y + HIT_T, HIT_R - HIT_L, HIT_B - HIT_T))
+            fila = static_cast<int>(std::min<u32>(d.desplaza, total ? total - 1 : 0)) + (e.my - (r.y + HIT_T)) / ROW_H;
+        if (fila >= 0 && static_cast<u32>(fila) < total) abrir_prompt_borrar_marcador(a, a.marcadores[static_cast<size_t>(fila)].id);
+        e.suprimir = e.retroceso = false;
+    }
     // The bar scrolls one row per step up to the last one (the original range is count-1, 2 for fewer than 3 rows).
     const bool sobre_lista = sobre_ventana(a, IdVentana::DESTINO);
     original_scrollbar(a, d.barra, r.x + SCROLL_X, r.y + SCROLL_Y, SCROLL_H, std::max<u32>(total, 3) + ROWS - 1, ROWS, d.desplaza,

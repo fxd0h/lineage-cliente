@@ -845,6 +845,7 @@ void eventos_marcadores(App& a, const Evento& e);
 void eventos_hechizos(App& a, const Evento& e);
 // "/bookmark nombre" y "/delbookmark nombre"; true si era uno de esos.
 bool comando_marcador(App& a, std::string_view orden, std::string_view nombre);
+void abrir_prompt_borrar_marcador(App& a, ObjId marcador);  // Del on a bookmark row: yes/no prompt (string 0x34e)
 void abrir_prompt_marcador(App& a);                        // social_ui.cpp: /bookmark without a name (string 0x246)
 void marcar_lugar_aqui(App& a, std::string_view nombre);  // checks name length / map, then C_AddBookmark
 int clase_personaje(const App& a);                          // class byte of the selected character (0 prince, 2 elf)

@@ -139,7 +139,7 @@ bool cargar_recursos(App& a) {
 
 void leer_entrada(App& a) {
     EntradaFrame& e = a.entrada;
-    e.clic = e.clic_derecho = e.doble_derecho = e.doble_izquierdo = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = false;
+    e.clic = e.clic_derecho = e.doble_derecho = e.doble_izquierdo = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = e.suprimir = false;
     e.pagina_arriba = e.pagina_abajo = e.alt_c = e.alt_i = e.alt_s = e.pulsado = false;
     e.atajo_ctrl = 0;
     e.tecla_f = 0;
@@ -203,6 +203,7 @@ void leer_entrada(App& a) {
             case SDLK_TAB: e.tab = true; break;
             case SDLK_ESCAPE: e.escape = true; break;
             case SDLK_BACKSPACE: e.retroceso = true; break;
+            case SDLK_DELETE: e.suprimir = true; break;
             case SDLK_PAGEUP: e.pagina_arriba = true; break;
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
             // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26). Upstream's Alt+I/C/S and A only
