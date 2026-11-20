@@ -107,25 +107,27 @@ bool estado(Lector& l, Evento& e) {
 // el largo (S_MapID trae 11 bytes). El tiempo: minutos desde 1997-01-01 17:00 (hora local), menos
 // 1200, divididos por 182 (S_WarTime.java); se devuelve en minutos desde 1970-01-01 00:00.
 constexpr i32 MINUTOS_1997 = 9862 * 1440 + 17 * 60;  // 1997-01-01 17:00 desde 1970
-bool mapa(Lector& l, Evento& e) {
-    if (l.quedan(30)) {
-        e.tipo = Ev::FECHA_ASEDIO;
-        const int n = std::min<int>(l.h(), 6);
-        e.s[0] = l.s();
+// S_WarTime: h count (max 6), s timezone, c c c, count x (d time, c 0). Own opcode on s3ep1 / tw380.
+bool tiempo_guerra(Lector& l, Evento& e) {
+    e.tipo = Ev::FECHA_ASEDIO;
+    const int n = std::min<int>(l.h(), 6);
+    e.s[0] = l.s();
+    l.c();
+    l.c();
+    l.c();
+    int validas = 0;
+    for (int i = 0; i < n && !l.error; ++i) {
+        // En i64; una fecha que no entra en i32 (un valor absurdo del servidor) se descarta en vez de
+        // truncarse a otra fecha cualquiera.
+        const i64 m = MINUTOS_1997 + 1200 + static_cast<i64>(static_cast<i32>(l.d())) * 182;
         l.c();
-        l.c();
-        l.c();
-        int validas = 0;
-        for (int i = 0; i < n; ++i) {
-            // En i64; una fecha que no entra en i32 (un valor absurdo del servidor) se descarta en vez de
-            // truncarse a otra fecha cualquiera.
-            const i64 m = MINUTOS_1997 + 1200 + static_cast<i64>(static_cast<i32>(l.d())) * 182;
-            l.c();
-            if (m >= INT32_MIN && m <= INT32_MAX) e.v[FA_MINUTOS + validas++] = static_cast<i32>(m);
-        }
-        e.v[FA_N] = validas;
-        return true;
+        if (m >= INT32_MIN && m <= INT32_MAX) e.v[FA_MINUTOS + validas++] = static_cast<i32>(m);
     }
+    e.v[FA_N] = validas;
+    return !l.error;
+}
+bool mapa(Lector& l, Evento& e) {
+    if (l.quedan(30)) return tiempo_guerra(l, e);  // jp363 shares the opcode: told apart by length
     e.tipo = Ev::MAPA;
     e.v[0] = l.h();
     e.v[1] = l.c();
@@ -873,6 +875,7 @@ constexpr Decodificador TABLA[] = {
     ignorar,        // CLANNAME
     ignorar,        // CLANATTENTION
     ignorar,        // CHANGENAME
+    tiempo_guerra,  // WARTIME
 };
 static_assert(sizeof(TABLA) / sizeof(TABLA[0]) == static_cast<size_t>(Srv::CANTIDAD));
 

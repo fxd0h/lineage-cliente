@@ -103,7 +103,7 @@ constexpr ParSrv TW380_SRV[] = {
     // 64 is S_CharReset / S_PetCtrlMenu / S_BookmarkLoad / S_EquipmentSlot / emblem sync (first byte = subtype).
     {64, Srv::PETCTRL},        {105, Srv::REDMESSAGE},    {72, Srv::CLANNAME},      {200, Srv::CLANATTENTION},
     {46, Srv::CHANGENAME},
-    {231, Srv::MAPID},  // S_WarTime: el decodificador de S_MapID lo distingue por el largo
+    {231, Srv::WARTIME},
 };
 constexpr ParCli TW380_CLI[] = {
     {Cli::CLIENTVERSION, 14},  {Cli::LOGINPACKET, 119},  {Cli::COMMONCLICK, 16},   {Cli::NEWCHAR, 84},
@@ -158,7 +158,7 @@ constexpr ParSrv S3EP1_SRV[] = {
     {43, Srv::LIQUOR}, {17, Srv::BLESSOFEVA}, {86, Srv::ABILITY}, {83, Srv::SOUND},
     {115, Srv::PRIVATESHOPLIST}, {93, Srv::BOARD}, {91, Srv::BOARDREAD}, {127, Srv::MAIL},
     {72, Srv::HOUSELIST}, {113, Srv::HOUSEMAP}, {94, Srv::WAR}, {111, Srv::CASTLEMASTER},
-    {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::MAPID},
+    {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::WARTIME},
     {14, Srv::USEMAP},  // S_UseMap: handler 0x48e0b0 of S3EP1U.bin, format "dc"
 };
 constexpr ParCli S3EP1_CLI[] = {
@@ -201,6 +201,7 @@ const char* NOMBRES[] = {
     "BOOKMARKS", "SELECTLIST", "IDENTIFYDESC", "INVIS", "RESURRECTION", "STRUP", "DEXUP", "PINKNAME", "LIQUOR", "BLESSOFEVA", "ABILITY", "SOUND", "PRIVATESHOPLIST", "BOARD", "BOARDREAD", "MAIL",
     "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL", "USEMAP",
     "REDMESSAGE", "CLANNAME", "CLANATTENTION", "CHANGENAME",
+    "WARTIME",
 };
 static_assert(sizeof(NOMBRES) / sizeof(NOMBRES[0]) == static_cast<size_t>(Srv::CANTIDAD));
 

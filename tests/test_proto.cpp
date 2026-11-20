@@ -784,6 +784,22 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
             REQUIRE(w.cuerpo().size() >= esperado.size());
             CHECK(std::memcmp(w.cuerpo().data(), esperado.data(), esperado.size()) == 0);
         };
+        // s3ep1 opcode 26 is S_WarTime (not MapID); 73 is S_MapID: "hc" map 4, underwater 1, then padding.
+        ev.clear();
+        std::vector<u8> uswar = {26, 6, 0, 'J', 'S', 'T', 0, 0, 0, 0};
+        for (u32 i = 0; i < 6; ++i) {
+            const u32 v = 86204 + 4 * i;
+            for (int b = 0; b < 4; ++b) uswar.push_back(static_cast<u8>(v >> (8 * b)));
+            uswar.push_back(0);
+        }
+        REQUIRE(decodificar(uswar, us, arena, ev));
+        CHECK(ev[0].tipo == Ev::FECHA_ASEDIO);
+        CHECK(ev[0].v[FA_N] == 6);
+        ev.clear();
+        std::vector<u8> usmapid = {73, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+        REQUIRE(decodificar(usmapid, us, arena, ev));
+        CHECK(ev[0].tipo == Ev::MAPA);
+        CHECK(ev[0].v[0] == 4);
         igual_us(cmd::rango_clan(us, 3, "Ana"), {78, 1, 3, 'A', 'n', 'a', 0});
         igual_us(cmd::proponer(us, false), {22, 0});
         igual_us(cmd::proponer(us, true), {22, 1});
