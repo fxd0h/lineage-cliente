@@ -1356,10 +1356,7 @@ void barra(Graficos& g, u32 img, int x, int y, int w) {
 // clears once t >= (frames * 3 + 18) * 50.
 void dibujar_orbe(App& a, int X, int Y) {
     Graficos& g = *a.g;
-    // Time of day as 0x4bad30 does it (gmtime of the dword; values >= 2^31 are first shifted by 0x879e0800, mod 2^32).
-    const u32 crudo = static_cast<u32>(a.mundo.hora);
-    const u32 efectivo = crudo >= 0x80000000u ? crudo + 0x879e0800u : crudo;
-    const int seg = a.hora_forzada >= 0 ? a.hora_forzada : static_cast<int>(efectivo % 86400u);
+    const int seg = static_cast<int>(hora_de_juego(a) % 86400);
     const int hora = seg / 3600, minuto = seg / 60 % 60;
     const u64 ahora = a.entrada.ahora_ms;
     if (a.orbe_hora_n != a.mundo.hora_n) {

@@ -142,7 +142,13 @@ void preparar_luz(App& a) {
     a.gpu.reservar_brillo(bw, bh);
 }
 
-i32 hora_de_juego(const App& a) { return a.hora_forzada >= 0 ? a.hora_forzada : a.mundo.hora; }
+// Game clock as 0x4bad30 reads it: the S_GameTime dword as unsigned, values >= 2^31 first shifted by 0x879e0800 (mod 2^32),
+// then gmtime. The orb, the light level, the status-window gauge and the ambience all use this one value.
+i64 hora_de_juego(const App& a) {
+    if (a.hora_forzada >= 0) return a.hora_forzada;
+    const u32 crudo = static_cast<u32>(a.mundo.hora);
+    return crudo >= 0x80000000u ? static_cast<u32>(crudo + 0x879e0800u) : crudo;
+}
 
 void aplicar_luz(App& a, u64 ahora) {
     const Mundo& m = a.mundo;
@@ -156,8 +162,8 @@ void aplicar_luz(App& a, u64 ahora) {
         return;
     }
 
-    const i32 hora = hora_de_juego(a);
-    const int seg = static_cast<int>(((hora % DIA) + DIA) % DIA);
+    const i64 hora = hora_de_juego(a);
+    const int seg = static_cast<int>(hora % DIA);
     const bool lluvia = m.nieve > 0 || m.lluvia > 0;
     int nivel = nivel_ambiente(m.mapa, seg / 60, dia_del_anio(hora), lluvia);
     if (m.jugador.luz_hechizo) nivel = nivel_con_luz_hechizo(nivel);

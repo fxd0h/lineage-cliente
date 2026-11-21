@@ -231,8 +231,8 @@ void draw_attributes(App& a, int x, int y) {
     // Day / night clock gauge (0x4b2e30): cap 990 / 993 at (76,233), bar 991 / 994 at (83,232) and the marker 992 / 995 at
     // (83 + v, 233), v = elapsed fraction of the daylight or night period * 83, from the game clock.
     {
-        const i32 clock = hora_de_juego(a);
-        const int seconds = static_cast<int>(((clock % 86400) + 86400) % 86400);
+        const i64 clock = hora_de_juego(a);
+        const int seconds = static_cast<int>(clock % 86400);
         const DayPhase ph = day_phase(seconds / 60, dia_del_anio(clock));
         const u32 base = ph.night ? IMG_CLOCK_NIGHT : IMG_CLOCK_DAY;
         const int v = ph.length > 0 ? std::clamp(ph.elapsed * 83 / ph.length, 0, 83) : 0;

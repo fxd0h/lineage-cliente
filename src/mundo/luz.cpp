@@ -97,8 +97,8 @@ DayPhase day_phase(int minute, int day_of_year) {
     return {true, (minute > dusk ? minute - dusk : minute + MINUTOS_DIA - dusk), length};
 }
 
-int dia_del_anio(i32 segundos) {
-    int dias = std::max(segundos, 0) / 86400;
+int dia_del_anio(i64 segundos) {
+    int dias = static_cast<int>(std::max<i64>(segundos, 0) / 86400);
     for (int anio = 1970;; ++anio) {
         const bool bisiesto = anio % 4 == 0 && (anio % 100 != 0 || anio % 400 == 0);
         const int largo = bisiesto ? 366 : 365;

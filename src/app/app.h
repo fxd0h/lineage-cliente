@@ -726,7 +726,7 @@ void cargar_sonidos(App& a);
 void aplicar_volumenes(App& a);
 void actualizar_sonido(App& a, u64 ahora);  // una vez por frame: música, ambiente y streams
 // Segundos de la hora de juego: la del servidor, o la forzada con forzar-hora (ver luz_ui.cpp).
-i32 hora_de_juego(const App& a);
+i64 hora_de_juego(const App& a);  // game clock as the exe reads it (0x4bad30)
 // Ctrl+P: screenshot request (original UI: <settings folder>/Capture/LinC%04d.bmp + chat line, simple UI: captura.bmp).
 void tomar_captura(App& a);
 // Al dibujar un frame de animación: si cambió desde el anterior y tiene sonido, suena (con el

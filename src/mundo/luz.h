@@ -42,7 +42,7 @@ DayPhase day_phase(int minute, int day_of_year);
 
 // Día del año (0 = 1 de enero) de una hora de juego de S_GameTime. El original la trata como una fecha
 // (segundos desde 1970, sub_4bad30): las estaciones siguen al reloj del juego, no al de la máquina.
-int dia_del_anio(i32 segundos);
+int dia_del_anio(i64 segundos);
 
 // Radio de la máscara de un objeto a partir de su luz: el jugador nunca baja de 5 (S_OwnCharPack manda 0)
 // y el tope es 14, la última máscara de source.lmp con datos.
