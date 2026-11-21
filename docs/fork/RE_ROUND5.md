@@ -61,3 +61,18 @@ So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, 
 - Not determined: nothing writes the From edit (+0x18); left blank. Window position: assumed (0,0) like the list (the default position table was not traced).
 - Fork: original UI compose rebuilt on paper 1545 with the layout above (To locked to the clan name in clan mode), subject 20 / body 256 chars, Cancel closes
   the whole mail window. Simple UI keeps its own compose. Verified live: layout, validation messages (no clan, self), Cancel.
+
+## 4. Buff slot flags (S_SkillSound 0x48a5c0, own-character wrapper 0x48bbd5..0x48bdb4)
+- The exe keeps one byte per buff slot, `[0x81680c + slot]` (1 while it runs; set by 0x4647a0 `(duration, slot)`, cleared by 0x464760 `(slot)`,
+  which also hides the icon and prints NO end-of-effect message). Every `[0x8168xx]` flag read in the handlers is such a slot byte:
+  0x816830 = slot 0x24, 0x816844 = 0x38, 0x81684e = 0x42, 0x816850 = 0x44, 0x816837 = 0x2b, 0x816859/5a = 0x4d/0x4e, 0x81685b/5c/5d = 0x4f/0x50/0x51. [C]
+- gfx 0x1130: slot 0x42 if slot 0x42 already runs (0x81684e), else slot 0x38; gfx 0x16c1: slot 0x38 if slot 0x38 runs (0x816844), else slot 0x42 and
+  the chat line string-e 1066 (0x42a). Slots 0x38 / 0x42 share icon 2339; 960 s / 100 s, tooltip 1012 / 1083 ("MP and HP still recover even when you are
+  over your weight limit."). gfx 0xf47 first clears slot 0x44 when it runs (0x48ac73) and starts 0x24; gfx 0x16c5 (slot 0x44, line 1068+) does nothing while
+  slot 0x24 runs (0x48ad93). The fork mapped 0x16c1 to 0x38 unconditionally: fixed (`ranura_de_skillsound`, mundo.cpp). The start chat lines that
+  the exe prints for these slots (0x48b679: 1066 etc.) are NOT printed (l1j-en never sends these graphics; the end/start text plumbing differs). [C]
+- Own S_SkillSound gfx 870 (0x366, Cancellation) runs a client-side purge after the normal handler (0x48bc15): slot 0x4d, else 0x4e if running;
+  when slot 0x2b is NOT running: slots 0x0c..0x3a except 0x2c, and 0x42..0x48 except 0x46 / 0x47; then slot 3; 0x53..0x5a; 0x5d..0x64; 0x88..0x8f;
+  0x65; the first running of 0x51 / 0x4f / 0x50; 0x6b 0x6c 0x6f 0x71 0x72 0x74 0x75 0x78 0x7b 0x7c 0x7d 0x80 0x81; 0x84; 0x99. All silent. Implemented
+  (`cancelacion_propia`, unit test in test_hechizos.cpp). [C]
+- Slot flags used in S_SkillSound gfx 0xbe (0x816832 = 0x26, 0x81685b/5c/5d) were already modelled.

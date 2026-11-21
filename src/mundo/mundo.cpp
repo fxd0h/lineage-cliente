@@ -141,6 +141,42 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
 }
 
+// The exe keeps one byte per buff slot, [0x81680c + slot], set while the slot runs (0x4647a0 / 0x464760).
+bool ranura_activa(const EstadoJugador& j, int ranura) {
+    for (u32 k = 0; k < j.n_efectos; ++k)
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) return true;
+    return false;
+}
+
+// 0x464760: drops a slot's icon silently (no end-of-effect message).
+void quitar_ranura(EstadoJugador& j, int ranura) {
+    for (u32 k = 0; k < j.n_efectos;) {
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) j.efectos[k] = j.efectos[--j.n_efectos];
+        else ++k;
+    }
+}
+
+// Own S_SkillSound with graphic 870 (Cancellation), exe 0x48bc15..0x48bdb4: client-side removal of the buff icons.
+void cancelacion_propia(EstadoJugador& j) {
+    if (ranura_activa(j, 0x4d)) quitar_ranura(j, 0x4d);
+    else if (ranura_activa(j, 0x4e)) quitar_ranura(j, 0x4e);
+    if (!ranura_activa(j, 0x2b)) {  // while slot 0x2b (S_SkillSound 0x8ba) runs, the two ranges below stay
+        for (int r = 0xc; r < 0x3b; ++r)
+            if (r != 0x2c) quitar_ranura(j, r);
+        for (int r = 0x42; r <= 0x48; ++r)
+            if (r != 0x46 && r != 0x47) quitar_ranura(j, r);
+    }
+    for (int r : {3, 0x65, 0x6b, 0x6c, 0x6f, 0x71, 0x72, 0x74, 0x75, 0x78, 0x7b, 0x7c, 0x7d, 0x80, 0x81, 0x84, 0x99}) quitar_ranura(j, r);
+    for (int r = 0x53; r <= 0x5a; ++r) quitar_ranura(j, r);
+    for (int r = 0x5d; r <= 0x64; ++r) quitar_ranura(j, r);
+    for (int r = 0x88; r <= 0x8f; ++r) quitar_ranura(j, r);
+    for (int r : {0x51, 0x4f, 0x50})  // only the first active of these three
+        if (ranura_activa(j, r)) {
+            quitar_ranura(j, r);
+            break;
+        }
+}
+
 void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora) {
     poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), segundos, ahora);
 }
@@ -441,7 +477,12 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                             if (otro != r) poner_ranura(m.jugador, otro, 0, ahora);
                     if (r >= 0) poner_ranura(m.jugador, r, sprite == 0x9d8 ? 300 : segundos_de_ranura(r), ahora);
                 } else {
-                    const int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
+                    int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
+                    if (ef.gfx == 0x1130 && ranura_activa(m.jugador, 0x42)) r = 0x42;
+                    else if (ef.gfx == 0x16c1 && ranura_activa(m.jugador, 0x38)) r = 0x38;
+                    else if (ef.gfx == 0xf47 && ranura_activa(m.jugador, 0x44)) quitar_ranura(m.jugador, 0x44);
+                    else if (ef.gfx == 0x16c5 && ranura_activa(m.jugador, 0x24)) r = -1;
+                    if (ef.gfx == 870) cancelacion_propia(m.jugador);
                     if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
                 }
             }

@@ -97,6 +97,13 @@ TEST_CASE("Hechizos: S_UseAttackSkill lleva el proyectil y el daño llega con é
     CHECK(m.objetos.col<O_TACCION>()[so] == ef.inicio + ef.vuelo_ms);
 }
 
+// Test helper: is a buff slot running (the exe's [0x81680c + slot] byte).
+static bool ranura_activa_para_prueba(const EstadoJugador& j, int r) {
+    for (u32 k = 0; k < j.n_efectos; ++k)
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == r) return true;
+    return false;
+}
+
 TEST_CASE("Hechizos: efectos, haste, brave e íconos") {
     Decodificador d;
     Mundo m;
@@ -427,4 +434,23 @@ TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage")
     REQUIRE(m.jugador.n_efectos == 1);
     CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x50);
     CHECK(ranura_de_efecto_activo(EA_EVA, 0) == 0xb);
+
+    // 0x1130 / 0x16c1 start slot 0x38 / 0x42 and swap to the other one while it runs (flag bytes at 0x48acd4 / 0x48ad4f).
+    m.jugador.n_efectos = 0;
+    auto activa = [&](int r) { return ranura_activa_para_prueba(m.jugador, r); };
+    snd.v[EF_GFX] = 0x16c1;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(activa(0x42));
+    snd.v[EF_GFX] = 0x1130;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(activa(0x42));
+    CHECK(!activa(0x38));
+    // Cancellation (graphic 870) drops the listed slots silently, but keeps the 0x46 / 0x47 range members and the rest.
+    m.jugador.n_efectos = 0;
+    snd.v[EF_GFX] = 0x8e8;  // slot 0x1c
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    REQUIRE(activa(0x1c));
+    snd.v[EF_GFX] = 870;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
 }
