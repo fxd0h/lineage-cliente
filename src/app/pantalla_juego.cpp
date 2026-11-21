@@ -440,7 +440,7 @@ void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave
 
 // Lo último que dijo el objeto, sobre su nombre (hasta 3 filas centradas). Se quita el
 // "Nombre: " / "<Nombre> " que agrega el servidor porque el nombre ya está debajo.
-void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false, GloboChat* gl = nullptr) {
+void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false, GloboChat* gl = nullptr, float foot_y = 0) {
     if (t.empty()) return;
     size_t corte = std::min(t.find(": "), t.find("> "));
     if (corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
@@ -456,30 +456,50 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         t.remove_prefix(c);
         while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
     }
-    if (original) base_y -= caja ? 14 : 6;  // lines drawn upward from here: top offset -lines*12-14 / -6
-    if (original && gl) {
-        // Rectangle of this bubble (text block, plus the 5 px frame padding when boxed) for the grey-overlap rule.
-        int tw = 0;
-        for (int i = 0; i < n; ++i) tw = std::max(tw, ancho_texto(filas[i].data(), filas[i].size()));
-        const int pad = caja ? 5 : 0;
-        gl->x0 = static_cast<int>(centro_x) - tw / 2 - pad, gl->x1 = static_cast<int>(centro_x) + tw / 2 + pad;
-        gl->y0 = static_cast<int>(base_y) - 12 * n, gl->y1 = gl->y0 + 12 * n + 2 * pad;
-        if (!gl->revisado) {  // first frame: older overlapping bubbles go grey
-            gl->revisado = true;
-            for (GloboChat& o : a.chat.globos)
-                if (&o != gl && o.id != 0 && o.con_rect && o.inicio < gl->inicio && o.x0 < gl->x1 && o.y0 < gl->y1 && o.x1 > gl->x0 &&
-                    o.y1 > gl->y0)
-                    o.gris = true;
+    // Original rectangle (S3EP1U 0x419e70 / 0x41a040, docs/fork/RE_ROUND7.md section 1): w = widest wrapped line in 6 px cells,
+    // L lines; anchor (ax, ay) = (screen x + 24, sprite frame top - 2); bottom edge on the anchor.
+    int rx0 = 0, ry0 = 0;
+    if (original) {
+        int cells = 0;
+        for (int i = 0; i < n; ++i) cells = std::max(cells, (ancho_texto(filas[i].data(), filas[i].size()) + 5) / 6);
+        const int ax = static_cast<int>(centro_x), ay = static_cast<int>(base_y);
+        const int half = 3 * cells + (caja ? 5 : 0);
+        int left = ax - half, right = ax + half, top = ay - 12 * n - (caja ? 14 : 6), bottom = ay;
+        if (left < 0x30) {  // horizontal clamps of 0x419e70 (shift by 2 - left, as disassembled)
+            const int d = 2 - left;
+            left += d, right += d;
+        } else if (right > 0x2b0) {
+            const int d = right - 0x2b0;
+            left -= d, right -= d;
         }
-        gl->con_rect = true;
+        if (top < 0x30) {  // [I] pushed under the sprite: top = foot + 4
+            const int h = bottom - top;
+            top = static_cast<int>(foot_y) + 4, bottom = top + h;
+        }
+        if (top < 0x30 || bottom >= 0x1c9) return;  // dropped, never shown
+        if (gl) {
+            gl->x0 = left, gl->x1 = right, gl->y0 = top, gl->y1 = bottom;
+            if (!gl->revisado) {  // new bubble: older bubbles whose rect strictly overlaps turn grey for good
+                gl->revisado = true;
+                for (GloboChat& o : a.chat.globos)
+                    if (&o != gl && o.id != 0 && o.con_rect && o.inicio < gl->inicio && o.x0 < gl->x1 && o.y0 < gl->y1 &&
+                        gl->x0 < o.x1 && gl->y0 < o.y1)
+                        o.gris = true;
+            }
+            gl->con_rect = true;
+        }
+        centro_x = static_cast<float>(left + right) / 2;
+        rx0 = left, ry0 = top;
+        base_y = static_cast<float>(top + 12 * n);  // text rows start at the rect top (+5 when boxed)
     }
     const int paso = original ? 12 : 14;
     if (caja) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
         int ancho = 0;
         for (int i = 0; i < n; ++i) ancho = std::max(ancho, ancho_texto(filas[i].data(), filas[i].size()));
         const int pad = original ? 5 : 6;
-        const int x0 = static_cast<int>(centro_x) - ancho / 2 - pad, w = ancho + 2 * pad;
-        const int y0 = original ? static_cast<int>(base_y) - 12 * n : static_cast<int>(base_y) - 14 * n - 6;
+        const int x0 = original ? rx0 : static_cast<int>(centro_x) - ancho / 2 - pad;
+        const int w = original ? gl ? gl->x1 - gl->x0 : ancho + 2 * pad : ancho + 2 * pad;
+        const int y0 = original ? ry0 : static_cast<int>(base_y) - 14 * n - 6;
         const int h = original ? 12 * n + 10 : 14 * n + 8;
         const int x1 = x0 + w - 1, y1 = y0 + h - 1, cx = static_cast<int>(centro_x);
         const u64 k = clave_orden(CAPA_EFECTOS, 1);
@@ -852,7 +872,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
         else  // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
             dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true,
-                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000));
+                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), sy);
         g.gpu().sin_zoom_mundo(false);
     }
 }
