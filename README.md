@@ -31,7 +31,8 @@ No game assets are included: you need your own Lineage installation (the folder 
   polymorph effect, per-frame sounds and lightning/meteor light flashes.
 - **Original HUD details:** chat and name colours, names on mouse-over, monster level shown by the outline colour,
   speech bubbles, cursors, buff icons with the original tooltips and end messages (154-slot table from the
-  binary), Alt+1..4 emotes, `/rank`, `/propose`, `/divorce`, `/duel`, `/checkpk`, `/loc`, `/telcon` and the
+  binary), game-time orb and zone type icons, shout direction icons, original mail compose window, Ctrl+P
+  screenshots to `Capture/`, Alt+1..4 emotes, `/rank`, `/propose`, `/divorce`, `/duel`, `/checkpk`, `/loc`, `/telcon` and the
   original command aliases.
 - **Fixed 640x480 view** scaled to any window (`vista=fija`) with filters: integer, xBR, FSR (default), CRT,
   Anime4K (`escalado=`, Shift+F5).
@@ -164,8 +165,8 @@ invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README
   [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
 - New-monster animations from the encrypted `list.spz` are not decoded.
 - Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
-- Not yet matched to the original: cooking window, original mail compose window and a few buff slots whose
-  conditions are not identified (see the audit).
+- Not yet matched to the original: cooking window (recipe data found, row layout not), mail reading/reply
+  windows, cursor states 8/14/16 and the time-orb sparkle overlays (see the audit and `RE_ROUND5.md`).
 - Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.
 - Server text for `tw380` depends on Whale's Big5 output and the data in the game folder; see the evaluations above.
 
