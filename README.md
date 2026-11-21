@@ -165,8 +165,8 @@ invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README
   [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
 - New-monster animations from the encrypted `list.spz` are not decoded.
 - Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
-- Not yet matched to the original: cooking window (recipe data found, row layout not), mail reading/reply
-  windows, cursor states 8/14/16 and the time-orb sparkle overlays (see the audit and `RE_ROUND5.md`).
+- Not yet matched to the original: the time-orb sparkle overlays, cursor states 14 / 16 and the selected-spell variant of 8, the cooking
+  progress bar (the l1j-en server never starts it) (see the audit, `RE_ROUND5.md` and `RE_ROUND6.md`).
 - Approximate, pending checks against the original: the area in which a newer chat bubble greys an older one, and
   the mail compose window's default position.
 - Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.

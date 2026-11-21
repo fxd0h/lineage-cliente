@@ -120,3 +120,10 @@ So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, 
 > zone-type "icons" 1224-1226 drew a second orb at (530,345) instead of the "Normal zone"/"Safety zone" text, which
 > contradicts the original's screenshots that the previous implementation was matched against. The findings above are
 > kept as unverified notes; the screenshot-matched 34-frame orb and text zone label are back.
+
+## Open items after round 6
+- Cooking window: DONE in round 6 (layout, grid, tooltip, click -> packet; RE_ROUND6 section 1). Still open there: progress bar start (needs a server message
+  l1j-en never sends), drag to the shortcut bar. Note: string-e ids in this file written as "file line n + 2" are the exe's index n (fork `linea(n)`).
+- Mail reading and Reply windows, From edit: DONE in round 6 (section 2).
+- Orb sparkle overlays (0x4e3 + t/100, 0x4dc + t/150): still open (skipped in round 6).
+- Cursor states: 8 in range DONE (section 4); 8 shortcut variant, 14 and 16 open (no data / no fishing).
