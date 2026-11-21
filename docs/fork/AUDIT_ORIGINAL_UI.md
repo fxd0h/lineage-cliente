@@ -422,3 +422,5 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 | Cursor 8, attack mode with spell 40 / 60 selected | 0x46a23a, [0x8f07b0] + 0x70 = selected spell | none (no selected spell) | MISSING | RE_ROUND6 section 4 |
 | Cursor 14 / 16 | kinds 7 / 13 / door flag; action overlay (fishing) | none | MISSING (no data / no fishing) | - |
 | State cursor loading | RT_GROUP_CURSOR table 0x6e0de8 | fixed: the 16 state cursors now load (the loader dropped them) | MATCH | cursores.cpp `load_originals` |
+
+- **Strip button hints** (ventanas.cpp `hint_panel`): rebuilt from the hint manager 0x4bb8f0 (700 ms delay, string-e 613/1250/614-619, 50% darkened bevelled box above the strip); not visible in the available footage (option off there). RE_ROUND8 section 3.

@@ -388,6 +388,8 @@ struct App {
     bool orbe_anim = false;                   // game-time orb transition running (0x8f0809)
     u64 orbe_t0 = 0;                          // its start tick (0x8f080c)
     u32 orbe_hora_n = 0;                      // last mundo.hora_n seen by the orb
+    int hint_boton = -1;                      // bottom-strip hint: button under the pointer (-1 none)
+    u64 hint_t0 = 0;                          // tick the pointer entered it / last clicked (0x4bbb50)
     i32 hora_forzada = -1;                    // comando forzar-hora (pruebas): segundos del día, -1 = la del servidor
     bool ambiente_agua = false;               // el ambiente que suena es el del agua (sonido 330)
     std::vector<u32> agua_filas;              // color por fila del agua (1416.img), cargado al primer uso

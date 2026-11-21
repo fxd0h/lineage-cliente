@@ -340,19 +340,12 @@ bool tapa_a_otra(const App& a, IdVentana v) {
 // Bottom-strip button (ctor 0x47c6d0, draw 0x47c760): the first id `n` at rest, the second (n + 1) while the pointer is over it or
 // pressed (hover sets +0x2d, press +0x2c: both pick id +0x4c / first + 1). The mail button (1585/1586) is plain art and toggles
 // the mail window (correo_ui.cpp). The rest art is the base-archive version (Graficos::img_base).
-static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
+static bool boton_panel(App& a, u32 n, int x, int y, bool mono = true) {
     Graficos& g = *a.g;
     const RegionAtlas reposo = mono ? g.img_base(n) : g.img(n);
     const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
     const u64 k = clave_orden(CAPA_UI, 1);
     if (encima) {
-        if (a.cfg.opciones_orig >> OPC_TOOLTIP & 1) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
-            // Same face as the original's hover names (quickslot names in its footage): white eng.fnt with a 1 px black
-            // outline and no box. Kept inside the 640 px frame.
-            const int w = ancho_texto(ayuda.data(), ayuda.size());
-            const int tx = std::min(x, (a.gpu.ancho() - 640) / 2 + 638 - w);
-            g.texto_contorno(ayuda, static_cast<float>(tx), static_cast<float>(y - 15), clave_orden(CAPA_UI_TEXTO, 30));
-        }
         g.gpu().dibujar(g.img(n + 1), x, y, k);
     } else {
         g.gpu().dibujar(reposo, x, y, k);
@@ -360,21 +353,79 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, boo
     return encima && a.entrada.clic;
 }
 
+// Strip hints (hint manager [0x8f0b6c], items built at 0x4bc1ef..: rect {l, t, r, b} (r, b exclusive), anchor x, string-e index).
+// The pointer must stay inside the rect 700 ms (0x2bc, timer 0x4ba8e0 -> 0x4bb830); a click hides it and re-arms the wait (0x4bbb50).
+// Draw 0x4bb8f0: width 142 (22 cells of 6 px + 10) or, for a single line, 6 * length + 21 when that is narrower; height 12 * lines + 10;
+// at (anchor x, 478), moved left to fit 640 and above the strip (460 - h) because it would pass 480; 50% darkened fill
+// (0x49a440), 2 px bevel light 23/31 grey (top, left) and 15/31 grey (bottom, right), white text at (x + 5, y + 5), 12 px pitch.
+struct HintBoton { int l, r, ancla_x; u16 texto; };
+constexpr HintBoton HINTS_PANEL[8] = {{491, 506, 495, 613}, {506, 525, 495, 1250}, {526, 543, 516, 614}, {544, 562, 537, 615},
+                                      {563, 579, 558, 616}, {580, 600, 579, 617}, {601, 617, 600, 618}, {618, 639, 621, 619}};
+
+static void hint_panel(App& a, int vx, int vy) {
+    int idx = -1;
+    const int mx = a.entrada.mx - vx, my = a.entrada.my - vy;
+    if (my >= 460 && my < 478)
+        for (int i = 0; i < 8; ++i)
+            if (mx >= HINTS_PANEL[i].l && mx < HINTS_PANEL[i].r) idx = i;
+    const u64 ahora = a.entrada.ahora_ms;
+    if (idx != a.hint_boton || (idx >= 0 && a.entrada.clic)) {
+        a.hint_boton = idx;
+        a.hint_t0 = ahora;
+    }
+    if (idx < 0 || !(a.cfg.opciones_orig >> OPC_TOOLTIP & 1) || ahora - a.hint_t0 < 700) return;
+    std::string_view t = a.mensajes.linea(HINTS_PANEL[idx].texto);
+    if (t.empty()) return;
+    std::string_view filas[8];
+    int n = 0;
+    while (!t.empty() && n < 8) {
+        const size_t c = bytes_que_caben(t.data(), t.size(), 22 * 6);
+        if (c == 0) break;
+        filas[n++] = t.substr(0, c);
+        t.remove_prefix(c);
+        while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
+    }
+    if (n == 0) return;
+    int w = 142;
+    if (n == 1) w = std::min(w, 6 * static_cast<int>(filas[0].size()) + 21);
+    w &= ~3;
+    const int h = 12 * n + 10;
+    int x = HINTS_PANEL[idx].ancla_x, y = 478;
+    if (x + w > 640) x = 640 - w;
+    if (y + h > 480) y = 460 - h;
+    x += vx, y += vy;
+    Gpu& gpu = a.g->gpu();
+    const u64 kf = clave_orden(CAPA_UI, 30), kt = clave_orden(CAPA_UI_TEXTO, 30);
+    const u32 claro = rgba(189, 189, 189), oscuro = rgba(123, 123, 123);
+    gpu.rectangulo(x, y, w, h, kf, rgba(0, 0, 0, 128));
+    gpu.rectangulo(x, y, w - 1, 1, kf, claro);
+    gpu.rectangulo(x + 1, y + 1, w - 2, 1, kf, claro);
+    gpu.rectangulo(x, y + 1, 1, h - 1, kf, claro);
+    gpu.rectangulo(x + 1, y + 2, 1, h - 2, kf, claro);
+    gpu.rectangulo(x + 1, y + h - 1, w - 1, 1, kf, oscuro);
+    gpu.rectangulo(x + 2, y + h - 2, w - 2, 1, kf, oscuro);
+    gpu.rectangulo(x + w - 1, y, 1, h - 1, kf, oscuro);
+    gpu.rectangulo(x + w - 2, y + 1, 1, h - 2, kf, oscuro);
+    for (int i = 0; i < n; ++i)
+        a.g->texto_sombra(filas[i], static_cast<float>(x + 5), static_cast<float>(y + 5 + 12 * i), kt, rgba(255, 255, 254));
+}
+
 void dibujar_botones_panel(App& a, int x, int y) {
     // Original bottom strip (S3EP1U 0x459595..0x45980a): eight buttons at y=460 of the 640x480 screen; x is
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
-    if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) alternar_ayuda(a);
-    if (boton_panel(a, 1585, x + 507, y + BY, "Mail", false)) {
+    if (boton_panel(a, 1017, x + 491, y + BY)) alternar_ayuda(a);
+    if (boton_panel(a, 1585, x + 507, y + BY, false)) {
         if (a.correo.abierto) a.correo.abierto = a.correo.escribiendo = false;
         else comando_correo(a, "mail");
     }
-    if (boton_panel(a, 1007, x + 527, y + BY, "Status (Ctrl+A)")) a.ventana_estado = !a.ventana_estado;
-    if (boton_panel(a, 1005, x + 544, y + BY, "Magic (Ctrl+S)")) a.ventana_hechizos = !a.ventana_hechizos;
-    if (boton_panel(a, 1011, x + 563, y + BY, "Inventory (Ctrl+I)")) a.ventana_inventario = !a.ventana_inventario;
-    if (boton_panel(a, 1015, x + 580, y + BY, "Party, trade, clan (Ctrl+C)")) alternar_comunidad(a);
-    if (boton_panel(a, 1009, x + 601, y + BY, "Options (Ctrl+V)")) alternar_opciones(a);
-    if (boton_panel(a, 1013, x + 618, y + BY, "Restart / Quit (Ctrl+Q)")) a.ventana_salida = !a.ventana_salida;
+    if (boton_panel(a, 1007, x + 527, y + BY)) a.ventana_estado = !a.ventana_estado;
+    if (boton_panel(a, 1005, x + 544, y + BY)) a.ventana_hechizos = !a.ventana_hechizos;
+    if (boton_panel(a, 1011, x + 563, y + BY)) a.ventana_inventario = !a.ventana_inventario;
+    if (boton_panel(a, 1015, x + 580, y + BY)) alternar_comunidad(a);
+    if (boton_panel(a, 1009, x + 601, y + BY)) alternar_opciones(a);
+    if (boton_panel(a, 1013, x + 618, y + BY)) a.ventana_salida = !a.ventana_salida;
+    hint_panel(a, x, y);
 }
 
 // UI simple: 6 botones en 2 columnas × 3 filas, a la izquierda del minimapa.

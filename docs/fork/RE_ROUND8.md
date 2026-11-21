@@ -37,3 +37,17 @@
   than the captured client. Drawing the base-archive image `Recursos::sprite_base` at rest reproduces the capture without any tint: per-button best offset vs hud_original_1.png is (0,0), mean abs error 4-5 on the icons
   (the video blur accounts for the rest). The old `img_sepia` luminance fit and its 17 row clip are removed. [V]
 - [V] Hover in original.mp4 (t = 1202.3, cursor on the magic button): the star turns reddish = image 1006 in colour; the video is too compressed to compare saturation. Pressed was not seen (no click in the footage).
+
+## 3. Strip button hints (hint manager [0x8f0b6c], class draw 0x4bb8f0, items 0x4bc1ef..)
+- NOT 0x4bbd20 / 0x4bbd30: those only set / clear the manager's enabled flag `[mgr + 8]` from the option byte `[0x6e50b8]` (option "tooltip", default 1 in the exe's data; applied at 0x459abf). [C]
+- Items are built in 0x4bbdb0.. by ctor 0x4bb850(rect{l,t,r,b}, text, id, anchor x, anchor y, callback 0x4bb830); ids 0..7 are the HP/MP/AC/... boxes (not ported), ids 8..15 the strip. The text is
+  string-e entry n (`[0x8f0b0c] + 4n`), wrapped by 0x41a040 at 22 cells (6 px): help 613 "Help (Ctrl-H)", mail 1250 "Letter", status 614, magic 615 "Magic (Ctrl-S)", inventory 616, social 617, options 618,
+  quit 619 "System (Ctrl-Q)". Rects (r, b exclusive): help 491-506, mail 506-525, status 526-543, magic 544-562, inventory 563-579, social 580-600, options 601-617, quit 618-639, all y 460-478;
+  anchors x 495, 495, 516, 537, 558, 579, 600, 621, y 478. [C]
+- Delay: the item's mouse handler 0x4bbb50 schedules the show with `0x4ba8e0(0x2bc = 700 ms, 0x4bb830, item)`; 0x4bb830 sets +0x48 = show. Leaving the rect, or a left button down / double click, cancels (0x4bbb30) and the next
+  mouse move re-arms the 700 ms. [C]
+- Draw 0x4bb8f0: w = 142 (22 * 6 + 10), or for ONE line `6 * len + 21` if narrower (0x433f70 = 6 * len for codepage 1252); w &= ~3; h = 12 * lines + 10. x = anchor x (+ view origin), pushed left so x + w <= 640;
+  y = anchor y = 478, but when y + h > 480 it goes ABOVE the rect: y = rect.top - h = 460 - h (always, for the strip). Then: 0x49a440 halves every channel of the w x h rect (50% darkening, not a black box);
+  8 bevel lines through 0x498720 (fill rect): light RGB555 0x5ef7 (23/31 grey = 189) top rows y, y+1 and left columns x, x+1; dark 0x3def (15/31 = 123) bottom rows y+h-1, y+h-2 and right columns x+w-1, x+w-2;
+  text via the chat-line blitter 0x432dc0 (flag 1) in white 0x7fff at (x + 5, y + 5), 12 px per line. [C]
+- Not verified visually: the footage has the option off (no hint ever appears while the pointer rests on the strip for > 1 s, e.g. t = 1196-1206 s). The fork implements the code as read; face = the chat face with shadow. [I for the face]
