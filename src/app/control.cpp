@@ -283,6 +283,9 @@ void estado(App& a, Conexion& c) {
         if (a.castillos.asedio[k]) (asedios += std::to_string(k)) += ',';
     if (u8 cs = castillo_de(a, j.id)) asedios += " senor=" + std::to_string(cs);
     responder(c, asedios);
+    // Cursor applied last frame (a.cursor itself is reset to the hand at the start of each frame): the original-UI state 1..16, <= 0 a fork role.
+    const int cs = static_cast<int>(a.cursor_aplicado) - static_cast<int>(Cursor::ESTADO_1) + 1;
+    responder(c, "cursor=" + std::to_string(cs));
 }
 
 const char* AYUDA[] = {

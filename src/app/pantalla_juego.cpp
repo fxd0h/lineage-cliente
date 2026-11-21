@@ -1967,13 +1967,43 @@ void dibujar_fps(App& a) {
 
 // Cursor: círculo si un hechizo espera su objetivo; espada sobre un monstruo (o con Ctrl sobre otro
 // personaje o NPC, que es atacarlo); si no, la mano (también sobre la interfaz).
+// Pending "Select a target." use (0x469f1f): the exe's setter 0x402490 stores the use in [0x81654c] and its range in [0x816548], which is
+// 15 for every caller but the out-of-range spell retry; the target (object under the pointer, else the cell under it) is in range when
+// |dx| <= range and |dy| <= range (the exe compares the doubled x against 2 * range).
+constexpr int PENDING_USE_RANGE = 15;
+bool pending_target_in_range(App& a, ObjId id) {
+    const TablaObjetos& o = a.mundo.objetos;
+    const Slot me = o.buscar(a.mundo.jugador.id);
+    if (me == SIN_SLOT) return false;
+    const int ox = o.col<O_X>()[me], oy = o.col<O_Y>()[me];
+    int tx, ty;
+    const Slot s = id ? o.buscar(id) : SIN_SLOT;
+    if (s != SIN_SLOT) {
+        tx = o.col<O_X>()[s];
+        ty = o.col<O_Y>()[s];
+    } else {  // no object: the cell under the pointer (inverse of mundo_px / mundo_py from the character's centre)
+        const Vista vi = vista_mundo(a);
+        const double rx = (raton_mundo_x(a) - vi.cx) / 24.0, ry = (raton_mundo_y(a) - vi.cy) / 12.0;
+        tx = ox + static_cast<int>(std::lround((rx - ry) / 2));
+        ty = oy + static_cast<int>(std::lround((rx + ry) / 2));
+    }
+    return std::abs(tx - ox) <= PENDING_USE_RANGE && std::abs(ty - oy) <= PENDING_USE_RANGE;
+}
+
 // Original UI chooser (0x469e40, docs/fork/RE_HUD.md): picks one of the 16 cursor states. The fork has no
-// weapon type, tile flags or "busy" state, so states 8, 14 and 16 are never chosen.
+// tile flags, kind 7 / 13 data, selected-spell shortcut or "busy" action overlay, so states 14, 16 and the shortcut
+// variant of 8 are never chosen (RE_ROUND6).
 void elegir_cursor_original(App& a) {
     auto poner = [&](int estado) {
         if (a.cursores[static_cast<int>(cursor_estado(estado))]) a.cursor = cursor_estado(estado);
     };
-    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando || a.gm_apuntando) return poner(11);
+    if (a.gm_apuntando) return poner(11);
+    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
+        // Target in range: the target circle (8), or the attack cursor with Ctrl / Alt held (15); out of range: 11 (0x46a344).
+        if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
+        const bool alt_held = (SDL_GetModState() & SDL_KMOD_ALT) != 0;
+        return poner(a.entrada.ctrl || alt_held ? 15 : 8);
+    }
     const Vista vi = vista(a);
     if (sobre_alguna_ventana(a)) return poner(5);
     if (a.entrada.my >= vi.panel_y || sobre_barra(a)) return poner(1);  // arrow over the HUD

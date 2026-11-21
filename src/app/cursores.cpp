@@ -117,7 +117,8 @@ SDL_Cursor* crear(char (*pixel)(int, int, const char* const*), const char* const
 }
 
 // Original cursor resource id per role (Cursor order: HAND, SWORD, TARGET, LIPS, COIN).
-constexpr u32 ORIGINAL_IDS[static_cast<int>(Cursor::CANTIDAD)] = {2, 6, 8, 7, 13};
+constexpr u32 ORIGINAL_IDS[] = {2, 6, 8, 7, 13};
+static_assert(std::size(ORIGINAL_IDS) == static_cast<size_t>(Cursor::ESTADO_1), "one id per role, then the 16 states");
 
 // Cursor state -> LoadCursor group resource id (table 0x6e0de8, 0x477c50); the RT_CURSOR image comes from its group.
 constexpr u32 STATE_GROUPS[16] = {130, 131, 105, 127, 132, 133, 144, 136, 138, 139, 140, 141, 142, 143, 145, 150};
@@ -132,21 +133,24 @@ void load_originals(const std::string& game_dir) {
         ArchivoMapeado f;
         if (!f.abrir(ruta_real(game_dir + name))) continue;
         std::vector<PeCursor> all;
+        bool any = false;
+        // The 5 fork roles (simple UI) and the 16 original states each load on their own: S3EP1U.bin has the state
+        // cursors (groups at 0x6e0de8) but not the role ids of the older executables, and a missing one leaves only its slot empty.
         for (u32 id : ORIGINAL_IDS) {
             PeCursor c;
-            if (!pe_load_cursor(f.datos(), id, c) || c.width % 8 != 0) {
-                all.clear();
-                break;
-            }
+            if (!pe_load_cursor(f.datos(), id, c) || c.width % 8 != 0) c = {};
+            any = any || c.width > 0;
             all.push_back(std::move(c));
         }
-        for (u32 group : STATE_GROUPS) {  // the 16 original states; a missing one only leaves that slot empty
+        for (u32 group : STATE_GROUPS) {
             PeCursor c;
-            const u32 rt = all.empty() ? 0 : pe_cursor_group_image(f.datos(), group);
-            if (!rt || !pe_load_cursor(f.datos(), rt, c) || c.width % 8 != 0) c = {};
+            const u32 rt = pe_cursor_group_image(f.datos(), group);
+            const bool ok = rt && pe_load_cursor(f.datos(), rt, c);
+            if (!ok || c.width % 8 != 0) c = {};
+            any = any || c.width > 0;
             all.push_back(std::move(c));
         }
-        if (!all.empty()) {
+        if (any) {
             g_originals = std::move(all);
             return;
         }
@@ -172,15 +176,18 @@ void build(App& a) {
     for (int i = 0; i < static_cast<int>(Cursor::CANTIDAD); ++i)
         if (i < static_cast<int>(g_originals.size()) && g_originals[i].width > 0)
             a.cursores[i] = from_original(g_originals[i], g_scale);
-    if (!g_originals.empty() && a.cursores[0]) return;
-    destruir_cursores(a);
-    g_originals.clear();
-    g_scale = 0;
-    a.cursores[static_cast<int>(Cursor::MANO)] = crear(de_arte, MANO, 2, 0);
-    a.cursores[static_cast<int>(Cursor::ESPADA)] = crear(de_arte, ESPADA, 0, 0);
-    a.cursores[static_cast<int>(Cursor::OBJETIVO)] = crear(de_objetivo, nullptr, 7, 7);
-    a.cursores[static_cast<int>(Cursor::LABIOS)] = crear(de_arte, LABIOS, 7, 8);
-    a.cursores[static_cast<int>(Cursor::MONEDA)] = crear(de_arte, MONEDA, 7, 7);
+    // Any role without an original image (see load_originals) keeps the hand-drawn art.
+    auto art = [&](Cursor role, SDL_Cursor* made) {
+        if (!a.cursores[static_cast<int>(role)]) a.cursores[static_cast<int>(role)] = made;
+        else if (made) SDL_DestroyCursor(made);
+    };
+    if (!a.cursores[static_cast<int>(Cursor::MANO)]) {
+        art(Cursor::MANO, crear(de_arte, MANO, 2, 0));
+        art(Cursor::ESPADA, crear(de_arte, ESPADA, 0, 0));
+        art(Cursor::OBJETIVO, crear(de_objetivo, nullptr, 7, 7));
+        art(Cursor::LABIOS, crear(de_arte, LABIOS, 7, 8));
+        art(Cursor::MONEDA, crear(de_arte, MONEDA, 7, 7));
+    }
 }
 
 }  // namespace
