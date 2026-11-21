@@ -351,9 +351,11 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, boo
     const int dy = mono ? 1 : 0;
     if (encima) {
         if (a.cfg.opciones_orig >> OPC_TOOLTIP & 1) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
-            int w = ancho_texto(ayuda.data(), ayuda.size());
-            g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-            g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+            // Same face as the original's hover names (quickslot names in its footage): white eng.fnt with a 1 px black
+            // outline and no box. Kept inside the 640 px frame.
+            const int w = ancho_texto(ayuda.data(), ayuda.size());
+            const int tx = std::min(x, (a.gpu.ancho() - 640) / 2 + 638 - w);
+            g.texto_contorno(ayuda, static_cast<float>(tx), static_cast<float>(y - 15), clave_orden(CAPA_UI_TEXTO, 30));
         }
         RegionAtlas sobre = g.img(n + 1);
         if (mono) sobre.h = std::min<u16>(sobre.h, 17);
