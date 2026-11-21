@@ -337,20 +337,27 @@ bool tapa_a_otra(const App& a, IdVentana v) {
     return false;
 }
 
-// Bottom-strip button (0x47c760 -> 0x4b7fb0, flag 0x8003): a plain colour-keyed blit, no tint or blend. Rest is the
-// first image `n`, hover the second (n + 1), pressed (mouse down over it) also n + 1 as the third id is not mapped.
-// The mail button (1585/1586) toggles the mail window (correo_ui.cpp).
-static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda) {
+// Bottom-strip button. `n` is the pair's odd image (a dark grey-scale icon on a box); the original shows the even
+// image n + 1 at rest, but as a monochrome dark-brown icon, so it is drawn here by luminance times a sepia tint
+// (fitted against its screenshots, 1 px below the strip's top). Hovering shows the even image in colour. The mail
+// button (1585/1586) is plain art and toggles the mail window (correo_ui.cpp).
+static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
     Graficos& g = *a.g;
-    const RegionAtlas reposo = g.img(n);
+    const RegionAtlas reposo = g.img(mono ? n + 1 : n);
     const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
     const u64 k = clave_orden(CAPA_UI, 1);
-    if (encima && (a.cfg.opciones_orig >> OPC_TOOLTIP & 1)) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
-        int w = ancho_texto(ayuda.data(), ayuda.size());
-        g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-        g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+    const int dy = mono ? 1 : 0;
+    if (encima) {
+        if (a.cfg.opciones_orig >> OPC_TOOLTIP & 1) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
+            int w = ancho_texto(ayuda.data(), ayuda.size());
+            g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
+            g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+        }
+        g.gpu().dibujar(g.img(n + 1), x, y + dy, k);
+    } else {
+        g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? rgba(255, 237, 208) : BLANCO,
+                           mono ? Mezcla::GRIS : Mezcla::NORMAL);
     }
-    g.gpu().dibujar(encima ? g.img(n + 1) : reposo, x, y, k);
     return encima && a.entrada.clic;
 }
 
@@ -359,7 +366,7 @@ void dibujar_botones_panel(App& a, int x, int y) {
     // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
     constexpr int BY = 460;
     if (boton_panel(a, 1017, x + 491, y + BY, "Help (Ctrl+H)")) alternar_ayuda(a);
-    if (boton_panel(a, 1585, x + 507, y + BY, "Mail")) {
+    if (boton_panel(a, 1585, x + 507, y + BY, "Mail", false)) {
         if (a.correo.abierto) a.correo.abierto = a.correo.escribiendo = false;
         else comando_correo(a, "mail");
     }
