@@ -322,7 +322,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **Ctrl+X -> "/pk"** (settled: it is the same local flag, now silent) and the **"Ctrl+R dragon-power panel"** comment (settled: Ctrl+R is the floating HP/MP window, U-D9).
 - **Inventory tab grouping** (`tab_of`): now the original filters (all / equipment by use type / quest via itemquest.tbl / misc).
 - **Chat colours** (chat.cpp): no source cited; wrong.
-- **Game-time orb:** now the 12 groups of 0x416160 (RE_ROUND5 section 1); the sparkle overlays of the 2-hour transition are not drawn.
+- **Game-time orb:** the 12 groups of 0x416160 with the odd-hour transition, both screen-blended sparkles and the Ctrl+T rise, verified against the original video (RE_ROUND8 section 1).
 - **Zone labels:** traced in round 5 (0x4d2410): name white with a class-colour outline at (16,350), type icon 1224/1225/1226 at (530,345).
 - **NPC text rect** (`NPC_TEXT_*`): marked "unverified" (U-C8).
 - **Status equipment slots:** equipo_ui.cpp calls them a "deduction", but they are verified against 0x8f0818.
@@ -340,7 +340,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-A7** (emblem settled, see U-D11) Clan emblem, crown, vendor title, True Target mark: whether the original draws them — trace the label draw
   after 0x4676f5.
 - **U-A8** DONE (RE_ROUND5 section 1): name = white fill with 1 px outline in the zone-class colour, GDI Times New Roman 12 px (the fork uses its own font), at (16,350); zone type is an icon-table picture (1224 combat / 1225 normal / 1226 safe, text baked in) at (530,345), no text: implemented in round 7 after verifying the pictures live.
-- **U-A9** DONE (RE_ROUND5 section 1): group ((hour+23)%24)/2 of the table 0x500228, resting image = last frame; odd-hour transition plays the group (sparkle overlays 0x4e3+ / 0x4dc+ not drawn); orb and chat backdrop rise 34 px per Ctrl+T step.
+- **U-A9** DONE (RE_ROUND5 section 1): group ((hour+23)%24)/2 of the table 0x500228, resting image = last frame; odd-hour transition plays the group with both sparkle overlays (screen blend, round 8); orb and chat backdrop rise 34 px per Ctrl+T step.
 - **U-A10** F-key slot item/spell overlays (count, dimming) in 0x445fd0 / 0x4aad90.
 - **U-A11** Actions of the 1041 "A" and 1045 buttons (0x421430, 0x474a47).
 - **U-A12** Exact Ctrl+T sizes (0x421330). DONE (RE_ROUND4 section 6).

@@ -535,7 +535,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_LUZ>()[s] = static_cast<u8>(luz);
             break;
         }
-        case Ev::HORA_JUEGO: m.hora = e.v[0]; break;
+        case Ev::HORA_JUEGO: m.hora = e.v[0]; ++m.hora_n; break;
         case Ev::CLIMA: {
             // S_Weather (489c82 del original): 0xTN, tipo e intensidad. Cada tipo guarda lo suyo: el
             // servidor manda 0x13 y después 0x00, que apaga la nieve y deja la lluvia. Una intensidad

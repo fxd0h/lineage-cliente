@@ -45,10 +45,13 @@ constexpr u64 MS_ENCADENAR_PASO = 10;
 constexpr int HUD_Y = 366;  // desde esta fila hacia abajo está el panel: el clic no camina
 constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_ENTRADA_CHAT = 1039,
               IMG_CHAT_ADORNO = 1043, IMG_CHAT_ALAS = 1044;
-// Day/night orb on top of the chat frame: 34 frames of 30x31 (1213 = noon, going through dusk, night with
-// the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
-constexpr u32 IMG_ORBE_PRIMERA = 1213;
-constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
+// Game-time orb (S3EP1U 0x416160, group table 0x500228, UI image table [0x8f0b1c]): 12 groups of two game hours,
+// {first image, frame count, sparkle x, sparkle y}; the resting image is the group's last frame, drawn at (295, 359).
+struct GrupoOrbe { u16 primera, frames, x, y; };
+constexpr GrupoOrbe ORBE_GRUPOS[12] = {{1237, 2, 305, 381}, {1239, 2, 298, 379}, {1241, 3, 293, 374}, {1244, 2, 292, 367},
+                                       {1316, 2, 293, 360}, {1318, 2, 298, 354}, {1213, 2, 305, 352}, {1215, 2, 313, 354},
+                                       {1217, 5, 318, 360}, {1222, 3, 319, 367}, {1225, 2, 317, 374}, {1227, 5, 312, 379}};
+constexpr int ORBE_X = 295, ORBE_Y = 359;
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 // Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
 constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
@@ -1308,6 +1311,43 @@ void barra(Graficos& g, u32 img, int x, int y, int w) {
     g.gpu().dibujar(r, x, y, clave_orden(CAPA_UI, 2));
 }
 
+// Orb of 0x416160. tm_hour = hour of the game-time dword; group = ((tm_hour + 23) % 24) / 2. S_GameTime re-arms the transition
+// (0x4876c0) whenever the new hour is odd and the minute is 0; t = ms since then. t < 1350: the previous group's last frame
+// (first - 1; 1213 -> 1319, 1316 -> 1245) until 900 ms, then one frame per 150 ms, plus the screen-blended sparkles 1251 + t/150
+// at the group's table position and, for 450 <= t < 1050, 1244 + t/150 over the orb. t >= 1350: the stepping frame, the flag
+// clears once t >= (frames * 3 + 18) * 50.
+void dibujar_orbe(App& a, int X, int Y) {
+    Graficos& g = *a.g;
+    // Time of day as 0x4bad30 does it (gmtime of the dword; values >= 2^31 are first shifted by 0x879e0800, mod 2^32).
+    const u32 crudo = static_cast<u32>(a.mundo.hora);
+    const u32 efectivo = crudo >= 0x80000000u ? crudo + 0x879e0800u : crudo;
+    const int seg = a.hora_forzada >= 0 ? a.hora_forzada : static_cast<int>(efectivo % 86400u);
+    const int hora = seg / 3600, minuto = seg / 60 % 60;
+    const u64 ahora = a.entrada.ahora_ms;
+    if (a.orbe_hora_n != a.mundo.hora_n) {
+        a.orbe_hora_n = a.mundo.hora_n;
+        if ((hora & 1) && minuto == 0) { a.orbe_anim = true; a.orbe_t0 = ahora; }
+    }
+    const GrupoOrbe& gr = ORBE_GRUPOS[(hora + 23) % 24 / 2];
+    const int ultima = gr.primera + gr.frames - 1, subida = 34 * a.chat_tam, oy = Y + ORBE_Y - subida;
+    const u64 k = clave_orden(CAPA_UI, 2), kb = clave_orden(CAPA_UI, 3);
+    int img = ultima;
+    const u64 t = a.orbe_anim ? ahora - a.orbe_t0 : 0;
+    if (a.orbe_anim) {
+        if (t < 900) img = gr.primera == 1213 ? 1319 : gr.primera == 1316 ? 1245 : gr.primera - 1;
+        else img = std::min<int>(gr.primera + static_cast<int>((t - 900) / 150), ultima);
+        if (t >= 1350 && t >= static_cast<u64>(gr.frames * 3 + 18) * 50) a.orbe_anim = false;
+    }
+    g.gpu().dibujar(g.img(static_cast<u32>(img)), X + ORBE_X, oy, k);
+    if (a.orbe_anim && t < 1350) {
+        g.gpu().dibujar_en(g.img(1251 + static_cast<u32>(t / 150)), static_cast<float>(X + gr.x), static_cast<float>(Y + gr.y - subida), kb,
+                           BLANCO, Mezcla::PANTALLA);
+        if (t >= 450 && t < 1050)
+            g.gpu().dibujar_en(g.img(1244 + static_cast<u32>(t / 150)), static_cast<float>(X + ORBE_X), static_cast<float>(oy), kb, BLANCO,
+                               Mezcla::PANTALLA);
+    }
+}
+
 void dibujar_panel(App& a) {
     Graficos& g = *a.g;
     const EstadoJugador& j = a.mundo.jugador;
@@ -1315,9 +1355,11 @@ void dibujar_panel(App& a) {
     const int X = vi.hx, Y = vi.hy;
     // Original layout (S3EP1U 0x416160): backdrop 1042 at (115,358), wings 1044 one pixel lower, flourishes 1043 at
     // (121,371), all drawn under the side panels (1028 at (0,368), 1019 at (485,366)) which cover its ends.
-    g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358, clave_orden(CAPA_UI, 0));
-    g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359, clave_orden(CAPA_UI, 0));
-    g.gpu().dibujar(g.img(IMG_CHAT_ADORNO), X + 121, Y + 371, clave_orden(CAPA_UI, 0));
+    // They all rise 34 px per Ctrl+T step with the orb (0x416160: y = ... - 34 * [0x7030dc]).
+    const int subida = 34 * a.chat_tam;
+    g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358 - subida, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359 - subida, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ADORNO), X + 121, Y + 371 - subida, clave_orden(CAPA_UI, 0));
     g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 1));
     dibujar_teclas_f(a, X + 485, Y + 366);
@@ -1338,12 +1380,7 @@ void dibujar_panel(App& a) {
         g.gpu().dibujar(g.img(1045), X + 470, Y + 463, kb);
         g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
     }
-    {
-        // Frame 0 is noon; the orb advances through the afternoon, night (frame 17) and morning.
-        const int seg = static_cast<int>(((hora_de_juego(a) % 86400) + 86400) % 86400);
-        const int fr = ((seg + 43200) % 86400) * ORBE_FRAMES / 86400;
-        g.gpu().dibujar(g.img(IMG_ORBE_PRIMERA + static_cast<u32>(fr)), X + ORBE_X, Y + ORBE_Y, clave_orden(CAPA_UI, 2));
-    }
+    dibujar_orbe(a, X, Y);
     dibujar_botones_panel(a, X, Y);
     // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
     const Slot yo = a.mundo.objetos.buscar(j.id);

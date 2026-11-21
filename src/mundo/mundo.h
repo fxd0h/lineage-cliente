@@ -180,6 +180,7 @@ struct Mundo {
     MapId mapa = 0;
     bool submarino = false;  // S_MapID: el mapa es bajo el agua (efecto azul y ola)
     i32 hora = 0;
+    u32 hora_n = 0;  // S_GameTime packets applied (the original re-arms the orb transition on every one)
     u8 nieve = 0, lluvia = 0;  // intensidad 0-3 de cada clima (S_Weather): son independientes
     bool en_juego = false;
     EfectoVisual efectos[MAX_EFECTOS_VISUALES];

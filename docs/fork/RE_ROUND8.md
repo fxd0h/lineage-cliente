@@ -1,0 +1,27 @@
+# Round 8 RE (S3EP1U.bin) -- tags: [C] confirmed in code, [V] verified against original captures / video, [I] inferred
+
+## 1. Game-time orb (0x416160), re-read and implemented with its transition and sparkles
+- Which table: every id in 0x416160 indexes `[0x8f0b1c] + id*4` (UI images, g.img(), error string "Surf Resource Error", count 0x70c). The ids are NOT icon-table ids. [C]
+- Draw order: 1042 at (hx + 0x73, vy + 0x1e0 - (h + 34T - 100)) through [0x8ed3cc], 1044 one pixel lower (0x4991e0), 1043 at (hx + 0x79, vy + 0x173 - 34T) through
+  [0x8ed3d0], then the orb. T = `[0x7030dc]` = the Ctrl+T chat size (0..3); h = height of image 1042. So backdrop, wings, flourish and orb all rise 34 px per size step. [C]
+  (The fork now does this too: `dibujar_panel` shifts 1042 / 1043 / 1044 and the orb by 34 * chat_tam.)
+- Hour: `[0x8f07d4]` (the S_GameTime dword) -> 0x4bad30: if the dword >= 0x80000000 it adds 0x879e0800 (mod 2^32) and calls the time import `[0x4f031c]` (gmtime per RE_ROUND5;
+  the import table of this packed dump is empty, so gmtime vs localtime is [I]) and adds 64 to tm_year. The server sends `(int)seconds` of its 6x clock, which is > 2^31 today,
+  so the shift matters: effective seconds = `v + 0x879e0800` mod 2^32; hour = (eff / 3600) % 24, minute = (eff / 60) % 60. The fork's light code uses the signed value (`v mod 86400`),
+  which differs by 512 s; only the orb uses the exact 0x4bad30 form for now. [C]
+- Group g = ((hour + 23) % 24) / 2 over the table 0x500228 (stride 16: first, count, x, y): hours 1-2 -> 1237(2), 3-4 -> 1239(2), 5-6 -> 1241(3), 7-8 -> 1244(2), 9-10 -> 1316(2), 11-12 -> 1318(2),
+  13-14 -> 1213(2), 15-16 -> 1215(2), 17-18 -> 1217(5), 19-20 -> 1222(3), 21-22 -> 1225(2), 23-0 -> 1227(5). Rest image = first + count - 1, at (hx + 0x127, vy + 0x1e1 - (h + 34T - 100)) = (295, 359 - 34T). [C]
+- Transition: the S_GameTime handler 0x4876c0 sets `[0x8f0809] = 1` and `[0x8f080c] = tick` EVERY time a packet arrives while the new hour is odd and the minute is 0 (so the animation re-arms for
+  as long as the server keeps sending the time during that game minute: ~10 s real). t = tick - [0x8f080c]. [C]
+  * t < 900: image first - 1 (1213 -> 1319, 1316 -> 1245 special cases); 900 <= t < 1350 and t >= 1350: first + (t - 900) / 150 clamped to the last frame; the flag clears at t >= 1350 and t >= (count*3 + 18) * 50. [C]
+  * Sparkle A while t < 1350: image 1251 + t/150 at (hx + tbl.x, vy + tbl.y - 34T). Sparkle B for 450 <= t < 1050: image 1244 + t/150 at the orb position. [C]
+  * Both sparkles go through `[0x8ed3d4]`: set at 0x4a09fc (565 build, [0x6fa678] != 0) -> 0x49c8a0 -> 0x49c380, else (555) 0x4a0b0e -> 0x49c870 -> 0x49c170. The routine skips colour-key pixels and
+    replaces each destination channel by a table lookup `T[src5 * 32 + dst5]`, tables 0x8cc714 / 0x8ccf14 / 0x8cd714 (blue / green / red, pre-shifted), built by 0x4a03b0 as
+    `max + min * (31 - max) / 31` (constants 31.0 and 1/31 at 0x4f27a8 / 0x4f27a0): a **screen blend**, colour-keyed. The fork's `Mezcla::PANTALLA`. [C]
+  * `[0x8ed3d0]` (chat flourish 1043) uses the same three tables through 0x49da40, i.e. also a screen blend. [C, not touched]
+- Debug flag `[0x8f080a]` prints "%02d:%02d" at (hx + 295, y + 0x1ea): not drawn.
+- Day/night sound switch in the same function (image index 1223..1240 -> `[0x700b0c]` = 2 else 1): not examined.
+- [V] The original video (original.mp4): rest image before t = 1018 s is group 0 (1238), and from 1018 s on, the transition to group 1 (1239 -> 1240) plays with the sparkle at the bottom-left of
+  the orb (table position (298,379)) and the screen-blended glow streak over the orb; it restarts every ~2 s because the packet repeats. A fork capture after `forzar-hora 10800` reproduces the same frame
+  sequence (/tmp/r8_orb.png: video row on top, fork row below). The 12 rest frames were rendered one by one (hours 1..23): hour 1 matches the video's first half and hour 3 its second half.
+  Earlier "1213 = noon" was wrong: 1213/1214 are the 13-14 h frames (blue sun).
