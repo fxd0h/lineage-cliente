@@ -115,3 +115,8 @@ So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, 
 - Not determined: the visible row count and geometry of the scrolling list (the row class 0x4458f0 arguments, text positions inside a row, how the ingredient list is
   drawn), where the dish name is shown, and the exact scroll step. Without those the window cannot be reproduced, so it stays unimplemented (the server sends type 52,
   the fork ignores it). Next step when picked up: decompile 0x4d4840 (draw), 0x4458f0 / 0x451dd0 (row add) and 0x47cd80 (scroll bar).
+
+> **Reverted (U-A8/U-A9 implementation of d6d399d):** in the live client the new orb groups drew a yellow sun orb and the
+> zone-type "icons" 1224-1226 drew a second orb at (530,345) instead of the "Normal zone"/"Safety zone" text, which
+> contradicts the original's screenshots that the previous implementation was matched against. The findings above are
+> kept as unverified notes; the screenshot-matched 34-frame orb and text zone label are back.

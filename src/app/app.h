@@ -385,8 +385,6 @@ struct App {
     };
     std::vector<LuzEnPantalla> luces;
     std::vector<u8> luz_mascara, luz_brillo;  // aplicar_luz: buffers del frame, se reusan
-    i32 orbe_hora = -1;                       // original UI game-time orb: last whole game hour seen (-1 = none yet)
-    u64 orbe_t0 = 0;                          // ... tick of the odd-hour change that started its transition (0 = idle)
     i32 hora_forzada = -1;                    // comando forzar-hora (pruebas): segundos del día, -1 = la del servidor
     bool ambiente_agua = false;               // el ambiente que suena es el del agua (sonido 330)
     std::vector<u32> agua_filas;              // color por fila del agua (1416.img), cargado al primer uso
