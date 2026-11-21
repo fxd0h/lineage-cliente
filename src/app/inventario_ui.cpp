@@ -173,6 +173,7 @@ void usar_item(App& a, ObjId item) {
     Slot s = a.mundo.inventario.items.buscar(item);
     if (s != SIN_SLOT) {
         a.gfx_item_usado = a.mundo.inventario.items.col<I_GFX>()[s];
+        if (a.gfx_item_usado >= 2498 && a.gfx_item_usado <= 2502) a.cocina.pan = item;  // cook book (0x449a70 -> [0x8f2fb8])
         a.t_item_usado = a.entrada.ahora_ms;
     }
     if (s != SIN_SLOT && se_usa_sobre_item(a.mundo.inventario.items.col<I_USO>()[s])) {

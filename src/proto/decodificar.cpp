@@ -250,7 +250,7 @@ constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
 constexpr int CAJA_CLASES = 21, CAJA_POLIMORFO = 35, CAJA_SIN_CHAT = 36, CAJA_56 = 56, CAJA_QUITA_87 = 59, CAJA_74 = 74, CAJA_75 = 75;
 constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
-              CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49;
+              CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49, CAJA_COCINA = 52;
 // S_PacketBox subtypes that are just a string-e.tbl message, turned into a MENSAJE_SERVIDOR (ids checked
 // against the string table: 130 "cannot restart while in combat", 672/673 item level limits, 678-683 elf
 // spirit, 764 new mayor, 1045-1047 Battle Coliseum).
@@ -346,6 +346,12 @@ bool caja(Lector& l, Evento& e) {
             e.v[IE_SEG] = static_cast<i16>(l.h());
             if (sub == CAJA_56 && l.quedan(2)) e.v[IE_EXTRA] = l.h();
         }
+    } else if (sub == CAJA_COCINA) {
+        // COOK_WINDOW (S3EP1U 0x49135f): d constant, c 1 (0: the exe answers with C_ItemUse, never sent), c stage - 1.
+        l.d();
+        e.tipo = Ev::COCINA;
+        e.v[0] = l.c();
+        e.v[1] = l.c();
     } else if (sub == CAJA_LOGOUT) {
         e.tipo = Ev::VOLVER_PERSONAJES;  // back to character select with the cached list
     } else if (sub <= 4) {

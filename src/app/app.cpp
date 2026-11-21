@@ -378,6 +378,7 @@ void procesar_red(App& a) {
         eventos_cantidad(a, e);
         eventos_reinicio(a, e);
         eventos_mascotas(a, e);
+        eventos_cocina(a, e);
         eventos_marcadores(a, e);
         eventos_hechizos(a, e);
         eventos_autobuffs(a, e);

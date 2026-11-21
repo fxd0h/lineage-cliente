@@ -854,6 +854,10 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         CHECK(ev.empty());
         caja_us({62, 42});
         CHECK(ev[0].tipo == Ev::VOLVER_PERSONAJES);
+        caja_us({62, 52, 0xdb, 0x31, 0xdf, 0x02, 1, 3});  // COOK_WINDOW: junk dword, c 1, stage 4 (value 3)
+        CHECK(ev[0].tipo == Ev::COCINA);
+        CHECK(ev[0].v[0] == 1);
+        CHECK(ev[0].v[1] == 3);
         caja_us({62, 35, 0x58, 0x02});  // polymorph icon, 600 s
         CHECK(ev[0].tipo == Ev::ICONO_EFECTO);
         CHECK(ev[0].v[IE_CLASE] == IE_CONTEXTO);

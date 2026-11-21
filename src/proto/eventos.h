@@ -24,6 +24,7 @@ enum class Ev : u8 {
     USAR_MAPA, CLAN_EMBLEMA_OBJETO,
     DUELO, VOLVER_PERSONAJES,  // S_PacketBox 5 (id = the opponent) and 42
     CAMBIO_NOMBRE,             // S_ChangeName: id = object, s[0] = the new name
+    COCINA,                    // S_PacketBox 52 (COOK_WINDOW): v[0] = sub (1 = open), v[1] = cook book stage - 1
     IGNORADO,
 };
 

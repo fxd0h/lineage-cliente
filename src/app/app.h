@@ -75,7 +75,7 @@ struct FilaTienda {
     std::string atributos;  // S_ShopSellList status bytes (L1ItemInstance.getStatusBytes), for the tooltip property lines
 };
 // Ventanas del juego (ventanas.cpp): se mueven arrastrando la barra de título.
-enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, DESTINO, CARTEL, CANTIDAD };
+enum class IdVentana : u8 { ESTADO, INVENTARIO, HECHIZOS, NPC, SALIDA, SOCIAL, INTERCAMBIO, VOLUMEN, HPMP, TIENDA_PRIV, LISTA, MASCOTA, DESTINO, CARTEL, COCINA, CANTIDAD };
 struct Rect {
     int x, y, w, h;
 };
@@ -501,7 +501,7 @@ struct App {
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
     // De atrás hacia adelante (IdVentana); la de más arriba abierta bajo el puntero, o -1.
-    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    u8 orden_ventanas[static_cast<int>(IdVentana::CANTIDAD)] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
     bool ventana_abierta_antes[static_cast<int>(IdVentana::CANTIDAD)] = {};
     int ventana_arriba = -1;
     bool ventana_sobre_otra = false;
@@ -559,6 +559,16 @@ struct App {
     size_t mascota_activa = 0;
     u8 hpmp_estilo = 0;                // floating HP/MP window style 0..2 ([0x8169b0], float_hpmp_ui.cpp)
     bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
+    // Original cooking window (cocina_ui.cpp; S_PacketBox 52 opens it for the cook book used).
+    struct Cocina {
+        bool abierta = false;
+        u8 modo = 0;        // cook book stage 1..5 (8 recipes per stage shown, up to 24)
+        ObjId pan = 0;      // the cook book item used last ([0x8f2fb8]); 0 = none
+        int sel = -1;       // selected recipe (+8 of the row)
+        u32 desplaza = 0;   // scroll, in rows of 4 recipes
+        ui::BarraScroll barra;
+        std::vector<std::string> nombres;  // recipe.tbl, list order: the dish name field ("$N")
+    } cocina;
     struct Cartel { bool abierto = false; u8 rumbo = 0; u32 desc = 0; } cartel;  // sign info card (cartel_ui.cpp)
     int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
     int volumen_arrastre = -1;         // slider being dragged
@@ -675,6 +685,10 @@ void dibujar_destino_orig(App& a);  // marcadores_ui.cpp: the teleport bookmark 
 Rect rect_destino_orig(const App& a);
 bool destino_orig_abierto(const App& a);
 Rect rect_lista_orig(const App& a);
+void eventos_cocina(App& a, const Evento& e);  // cocina_ui.cpp
+void dibujar_cocina(App& a);
+Rect rect_cocina(const App& a);
+bool cocina_abierta(const App& a);
 void dibujar_mascota_orig(App& a);  // mascotas_ui.cpp
 Rect rect_mascota_orig(const App& a);
 bool mascota_orig_abierta(const App& a);

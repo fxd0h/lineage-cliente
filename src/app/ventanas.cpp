@@ -17,9 +17,9 @@ namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota", "destino", "cartel"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota", "destino", "cartel", "cocina"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 14, "App::orden_ventanas se inicializa con 0..13");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 15, "App::orden_ventanas se inicializa con 0..14");
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
 // Original exit window (client draw at 0x4a1570, built at 0x4a1180): background 1058 at (7,7), frame 1059, ornaments
 // 1060 at (0,6), close button at (108,11), buttons Restart 1063 / Quit 1065 / Cancel 1067 (hover +1) at x 31, y 34/52/70.
@@ -34,7 +34,7 @@ int indice(IdVentana v) { return static_cast<int>(v); }
 bool original_listed(const App& a, IdVentana v) {
     if (a.cfg.ui_simple) return false;
     return v == IdVentana::ESTADO || v == IdVentana::INVENTARIO || v == IdVentana::HECHIZOS || v == IdVentana::INTERCAMBIO ||
-           v == IdVentana::MASCOTA;
+           v == IdVentana::MASCOTA || v == IdVentana::COCINA;
 }
 bool original_draggable(const App& a, IdVentana v) { return original_listed(a, v) && v != IdVentana::MASCOTA; }
 constexpr int MAX_LISTED_WINDOWS = 4;
@@ -114,6 +114,7 @@ Rect por_defecto(const App& a, IdVentana v) {
     case IdVentana::MASCOTA: return rect_mascota_orig(a);
     case IdVentana::DESTINO: return rect_destino_orig(a);
     case IdVentana::CARTEL: return rect_cartel(a);
+    case IdVentana::COCINA: return rect_cocina(a);
     default: return {0, y, w, h};
     }
 }
@@ -134,6 +135,7 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::MASCOTA: return mascota_orig_abierta(a);
     case IdVentana::DESTINO: return destino_orig_abierto(a);
     case IdVentana::CARTEL: return a.cartel.abierto;
+    case IdVentana::COCINA: return cocina_abierta(a);
     default: return false;
     }
 }
@@ -195,6 +197,7 @@ void cerrar_listada(App& a, IdVentana v) {
     case IdVentana::INVENTARIO: a.ventana_inventario = false; break;
     case IdVentana::HECHIZOS: a.ventana_hechizos = false; break;
     case IdVentana::MASCOTA: a.ventana_mascota = false; break;
+    case IdVentana::COCINA: a.cocina.abierta = false; break;
     case IdVentana::INTERCAMBIO: enviar(a, cmd::cancelar_intercambio(a.op)); break;
     default: break;
     }

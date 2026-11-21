@@ -140,6 +140,7 @@ target_link_libraries(lin_ui PUBLIC lin_core lin_render)
 
 add_executable(lineage
     src/app/cartel_ui.cpp
+    src/app/cocina_ui.cpp
     src/app/main.cpp
     src/app/ajustes_ui.cpp
     src/app/app.cpp

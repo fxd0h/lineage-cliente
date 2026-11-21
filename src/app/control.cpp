@@ -419,6 +419,13 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         ev.v[MA_AGREGAR] = 1;
         ev.s[0] = p.size() > 2 ? std::string_view(p[2]) : std::string_view("Pet");
         eventos_mascotas(a, ev);
+    } else if (cmd == "debug-cocina") {  // debug: cooking window for cook book stage <1..5> as S_PacketBox 52 would, optional book object id
+        Evento ev{};
+        ev.tipo = Ev::COCINA;
+        ev.v[0] = 1;
+        ev.v[1] = (p.size() > 1 ? std::atoi(p[1].c_str()) : 1) - 1;
+        eventos_cocina(a, ev);
+        if (p.size() > 2) a.cocina.pan = static_cast<ObjId>(std::atoi(p[2].c_str()));
     } else if (cmd == "debug-tienda") {  // debug: an NPC buy list of 3 items with property bytes, as S_ShopSellList would
         Evento ev{};
         ev.tipo = Ev::LISTA_TIENDA;

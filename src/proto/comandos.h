@@ -91,6 +91,12 @@ inline Escritor usar_item(const TablaOpcodes& t, u32 item) {
     e.d(item).c(0);
     return e;
 }
+// C_UseItem of a cook book with a chosen recipe (S3EP1U 0x4d3900, "cdcc"): d item, c 1 (cookStatus), c recipe.
+inline Escritor cocinar(const TablaOpcodes& t, u32 item, u8 receta) {
+    Escritor e(t, Cli::USEITEM);
+    e.d(item).c(1).c(receta);
+    return e;
+}
 // C_PickUpItem / C_DropItem: h x, h y, d ítem, d cantidad (recoger: a 3 celdas o menos)
 inline Escritor recoger(const TablaOpcodes& t, u16 x, u16 y, u32 item, u32 cantidad) {
     Escritor e(t, Cli::PICKUPITEM);
