@@ -213,6 +213,11 @@ bool chat(Lector& l, Evento& e) {
     e.v[0] = l.c();
     if (e.origen != Srv::GLOBALCHAT) e.id = l.d();
     e.s[0] = l.s();
+    if (e.v[0] == CHAT_GRITO && e.origen != Srv::GLOBALCHAT && l.quedan(4)) {  // the shout carries the speaker's tile
+        e.v[CH_X] = l.h();
+        e.v[CH_Y] = l.h();
+        e.v[CH_CON_POS] = 1;
+    }
     return true;
 }
 // S_Exp: c nivel, d experiencia acumulada

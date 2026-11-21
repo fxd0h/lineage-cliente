@@ -446,7 +446,7 @@ void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave
 
 // Lo último que dijo el objeto, sobre su nombre (hasta 3 filas centradas). Se quita el
 // "Nombre: " / "<Nombre> " que agrega el servidor porque el nombre ya está debajo.
-void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false) {
+void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false, GloboChat* gl = nullptr) {
     if (t.empty()) return;
     size_t corte = std::min(t.find(": "), t.find("> "));
     if (corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
@@ -463,6 +463,22 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
     }
     if (original) base_y -= caja ? 14 : 6;  // lines drawn upward from here: top offset -lines*12-14 / -6
+    if (original && gl) {
+        // Rectangle of this bubble (text block, plus the 5 px frame padding when boxed) for the grey-overlap rule.
+        int tw = 0;
+        for (int i = 0; i < n; ++i) tw = std::max(tw, ancho_texto(filas[i].data(), filas[i].size()));
+        const int pad = caja ? 5 : 0;
+        gl->x0 = static_cast<int>(centro_x) - tw / 2 - pad, gl->x1 = static_cast<int>(centro_x) + tw / 2 + pad;
+        gl->y0 = static_cast<int>(base_y) - 12 * n, gl->y1 = gl->y0 + 12 * n + 2 * pad;
+        if (!gl->revisado) {  // first frame: older overlapping bubbles go grey
+            gl->revisado = true;
+            for (GloboChat& o : a.chat.globos)
+                if (&o != gl && o.id != 0 && o.con_rect && o.inicio < gl->inicio && o.x0 < gl->x1 && o.y0 < gl->y1 && o.x1 > gl->x0 &&
+                    o.y1 > gl->y0)
+                    o.gris = true;
+        }
+        gl->con_rect = true;
+    }
     const int paso = original ? 12 : 14;
     if (caja) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
         int ancho = 0;
@@ -490,7 +506,7 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         int w = ancho_texto(filas[i].data(), filas[i].size());
         a.g->texto_sombra(filas[i], centro_x - w / 2, base_y - paso * (n - i) + (original && caja ? 5 : 0),
                           clave_orden(CAPA_EFECTOS, 2),
-                          rgba(255, 255, 254));
+                          gl && gl->gris ? rgba(148, 148, 148) : rgba(255, 255, 254));
     }
 }
 
@@ -841,7 +857,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         }
         if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
         else  // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
-            dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true);
+            dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true,
+                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000));
         g.gpu().sin_zoom_mundo(false);
     }
 }
@@ -1712,13 +1729,16 @@ void dibujar_chat(App& a) {
         std::string_view partes[8];
         int k = 0;
         while (!t.empty() && k < 8) {
-            size_t c = bytes_que_caben(t.data(), t.size(), ac.ancho);
+            // A shout starts with its 12 px direction icon (the exe's "\d<n>" code), which takes room in the first row.
+            size_t c = bytes_que_caben(t.data(), t.size(), ac.ancho - (k == 0 && l.dir >= 0 ? 12 : 0));
             partes[k++] = t.substr(0, c);
             t.remove_prefix(c);
             while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
         }
         for (int p = k - 1; p >= 0 && fila >= 0; --p, --fila) {
-            g.texto_sombra(partes[p], ac.x, ac.y + fila * pitch, kt, l.color);
+            const bool icono = p == 0 && l.dir >= 0;
+            if (icono) g.gpu().dibujar(g.img(605 + static_cast<u32>(l.dir)), ac.x, ac.y + fila * pitch, kt);
+            g.texto_sombra(partes[p], ac.x + (icono ? 12 : 0), ac.y + fila * pitch, kt, l.color);
             visibles[fila] = partes[p];
         }
     }

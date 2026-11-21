@@ -25,6 +25,7 @@ struct LineaChat {
     u32 color;
     u8 tipo;  // TipoChat o CHAT_MENSAJE
     u8 largo;
+    i8 dir = -1;  // original UI shouts: direction icon 0..7 drawn before the text (S3EP1U "\\d<n>" code, image 605 + n), -1 none
     char texto[LARGO_LINEA_CHAT];
 };
 
@@ -32,6 +33,10 @@ struct GloboChat {
     ObjId id;
     u64 inicio;
     u32 linea;  // número absoluto de línea en el registro
+    // Original UI overlap rule (S3EP1U 0x41a8e3): when a new bubble first shows, every older bubble whose rectangle
+    // overlaps it turns grey (RGB555 0x4a52) for the rest of its life. `rect` = last drawn screen rectangle.
+    i32 x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    bool con_rect = false, revisado = false, gris = false;
 };
 
 struct Chat {
@@ -45,13 +50,19 @@ struct Chat {
     // i = 0 es la más reciente; i < cantidad().
     const LineaChat& reciente(u32 i) const { return lineas[(total - 1 - i) % CAPACIDAD_CHAT]; }
     std::string_view texto(const LineaChat& l) const { return {l.texto, l.largo}; }
-    void agregar(std::string_view t, u32 color, u8 tipo);
+    void agregar(std::string_view t, u32 color, u8 tipo, i8 dir = -1);
     // Globo vigente del objeto (vacío si no habló en los últimos MS_GLOBO).
     std::string_view globo(ObjId id, u64 ahora, u64 duracion = MS_GLOBO) const;
+    GloboChat* globo_activo(ObjId id, u64 ahora, u64 duracion = MS_GLOBO);
     void limpiar() { total = 0; for (GloboChat& g : globos) g = {}; }
 };
 
-void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora);
+// `px`, `py`: own tile (-1 when unknown), for the direction icon of shouts (original UI).
+void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora,
+                  int px = -1, int py = -1);
+// Shout direction digit of S3EP1U 0x483500..0x483697: sector 0..7 of the speaker's offset (dx, dy) from the listener,
+// -1 when both are zero.
+int direccion_grito(int dx, int dy);
 
 // Color de cada tipo de chat (0xAABBGGRR).
 u32 color_chat(u8 tipo);

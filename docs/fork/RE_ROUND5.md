@@ -76,3 +76,27 @@ So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, 
   0x65; the first running of 0x51 / 0x4f / 0x50; 0x6b 0x6c 0x6f 0x71 0x72 0x74 0x75 0x78 0x7b 0x7c 0x7d 0x80 0x81; 0x84; 0x99. All silent. Implemented
   (`cancelacion_propia`, unit test in test_hechizos.cpp). [C]
 - Slot flags used in S_SkillSound gfx 0xbe (0x816832 = 0x26, 0x81685b/5c/5d) were already modelled.
+
+## 5. Shout direction icon, grey overlapped bubbles, cursor states 8 / 14 / 16
+- **Shout direction (S_Say 0x483500, type 2).** The packet ends with `h x, h y` (the speaker's tile). The client computes dx = x - ownX, dy = y - ownY
+  (the exe reads own x from obj+0x30 as a doubled coordinate: (+0x30 - 0x8000) / 2) and, unless both are 0, picks a digit '0'..'7' from
+  deg = atan(dy / dx) * 180 / pi (+-90 when dx = 0), thresholds from the doubles at 0x4f2610..0x4f2648: dx >= 0: deg > 70 -> 7, > 15 -> 0, > -20 -> 1,
+  > -65 -> 2, else 3; dx < 0: deg > 75 -> 3, > 20 -> 4, > -17 -> 5, > -73 -> 6, else 7. The chat line (not the bubble, which is created before)
+  becomes `"\d" + digit + text` (0x4836e5..0x48374d). The chat text blitter 0x432aa0 (at 0x432cc9) treats `\d<0-7>` as an icon: image **605 + n** (12x12, ids
+  605..612) blitted at the pen position (0x499080), pen += 12. [C]
+  Fork: `direccion_grito`, `LineaChat::dir`; the decoder now reads the shout's `h x, h y` (`CH_X/CH_Y/CH_CON_POS`); the original-UI chat draws the icon before the
+  first row (12 px of its width). Unit tested (the live server only echoes own shouts, which carry dx = dy = 0 and so no icon).
+- **Grey overlapped bubbles (0x41a8e3, in the bubble constructor/queue 0x41a600).** The bubble list is [0x6f5d28] (count [0x6f5d20]); each bubble keeps its
+  rectangle at +0x384 left, +0x388 top, +0x38c right, +0x390 bottom and its colour word at +0x39c. When a new bubble is made, every OTHER bubble whose rectangle overlaps
+  (strict comparisons) gets +0x39c = [0x50054c] = 0x4a52 (RGB555, 148,148,148) for the rest of its life. [C] Fork: `GloboChat` stores its last drawn rectangle
+  (text block, +5 px frame padding when boxed: the exe's exact rectangle formula was not extracted, [I]); on a bubble's first drawn frame older overlapping
+  ones are flagged `gris` and draw in (148,148,148). Not seen live (needs two speakers).
+- **Cursor states (chooser 0x469e40, setter 0x477c90), still not selectable:**
+  * 16 (resource 150): the own object's +0x12c pointer non-empty (0x469e53). That field belongs to the object created by the action 0x47 handler at 0x487064
+    (it frees the object, then the handler sets state 3 again at 0x4870d6): an in-progress action overlay (fishing bobber [I]). The fork has no fishing.
+  * 8 (resource 136): (a) a pending use ([0x81654c]) with no Ctrl / Alt-held flag ([0x6f1dac], [0x702dd6]) and the target within |dx| <= 2 * [0x816548],
+    |dy| <= [0x816548] of the own object = "target in range" circle (out of range: 11, 0x46a344); (b) attack mode ([0x703105]) while the selected shortcut
+    ([0x8f07b0] + 0x70) is 0x28 or 0x3c, on kinds 2/3/5/10/11, instead of 15. The fork lacks both the use range ([0x816548] writer not traced) and the meaning of those
+    two shortcut values.
+  * 14 (resource 143): sprite kinds 7 / 13, and kind 8 (door) when the tile flag bit 2 is set. The fork has no tile-flag or kind 7 / 13 data for the cursor.
+  Decision: left unimplemented (the existing states 1/3/5/6/7/11/13/15 stay).

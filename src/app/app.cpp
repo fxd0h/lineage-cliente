@@ -403,7 +403,9 @@ aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
     a.hp_anterior = a.mundo.jugador.hp;
     a.chat.original_ui = !a.cfg.ui_simple;
     a.chat.globo_comercio = a.cfg.opciones_orig >> OPC_MARKETMSG & 1;
-    aplicar_chat(a.chat, a.mensajes, a.desc, a.eventos, a.entrada.ahora_ms);
+    const Slot yo_chat = a.mundo.objetos.buscar(a.mundo.jugador.id);
+    aplicar_chat(a.chat, a.mensajes, a.desc, a.eventos, a.entrada.ahora_ms,
+                 yo_chat == SIN_SLOT ? -1 : a.mundo.objetos.col<O_X>()[yo_chat], yo_chat == SIN_SLOT ? -1 : a.mundo.objetos.col<O_Y>()[yo_chat]);
 }
 
 void frame_elegir_carpeta(App& a) {

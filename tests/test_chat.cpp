@@ -187,6 +187,35 @@ TEST_CASE("Chat: anillo de tamaño fijo, recorte CP949 y globos") {
     CHECK(c.globo(7, 1000).empty());
 }
 
+TEST_CASE("Chat: shout direction icon (S3EP1U 0x483500)") {
+    CHECK(direccion_grito(0, 0) == -1);
+    CHECK(direccion_grito(5, 0) == 1);     // 0 deg, dx >= 0
+    CHECK(direccion_grito(5, 5) == 0);     // 45 deg
+    CHECK(direccion_grito(0, 5) == 7);     // +90 deg
+    CHECK(direccion_grito(0, -5) == 3);    // -90 deg
+    CHECK(direccion_grito(5, -5) == 2);    // -45 deg
+    CHECK(direccion_grito(-5, 0) == 5);    // 0 deg, dx < 0
+    CHECK(direccion_grito(-5, -5) == 4);   // atan(1) = 45 deg
+    CHECK(direccion_grito(-5, 5) == 6);    // -45 deg
+    CHECK(direccion_grito(-1, 10) == 7);   // atan(-10) < -73
+    Chat c;
+    c.original_ui = true;
+    TablaTexto vacia;
+    Evento e{};
+    e.tipo = Ev::CHAT;
+    e.v[0] = CHAT_GRITO;
+    e.id = 42;
+    e.s[0] = "Ana: hola";
+    e.v[CH_X] = 105;
+    e.v[CH_Y] = 100;
+    e.v[CH_CON_POS] = 1;
+    Evento lote[] = {e};
+    aplicar_chat(c, vacia, vacia, lote, 1000, 100, 100);
+    CHECK(c.reciente(0).dir == 1);
+    aplicar_chat(c, vacia, vacia, lote, 1000, 105, 100);  // same tile: no icon
+    CHECK(c.reciente(0).dir == -1);
+}
+
 TEST_CASE("Chat: S_ServerMessage con string-e.tbl y desc-e.tbl reales") {
     std::string dir = carpeta_juego();
     if (dir.empty()) return;

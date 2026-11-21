@@ -174,6 +174,8 @@ enum : int { MA_AGREGAR };
 enum : int { MK_MAPA, MK_X, MK_Y };
 // CHAT: v[0] = tipo de chat del servidor (TipoChat), id = quien habla (0 si no se sabe),
 // s[0] = texto ya armado por el servidor ("Nombre: hola"), s[1] = remitente (solo susurros).
+// Shouts (type 2) also carry the speaker's tile: CH_CON_POS = 1 when CH_X / CH_Y are set.
+enum : int { CH_X = 1, CH_Y, CH_CON_POS };
 enum TipoChat : u8 {
     CHAT_NORMAL = 0, CHAT_GRITO = 2, CHAT_GLOBAL = 3, CHAT_CLAN = 4, CHAT_SISTEMA = 9,  // 9 también es el eco del susurro enviado
     CHAT_GRUPO = 11, CHAT_COMERCIO = 12, CHAT_ALIANZA = 13, CHAT_GRUPO_CHAT = 14, CHAT_SUSURRO = 16,

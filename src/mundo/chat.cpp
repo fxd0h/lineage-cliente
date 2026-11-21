@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "mundo/chat.h"
+#include <cmath>
 #include "recursos/fuente.h"
 #include "recursos/imagen.h"
 
@@ -82,14 +83,22 @@ u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto) {
     }
 }
 
-void Chat::agregar(std::string_view t, u32 c, u8 tipo) {
+void Chat::agregar(std::string_view t, u32 c, u8 tipo, i8 dir) {
     LineaChat& l = lineas[total % CAPACIDAD_CHAT];
     size_t n = recorte_cp949(t, LARGO_LINEA_CHAT);
     for (size_t i = 0; i < n; ++i) l.texto[i] = t[i];
     l.largo = static_cast<u8>(n);
     l.color = c;
     l.tipo = tipo;
+    l.dir = dir;
     ++total;
+}
+
+GloboChat* Chat::globo_activo(ObjId id, u64 ahora, u64 duracion) {
+    if (id == 0) return nullptr;
+    for (GloboChat& g : globos)
+        if (g.id == id && ahora - g.inicio < duracion && total - g.linea <= CAPACIDAD_CHAT) return &g;
+    return nullptr;
 }
 
 std::string_view Chat::globo(ObjId id, u64 ahora, u64 duracion) const {
@@ -195,7 +204,16 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
     return s.n;
 }
 
-void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora) {
+int direccion_grito(int dx, int dy) {
+    if (dx == 0 && dy == 0) return -1;
+    // atan(dy / dx) in degrees (the exe: fpatan(dy/dx, 1) * 180 / pi), +-90 when dx == 0; thresholds from 0x4f2610..0x4f2648.
+    const double deg = dx == 0 ? (dy > 0 ? 90.0 : -90.0) : std::atan(static_cast<double>(dy) / dx) * 180.0 / 3.14159265358979323846;
+    if (dx >= 0) return deg > 70 ? 7 : deg > 15 ? 0 : deg > -20 ? 1 : deg > -65 ? 2 : 3;
+    return deg > 75 ? 3 : deg > 20 ? 4 : deg > -17 ? 5 : deg > -73 ? 6 : 7;
+}
+
+void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora,
+                  int px, int py) {
     char buf[LARGO_LINEA_CHAT * 2];
     for (const Evento& e : eventos) {
         if (e.tipo == Ev::MENSAJE_SERVIDOR) {
@@ -224,7 +242,10 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                 else if (tipo == CHAT_SISTEMA) col = color(255, 230, 205);  // sent-whisper echo (0x48391d)
                 else col = color_chat_original(tipo, e.origen == Srv::NORMALCHAT || e.origen == Srv::NPCSHOUT, {buf, n});
             }
-            c.agregar({buf, n}, col, tipo);
+            i8 dir = -1;
+            if (c.original_ui && tipo == CHAT_GRITO && e.v[CH_CON_POS] && px >= 0)
+                dir = static_cast<i8>(direccion_grito(e.v[CH_X] - px, e.v[CH_Y] - py));
+            c.agregar({buf, n}, col, tipo, dir);
             // Globo sobre la cabeza: chat normal y grito de quien está a la vista.
             if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO || (c.globo_comercio && tipo == CHAT_COMERCIO))) {
                 GloboChat* destino = &c.globos[0];
@@ -232,7 +253,7 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                     if (g.id == e.id) { destino = &g; break; }
                     if (g.inicio < destino->inicio) destino = &g;  // el más viejo
                 }
-                *destino = {e.id, ahora, linea};
+                *destino = GloboChat{e.id, ahora, linea};
             }
         }
     }
