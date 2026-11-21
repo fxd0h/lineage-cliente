@@ -107,7 +107,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | `\fX` codes in server messages | parsed by 0x432aa0 with the 0x500430 table | same table | MATCH | - |
 | Chat double click | 0x41f680 | implemented | MATCH | - |
 | "Select a target." (GM Ctrl+Y/Z) | string 179 into chat (0x409430/0x409380, 0x41f0a0) | chat line (255,230,120) | DIFFERENT | use the default cream unless 0x409430 passes a colour |
-| Ctrl+P screenshot | `%sCapture\%s%04d.bmp`, prefix "LinC", counter 0x6f1e54; message "Saved current screen to %s" (0x4ff36c), non-GM only (0x402680) | "captura.bmp" overwritten; "Screenshot saved: captura.bmp" | DIFFERENT | pantalla_juego.cpp case 'P' |
+| Ctrl+P screenshot | `%sCapture\%s%04d.bmp`, prefix "LinC", counter 0x6f1e54; message "Saved current screen to %s" (0x4ff36c), non-GM only (0x402680) | `<settings folder>/Capture/LinC%04u.bmp` (counter per run) + the same line in white (round 5); the GM path (silent + rename prompt) is not modelled, l1j-en never sets the flag | MATCH (GM path n/a) | pantalla_juego.cpp `tomar_captura` |
 
 ## 4. Mouse in the world
 
@@ -261,7 +261,7 @@ Original base window: ctor 0x4d0700, vtable 0x4f5c00, child container 0x422570, 
 | Row text | id `"%04d"` (0x500308), name w72, date w48, ink (65,65,65) | id unpadded, date "%m-%d %H:%M" w80 | DIFFERENT | `draw_original_mail` |
 | Header | white (0x7fff) at (30,15), row -2 marker 657 at (18,15) | "%s  %d/%d" in ink | DIFFERENT | |
 | Reading letter 0x417320 | paper 671; buttons 686 (159,302), 678 (213,297), 674 (90,299); 672 (56,312), 676 (110,312); text (20,20) and (18,269) | paper 671, buttons 664 (60,302), 580 (120,299), "Keep" link | DIFFERENT | correo_ui.cpp |
-| Compose 0x455800 (paper 577) | edits at (85,47), (85,64) 136x16, body (45,103) 192x160 | field y 66/86/108 | DIFFERENT | correo_ui.cpp `fy[]` |
+| Compose 0x453120 (paper 1545; 0x455800 / paper 577 is another window) | tabs (55/118/174,31), edits To (100,70), Subject (100,90) 116x16, body (50,112) 170x192, mode buttons (24/53,340), fee text (50,310), Send (127,308), Cancel (163,308), close (230,5) | same (round 5); the From edit (100,55) stays blank | MATCH (From edit unresolved) | correo_ui.cpp |
 | Memo editor (paper 1545: 0x47fd10/0x453120/0x4541b0) | draggable, format buttons 0x4ff-0x503, close (230,5) | none | MISSING | |
 | List buttons, paper 656, 8 rows, marker 657 | 0x417b25..0x417c7d | same | MATCH | - |
 
@@ -322,8 +322,8 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **Ctrl+X -> "/pk"** (settled: it is the same local flag, now silent) and the **"Ctrl+R dragon-power panel"** comment (settled: Ctrl+R is the floating HP/MP window, U-D9).
 - **Inventory tab grouping** (`tab_of`): now the original filters (all / equipment by use type / quest via itemquest.tbl / misc).
 - **Chat colours** (chat.cpp): no source cited; wrong.
-- **Game-time orb:** placed by template matching, not traced in the binary (U-A9).
-- **Zone labels:** placed by screenshot only (U-A8).
+- **Game-time orb:** now the 12 groups of 0x416160 (RE_ROUND5 section 1); the sparkle overlays of the 2-hour transition are not drawn.
+- **Zone labels:** traced in round 5 (0x4d2410): name white with a class-colour outline at (16,350), type icon 1224/1225/1226 at (530,345).
 - **NPC text rect** (`NPC_TEXT_*`): marked "unverified" (U-C8).
 - **Status equipment slots:** equipo_ui.cpp calls them a "deduction", but they are verified against 0x8f0818.
 
@@ -340,12 +340,12 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
   chat-packet store into the object.
 - **U-A7** (emblem settled, see U-D11) Clan emblem, crown, vendor title, True Target mark: whether the original draws them — trace the label draw
   after 0x4676f5.
-- **U-A8** Zone label colours, font and y (matched to a screenshot only) — trace the label draw.
-- **U-A9** Game-time orb frame mapping — trace its draw.
+- **U-A8** DONE (RE_ROUND5 section 1): name = white fill with 1 px outline in the zone-class colour, GDI Times New Roman 12 px (the fork uses its own font), at (16,350); zone type is an icon (1224 combat / 1225 normal / 1226 safe) at (530,345), no text.
+- **U-A9** DONE (RE_ROUND5 section 1): group ((hour+23)%24)/2 of the table 0x500228, resting image = last frame; odd-hour transition plays the group (sparkle overlays 0x4e3+ / 0x4dc+ not drawn); orb and chat backdrop rise 34 px per Ctrl+T step.
 - **U-A10** F-key slot item/spell overlays (count, dimming) in 0x445fd0 / 0x4aad90.
 - **U-A11** Actions of the 1041 "A" and 1045 buttons (0x421430, 0x474a47).
 - **U-A12** Exact Ctrl+T sizes (0x421330). DONE (RE_ROUND4 section 6).
-- **U-A13** Blindness overlay (DONE: light level 0), death/restart dialog (DONE: Esc menu), Ctrl+P message for GMs (open).
+- **U-A13** Blindness overlay (DONE: light level 0), death/restart dialog (DONE: Esc menu), Ctrl+P (DONE round 5: the GM path is silent + a rename prompt; not modelled).
 - **U-A14** Original chat-input prefix parsing (`! & $ @ # %`), input history, whisper reply.
 - **U-D9** Polymorph page vs typed prompt, and page scrolling (decoded in S3EP1U). 0x409cf0 (reached from the item-use switch for the polymorph scroll, 0x449860 / 0x44c4a3 / 0x4b355d, and from 0x408fef) tests byte [0x4ff208], initial value 1: non-zero opens the page `monlist` (0x4ffce4; or the page named in [0x7011b4] for other item types), zero opens the typed-name prompt (0x409e00, callback 0x409e40 sends `cdds` 0x77 with the name). The byte is only toggled by the chat command `morphwin` (0x40b693), so the US default is the page. [0x8ed570] is slot 2 of the six server-set protected ints at 0x8ed558 (setter 0x4a5620, reset to 0 at 0x45a360, set by the packet handler 0x488da0 from a 2-field message): when it decodes to 1 the scroll skips the 0x77 round trip and calls 0x409cf0 directly (0x408fe2), otherwise the 0x77 request goes to the server first. Neither the `morphwin` toggle (typed prompt, kept for `ui_simple=1` only) nor slot 2 is modelled. Page scrolling (page object, pixel offset [+0x74], content height [+0x78]): line up/down (0x43c080 / 0x43c0b0) step 13 px (font height, 0x435370) and stop at content height - 13; page up/down (0x43c0f0 / 0x43c120) step 277; the thumb maps y 34..262 to offset total * (y - 34) / 228 (0x43c170); the draw rect is intersected with the page rect (OffsetRect / IntersectRect at 0x4367e5..0x436816). The fork steps whole 13 px lines with arrows and thumb (no 277 px page-step buttons, thumb quantized to lines), shows the bar only when the content overflows the view (the exe seems to scroll any page; its minimum content height at 0x43bb7d is not decoded), and the mouse wheel (one line per notch) is a fork convenience: the exe page has no wheel handler (the 0x20a handlers at 0x466045 / 0x4c16e4 belong to other controls). Clipping: images are cropped to the page rect, text runs are shown only when they fit whole (the GPU has no scissor), so a half-visible text line disappears instead of being cut.
 - **U-D8** Options pages (0x40b1de..0x40c660), settled: `volume` opens the volume window (0x4aa3b0 draw, 0x4a9cd0 ctor, volume_ui.cpp: frame 1197, background 1198, close 969, labels 792/793/794/1016, three 0..100 sliders with bar 1269 / thumb 1272 / arrows 1270 and OK 1274; music and effects drive `cfg.volumen_*`, the third ("Environmental Sound", [0x6e42b8]) has no audio channel in the fork and is only remembered). dochat / dotradechat / dowhisper send `ccc` 0x19 (what 0 / 6 / 2, new flag) = C_LoginToServerOK (`Cli::LOGINTOSERVEROK`, wire 75 jp363 / 25 s3ep1, not mapped for tw380). Effects wired: getall off asks how many of a stack on pickup (0x408529 -> prompt 0x79 -> 0x4086f0); randomParty is the type byte of the invite packet (0x4075b3); cPartyReject refuses party invitations (question 951) by itself with string 1005 (0x4887e6); accepttrade off refuses trade requests (question 252) silently (0x48876d); bubbleon draws the balloon frame (0x41a6c7); showMargetMsg lets trade chat ($) show over the speaker (0x41a4f2); tooltip gates the panel-button hover hints (0x4bbd20 / 0x4bbd30). Not acted on by the fork: combatMusic (flag read at 0x46816f / 0x4c53ed to pick the combat music; the fork has no combat music), shortcutscroll (wheel handler 0x45aa70 cycles `[0x703100]` 0..7 and the 0xb4 ms timer 0x45ab60 then fires slot `4b1ae0(slot, 1)`: done, `rueda_teclas_f`), telcon / infracon (elf-only vision toggles, fork keeps the flag). showhpmp is `[0x8169ac]` and the Options action `showfloathpmp` is `[0x6ddf90]` (the floating HP/MP window, U-D9); the fork maps showhpmp to its own-character bar, unverified against 0x466e18. Also in the dispatcher and not in the fork's list: doreceive / domail / doexchange (flags 0x4ff205..07, same packet 0x19 via 0x406dbb..), wantparty, morphwin, autotrade, keyboard, obscene, violence. The Text.pak pages option11/option14 also list actions the US exe lacks (dropItemView, npcNameView, HPMPBarThicknessSet, mouseCursorChange, uitype, windowMode, fullScreenMode, win*) and vars 1032, 1037, 2026-2028: no handler/case in S3EP1U, kept as no-ops with empty values.
@@ -369,7 +369,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-C4** Meaning of the status-page gauge 990-995 (0x4b2e31, 0x4b2cc0).
 - **U-C5** Which spellbook strip group is shown and what a tab selects. RESOLVED (round 2): class slot tables (`spellbook_skill_id`), tab click = scroll row 2*i.
 - **U-C6** Inventory hover popup (0x44be70 / 0x44bdf0), overlays 2700-2702, stack count, item name colours.
-- **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40.
+- **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40. Compose (0x453120, paper 1545) DONE in round 5 (RE_ROUND5 section 3); the reading windows 0x417320 / 0x4541b0 and the Reply flow (0x4555b0) remain.
 - **U-C8** NPC text rect; default positions of status, NPC, shop and trade (no code in their ctors; possibly a saved
   layout).
 - **U-C9** Trade grid rects (base 0x42cb60), the "Waiting" state, equipment icon size.

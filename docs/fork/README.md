@@ -21,6 +21,7 @@ client. The front page is the [root README](../../README.md).
 | [RE_HUD.md](RE_HUD.md) | Reverse-engineered chat colours, names, bubbles, buff row, cursors |
 | [RE_ROUND3.md](RE_ROUND3.md) | Overlay blits, packet-to-buff-slot map, roof groups in .s32, emotes, S_Ability |
 | [RE_ROUND4.md](RE_ROUND4.md) | Char-list fields, S_Ability indices, cooking window, light flash, Esc/death menu, Ctrl+T, blindness |
+| [RE_ROUND5.md](RE_ROUND5.md) | Game-time orb, zone label, Ctrl+P, mail compose, buff slot flags / Cancellation, shout icon, grey bubbles, cursor states, cooking data source |
 | [../upstream/](../upstream/README.md) | Upstream's README and ENTREGABLES tracker (history, not maintained) |
 
 ## Conventions
@@ -93,9 +94,10 @@ client. The front page is the [root README](../../README.md).
   Releasing over the panel keeps the attack going.
 - **Recovered from the 2009 US client binary** (`S3EP1U.bin`, read with Ghidra/objdump): original
   cursors (PE resources), buff icons 5240+ with their table and screen blend, overhead bars 930–932,
-  level-up effect 2127, game-time orb 1213–1246, knight skill icons (table at 0x503c00), blessed items
+  level-up effect 2127, game-time orb 1213–1246 (12 two-hour groups, RE_ROUND5), knight skill icons (table at 0x503c00), blessed items
   lightened toward white (LUT 0x8f173c) and cursed ones tinted red.
-- **Zone type label** ("Normal zone" / "Safety zone" / "Combat zone") from the `.s32` attribute bits.
+- **Zone type icon** (1224 combat / 1225 normal / 1226 safe at (530,345), from the `.s32` attribute bits) and the zone name in white with a class-colour outline at (16,350) (0x4d2410, round 5; the simple UI keeps text).
+- **Round 5 (RE_ROUND5.md):** orb groups and Ctrl+T backdrop shift; Ctrl+P writes `Capture/LinC%04d.bmp` and prints the original line; mail compose rebuilt on paper 1545; buff slots 0x38/0x42, silent Cancellation purge; shout direction icon (images 605-612) and grey overlapped bubbles. Cursor states 8 / 14 / 16 and the cooking window stay open (documented).
 - **Original framed windows** (`src/app/original_window.cpp`), layers and offsets read from the 2009
   binary: inventory (996 background, 997 frame, 998 ornaments, category tabs 999–1002, trash can
   1003, image scroll bar 971/1206–1211) with a 4 × 6 grid and worn items first; status window with

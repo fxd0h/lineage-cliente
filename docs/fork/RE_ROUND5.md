@@ -100,3 +100,18 @@ So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, 
     two shortcut values.
   * 14 (resource 143): sprite kinds 7 / 13, and kind 8 (door) when the tile flag bit 2 is set. The fork has no tile-flag or kind 7 / 13 data for the cursor.
   Decision: left unimplemented (the existing states 1/3/5/6/7/11/13/15 stay).
+
+## 6. Cooking window (ctor 0x4d43f0, global [0x8f2fd4]): data source found, layout NOT finished (not implemented)
+- Recipes come from **`recipe.tbl`** in Text.pak (string at 0x6e5404, loaded by 0x4d3130 through 0x430b00): line 1 = count (27), then per recipe
+  `"name" "title" cookNo type nIngredients ("ingredient" qty)*`, all names being `$N` desc-e ids resolved with the desc table [0x8f0af8]
+  (name = desc 4928 + the dish word in the "title"). Records (0x124 bytes) with cookNo < 0x30 go to the window's list (0..23), the cookNo 80 / 81 / 82 ones (>= 0x30) to a second
+  vector (use not traced). The 24 rows are created by 0x4d47b0 from the static table at **0x6e52e8** (24 x 12 bytes): `{u16 dish icon gfx (0xa34, 0xa12, 0xa31, 0xa10, ...),
+  u16 0, u32 string-e index of the effect line (1144.., 1211.., 1394..: "Ingredient: 1 monster eye meat (Attribute resistance power increases by 10.)"),
+  u32 tier 1 / 2 / 3 (8 rows each)}` through the row factory 0x4d3a20 (-> 0x4458f0, the same row class as the other item lists). 0x4d43c0 shows the first `8 * mode` rows
+  (mode = pan 1..5, so pans 1 / 2 / 3+ show tier 1 / 1-2 / all 24 rows). Row index = cookNo sent in `cdcc` (l1j-en `recipes[cookNo]`, 19 entries
+  server side, so cookNo >= 19 would index out of bounds there). [C]
+- Window: frame 1480 at the window origin, close 969 at (165,18), drag handle callback 0x4d5130, scroll bar 0x47cd80 (images 971..976, callbacks 0x4d5110 / 0x4d4ca0 / 0x4d4d00),
+  picture 1482 + mode at (+0x109,+0x70), progress bar 0x4d4c40 at (+0x104,+0x20) with image 1495 scaled by remaining / total half-seconds. [C]
+- Not determined: the visible row count and geometry of the scrolling list (the row class 0x4458f0 arguments, text positions inside a row, how the ingredient list is
+  drawn), where the dish name is shown, and the exact scroll step. Without those the window cannot be reproduced, so it stays unimplemented (the server sends type 52,
+  the fork ignores it). Next step when picked up: decompile 0x4d4840 (draw), 0x4458f0 / 0x451dd0 (row add) and 0x47cd80 (scroll bar).

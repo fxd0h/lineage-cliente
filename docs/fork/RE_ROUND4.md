@@ -107,11 +107,11 @@ day/night updater 0x4b2f00 skips while counter > 0); saved value in [0x7026cc], 
   [0x8ed528] (0 none, 1, 2) and prints string idx 147 / 148 (colour [0x50051c], state 2 [0x50054c]). NO overlay image: the world draw
   0x4626c0 forces the light level to 0 while the state != 0 (`ecx = state ? 0 : light`, then 0x49c110) and the infravision block
   (idx 4) is skipped. [C]
-- Ctrl+P message for GMs: not examined (flag [0x8ed548] has 40 readers, e.g. 0x4a4ec0 getter).
+- Ctrl+P message for GMs: DONE in round 5 (RE_ROUND5 section 2).
 - Game Tip window ([0x7026f0], ctor 0x4badd0, img 808/811 234x180 area 0xe7 x 0x5e at (0xb0,0x63), scroll 0x199..0x19b buttons, close 0x329):
   created at startup (0x45914f), opened/toggled with 0x4d1200 by the HTML page action **`sendsmp`** (0x40c514 -> 0x40c53b; the sibling
   action `sendsm` sends `cd`, `checkpet` precedes). Scroll callbacks 0x455e30. Not opened by a hotkey or login. [C]
-- Not done (budget): U-A8 zone label colours, U-A9 game-time orb, Ctrl+P GM message text.
+- Done in round 5 (RE_ROUND5): U-A8 zone label, U-A9 game-time orb, Ctrl+P, mail compose, buff slot flags, shout icon, grey bubbles. Still open: cursor states 8 / 14 / 16, cooking window layout (data source = recipe.tbl, see RE_ROUND5 section 6).
 
 ## 6. Implementation status (round 4 follow-up, original UI)
 - Done: Esc menu (Esc with no window open pops it; own death auto-opens it, the "You have died" box stays only in the simple UI;
@@ -130,7 +130,7 @@ day/night updater 0x4b2f00 skips while counter > 0); saved value in [0x7026cc], 
   While one is past its frame the world level is forced to 15 (blindness still wins).
 - Skipped: cooking window. l1j-en: COOK_WINDOW sends `type 52, c 0xdb, 0x31, 0xdf, 0x02 (dword 0x02df31db), c 1, c pan-1`
   and C_ItemUSe for 41255..41259 reads `c cookStatus, c cookNo` (cookStatus 0 re-opens the window, otherwise `makeCooking(cookNo)`;
-  needs a bonfire gfx 5943 within 3 cells, server messages 1160/1103/1102/1101). Missing prerequisites: where the exe
-  gets the recipe names/order of each pan (recipes[] are server side, indexed by cookNo) and the list/bar layout coordinates.
+  needs a bonfire gfx 5943 within 3 cells, server messages 1160/1103/1102/1101). Round 5: the recipe names come from Text.pak `recipe.tbl`
+  and the rows from the table 0x6e52e8 (RE_ROUND5 section 6); still missing: the list/row layout coordinates.
 - Char-select stats: no change. The fork already draws slots 4-6 as the packet orders them (wis, cha, int) and the background
   labels read Strength, Dexterity, Constitution, Wisdom, Charisma, Intelligence, so each value sits under its label.
