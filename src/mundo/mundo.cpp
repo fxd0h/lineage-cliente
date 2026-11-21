@@ -484,6 +484,10 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                     else if (ef.gfx == 0x16c5 && ranura_activa(m.jugador, 0x24)) r = -1;
                     if (ef.gfx == 870) cancelacion_propia(m.jugador);
                     if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
+                    // Start line (0x48b679 tail): gfx 0x1130 is silent in both branches; 0x16c1 restarting slot 0x38 has no line.
+                    if (r >= 0 && ef.gfx != 0x1130)
+                        if (const u16 msg = mensaje_inicio_ranura(r); msg && m.jugador.n_fin_pendientes < MAX_FIN_PENDIENTES)
+                            m.jugador.fin_pendientes[m.jugador.n_fin_pendientes++] = {msg, ahora};
                 }
             }
             break;

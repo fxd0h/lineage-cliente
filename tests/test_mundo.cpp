@@ -4,6 +4,7 @@
 #include "comun.h"
 #include "plataforma/archivo_mapeado.h"
 #include "mundo/mundo.h"
+#include "mundo/tabla_buffs.h"
 #include "mundo/subida_nivel.h"
 
 using namespace lin;
@@ -550,4 +551,11 @@ TEST_CASE("S_ChangeName renames the object") {
     const Slot s = m.objetos.buscar(5);
     REQUIRE(s != SIN_SLOT);
     CHECK(texto(m, m.objetos.col<O_NOMBRE>()[s]) == "$1234");
+}
+
+TEST_CASE("buff start lines come from the S_SkillSound tail (RE_ROUND7)") {
+    CHECK(mensaje_inicio_ranura(0x42) == 0x42a);  // gfx 0x16c1: string-e 1066
+    CHECK(mensaje_inicio_ranura(0x38) == 0);      // silent
+    CHECK(mensaje_inicio_ranura(0x40) == 0x413);
+    CHECK(mensaje_inicio_ranura(0x99) == 0x5a5);
 }
