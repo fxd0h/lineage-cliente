@@ -14,12 +14,25 @@ No game assets are included: you need your own Lineage installation (the folder 
 ## What the fork does
 
 - **Platforms:** Linux (Ubuntu 24.04, Vulkan with SPIR-V shaders compiled from GLSL) and macOS (Metal, hand-written
-  MSL twins of every shader). Verified on Intel Iris Xe (Mesa) and Apple M5 Pro. Windows is not started.
+  MSL twins of every shader). Verified on Intel Iris Xe (Mesa) and Apple M5 Pro. Windows: HLSL versions of every
+  shader and the DXIL path exist but are untested; the rest of the port is not started.
 - **Original 2009 client UI is the default** (`ui_simple=0`): framed inventory, status, spellbook, options, volume,
   pet, party/pledge/buddy and private-shop windows, shop list and tooltips, F-key bar with 3 pages, HP/MP floating
   window, NPC HTML pages in the original GDI-style face, original cursors, buff icons, overhead bars, level-up
   effect, game-time orb, zone type label. Layers, offsets, colours and fonts are read from the 2009 binary.
   Upstream's simple text interface is still there (`ui_simple=1`, F2).
+- **Original window behaviour:** windows drag only by the title bar, at most four open at once, Esc closes them all
+  (or opens the Esc/restart menu, which also pops up on death), right double-click closes one; original default
+  positions, status page bars, spellbook tabs and slots per class, trade window and yes/no bar, inventory
+  double-click use, 25 px drag threshold and equipped/sealed marks, sign-post info cards, Ctrl+T chat sizes.
+- **Original sprite rendering:** the blend modes of the sprite attribute table (50% translucency, additive,
+  multiply, fade, pulse), "clothes" overlay layers, alternating half-step walk for large monsters (Valakas,
+  Antharas...), see-through houses and fading roofs taken from the map, poison pulse, the exact invisibility rule,
+  polymorph effect, per-frame sounds and lightning/meteor light flashes.
+- **Original HUD details:** chat and name colours, names on mouse-over, monster level shown by the outline colour,
+  speech bubbles, cursors, buff icons with the original tooltips and end messages (154-slot table from the
+  binary), Alt+1..4 emotes, `/rank`, `/propose`, `/divorce`, `/duel`, `/checkpk`, `/loc`, `/telcon` and the
+  original command aliases.
 - **Fixed 640x480 view** scaled to any window (`vista=fija`) with filters: integer, xBR, FSR (default), CRT,
   Anime4K (`escalado=`, Shift+F5).
 - **HD text** (`texto_hd=1`, default): UI and world text drawn after the scaling filter at output resolution,
@@ -131,6 +144,13 @@ HP/MP, Ctrl+T chat size, Ctrl+X attack mode, Ctrl+P screenshot. Hold the left bu
 forces an attack on NPCs/players; F2 toggles the UI mode; Shift+F5 cycles the scaling filter; Alt+Enter toggles
 full screen. Complete list: [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
 
+## Reverse engineering notes
+
+What the 2009 client does and where (addresses in `S3EP1U.bin`) is written down in [docs/fork/](docs/fork/README.md):
+sprites and rendering (`RE_SPRITES_RENDER.md`), protocol (`RE_PROTOCOL.md`), windows (`RE_WINDOWS.md`), HUD
+(`RE_HUD.md`) and the later rounds (`RE_ROUND3.md`, `RE_ROUND4.md`, ...). The remaining differences from the
+original UI are tracked in [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
+
 ## Development and testing
 
 Rules, architecture and recipes for people and coding agents are in [AGENTS.md](AGENTS.md). Tests: doctest
@@ -143,9 +163,17 @@ invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README
 - Shop and options windows are partly upstream's; the full list of differences from the 2009 UI is in
   [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
 - New-monster animations from the encrypted `list.spz` are not decoded.
-- Windows port (DXIL shaders, Winsock, file mapping) not started; no CI.
+- Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
+- Not yet matched to the original: cooking window, original mail compose window and a few buff slots whose
+  conditions are not identified (see the audit).
 - Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.
 - Server text for `tw380` depends on Whale's Big5 output and the data in the game folder; see the evaluations above.
+
+## Issues and discussions
+
+Bug reports and feature requests go to [Issues](https://github.com/fxd0h/lineage-cliente/issues); questions,
+setup help and ideas to [Discussions](https://github.com/fxd0h/lineage-cliente/discussions). When reporting a
+UI difference from the original client, a screenshot of both helps a lot. Game assets are never accepted.
 
 ## Credits and license
 
