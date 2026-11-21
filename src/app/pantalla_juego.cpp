@@ -45,9 +45,15 @@ constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_E
               IMG_CHAT_ADORNO = 1043, IMG_CHAT_ALAS = 1044;
 // Day/night orb on top of the chat frame: 34 frames of 30x31 (1213 = noon, going through dusk, night with
 // the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
-constexpr u32 IMG_ORBE_PRIMERA = 1213;
-constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
-constexpr int ZONA_ROTULO_Y = 346, ZONA_ROTULO_DER = 626;  // zone labels: name on the left, type right-aligned
+// Game-time orb (S3EP1U 0x416160): 12 groups of 2 game hours, table 0x500228 {first image, frame count}; drawn at (295,359)
+// minus 34 px per Ctrl+T step, like the chat backdrop. The group is ((hour + 23) % 24) / 2 and the resting image is
+// the group's last frame.
+constexpr int ORBE_X = 295, ORBE_Y = 359, ORBE_GRUPOS = 12;
+constexpr u32 ORBE_BASE[ORBE_GRUPOS] = {0x4d5, 0x4d7, 0x4d9, 0x4dc, 0x524, 0x526, 0x4bd, 0x4bf, 0x4c1, 0x4c6, 0x4c9, 0x4cb};
+constexpr u32 ORBE_CUENTA[ORBE_GRUPOS] = {2, 2, 3, 2, 2, 2, 2, 2, 5, 3, 2, 5};
+// Zone label (0x4d2410, US branch): name at (16,350) in white with a 1 px outline in the zone-class colour; the zone
+// type is an icon, 1224 combat / 1225 normal / 1226 safe (attribute bits 8 / none / 4), at (530,345).
+constexpr int ZONA_NOMBRE_X = 16, ZONA_NOMBRE_Y = 350, ZONA_ICONO_X = 530, ZONA_ICONO_Y = 345;
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 // Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
 constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
@@ -1277,9 +1283,9 @@ void dibujar_panel(App& a) {
     const int X = vi.hx, Y = vi.hy;
     // Original layout (S3EP1U 0x416160): backdrop 1042 at (115,358), wings 1044 one pixel lower, flourishes 1043 at
     // (121,371), all drawn under the side panels (1028 at (0,368), 1019 at (485,366)) which cover its ends.
-    g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358, clave_orden(CAPA_UI, 0));
-    g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359, clave_orden(CAPA_UI, 0));
-    g.gpu().dibujar(g.img(IMG_CHAT_ADORNO), X + 121, Y + 371, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358 - 34 * a.chat_tam, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359 - 34 * a.chat_tam, clave_orden(CAPA_UI, 0));
+    g.gpu().dibujar(g.img(IMG_CHAT_ADORNO), X + 121, Y + 371 - 34 * a.chat_tam, clave_orden(CAPA_UI, 0));
     g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 1));
     dibujar_teclas_f(a, X + 485, Y + 366);
@@ -1301,25 +1307,41 @@ void dibujar_panel(App& a) {
         g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
     }
     {
-        // Frame 0 is noon; the orb advances through the afternoon, night (frame 17) and morning.
+        // The orb and the chat backdrop rise 34 px per Ctrl+T step. At an odd game hour (minute 0) the orb plays its
+        // group: the previous group's image for 900 ms, then one frame per 150 ms (0x416160).
         const int seg = static_cast<int>(((hora_de_juego(a) % 86400) + 86400) % 86400);
-        const int fr = ((seg + 43200) % 86400) * ORBE_FRAMES / 86400;
-        g.gpu().dibujar(g.img(IMG_ORBE_PRIMERA + static_cast<u32>(fr)), X + ORBE_X, Y + ORBE_Y, clave_orden(CAPA_UI, 2));
+        const int hora = seg / 3600;
+        if (a.orbe_hora >= 0 && hora != a.orbe_hora && (hora & 1)) a.orbe_t0 = std::max<u64>(a.entrada.ahora_ms, 1);
+        a.orbe_hora = hora;
+        const u32 base = ORBE_BASE[((hora + 23) % 24) / 2], cuenta = ORBE_CUENTA[((hora + 23) % 24) / 2];
+        u32 img = base + cuenta - 1;
+        if (a.orbe_t0) {
+            const u64 t = a.entrada.ahora_ms - a.orbe_t0;
+            if (t >= 900) img = std::min<u32>(base + static_cast<u32>((t - 900) / 150), base + cuenta - 1);
+            else img = base == 0x4bd ? 0x527 : base == 0x524 ? 0x4dd : base - 1;
+            if (t >= 1350 && t >= static_cast<u64>(cuenta * 3 + 18) * 50) a.orbe_t0 = 0;
+        }
+        g.gpu().dibujar(g.img(img), X + ORBE_X, Y + ORBE_Y - 34 * a.chat_tam, clave_orden(CAPA_UI, 2));
     }
     dibujar_botones_panel(a, X, Y);
-    // Nombre de la zona, abajo a la izquierda sobre el panel, con el color de su clase (zone3-e.tbl).
+    // Zone name (zone table class colour as outline) and zone type icon, see ZONA_* above.
     const Slot yo = a.mundo.objetos.buscar(j.id);
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
                               : a.zonas.buscar(a.mundo.mapa, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo])) {
         const u32 c = a.zonas.color(z->clase);
-        g.texto_sombra(z->nombre, static_cast<float>(X + 16), static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0),
-                       rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c)));
+        const u32 borde = rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c));
+        const u64 k = clave_orden(CAPA_UI_TEXTO, 0);
+        const float x = static_cast<float>(X + ZONA_NOMBRE_X), y = static_cast<float>(Y + ZONA_NOMBRE_Y);
+        g.texto(z->nombre, x - 1, y, k, borde);
+        g.texto(z->nombre, x + 1, y, k, borde);
+        g.texto(z->nombre, x, y - 1, k, borde);
+        g.texto(z->nombre, x, y + 1, k, borde);
+        g.texto(z->nombre, x, y, k, rgba(255, 255, 255));
     }
     if (yo != SIN_SLOT) {
-        // Zone type, bottom-right: from the left-half attribute of the character's cell.
-        const char* tipo = rotulo_zona(tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]));
-        g.texto_sombra(tipo, static_cast<float>(X + ZONA_ROTULO_DER - ancho_texto(tipo, std::strlen(tipo))),
-                       static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0), rgba(235, 235, 235));
+        const TipoZona tz = tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]);
+        const u32 icono = tz == TipoZona::SEGURA ? 1226 : tz == TipoZona::COMBATE ? 1224 : 1225;
+        g.gpu().dibujar(g.img(icono), X + ZONA_ICONO_X, Y + ZONA_ICONO_Y, clave_orden(CAPA_UI, 3));
     }
     char t[48];
     // Level and EXP (0x4b0c80): "%2d" at (37,391); "%d.%02d%%" at (80,391) below level 40, "%d.%04d%%" at (72,391) from 40.
