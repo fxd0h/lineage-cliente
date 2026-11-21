@@ -4,6 +4,8 @@
 // estado en los dos casos (F2 alterna).
 #include <cctype>
 #include <cmath>
+#include <cstdio>
+#include <filesystem>
 #include <cstring>
 #include "app/app.h"
 #include "mundo/ataque.h"
@@ -1503,6 +1505,29 @@ void dibujar_minimapa(App& a, double cam_x, double cam_y) {
 
 }  // namespace
 
+// Ctrl+P (S3EP1U 0x402680, non-GM path): creates "<dir>Capture", saves "<dir>Capture\\LinC%04d.bmp" with a counter that
+// starts at 0 and prints "Saved current screen to <path>" in white (colour [0x500528]). The GM path (flag [0x8ed548] = 1) is
+// silent and asks for a file name; l1j-en never sets that flag, so it is not modelled. The exe's <dir> is its own folder;
+// here it is the settings folder.
+void tomar_captura(App& a) {
+    if (a.cfg.ui_simple) {
+        a.gpu.pedir_captura("captura.bmp");
+        a.chat.agregar("Screenshot saved: captura.bmp", rgba(255, 200, 120), CHAT_SISTEMA);
+        return;
+    }
+    const std::string cfg = ruta_configuracion();
+    const std::string dir = cfg.substr(0, cfg.rfind('/') + 1) + "Capture";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    char nombre[32];
+    std::snprintf(nombre, sizeof nombre, "/LinC%04u.bmp", a.capturas++);
+    const std::string ruta = dir + nombre;
+    a.gpu.pedir_captura(ruta);
+    a.chat.agregar("Saved current screen to " + ruta, rgba(255, 255, 255), CHAT_SISTEMA);
+}
+
+
+
 void enviar_chat(App& a, std::string_view linea) {
     if (linea == "/infracon") {  // client-side toggle of the elf infravision filter; nothing is sent
         a.infracon = !a.infracon;
@@ -2088,8 +2113,7 @@ void frame_juego(App& a) {
     case 'V': alternar_opciones(a); break;
     case 'H': alternar_ayuda(a); break;
     case 'P':  // original: screenshot (BMP) to the Capture folder
-        a.gpu.pedir_captura("captura.bmp");
-        a.chat.agregar("Screenshot saved: captura.bmp", rgba(255, 200, 120), CHAT_SISTEMA);
+        tomar_captura(a);
         break;
     // Only the original UI has these (Ctrl+R: see below; Ctrl+M has no handler in the US client's hotkey table).
     case 'X':  // attack mode: flips the local byte [0x703105] (0x456e30), silently and without a packet

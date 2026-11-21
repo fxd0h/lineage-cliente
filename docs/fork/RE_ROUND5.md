@@ -25,3 +25,15 @@
   * Zone NAME (record [obj] + idx*64, class byte +0x28 picks colour [obj + 0x14 + 4*class]) is drawn by 0x4d2bb0 with GDI
     ExtTextOut: 1 px outline (x-1, x+1, y-1, y+1) in the CLASS colour (SetTextColor [ebp+0x24]) and the fill in 0xffffff, at
     (hx+16, y+0x15e = 350). The class colour is the zone table's colour line (COLORREF r g b order). [C]
+
+## 2. Ctrl+P (0x402680, callers 0x456d77 / 0x456dad hotkey, 0x459e83 / 0x459eaa window message)
+- Non-GM (flag [0x8ed548] != 1, always the case with l1j-en): creates `"%sCapture"` (CreateDirectory, 0x4ff3b4), builds
+  `"%sCapture\%s%04d.bmp"` (0x4ff39c) with prefix "LinC" (0x4ff20c) and counter [0x6f1e54] (starts 0, post-incremented, so
+  the first file is LinC0000.bmp and each run overwrites the previous one), `%s` = the exe's base folder [0x700c30]. Writes a 640x480 24-bit
+  BMP (0x96036 bytes) from the primary surface (565 -> 555 conversion when [0x6fa678]) and prints `"Saved current screen to %s"`
+  (0x4ff36c, the full path) through the chat adder 0x41f0a0 in white (RGB555 0x7fff, [0x500528]). [C]
+- GM (flag == 1): same file but silent, then opens a text prompt ([0x702dd8] vtable +0x64, empty strings, callback 0x457600). OK with text
+  -> 0x402590 renames the file to `"%sCapture\%s.bmp"` (0x4ff388) with that name, prints the message with the new name and
+  decrements the counter; cancel -> closes the prompt (0x41f1d0). Not modelled (flag never set, see RE_ROUND4 section 1). [C]
+- Fork: original UI now writes `<settings folder>/Capture/LinC%04u.bmp` (counter per run) and prints the exe's line in white.
+  The simple UI keeps `captura.bmp`. Shift+F12 uses the same routine (the exe's 0x459e83 window-message path calls the same function). Verified live.

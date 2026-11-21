@@ -424,7 +424,7 @@ void dibujar_ayuda_teclas(App& a) {
         {"F4 / Shift+F4", "Pick up a nearby item (simple UI: camera) / shade in shadows"},
         {"F5-F12 / Ctrl+1..8", "Use the assigned spell or item (Alt+F10 = F10)"},
         {"Shift+F5", "Cycle scaling filter (integer/xBR/FSR/CRT)"},
-        {"Ctrl+P / Shift+F12", "Screenshot (captura.bmp)"},
+        {"Ctrl+P / Shift+F12", "Screenshot (Capture/LinC0000.bmp, simple UI: captura.bmp)"},
         {"Shift+click", "Turn that way (to face someone)"},
         {"1..0 / Alt+1..0", "Shortcut bar (spells, items)"},
         {"Enter", "Open chat / send (Esc: cancel)"},

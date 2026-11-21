@@ -276,7 +276,7 @@ void leer_entrada(App& a) {
                 break;
             case SDLK_F12:
                 if (ev.key.mod & SDL_KMOD_SHIFT) {
-                    a.gpu.pedir_captura("captura.bmp");
+                    tomar_captura(a);
                     break;
                 }
                 e.tecla_f = 12;

@@ -585,6 +585,7 @@ struct App {
     u64 flash_luz_frame = 0;            // last frame in which a light-flash effect was past its trigger frame
     u8 ceguera_avisada = 0;             // last S_CurseBlind state whose string was printed
     bool infracon = true;               // "/infracon" toggle (0x6f1e4b): elves / dark elves use their infravision filter
+    u32 capturas = 0;                   // original UI Ctrl+P screenshot counter ([0x6f1e54], starts at 0 each run)
     u8 chat_tam = 0;                    // original UI Ctrl+T: chat window size 0..3 (+3 rows per step)
     bool paleta_chat = false;           // original UI Ctrl+O: chat colour palette
     ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
@@ -709,6 +710,8 @@ void aplicar_volumenes(App& a);
 void actualizar_sonido(App& a, u64 ahora);  // una vez por frame: música, ambiente y streams
 // Segundos de la hora de juego: la del servidor, o la forzada con forzar-hora (ver luz_ui.cpp).
 i32 hora_de_juego(const App& a);
+// Ctrl+P: screenshot request (original UI: <settings folder>/Capture/LinC%04d.bmp + chat line, simple UI: captura.bmp).
+void tomar_captura(App& a);
 // Al dibujar un frame de animación: si cambió desde el anterior y tiene sonido, suena (con el
 // volumen según la distancia al personaje). `ultimo`: O_SONIDO o EfectoVisual::sonido.
 // `sonar_primero`: el primer frame también suena (los efectos de hechizos; un personaje recién
