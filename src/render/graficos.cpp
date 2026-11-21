@@ -94,29 +94,19 @@ const RegionAtlas& Graficos::img(u32 n) {
     });
 }
 
-// Bottom-strip button art as the original shows it at rest: the picture's luminance, scaled and shifted towards
-// brown (fitted by least absolute error against a 2009 client screenshot; a multiplicative tint cannot do it,
-// the original's darks are brown and its lights stay warm).
-const RegionAtlas& Graficos::img_sepia(u32 n) {
+// UI image n from the base Sprite.pak only. The bottom-strip buttons' rest art (odd ids 1005..1017) exists twice: the base
+// archive has the brown monochrome icon the 2009 captures show at rest, a SpriteNN.pak patch replaces it with a dark tile
+// version. The exe draws the first id at rest (0x47c760), so this is that image as the captured client had it.
+const RegionAtlas& Graficos::img_base(u32 n) {
     return cargar(clave(T_IMG, n | 0x40000000u), [&] {
-        if (hd_abierto_ && hd_.cargar(HdPack::Tipo::IMG, n, tmp_, TAM_PAGINA - 1, TAM_PAGINA - 1)) {
-            escala_tmp_ = HD_SCALE;
-        } else {
-            char nombre[32];
-            std::snprintf(nombre, sizeof nombre, "%ue.img", n);
-            Bytes b = rec_.sprite(nombre);
-            if (b.empty()) {
-                std::snprintf(nombre, sizeof nombre, "%u.img", n);
-                b = rec_.sprite(nombre);
-            }
-            if (b.empty() || !decodificar_img(b, tmp_)) return Carga::FALLO;
+        char nombre[32];
+        std::snprintf(nombre, sizeof nombre, "%ue.img", n);
+        Bytes b = rec_.sprite_base(nombre);
+        if (b.empty()) {
+            std::snprintf(nombre, sizeof nombre, "%u.img", n);
+            b = rec_.sprite_base(nombre);
         }
-        for (u32& c : tmp_.px) {
-            const float l = 0.95f * (0.299f * static_cast<float>(c & 255) + 0.587f * static_cast<float>(c >> 8 & 255) +
-                                     0.114f * static_cast<float>(c >> 16 & 255));
-            const auto v = [](float x) { return static_cast<u32>(std::clamp(x + 0.5f, 0.0f, 255.0f)); };
-            c = (c & 0xFF000000u) | v(l + 22.0f) | v(l + 5.0f) << 8 | v(l - 15.0f) << 16;
-        }
+        if (b.empty() || !decodificar_img(b, tmp_)) return Carga::FALLO;
         return Carga::OK;
     });
 }

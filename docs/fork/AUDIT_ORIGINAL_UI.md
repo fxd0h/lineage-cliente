@@ -57,7 +57,7 @@ Original HUD object: ctor 0x4b08e0, draw 0x4b2c20 -> 0x4b2b60, mouse 0x4b1c50.
 | F-key box origin | (502+34c, 389+34r), 4x2 (0x4b23e5, pitch 0x22) | (502,389) pitch 34 | MATCH | - |
 | F-key overlays (cooldown shade, seconds countdown, MP-short dim, count) | no such draw found in 0x4b2260 (contents drawn by 0x4aad90 / 0x445fd0) | drawn | EXTRA | `dibujar_teclas_f`: gate on `ui_simple` (see UNKNOWN U-A10 for item count) |
 | Panel buttons (8 at y=460) | help 491 (1017/1018), mail 507 (1585/1586), status 527, magic 544, inventory 563, social 580, options 601, quit 618 (0x459595..0x45980a, ctor 0x47c6d0) | same x, y=460 | MATCH | - |
-| Panel button rest/hover art | draw 0x47c760: rest = FIRST id (odd, e.g. 1005); hover = 2nd ctor id; pressed = id+1; all via 0x4b7fb0 with flag 0x8003 (blend not decoded) | rest = id+1 converted to sepia mono and drawn 1 px lower; hover = id+1 in colour ("fitted" to a screenshot, ventanas.cpp `boton_panel`) | DIFFERENT | ventanas.cpp `boton_panel`: draw id n at rest; decode flag 0x8003 (U-A1) (done: rest = 1st image, hover = 2nd, pressed = 2nd (3rd id unknown)) Round 2: pressed = hover = base+1 (no third image), which is what the fork draws: MATCH. |
+| Panel button rest/hover art | draw 0x47c760: rest = FIRST id (odd), hover = 2nd ctor id, pressed = id + 1; 0x4b7fb0 flag 0x8003 = opaque overlay copy + colour-keyed blit, no tint | rest = base Sprite.pak art of the odd id (the SpriteNN patch copy is a different dark-tile skin the captured client does not show), hover = pressed = id + 1, at y = 460, no sepia | MATCH | ventanas.cpp `boton_panel`, Graficos::img_base, RE_ROUND8 section 2 |
 | Panel button tooltips ("Help (Ctrl+H)" ...) | no tooltip in button class 0x47c760 | black box + white tooltip | EXTRA | ventanas.cpp: remove in original mode |
 | "A" chat-mode button 1041 / scroll-to-bottom 1045 | 1041 at (136,464) (0x459b30); 1045 at (470,463), hover 1281, callback 0x421430 (0x4594d8) | drawn at those coordinates, inert, no hover | DIFFERENT | pantalla_juego.cpp: wire up 0x421430 / 0x474a47 behaviour (U-A11) |
 | Chat scroll bar | track 1047 (470,401), arrows 974/972, thumb 976; ctor 0x47cd80 cb 0x41f650 | implemented at those positions | MATCH | - |
@@ -315,7 +315,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **Status window alignment box:** it matches 0x4b4d9f..0x4b4e6b. The class 3/5 variant at (125,164) is not handled (U-C3).
 - **Chat scrollbar and "A" button positions:** they match 0x47cd80 / 0x4599ea and 0x459b30. The "A" and 1045 buttons are
   inert (section 1).
-- **Panel button rest look** (ventanas.cpp `boton_panel`): sepia conversion fitted to a screenshot. DIFFERENT.
+- **Panel button rest look** (ventanas.cpp `boton_panel`): now the base-archive art of the first id, no tint (RE_ROUND8 section 2). MATCH.
 - **Cursor roles "chosen by visual match"** (cursores.cpp): lips and coin are wrong (section 2).
 - **Spellbook tab strip placement and level grouping** (README: "inferred"): DIFFERENT (section 11).
 - **Buff icons marked "Inferred"** (hechizos_ui.cpp:668).

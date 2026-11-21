@@ -119,6 +119,12 @@ Bytes Recursos::sprite(std::string_view nombre) const {
     return {};
 }
 
+Bytes Recursos::sprite_base(std::string_view nombre) const {
+    for (const auto& f : fuentes_)
+        if (Bytes b = f->sprite_base.buscar(nombre); !b.empty()) return b;
+    return {};
+}
+
 int Recursos::fuente_de_sprite(std::string_view nombre) const {
     for (size_t i = 0; i < fuentes_.size(); ++i)
         if (!en_fuente(*fuentes_[i], nombre).empty()) return static_cast<int>(i);

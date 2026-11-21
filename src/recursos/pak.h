@@ -53,6 +53,9 @@ public:
     // First source that has `relativa` (e.g. "map/4/7fff8000.s32", "sound/12.wav"); the primary's path if none.
     std::string ruta_archivo(const std::string& relativa) const;
     // Which source (0 = primary) served the last lookups is not tracked; this tells where a sprite name resolves.
+    // Same lookup but only in Sprite.pak (the base archive): the hashed SpriteNN.pak patches are skipped. The captured 2009 client
+    // still shows the base art of some UI images (bottom-strip buttons) that the patches replaced.
+    Bytes sprite_base(std::string_view nombre) const;
     int fuente_de_sprite(std::string_view nombre) const;
     size_t fuentes() const { return fuentes_.size(); }
     const std::string& carpeta_de(size_t i) const { return fuentes_[i]->carpeta; }

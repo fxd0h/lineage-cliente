@@ -337,18 +337,14 @@ bool tapa_a_otra(const App& a, IdVentana v) {
     return false;
 }
 
-// Bottom-strip button. `n` is the pair's odd image (a dark grey-scale icon on a box); the original shows the even
-// image n + 1 at rest, but as a monochrome brown icon (Graficos::img_sepia)
-// (fitted against a screenshot, 1 px below the strip top, 17 rows). Hovering shows the even image in colour. The mail
-// button (1585/1586) is plain art and toggles the mail window (correo_ui.cpp).
+// Bottom-strip button (ctor 0x47c6d0, draw 0x47c760): the first id `n` at rest, the second (n + 1) while the pointer is over it or
+// pressed (hover sets +0x2d, press +0x2c: both pick id +0x4c / first + 1). The mail button (1585/1586) is plain art and toggles
+// the mail window (correo_ui.cpp). The rest art is the base-archive version (Graficos::img_base).
 static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
     Graficos& g = *a.g;
-    RegionAtlas reposo = mono ? g.img_sepia(n + 1) : g.img(n);
-    // The 18 px tall art drawn at y + 1 would cover the strip's bottom border row; the original shows 17 rows.
-    if (mono) reposo.h = std::min<u16>(reposo.h, 17);
+    const RegionAtlas reposo = mono ? g.img_base(n) : g.img(n);
     const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
     const u64 k = clave_orden(CAPA_UI, 1);
-    const int dy = mono ? 1 : 0;
     if (encima) {
         if (a.cfg.opciones_orig >> OPC_TOOLTIP & 1) {  // option tooltip (0x4bbd20 / 0x4bbd30): the hover hints
             // Same face as the original's hover names (quickslot names in its footage): white eng.fnt with a 1 px black
@@ -357,11 +353,9 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, boo
             const int tx = std::min(x, (a.gpu.ancho() - 640) / 2 + 638 - w);
             g.texto_contorno(ayuda, static_cast<float>(tx), static_cast<float>(y - 15), clave_orden(CAPA_UI_TEXTO, 30));
         }
-        RegionAtlas sobre = g.img(n + 1);
-        if (mono) sobre.h = std::min<u16>(sobre.h, 17);
-        g.gpu().dibujar_en(sobre, static_cast<float>(x), static_cast<float>(y + dy), k, BLANCO, Mezcla::NORMAL);
+        g.gpu().dibujar(g.img(n + 1), x, y, k);
     } else {
-        g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? BLANCO : rgba(255, 247, 245));
+        g.gpu().dibujar(reposo, x, y, k);
     }
     return encima && a.entrada.clic;
 }

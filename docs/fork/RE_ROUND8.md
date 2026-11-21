@@ -25,3 +25,15 @@
   the orb (table position (298,379)) and the screen-blended glow streak over the orb; it restarts every ~2 s because the packet repeats. A fork capture after `forzar-hora 10800` reproduces the same frame
   sequence (/tmp/r8_orb.png: video row on top, fork row below). The 12 rest frames were rendered one by one (hours 1..23): hour 1 matches the video's first half and hour 3 its second half.
   Earlier "1213 = noon" was wrong: 1213/1214 are the 13-14 h frames (blue sun).
+
+## 2. Bottom panel buttons: rest / hover / pressed (ctor 0x47c6d0, draw 0x47c760)
+- Ctor `0x47c6d0(id1, id2, x, y, callback, cursor, flags, ...)` (called from 0x459595..0x45980a, y = 0x1cc = 460 for all eight): stores id1 at +0x24, id2 at +0x4c, +0x50 = -1, kind +0x48 = 0x1f. [C]
+- Draw 0x47c760 (vtable idx 9 of 0x4f1df8): id = +0x2c (pressed) ? (+0x50 == -1 ? id1 + 1 : +0x50) : +0x2d (hover) ? id2 : id1. Image from the UI table `[0x8f0b1c]` (g.img()), drawn by 0x4b7fb0
+  at (hx + x, vy + y) with flags 0x8003: first an OPAQUE copy of the overlay `[0x8f0b14]` rect (0x499330, restores the background), then the colour-keyed draw of the image (0x499480). No tint, no blend, no per-state offset. [C]
+- State: mouse handler 0x47b2a0: move inside -> vtable +0x0c (0x47b470: +0x3c = +0x2d = 1 = hover), left down -> +0x30 (0x47b4e0: +0x2c = +0x2d = 1 = pressed, capture owner [0x6fa7cc]), up -> +0x34 (0x47b510 clears +0x2c, then the click callback). Leaving the rect clears them. [C]
+  So rest = id1 (odd), hover = pressed = id2 = id1 + 1 for all eight buttons (1017/1018, 1585/1586, 1007/1008, 1005/1006, 1011/1012, 1015/1016, 1009/1010, 1013/1014).
+- Why the fork had a "sepia" fit: the image loader 0x4b7da0 (US: "%de.img", then "%d.img", hashed SpriteNN bucket first = sum of the name bytes & 15, then Sprite.pak) would pick the SpriteNN patch copy of the
+  odd images (1017: Sprite04, 328 bytes, a dark tile art; 1005: Sprite01) but the captured client shows the Sprite.pak art (brown monochrome icon on the parchment, 548 bytes for 1017): the installation here is newer
+  than the captured client. Drawing the base-archive image `Recursos::sprite_base` at rest reproduces the capture without any tint: per-button best offset vs hud_original_1.png is (0,0), mean abs error 4-5 on the icons
+  (the video blur accounts for the rest). The old `img_sepia` luminance fit and its 17 row clip are removed. [V]
+- [V] Hover in original.mp4 (t = 1202.3, cursor on the magic button): the star turns reddish = image 1006 in colour; the video is too compressed to compare saturation. Pressed was not seen (no click in the footage).
