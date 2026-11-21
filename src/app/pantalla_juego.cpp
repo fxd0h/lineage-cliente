@@ -49,7 +49,7 @@ constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_E
 // the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
 constexpr u32 IMG_ORBE_PRIMERA = 1213;
 constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
-constexpr int ZONA_ROTULO_Y = 346, ZONA_ROTULO_DER = 626;  // zone labels: name on the left, type right-aligned
+constexpr int ZONA_ROTULO_Y = 346;  // zone name on the left (the type is an icon picture)
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 // Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
 constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
@@ -1356,9 +1356,11 @@ void dibujar_panel(App& a) {
     }
     if (yo != SIN_SLOT) {
         // Zone type, bottom-right: from the left-half attribute of the character's cell.
-        const char* tipo = rotulo_zona(tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]));
-        g.texto_sombra(tipo, static_cast<float>(X + ZONA_ROTULO_DER - ancho_texto(tipo, std::strlen(tipo))),
-                       static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0), rgba(235, 235, 235));
+        // Zone-type label of 0x4d2410 (US branch): the icon-table pictures 1226 safe / 1224 combat / 1225 normal at (530, 345), with
+        // the text baked in (RE_ROUND7 section 3; verified by drawing them).
+        const TipoZona tz = tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]);
+        g.gpu().dibujar(g.icono(tz == TipoZona::SEGURA ? 1226 : tz == TipoZona::COMBATE ? 1224 : 1225), X + 530.0f, Y + 345.0f,
+                        clave_orden(CAPA_UI_TEXTO, 0));
     }
     char t[48];
     // Level and EXP (0x4b0c80): "%2d" at (37,391); "%d.%02d%%" at (80,391) below level 40, "%d.%04d%%" at (72,391) from 40.
