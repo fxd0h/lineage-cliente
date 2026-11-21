@@ -338,12 +338,14 @@ bool tapa_a_otra(const App& a, IdVentana v) {
 }
 
 // Bottom-strip button. `n` is the pair's odd image (a dark grey-scale icon on a box); the original shows the even
-// image n + 1 at rest, but as a monochrome dark-brown icon, so it is drawn here by luminance times a sepia tint
-// (fitted against its screenshots, 1 px below the strip's top). Hovering shows the even image in colour. The mail
+// image n + 1 at rest, but as a monochrome brown icon (Graficos::img_sepia)
+// (fitted against a screenshot, 1 px below the strip top, 17 rows). Hovering shows the even image in colour. The mail
 // button (1585/1586) is plain art and toggles the mail window (correo_ui.cpp).
 static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, bool mono = true) {
     Graficos& g = *a.g;
-    const RegionAtlas reposo = g.img(mono ? n + 1 : n);
+    RegionAtlas reposo = mono ? g.img_sepia(n + 1) : g.img(n);
+    // The 18 px tall art drawn at y + 1 would cover the strip's bottom border row; the original shows 17 rows.
+    if (mono) reposo.h = std::min<u16>(reposo.h, 17);
     const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
     const u64 k = clave_orden(CAPA_UI, 1);
     const int dy = mono ? 1 : 0;
@@ -353,10 +355,11 @@ static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda, boo
             g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
             g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
         }
-        g.gpu().dibujar(g.img(n + 1), x, y + dy, k);
+        RegionAtlas sobre = g.img(n + 1);
+        if (mono) sobre.h = std::min<u16>(sobre.h, 17);
+        g.gpu().dibujar_en(sobre, static_cast<float>(x), static_cast<float>(y + dy), k, BLANCO, Mezcla::NORMAL);
     } else {
-        g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? rgba(255, 237, 208) : BLANCO,
-                           mono ? Mezcla::GRIS : Mezcla::NORMAL);
+        g.gpu().dibujar_en(reposo, static_cast<float>(x), static_cast<float>(y + dy), k, mono ? BLANCO : rgba(255, 247, 245));
     }
     return encima && a.entrada.clic;
 }

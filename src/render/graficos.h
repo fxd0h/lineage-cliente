@@ -32,6 +32,7 @@ public:
     // World-map picture n (original decode, no HD) cropped at (px, py) to the first `mw` x `mh` pixels
     // and multiplied by `alfa` (mw*mh bytes, the "0.alp" mask: soft edges). One cached region: it is
     // rebuilt (reusing the buffers) only when n or the crop position change.
+    const RegionAtlas& img_sepia(u32 n);  // img(n) as luminance shifted to brown (bottom-strip buttons at rest)
     const RegionAtlas& img_mascara(u32 n, int px, int py, const u8* alfa, int mw, int mh);
     // Imagen N.png (fondos de pantalla, animaciones de la selección de personaje).
     const RegionAtlas& png(u32 n);
