@@ -426,6 +426,15 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         ev.v[1] = (p.size() > 1 ? std::atoi(p[1].c_str()) : 1) - 1;
         eventos_cocina(a, ev);
         if (p.size() > 2) a.cocina.pan = static_cast<ObjId>(std::atoi(p[2].c_str()));
+    } else if (cmd == "debug-correo") {  // debug: a letter from <name> in the inbox, shown in the reading window
+        Correo& c = a.correo;
+        c.abierto = true;
+        c.escribiendo = false;
+        c.bandeja = 0;
+        c.cartas.clear();
+        c.cartas.push_back({7, 1700000000u, false, false, p.size() > 1 ? p[1] : "Sender", "Test subject"});
+        c.leyendo = 7;
+        c.texto = "Body of the letter. Second sentence to check the wrapping inside the paper edit area of the window.";
     } else if (cmd == "debug-tienda") {  // debug: an NPC buy list of 3 items with property bytes, as S_ShopSellList would
         Evento ev{};
         ev.tipo = Ev::LISTA_TIENDA;

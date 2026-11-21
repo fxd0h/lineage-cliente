@@ -26,11 +26,12 @@ constexpr u32 IMG_PAPEL = 656, IMG_LEIDA = 657, IMG_CERRAR = 658, IMG_WRITE = 66
               IMG_DELETE = 664, IMG_CANCEL = 578, IMG_SEND_OLD = 582;
 // Original layout (S3EP1U.bin, mail list window ctor 0x417a90, draw 0x417d50; compose ctor 0x455800): the list
 // is paper 656 (238x350), 8 rows of 30 px from y=50, buttons placed in window coordinates.
-constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668, IMG_PAPER_READ = 671, IMG_CLOSE_READ = 580;
+constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668;
 // Compose window (ctor 0x453120): paper, tabs (rest; the hover frame is +1), mode buttons (+ their selected frame), buttons.
 constexpr u32 IMG_PAPER_COMPOSE = 1545, IMG_TAB_INBOX = 1564, IMG_TAB_KEEP = 1561, IMG_TAB_WRITE_SEL = 1573,
               IMG_MODE_PRIVATE = 1549, IMG_MODE_PRIVATE_SEL = 1551, IMG_MODE_CLAN = 1552, IMG_MODE_CLAN_SEL = 1554,
-              IMG_SEND = 1580, IMG_CANCEL_COMPOSE = 1546, IMG_CLOSE_COMPOSE = 1583;
+              IMG_SEND = 1580, IMG_CANCEL_COMPOSE = 1546, IMG_CLOSE_COMPOSE = 1583,
+              IMG_READ_REPLY = 1574, IMG_READ_DELETE = 1558, IMG_READ_KEEP = 1577, IMG_READ_BACK = 1568;
 constexpr int ROWS = 8, ROW_H = 30, ROW_Y = 50;
 int selected_row = -1, page = 0;  // list state of the original window (reset on opening a mailbox)
 // Los colores del texto: tinta sobre el papel, o los de la UI simple (se eligen en cada cuadro).
@@ -178,18 +179,62 @@ void draw_original_mail(App& a) {
     }
 
     if (c.leyendo) {
-        g.gpu().dibujar(g.img(IMG_PAPER_READ), x, y, kf);
+        // Reading window (S3EP1U class 0x4541b0, global [0x7026f8], filled by the S_Mail handler at 0x492bb4): the compose paper 1545
+        // with four read-only edits, From = the letter's name column (100,55), To = the own name (100,70), Subject (100,90) 116 px
+        // and the body (50,112) 170x192; the same tabs and mode buttons as the compose window (they close this window and open the
+        // inbox / compose / storage / private / clan list), close X (230,5) and four buttons at y 308: Reply (56) 1574, Delete (96)
+        // 1558, Keep (138) 1577 and Back to the list (174) 1568 (callbacks 0x4555b0, 0x455610, 0x455660, 0x455680).
+        g.gpu().dibujar(g.img(IMG_PAPER_COMPOSE), x, y, kf);
+        const std::string_view propio = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
+                                            ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].nombre) : std::string_view{};
         const auto it = std::find_if(c.cartas.begin(), c.cartas.end(), [&](const Carta& m) { return m.id == c.leyendo; });
         if (it != c.cartas.end()) {
-            std::snprintf(txt, sizeof txt, "%s %s", it->enviada ? "To" : "From", it->otro.c_str());
-            text(clip(txt, 200, buf, sizeof buf), 20, 20, TINTA_SUAVE);
-            texto_ajustado(g, it->asunto, x + 20, y + 36, 200, kt, TINTA, 2);
+            text(clip(it->otro, 116, buf, sizeof buf), 100, 55, TINTA);
+            text(clip(propio, 116, buf, sizeof buf), 100, 70, TINTA);
+            text(clip(it->asunto, 116, buf, sizeof buf), 100, 90, TINTA);
         }
-        texto_ajustado(g, c.texto, x + 20, y + 70, 200, kt, TINTA, 16);
-        if (ui::boton(g, e, IMG_DELETE, x + 60, y + 302)) enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.leyendo));
-        if (c.bandeja == 0 && vinculo(g, e, "Keep", x + 20, y + 312, kt, false)) enviar(a, cmd::correo(a.op, 0x40, c.leyendo));
-        if (ui::boton(g, e, IMG_CLOSE_READ, x + 120, y + 299) || e.escape) {
+        texto_ajustado(g, c.texto, x + 50, y + 112, 170, kt, TINTA, 15);
+        // Tabs and mode buttons: 0x455450 inbox, 0x455480 compose, 0x4554b0 storage, 0x4554e0 private list, 0x455510 clan list.
+        if (ui::boton(g, e, IMG_TAB_INBOX, x + 55, y + 31) || ui::boton(g, e, IMG_MODE_PRIVATE, x + 24, y + 340)) {
+            abrir_bandeja(a, 0);
+            return;
+        }
+        if (ui::boton(g, e, IMG_TAB_WRITE_SEL - 2, x + 118, y + 31)) {
             c.leyendo = 0;
+            c.escribiendo = true;
+            c.al_clan = false;
+            c.destino.clear();
+            c.foco = 0;
+            return;
+        }
+        if (ui::boton(g, e, IMG_TAB_KEEP, x + 174, y + 31)) {
+            abrir_bandeja(a, 2);
+            return;
+        }
+        if (ui::boton(g, e, IMG_MODE_CLAN, x + 53, y + 340)) {
+            abrir_bandeja(a, 1);
+            return;
+        }
+        // Reply (0x4555b0): the compose window in private mode with To = the letter's name column.
+        if (ui::boton(g, e, IMG_READ_REPLY, x + 56, y + 308) && it != c.cartas.end()) {
+            c.escribiendo = true;
+            c.al_clan = false;
+            c.destino = it->otro;
+            c.asunto.clear();
+            c.cuerpo.clear();
+            c.foco = 1;
+            c.leyendo = 0;
+            return;
+        }
+        if (ui::boton(g, e, IMG_READ_DELETE, x + 96, y + 308)) enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.leyendo));
+        if (ui::boton(g, e, IMG_READ_KEEP, x + 138, y + 308)) enviar(a, cmd::correo(a.op, 0x40, c.leyendo));
+        if (ui::boton(g, e, IMG_READ_BACK, x + 174, y + 308)) {
+            c.leyendo = 0;  // back to the list, which keeps its page and row (0x455680 reopens it)
+            return;
+        }
+        if (ui::boton(g, e, IMG_CLOSE_COMPOSE, x + 230, y + 5) || e.escape) {  // 0x455270: only this window closes
+            c.leyendo = 0;
+            c.abierto = false;
             e.escape = false;
         }
         return;
