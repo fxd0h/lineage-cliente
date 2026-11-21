@@ -336,11 +336,10 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-A4** Mapping of chat jump-table types (0x484a14) to L1J chat packets — trace the S_Chat handlers to the index they
   push.
 - **U-A5** Click behaviour on chat lines (no handler found, not proven absent) — trace 0x41f650's neighbours.
-- **U-A6** Speech bubbles / overhead chat: which object field and draw site; the fork's style is invented — trace the
-  chat-packet store into the object.
+- **U-A6** Speech bubbles / overhead chat: rectangle, clamps and grey overlap test DONE in round 7 (RE_ROUND7 section 1, `dibujar_globo`); the text blit position inside the rect and the downward flip detail stay inferred.
 - **U-A7** (emblem settled, see U-D11) Clan emblem, crown, vendor title, True Target mark: whether the original draws them — trace the label draw
   after 0x4676f5.
-- **U-A8** DONE (RE_ROUND5 section 1): name = white fill with 1 px outline in the zone-class colour, GDI Times New Roman 12 px (the fork uses its own font), at (16,350); zone type is an icon (1224 combat / 1225 normal / 1226 safe) at (530,345), no text.
+- **U-A8** DONE (RE_ROUND5 section 1): name = white fill with 1 px outline in the zone-class colour, GDI Times New Roman 12 px (the fork uses its own font), at (16,350); zone type is an icon-table picture (1224 combat / 1225 normal / 1226 safe, text baked in) at (530,345), no text: implemented in round 7 after verifying the pictures live.
 - **U-A9** DONE (RE_ROUND5 section 1): group ((hour+23)%24)/2 of the table 0x500228, resting image = last frame; odd-hour transition plays the group (sparkle overlays 0x4e3+ / 0x4dc+ not drawn); orb and chat backdrop rise 34 px per Ctrl+T step.
 - **U-A10** F-key slot item/spell overlays (count, dimming) in 0x445fd0 / 0x4aad90.
 - **U-A11** Actions of the 1041 "A" and 1045 buttons (0x421430, 0x474a47).
@@ -369,7 +368,7 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **U-C4** Meaning of the status-page gauge 990-995 (0x4b2e31, 0x4b2cc0).
 - **U-C5** Which spellbook strip group is shown and what a tab selects. RESOLVED (round 2): class slot tables (`spellbook_skill_id`), tab click = scroll row 2*i.
 - **U-C6** Inventory hover popup (0x44be70 / 0x44bdf0), overlays 2700-2702, stack count, item name colours.
-- **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40. Compose (0x453120, paper 1545) DONE in round 5 (RE_ROUND5 section 3); the reading window 0x4541b0 and the Reply flow (0x4555b0) DONE in round 6 (RE_ROUND6 section 2); 0x417320 / 0x416b50 / 0x413500 / 0x413a80 are not on the letter-reading path.
+- **U-C7** Roles of the mail classes 0x416b50 / 0x417320 / 0x413500 / 0x413a80 and string ids in 0x416e40. Compose (0x453120, paper 1545) DONE in round 5 (RE_ROUND5 section 3), From edit = own name and clan-locked To in round 7; the reading window 0x4541b0 and the Reply flow (0x4555b0) DONE in round 6 (RE_ROUND6 section 2); 0x417320 / 0x416b50 / 0x413500 / 0x413a80 are not on the letter-reading path.
 - **U-C8** NPC text rect; default positions of status, NPC, shop and trade (no code in their ctors; possibly a saved
   layout).
 - **U-C9** Trade grid rects (base 0x42cb60), the "Waiting" state, equipment icon size.

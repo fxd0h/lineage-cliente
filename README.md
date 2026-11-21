@@ -167,8 +167,8 @@ invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README
 - Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
 - Not yet matched to the original: the time-orb sparkle overlays, cursor states 14 / 16 and the selected-spell variant of 8, the cooking
   progress bar (the l1j-en server never starts it) (see the audit, `RE_ROUND5.md` and `RE_ROUND6.md`).
-- Approximate, pending checks against the original: the area in which a newer chat bubble greys an older one, and
-  the mail compose window's default position.
+- Approximate: the bubble text block position inside its rectangle and the downward flip of a bubble clipped at the top
+  (inferred, RE_ROUND7 section 1).
 - Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.
 - Server text for `tw380` depends on Whale's Big5 output and the data in the game folder; see the evaluations above.
 

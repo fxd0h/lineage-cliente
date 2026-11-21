@@ -22,6 +22,7 @@ client. The front page is the [root README](../../README.md).
 | [RE_ROUND3.md](RE_ROUND3.md) | Overlay blits, packet-to-buff-slot map, roof groups in .s32, emotes, S_Ability |
 | [RE_ROUND4.md](RE_ROUND4.md) | Char-list fields, S_Ability indices, cooking window, light flash, Esc/death menu, Ctrl+T, blindness |
 | [RE_ROUND5.md](RE_ROUND5.md) | Game-time orb, zone label, Ctrl+P, mail compose, buff slot flags / Cancellation, shout icon, grey bubbles, cursor states, cooking data source |
+| [RE_ROUND7.md](RE_ROUND7.md) | Exact chat bubble rectangle / grey test, mail From edit, zone-type icons, buff start lines |
 | [RE_ROUND6.md](RE_ROUND6.md) | Cooking window, mail reading / Reply windows, cursor state 8 and the cursor loader fix |
 | [../upstream/](../upstream/README.md) | Upstream's README and ENTREGABLES tracker (history, not maintained) |
 
@@ -100,6 +101,7 @@ client. The front page is the [root README](../../README.md).
 - **Zone type icon** (1224 combat / 1225 normal / 1226 safe at (530,345), from the `.s32` attribute bits) and the zone name in white with a class-colour outline at (16,350) (0x4d2410, round 5; the simple UI keeps text).
 - **Round 5 (RE_ROUND5.md):** orb groups and Ctrl+T backdrop shift; Ctrl+P writes `Capture/LinC%04d.bmp` and prints the original line; mail compose rebuilt on paper 1545; buff slots 0x38/0x42, silent Cancellation purge; shout direction icon (images 605-612) and grey overlapped bubbles. Cursor states 8 / 14 / 16 and the cooking window stay open (documented).
 - **Round 6 (RE_ROUND6.md):** original cooking window (frame 1480, 24-recipe grid, hover box, double click cooks); mail reading window on paper 1545 with Reply / Delete / Keep / Back; cursor state 8 for a pending target in range, and the 16 original state cursors now actually load (the loader dropped them before). Orb sparkles, states 14 / 16 and the selected-spell variant of 8 stay open.
+- **Round 7 (RE_ROUND7.md):** chat bubbles use the exact rectangle (6 px cells, 20 or 16 per line, anchor x + 24 / frame top - 2, clamps, strict overlap test greying older bubbles for good); mail compose From edit shows the own character name; the zone-type label is the icon-table picture 1224 / 1225 / 1226 at (530,345) (verified: the pictures carry the text); buff start chat lines per S_SkillSound slot (gfx 0x16c1 on slot 0x42 prints string 1066, 0x1130 silent), all pairs checked in the disassembly.
 - **Original framed windows** (`src/app/original_window.cpp`), layers and offsets read from the 2009
   binary: inventory (996 background, 997 frame, 998 ornaments, category tabs 999–1002, trash can
   1003, image scroll bar 971/1206–1211) with a 4 × 6 grid and worn items first; status window with
