@@ -49,7 +49,6 @@ constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_E
 // the moon, dawn) at (295, 359) of the 640x480 block. Found by template matching the original's screenshots.
 constexpr u32 IMG_ORBE_PRIMERA = 1213;
 constexpr int ORBE_FRAMES = 34, ORBE_X = 295, ORBE_Y = 359;
-constexpr int ZONA_ROTULO_Y = 346;  // zone name on the left (the type is an icon picture)
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 // Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
 constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
@@ -1351,8 +1350,13 @@ void dibujar_panel(App& a) {
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
                               : a.zonas.buscar(a.mundo.mapa, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo])) {
         const u32 c = a.zonas.color(z->clase);
-        g.texto_sombra(z->nombre, static_cast<float>(X + 16), static_cast<float>(Y + ZONA_ROTULO_Y), clave_orden(CAPA_UI_TEXTO, 0),
-                       rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c)));
+        // Zone name (0x4d2410): the proportional system face, white with a 1 px outline in the zone-class colour, glyph tops at
+        // y 350. Matches the original HUD capture ("Thebes Desert" reads light tan: thin white strokes with an orange rim).
+        const u32 borde = rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c));
+        const float zx = static_cast<float>(X + 16), zy = static_cast<float>(Y + 348);
+        for (const auto& [dx, dy] : {std::pair{-1, 0}, {1, 0}, {0, -1}, {0, 1}})
+            g.texto_html(z->nombre, zx + static_cast<float>(dx), zy + static_cast<float>(dy), clave_orden(CAPA_UI_TEXTO, 0), borde);
+        g.texto_html(z->nombre, zx, zy, clave_orden(CAPA_UI_TEXTO, 1), BLANCO);
     }
     if (yo != SIN_SLOT) {
         // Zone type, bottom-right: from the left-half attribute of the character's cell.
