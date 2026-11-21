@@ -460,24 +460,31 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
     }
     // Original rectangle (S3EP1U 0x419e70 / 0x41a040, docs/fork/RE_ROUND7.md section 1): w = widest wrapped line in 6 px cells,
     // L lines; anchor (ax, ay) = (screen x + 24, sprite frame top - 2); bottom edge on the anchor.
-    int rx0 = 0, ry0 = 0;
+    int rx0 = 0, ry0 = 0, desp = 0, volteado = 0;
     if (original) {
         int cells = 0;
         for (int i = 0; i < n; ++i) cells = std::max(cells, (ancho_texto(filas[i].data(), filas[i].size()) + 5) / 6);
         const int ax = static_cast<int>(centro_x), ay = static_cast<int>(base_y);
         const int half = 3 * cells + (caja ? 5 : 0);
         int left = ax - half, right = ax + half, top = ay - 12 * n - (caja ? 14 : 6), bottom = ay;
+        int desp_x = half;  // [+0x394]: where the pointer sits inside the rect (tracks the anchor through the clamps)
         if (left < 0x30) {  // horizontal clamps of 0x419e70 (shift by 2 - left, as disassembled)
             const int d = 2 - left;
             left += d, right += d;
+            desp_x -= d;
+            if (desp_x < 8) return;  // pointer too close to the left edge: dropped
         } else if (right > 0x2b0) {
             const int d = right - 0x2b0;
+            desp_x += d;
+            if (desp_x > (right - left) - 9) return;
             left -= d, right -= d;
         }
-        if (top < 0x30) {  // [I] pushed under the sprite: top = foot + 4
+        if (top < 0x30) {  // pushed under the sprite (0x419f5e): top = the frame's bottom (frame + 0x1c), flag +0x36a = 4
             const int h = bottom - top;
-            top = static_cast<int>(foot_y) + 4, bottom = top + h;
+            top = static_cast<int>(foot_y), bottom = top + h;
+            volteado = 1;
         }
+        desp = desp_x;
         if (top < 0x30 || bottom >= 0x1c9) return;  // dropped, never shown
         if (gl) {
             gl->x0 = left, gl->x1 = right, gl->y0 = top, gl->y1 = bottom;
@@ -492,6 +499,7 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         }
         centro_x = static_cast<float>(left + right) / 2;
         rx0 = left, ry0 = top;
+        // Text start 0x419d3e..: x = left (+ 5 boxed), y = top (+ 5 boxed); pushed down 6 (4 boxed) by the pointer when flipped.
         base_y = static_cast<float>(top + 12 * n);  // text rows start at the rect top (+5 when boxed)
     }
     const int paso = original ? 12 : 14;
@@ -518,11 +526,38 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         }
         punto(cx - 2, y1 + 1), punto(cx + 2, y1 + 1), punto(cx - 1, y1 + 2), punto(cx + 1, y1 + 2), punto(cx, y1 + 3);
     }
+    const u32 color_txt = gl && gl->gris ? rgba(148, 148, 148) : rgba(255, 255, 254);
+    if (original) {
+        // 0x4334f0 per line: every line starts at the same x (flush left in the rect), 12 px pitch, 1 px black outline, the bubble colour.
+        const float tx = static_cast<float>(rx0 + (caja ? 5 : 0));
+        const float ty = static_cast<float>(ry0 + (caja ? 5 : 0) + (volteado ? (caja ? 4 : 6) : 0));
+        for (int i = 0; i < n; ++i)
+            a.g->texto_contorno(filas[i], tx, ty + 12.0f * static_cast<float>(i), clave_orden(CAPA_EFECTOS, 2), color_txt);
+        if (!caja) {
+            // Speech pointer (0x419aeb / 0x419b7f): a black 9 x 5 triangle with the 7 x 4 bubble-coloured one on it, under the text
+            // (pointing down), or above it (pointing up) when the bubble was pushed under the sprite. 1 bit per pixel, MSB first.
+            const int px = rx0 + desp - 3, h = 12 * n + 6;
+            static constexpr u8 FUERA_ABAJO[5][2] = {{0xff, 0x80}, {0x7f, 0x00}, {0x3e, 0x00}, {0x1c, 0x00}, {0x08, 0x00}};
+            static constexpr u8 DENTRO_ABAJO[4] = {0xfe, 0x7c, 0x38, 0x10};
+            const u64 kp = clave_orden(CAPA_EFECTOS, 1);
+            Gpu& gpu = a.g->gpu();
+            const int py = ry0;  // rect top; the pointer sits at the bottom (normal) or the top (flipped)
+            for (int f = 0; f < 5; ++f)
+                for (int c = 0; c < 9; ++c) {
+                    const int fila = volteado ? 4 - f : f;
+                    if (FUERA_ABAJO[fila][c / 8] >> (7 - c % 8) & 1)
+                        gpu.rectangulo(px + c, (volteado ? py : py + h - 5) + f, 1, 1, kp, rgba(0, 0, 0));
+                }
+            for (int f = 0; f < 4; ++f)
+                for (int c = 0; c < 7; ++c)
+                    if (DENTRO_ABAJO[volteado ? 3 - f : f] >> (7 - c) & 1)
+                        gpu.rectangulo(px + c, (volteado ? py + 1 : py + h - 4) + f, 1, 1, clave_orden(CAPA_EFECTOS, 2), color_txt);
+        }
+        return;
+    }
     for (int i = 0; i < n; ++i) {
         int w = ancho_texto(filas[i].data(), filas[i].size());
-        a.g->texto_sombra(filas[i], centro_x - w / 2, base_y - paso * (n - i) + (original && caja ? 5 : 0),
-                          clave_orden(CAPA_EFECTOS, 2),
-                          gl && gl->gris ? rgba(148, 148, 148) : rgba(255, 255, 254));
+        a.g->texto_sombra(filas[i], centro_x - w / 2, base_y - paso * (n - i), clave_orden(CAPA_EFECTOS, 2), color_txt);
     }
 }
 
@@ -627,7 +662,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
-        float top = sy - 40;
+        float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
         RegionAtlas rg;
         bool rg_pendiente = false;
         bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
@@ -739,6 +774,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             else if (a.jugador_tapado && o.ids()[s] == a.mundo.jugador.id)
                 g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, 0xFFFFFFFEu), rgba(255, 255, 255, ALFA_SILUETA));  // bajo la lluvia, sobre el resto
             top = py + rg.oy - desfase_y;
+            pie = top + rg.h;
             const float x0 = px + rg.ox, y0 = py + rg.oy, x1 = x0 + rg.w, y1 = y0 + rg.h;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});
@@ -752,6 +788,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (!rg_pendiente && !frame_vacio)
                 g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), rgba(255, 0, 255, 170));
             top = y0;
+            pie = y0 + 36;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
         }
@@ -763,6 +800,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             ex = (ex + 24) * z - 24;
             sy *= z;
             top *= z;
+            pie *= z;
             g.gpu().sin_zoom_mundo(true);
         }
         const float top_sprite = top;
@@ -874,7 +912,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
         else  // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
             dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true,
-                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), sy);
+                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), pie);
         g.gpu().sin_zoom_mundo(false);
     }
 }

@@ -424,3 +424,5 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 | State cursor loading | RT_GROUP_CURSOR table 0x6e0de8 | fixed: the 16 state cursors now load (the loader dropped them) | MATCH | cursores.cpp `load_originals` |
 
 - **Strip button hints** (ventanas.cpp `hint_panel`): rebuilt from the hint manager 0x4bb8f0 (700 ms delay, string-e 613/1250/614-619, 50% darkened bevelled box above the strip); not visible in the available footage (option off there). RE_ROUND8 section 3.
+
+- **Chat bubbles, text / pointer / flip** (pantalla_juego.cpp `dibujar_globo`, original mode): lines flush left at rect.left (+5 boxed) with a black outline, speech pointer triangles (unboxed), pushed-down bubble starts at the sprite frame bottom, pointer-edge drop rules (RE_ROUND8 section 4). Code-confirmed, no footage to compare.

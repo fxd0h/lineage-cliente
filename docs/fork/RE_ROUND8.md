@@ -51,3 +51,15 @@
   8 bevel lines through 0x498720 (fill rect): light RGB555 0x5ef7 (23/31 grey = 189) top rows y, y+1 and left columns x, x+1; dark 0x3def (15/31 = 123) bottom rows y+h-1, y+h-2 and right columns x+w-1, x+w-2;
   text via the chat-line blitter 0x432dc0 (flag 1) in white 0x7fff at (x + 5, y + 5), 12 px per line. [C]
 - Not verified visually: the footage has the option off (no hint ever appears while the pointer rests on the strip for > 1 s, e.g. t = 1196-1206 s). The fork implements the code as read; face = the chat face with shadow. [I for the face]
+
+## 4. Chat bubble draw (draw loop 0x4199eb..0x419e48, rect 0x419e70, ctor 0x41a600)
+- Text: per line `0x4334f0(surface, line text, len, x, y, fill = bubble colour [+0x39c], outline = [0x5004f0] = 0 (black), flag)` (flag 1 for lines 2.. = "keep the colour state of the previous line").
+  All lines use the SAME x: unboxed x = rect.left, boxed x = rect.left + 5 (flush left, NOT centred; the rect is as wide as the widest line); y = rect.top (+ 5 boxed), +12 per line. 1 px black outline. [C]
+- Pointer (unboxed bubbles only; the boxed variant draws its own tail masks 0x500328 / 0x50032c): `0x498620` bit-mask blit (1 bpp, MSB first). Normal: black 9 x 5 triangle (mask 0x500348) at (left + off - 3, bottom - 5), then the
+  bubble-coloured 7 x 4 triangle (mask 0x500340) at the same x, y = bottom - 4. Off = +0x394 = distance from rect.left to the anchor (3 * w), kept on the anchor by the clamps. [C]
+- Clamps (0x419e70), complete: left < 0x30 -> shift right by 2 - left and off -= shift, dropped when off < 8; right > 0x2b0 -> off += overshoot, dropped when off > width - 9, then shift left. [C]
+- Pushed-down flip (top < 0x30, 0x419f5e..): `top = Y + frame[+0x1c]` = the current sprite frame's BOTTOM (frame +0x14 is its top, used for the anchor), bottom moves by the same delta, flag +0x36a = 4. No "+ 4". [C code, frame fields as
+  top / bottom of the frame rect: I]. Then the pointer flips: up-triangle masks 0x500352 (outline, at y = top) and 0x500344 (fill, at y = top + 1), and the text starts 6 px lower (boxed: 4 + 5). The bubble is dropped when top < 0x30 or bottom > 0x1c8 afterwards. [C]
+- Grey marking: done in the constructor right after the first rect computation (0x41a867..0x41a8f4), and ONLY when that computation did not drop the new bubble. Fork: still run on the bubble's first drawn frame (same
+  result unless the speaker is off screen at creation: the fork has no screen position then). [C; difference kept]
+- Verified: fork capture only (/tmp/r8_bubble.png): no speech bubble could be found in original.mp4 or the JP footage, so none of the above could be compared with an original frame. Not tested live: the flipped case (needs a speaker near the top edge).
