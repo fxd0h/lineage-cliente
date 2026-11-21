@@ -93,8 +93,7 @@ void draw_original_mail(App& a) {
         // Compose window (S3EP1U ctor 0x453120, draw 0x453750, send 0x453c60): paper 1545 (252x370) with the tabs
         // Inbox (55,31) / Write (118,31, selected) / Keep (174,31), edits To (100,70) 116x16, Subject (100,90) 116x16 and
         // body (50,112) 170x192, mode buttons private (24,340) / clan (53,340), fee text at (50,310), Send (127,308),
-        // Cancel (163,308) and close (230,5). The edit at (100,55) is not read by the send code and nothing fills it:
-        // left blank (RE_ROUND5).
+        // Cancel (163,308) and close (230,5). The edit at (100,55) (From) shows the own character name (RE_ROUND7).
         g.gpu().dibujar(g.img(IMG_PAPER_COMPOSE), x, y, kf);
         const std::string_view propio = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
                                             ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].nombre) : std::string_view{};
@@ -129,6 +128,10 @@ void draw_original_mail(App& a) {
         char fee[64];
         std::snprintf(fee, sizeof fee, "%d %.*s", c.al_clan ? 1000 : 50, static_cast<int>(a.desc.linea(4).size()), a.desc.linea(4).data());
         g.texto(fee, static_cast<float>(x + 50), static_cast<float>(y + 310), kt, rgba(0, 0, 0));
+        // From edit (100,55): the open handler 0x453a00 sets it to the own character name on every open (RE_ROUND7 section 2);
+        // in clan mode To holds the clan name, locked (flag 2).
+        text(clip(propio, 116, buf, sizeof buf), 100, 55, TINTA);
+        if (c.al_clan && !clan.empty()) c.destino.assign(clan);
         // Edits: To (locked while the clan name is in it), Subject (20), body (256).
         std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
         const size_t maximos[3] = {16, 20, 256};
