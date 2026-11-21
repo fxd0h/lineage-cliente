@@ -82,3 +82,11 @@ How to implement: for 0x16c1 on a fresh slot 0x42 add chat line string-e[1066] i
 - Section 2 DONE (correo_ui.cpp): From edit (100,55) shows the own name on every frame of the compose window; clan mode keeps To = clan name, locked.
 - Section 3 DONE for the zone label: icon-table pictures 1224 / 1225 / 1226 drawn live and confirmed to be the "Combat zone" / "Normal zone" / "Safety zone" label art (text baked in); the text label was replaced (screenshot /tmp/r7_bubble_zone.png). The `off` shift from 0x4ae5b0 is not modelled. Orb untouched.
 - Section 4 DONE (`mensaje_inicio_ranura`, tabla_buffs.h; queued with the end-message mechanism, due immediately): all 50 slot -> string pairs re-extracted from 0x48a5c0..0x48b6a8 (`jmp 0x48b679` tails) and match the table above; the only silent direct calls on printing slots are 0x1130 (0x42/0x38) and 0x16c1 restarting 0x38. String 1066 = "MP and HP still recover even when you are over your weight limit." Not live-tested (needs the server to send the S_SkillSound); unit test covers the table.
+
+## Zone name, re-read (0x4d27d8 -> 0x4d2bb0)
+- 0x4d2410 tail calls 0x4d2bb0(surface [0x7009d8], font [0x8f2f88], name, len, x = hx + 0x10, y = vy + 0x15e, fill 0xffffff,
+  outline = [obj + 0x14 + 4 * class]). 0x4d2bb0 selects the font, SetBkMode TRANSPARENT, sets the outline colour and calls
+  ExtTextOut at (x-1,y), (x+1,y), (x,y-1), (x,y+1), then the fill colour and ExtTextOut at (x,y). [C]
+- Font (ctor 0x4d1f40, codepage 1252 branch): CreateFont(height 12, weight 500, charset 0x81, clip 1, face "Times New Roman"). The
+  Hangul charset makes the Windows font mapper substitute a Korean face, which is why the original capture shows a sans face. The
+  fork draws it with the proportional HTML face (Arial 13), white with the 4-way class-colour outline at (16,350). [C draw, I face]
