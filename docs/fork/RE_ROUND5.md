@@ -37,3 +37,27 @@
   decrements the counter; cancel -> closes the prompt (0x41f1d0). Not modelled (flag never set, see RE_ROUND4 section 1). [C]
 - Fork: original UI now writes `<settings folder>/Capture/LinC%04u.bmp` (counter per run) and prints the exe's line in white.
   The simple UI keeps `captura.bmp`. Shift+F12 uses the same routine (the exe's 0x459e83 window-message path calls the same function). Verified live.
+
+## 3. Mail compose window (class 0x453120, global [0x7026fc], vtable 0x4f1660, draw 0x453750, send 0x453c60)
+Created at world entry (0x458c62, id 0x16); the same paper 1545 (252x370) is shared with the view variant 0x4541b0 ([0x7026f8]).
+So the real composer is 0x453120 (paper 1545), NOT 0x455800 (paper 577, `ccss`, RE_WINDOWS round 3). [C]
+- Children (list [obj+8], ids): 0 Send, 1 Cancel, 2 edit [+0x18] (100,55) 116x16 ("From" printed on the paper), 3 edit [+0x1c] To
+  (100,70) 116x16 (limit 0x82, names <= 16), 4 edit [+0x20] Subject (100,90) 116x16 (limit 0x14 = 20), 5 edit [+0x24] body (50,112)
+  170x192 multi-line (limit 0x100 = 256), 10 close, 11/12 mode buttons. Ink colour [0x500510]. [C]
+- Buttons (`0x47c6d0` image buttons, `0x47c950` text/tab buttons, `0x47c2d0` plain): Send 1580/1582 at (127,308) cb 0x453c60; Cancel
+  1546/1548 at (163,308) cb 0x453a80 (closes the window, resets the list: the list does NOT reopen); close 1583 at (230,5) cb 0x453a80;
+  tabs at y 31: x 55 imgs 1564/1566 cb 0x454060 (close, open the inbox list via 0x480ea0: private list, or the clan list when mode 5),
+  x 118 imgs 1571/1573 cb 0x4536b0 (`ret`, current tab; the selected frame 1573 is drawn over it, 0x453986), x 174 imgs 1561/1563 cb 0x454090
+  (0x480e40: opens the storage list, C_Mail type 2); mode buttons at y 340: x 24 imgs 1549/1551 cb 0x4540c0 (mode 2 private),
+  x 53 imgs 1552/1554 cb 0x454100 (mode 5 clan, only with a clan name [player+0x64]; otherwise string 1262 "You are not a member of a
+  clan..."; the clan name goes into the To edit, locked). The mode byte is [0x81c5ec] (2 private, 5 clan; 0 / 3 = inbox / clan list, 8 = storage). Selected
+  mode frame 1551 / 1554 drawn on top; fee text `"%d %s"` (0x6da514) = 1000 (clan) or 50 with desc-e entry 4 (Adena) at (50,310) in black (0x453971). [C]
+- Send 0x453c60: C_Mail (opcode 0x7f, `c type h 0 s receiver s subject s body` via 0x4a7df0), type 0x20 private / 0x21 clan. Checks, with
+  string-e entries (entry n = file line n + 2): no name 434 "There are no recipients.", more than [obj+0x14] (= 1) names 433, name over 16 435 "Name is too long.",
+  empty subject or body 1251 (line 1253) "You did not enter the letter's header or content.", own name 1252 "You cannot send a letter to yourself."
+  (unless own name == the second player string [+0x64]), clan mail with 50 or more letters in the clan list 400 + 1261 (not modelled), a name check
+  0x401b00 (not modelled; the server validates). Messages go to the chat in white. The list's Write opens it in mode 5 when the clan list was showing
+  (0x480e0b) else mode 2 (0x480e14). A letter's Reply (0x4555b0) opens it with To = the sender (not wired: the reading window of the fork has no Reply). [C]
+- Not determined: nothing writes the From edit (+0x18); left blank. Window position: assumed (0,0) like the list (the default position table was not traced).
+- Fork: original UI compose rebuilt on paper 1545 with the layout above (To locked to the clan name in clan mode), subject 20 / body 256 chars, Cancel closes
+  the whole mail window. Simple UI keeps its own compose. Verified live: layout, validation messages (no clan, self), Cancel.

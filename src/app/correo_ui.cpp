@@ -23,11 +23,14 @@ namespace {
 
 constexpr int ANCHO = 238, ALTO = 350, FILA = 26;
 constexpr u32 IMG_PAPEL = 656, IMG_LEIDA = 657, IMG_CERRAR = 658, IMG_WRITE = 662,
-              IMG_DELETE = 664, IMG_CANCEL = 578, IMG_SEND = 582;
+              IMG_DELETE = 664, IMG_CANCEL = 578, IMG_SEND_OLD = 582;
 // Original layout (S3EP1U.bin, mail list window ctor 0x417a90, draw 0x417d50; compose ctor 0x455800): the list
 // is paper 656 (238x350), 8 rows of 30 px from y=50, buttons placed in window coordinates.
-constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668, IMG_PAPER_READ = 671, IMG_PAPER_WRITE = 577,
-              IMG_CLOSE_READ = 580;
+constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668, IMG_PAPER_READ = 671, IMG_CLOSE_READ = 580;
+// Compose window (ctor 0x453120): paper, tabs (rest; the hover frame is +1), mode buttons (+ their selected frame), buttons.
+constexpr u32 IMG_PAPER_COMPOSE = 1545, IMG_TAB_INBOX = 1564, IMG_TAB_KEEP = 1561, IMG_TAB_WRITE_SEL = 1573,
+              IMG_MODE_PRIVATE = 1549, IMG_MODE_PRIVATE_SEL = 1551, IMG_MODE_CLAN = 1552, IMG_MODE_CLAN_SEL = 1554,
+              IMG_SEND = 1580, IMG_CANCEL_COMPOSE = 1546, IMG_CLOSE_COMPOSE = 1583;
 constexpr int ROWS = 8, ROW_H = 30, ROW_Y = 50;
 int selected_row = -1, page = 0;  // list state of the original window (reset on opening a mailbox)
 // Los colores del texto: tinta sobre el papel, o los de la UI simple (se eligen en cada cuadro).
@@ -86,43 +89,89 @@ void draw_original_mail(App& a) {
     };
 
     if (c.escribiendo) {
-        g.gpu().dibujar(g.img(IMG_PAPER_WRITE), x, y, kf);
-        // The printed labels From / To / Subject sit at y 53 / 69 / 89; the entry fields run on their right.
-        text(c.al_clan ? "Pledge: 1000 adena each" : "50 adena", 85, 46, TINTA_SUAVE);  // on the From row (the exe shows the own name)
-        const char* rotulos[3] = {c.al_clan ? "Pledge" : "To", "Subject", "Text"};
-        (void)rotulos;
-        std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
-        const size_t maximos[3] = {16, 40, 400};
-        // Paper 577 prints From / To / Subject at y 52 / 66 / 89; the To field is the exe's second edit (85,64) 136x16 (ctor
-        // 0x455800), the subject sits on the Subject row and the body fills (45,105) 192x160 (the exe has no subject edit:
-        // that window sends a different packet, so the l1j-en mail needs this extra field).
-        const int fy[3] = {64, 86, 105}, fx[3] = {85, 85, 45}, fw[3] = {136, 136, 192}, fh[3] = {16, 16, 160};
-        for (int i = 0; i < 3; ++i) {
-            if (e.clic && ui::sobre(e, x + fx[i], y + fy[i], fw[i], fh[i])) c.foco = i;
-            if (i < 2) {
-                g.gpu().rectangulo(x + fx[i], y + fy[i] + 15, fw[i], 1, kf + 1, c.foco == i ? TINTA_VIVA : TINTA_SUAVE);
-                ui::caja_texto(g, e, *campos[i], x + fx[i] + 2, y + fy[i] + 1, fw[i] - 4, c.foco == i, false, maximos[i]);
+        // Compose window (S3EP1U ctor 0x453120, draw 0x453750, send 0x453c60): paper 1545 (252x370) with the tabs
+        // Inbox (55,31) / Write (118,31, selected) / Keep (174,31), edits To (100,70) 116x16, Subject (100,90) 116x16 and
+        // body (50,112) 170x192, mode buttons private (24,340) / clan (53,340), fee text at (50,310), Send (127,308),
+        // Cancel (163,308) and close (230,5). The edit at (100,55) is not read by the send code and nothing fills it:
+        // left blank (RE_ROUND5).
+        g.gpu().dibujar(g.img(IMG_PAPER_COMPOSE), x, y, kf);
+        const std::string_view propio = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
+                                            ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].nombre) : std::string_view{};
+        const std::string_view clan = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
+                                          ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].clan) : std::string_view{};
+        auto aviso = [&](size_t idx) { a.chat.agregar(a.mensajes.linea(idx), rgba(255, 255, 255), CHAT_SISTEMA); };
+        // Tabs: Inbox / Keep close this window and open that mailbox (0x454060 / 0x454090); Write is the current one.
+        if (ui::boton(g, e, IMG_TAB_INBOX, x + 55, y + 31)) {
+            c.escribiendo = false;
+            abrir_bandeja(a, c.al_clan ? 1 : 0);
+            return;
+        }
+        ui::imagen(g, IMG_TAB_WRITE_SEL, x + 118, y + 31, CAPA_UI);
+        if (ui::boton(g, e, IMG_TAB_KEEP, x + 174, y + 31)) {
+            c.escribiendo = false;
+            abrir_bandeja(a, 2);
+            return;
+        }
+        // Mode buttons (0x4540c0 private, 0x454100 clan: needs a clan, string 1262; the clan name fills the locked To).
+        if (ui::boton(g, e, IMG_MODE_PRIVATE, x + 24, y + 340) && c.al_clan) {
+            c.al_clan = false;
+            c.destino.clear();
+        }
+        if (ui::boton(g, e, IMG_MODE_CLAN, x + 53, y + 340) && !c.al_clan) {
+            if (clan.empty()) aviso(0x4ee);
+            else {
+                c.al_clan = true;
+                c.destino.assign(clan);
             }
         }
+        ui::imagen(g, c.al_clan ? IMG_MODE_CLAN_SEL : IMG_MODE_PRIVATE_SEL, x + (c.al_clan ? 53 : 24), y + 340);
+        char fee[64];
+        std::snprintf(fee, sizeof fee, "%d %.*s", c.al_clan ? 1000 : 50, static_cast<int>(a.desc.linea(4).size()), a.desc.linea(4).data());
+        g.texto(fee, static_cast<float>(x + 50), static_cast<float>(y + 310), kt, rgba(0, 0, 0));
+        // Edits: To (locked while the clan name is in it), Subject (20), body (256).
+        std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
+        const size_t maximos[3] = {16, 20, 256};
+        const int fy[3] = {70, 90, 112}, fx[3] = {100, 100, 50}, fw[3] = {116, 116, 170}, fh[3] = {16, 16, 192};
+        for (int i = 0; i < 3; ++i)
+            if (e.clic && ui::sobre(e, x + fx[i], y + fy[i], fw[i], fh[i]) && !(i == 0 && c.al_clan)) c.foco = i;
+        if (c.al_clan && c.foco == 0) c.foco = 1;
         if (e.tab) c.foco = (c.foco + 1) % 3;
-        if (c.foco == 2) {  // the body is a multi-line area: ASCII and Backspace
+        if (c.foco < 2 && !(c.foco == 0 && c.al_clan)) {
+            std::string& v = *campos[c.foco];
+            for (int i = 0; i < e.ntexto; ++i)
+                if (e.texto[i] >= 0x20 && e.texto[i] < 0x7F && v.size() < maximos[c.foco]) v.push_back(e.texto[i]);
+            if (e.retroceso && !v.empty()) v.pop_back();
+        } else if (c.foco == 2) {  // the body is a multi-line area: ASCII and Backspace
             for (int i = 0; i < e.ntexto; ++i)
                 if (e.texto[i] >= 0x20 && e.texto[i] < 0x7F && c.cuerpo.size() < maximos[2]) c.cuerpo.push_back(e.texto[i]);
             if (e.retroceso && !c.cuerpo.empty()) c.cuerpo.pop_back();
         }
-        texto_ajustado(g, c.cuerpo, x + 45, y + 105, 192, kt, TINTA, 10);
-        if (vinculo(g, e, c.al_clan ? "To a character instead" : "To the pledge instead", x + 45, y + 276, kt, false))
-            c.al_clan = !c.al_clan;
-        if (!c.destino.empty() && !c.asunto.empty() && ui::boton(g, e, IMG_SEND, x + 97, y + 298)) {
-            enviar(a, cmd::escribir_correo(a.op, c.al_clan, sin_espacios(c.destino), sin_espacios(c.asunto), sin_espacios(c.cuerpo)));
-            c.escribiendo = false;
+        for (int i = 0; i < 2; ++i) {
+            const int w = g.texto(*campos[i], static_cast<float>(x + fx[i]), static_cast<float>(y + fy[i]), kt, TINTA);
+            if (c.foco == i && (e.ahora_ms / 500) % 2 == 0)
+                g.gpu().rectangulo(x + fx[i] + w + 1, y + fy[i], 1, ALTO_GLIFO, kt, TINTA);
+        }
+        texto_ajustado(g, c.cuerpo, x + 50, y + 112, 170, kt, TINTA, 15);
+        auto cerrar = [&] {
+            c.escribiendo = c.abierto = false;
             c.asunto.clear();
             c.cuerpo.clear();
-        }
-        if (ui::boton(g, e, IMG_CANCEL, x + 145, y + 298) || e.escape) {
-            c.escribiendo = false;
             e.escape = false;
+        };
+        if (ui::boton(g, e, IMG_SEND, x + 127, y + 308)) {
+            // 0x453c60: no name (434), name over 16 (435), empty subject or body (1251), yourself (1252).
+            const std::string_view dest = sin_espacios(c.destino);
+            if (dest.empty()) aviso(0x1b2);
+            else if (dest.size() > 16) aviso(0x1b3);
+            else if (c.asunto.empty() || c.cuerpo.empty()) aviso(0x4e3);
+            else if (!c.al_clan && dest == propio) aviso(0x4e4);
+            else {
+                enviar(a, cmd::escribir_correo(a.op, c.al_clan, dest, sin_espacios(c.asunto), sin_espacios(c.cuerpo)));
+                cerrar();
+            }
         }
+        if (ui::boton(g, e, IMG_CANCEL_COMPOSE, x + 163, y + 308) || ui::boton(g, e, IMG_CLOSE_COMPOSE, x + 230, y + 5) || e.escape)
+            cerrar();
         e.ntexto = 0;
         e.enter = false;
         return;
@@ -183,7 +232,10 @@ void draw_original_mail(App& a) {
         enviar(a, cmd::correo(a.op, static_cast<u8>(0x10 + c.bandeja), c.cartas[static_cast<size_t>(selected_row)].id));
     if (ui::boton(g, e, IMG_WRITE, x + 139, y + 304)) {
         c.escribiendo = true;
-        c.foco = c.destino.empty() ? 0 : 1;
+        c.al_clan = c.bandeja == 1;  // the clan list opens the clan mode (0x480e0b), the others private (0x480e14)
+        c.destino.clear();
+        if (c.al_clan && a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) c.destino = a.pjs[static_cast<size_t>(a.pj_sel)].clan;
+        c.foco = c.al_clan ? 1 : 0;
     }
     if (ui::boton(g, e, IMG_DELETE, x + 171, y + 304) && has_sel)
         enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.cartas[static_cast<size_t>(selected_row)].id));
@@ -237,7 +289,7 @@ void eventos_correo(App& a, const Evento& e) {
 
 bool sobre_correo(const App& a) {
     const Correo& c = a.correo;
-    return (c.abierto && ui::sobre(a.entrada, x0(a), y0(a), ANCHO, ALTO)) || (c.nuevas > 0 && !c.abierto && ui::sobre(a.entrada, 8, 8, 56, 20));
+    return (c.abierto && ui::sobre(a.entrada, x0(a), y0(a), c.escribiendo && !a.cfg.ui_simple ? 252 : ANCHO, c.escribiendo && !a.cfg.ui_simple ? 370 : ALTO)) || (c.nuevas > 0 && !c.abierto && ui::sobre(a.entrada, 8, 8, 56, 20));
 }
 
 // El aviso de correo nuevo: un sobre arriba a la izquierda con la cantidad; un clic abre el correo.
@@ -311,7 +363,7 @@ void dibujar_correo(App& a) {
         if (vinculo(g, e, c.al_clan ? "To a character instead" : "To the pledge instead", x + 20, y + ALTO - 70, kt, false))
             c.al_clan = !c.al_clan;
         const int by = y + ALTO - 50;
-        if (!c.destino.empty() && !c.asunto.empty() && boton(IMG_SEND, "Send", x + 30, by)) {
+        if (!c.destino.empty() && !c.asunto.empty() && boton(IMG_SEND_OLD, "Send", x + 30, by)) {
             enviar(a, cmd::escribir_correo(a.op, c.al_clan, sin_espacios(c.destino), sin_espacios(c.asunto), sin_espacios(c.cuerpo)));
             c.escribiendo = false;
             c.asunto.clear();
