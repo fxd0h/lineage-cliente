@@ -1,20 +1,14 @@
 # Empaquetado y releases.
 # - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS, los
 #   .zip de Windows y el AppImage y el .tar.gz de Linux (x64 y arm64), y publica la release en GitHub con notas generadas.
+#   Después mueve el tag `latest` a esa versión: instalar.sh (curl ... | sh) instala lo que apunta `latest`.
 # - A mano (Actions > Release > Run workflow): lo mismo sin publicar; los paquetes quedan como artefactos.
-#   Con `tag` (p. ej. v0.2.0), los paquetes llevan esa versión y se suman a esa release los que le falten
-#   (sin reemplazar los que ya tiene): así se agregan plataformas nuevas a una release publicada.
 name: Release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Release existente a la que sumar los paquetes que le falten (p. ej. v0.2.0); vacío = no publicar"
-        required: false
-        default: ""
 
 permissions:
   contents: write
@@ -37,10 +31,8 @@ jobs:
       - name: Empaquetar
         id: paquete
         run: |
-          TAG="${{ inputs.tag }}"
-          [[ -n "$TAG" || "$GITHUB_REF_TYPE" != tag ]] || TAG="$GITHUB_REF_NAME"
-          VERSION="${TAG#v}"
-          [[ -n "$TAG" ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
           echo "dmg=$(herramientas/empaquetar_macos.sh "$VERSION" | tail -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
@@ -74,9 +66,7 @@ jobs:
       - name: Empaquetar
         id: paquete
         run: |
-          $tag = "${{ inputs.tag }}"
-          if (-not $tag -and "${{ github.ref_type }}" -eq "tag") { $tag = "${{ github.ref_name }}" }
-          $version = if ($tag) { $tag.Substring(1) } else { "0.0.0-$("${{ github.sha }}".Substring(0, 7))" }
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".Substring(1) } else { "0.0.0-$("${{ github.sha }}".Substring(0, 7))" }
           $zip = herramientas/empaquetar_windows.ps1 -Version $version | Select-Object -Last 1
           "zip=$zip" >> $env:GITHUB_OUTPUT
 
@@ -111,10 +101,8 @@ jobs:
       - name: Empaquetar
         id: paquete
         run: |
-          TAG="${{ inputs.tag }}"
-          [[ -n "$TAG" || "$GITHUB_REF_TYPE" != tag ]] || TAG="$GITHUB_REF_NAME"
-          VERSION="${TAG#v}"
-          [[ -n "$TAG" ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
           herramientas/empaquetar_linux.sh "$VERSION"
 
       - uses: actions/upload-artifact@v4
@@ -125,10 +113,9 @@ jobs:
             dist/Lineage-*-linux-*.AppImage
           if-no-files-found: error
 
-  # La release se publica una vez, con los paquetes de todos los jobs. Si ya existe (Run workflow con `tag`),
-  # se le suman solo los paquetes que no tiene.
+  # La release se publica una vez, con los paquetes de todos los jobs.
   publicar:
-    if: github.ref_type == 'tag' || inputs.tag != ''
+    if: github.ref_type == 'tag'
     needs: [macos, windows, linux]
     runs-on: ubuntu-latest
     steps:
@@ -141,13 +128,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ inputs.tag }}"
-          [[ -n "$TAG" ]] || TAG="$GITHUB_REF_NAME"
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
-            exit 0
-          fi
-          tiene=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
-          for f in paquetes/*; do
-            grep -qxF "$(basename "$f")" <<< "$tiene" || gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY"
-          done
+          gh release create "$GITHUB_REF_NAME" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+
+      # `latest` apunta siempre a la última versión publicada (instalar.sh la descarga). Lo mueve el workflow,
+      # no una persona: un push del GITHUB_TOKEN no dispara otros workflows, y `latest` no coincide con v*.
+      - name: Mover el tag latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true ||
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"

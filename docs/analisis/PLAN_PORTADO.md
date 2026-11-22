@@ -59,7 +59,8 @@ para probar rápido, no para las releases.
   (`linuxdeploy`, con `herramientas/linux/lineage.desktop` y el ícono de 256 px; `datos/` en `usr/bin/`, junto al
   ejecutable) y un `.tar.gz` con `lineage`, `datos/`, `LICENSE.txt` y `herramientas/linux/LEEME.txt` para
   sistemas sin FUSE. SDL3 va estático; el binario pide la glibc de Ubuntu 24.04 (2.39). `release.yml` los
-  publica con el tag, y "Run workflow" con `tag` suma a una release publicada los paquetes que le falten.
+  publica con el tag y mueve `latest` a esa versión. `instalar.sh` (raíz) descarga, compila e instala en Linux,
+  macOS y BSD (BSD sin probar).
   Falta: Flatpak o paquetes .deb/.rpm si se piden, y bajar el requisito de glibc compilando en una distro más vieja.
 
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)

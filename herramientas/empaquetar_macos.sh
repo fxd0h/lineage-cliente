@@ -8,13 +8,15 @@
 # - Firma ad hoc: sin una cuenta de Apple Developer, macOS avisa que no puede verificar al
 #   desarrollador (clic derecho > Abrir la primera vez). Firmar y notarizar queda pendiente.
 # - No incluye recursos del juego: el jugador elige su carpeta al primer arranque (o en Ajustes).
+# - LIN_ARQS="arm64" (o "x86_64") compila solo esa arquitectura; LIN_SOLO_APP=1 deja dist/dmg/Lineage.app sin
+#   armar el .dmg (lo usa instalar.sh).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${1:-0.0.0}"
 BUILD=build/empaquetado
 DIST=dist
 
-cmake --preset release -B "$BUILD" -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+cmake --preset release -B "$BUILD" -DCMAKE_OSX_ARCHITECTURES="${LIN_ARQS:-arm64;x86_64}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
 cmake --build "$BUILD" --target lineage
 python3 tools/generar_iconos.py --icns "$BUILD/iconos" >/dev/null
 
@@ -51,6 +53,10 @@ PLIST
 }
 
 app "Lineage" lineage cl.lineage.cliente lineage
+if [[ "${LIN_SOLO_APP:-}" == 1 ]]; then
+    echo "$DIST/dmg/Lineage.app"
+    exit 0
+fi
 ln -s /Applications "$DIST/dmg/Applications"
 
 hdiutil create -volname "Lineage $VERSION" -srcfolder "$DIST/dmg" -ov -format UDZO "$DIST/Lineage-$VERSION-macos.dmg" >/dev/null

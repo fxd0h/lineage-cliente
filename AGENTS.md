@@ -219,6 +219,12 @@ Mantener la lógica en el archivo propio; en los archivos compartidos, solo los 
   - `git worktree add ../cliente-<tema> -b agente/<tema>`;
   - cada worktree con su propio `build/`.
 - **Commits:** en español, en imperativo y con alcance: `social: contar miembros en la página del clan`.
+- **Versiones:** el PR de una versión agrega su sección arriba de todo en `CHANGES.md` (los PRs mezclados desde el
+  tag anterior). Mezclado, se marca el tag `vX.Y.Z` sobre el commit de merge y se sube: `release.yml` compila,
+  publica la release (macOS, Windows y Linux) y **mueve el tag `latest`** a esa versión. `latest` apunta siempre
+  a la última versión publicada y es lo que descarga `instalar.sh` (el `curl ... | sh` del README): no moverlo a
+  mano ni borrarlo, y no subir tags de versiones viejas después de una nueva (el workflow movería `latest`
+  hacia atrás).
 
 ### Repartir el trabajo
 

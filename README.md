@@ -11,6 +11,23 @@ No game assets are included: you need your own Lineage installation (the folder 
 
 ![Original 2009 UI with HD text, on the l1j-en classic server](docs/capturas/fork_2026-11-17.png)
 
+## Install
+
+On **Linux, macOS or BSD**, one command downloads the latest version, builds it and installs it for your user
+(no root needed, except to install missing build tools, which it asks for first):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/javiercorrea/lineage-cliente/latest/instalar.sh | sh
+```
+
+Run it again to update. It installs `~/.local/bin/lineage` plus a desktop entry on Linux and BSD, and
+`~/Applications/Lineage.app` on macOS. Options (environment variables) are described at the top of
+[instalar.sh](instalar.sh), e.g. `LIN_REF=v0.2.1` for a given version. BSD is untested.
+
+Prebuilt packages (macOS `.dmg`, Windows `.zip`, Linux AppImage and `.tar.gz`) are on the
+[Releases](https://github.com/javiercorrea/lineage-cliente/releases/latest) page. The game itself is not included:
+the first time, the client asks for the folder of your Lineage installation.
+
 ## What the fork does
 
 - **Platforms:** Linux (Ubuntu 24.04, Vulkan with SPIR-V shaders compiled from GLSL) and macOS (Metal, hand-written
