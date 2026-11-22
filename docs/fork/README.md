@@ -29,12 +29,12 @@ client. The front page is the [root README](../../README.md).
 
 ## Conventions
 
-- **Language:** all new code (identifiers, comments), commit messages and documentation are written in
-  **English**. Existing Spanish code is translated gradually, only when it is touched or refactored.
+- **Language:** code comments, identifiers and commit messages are in **Spanish**, as in upstream
+  ([AGENTS.md](../../AGENTS.md)). The README stays in English.
 - **Standard:** C++23 (`CMAKE_CXX_STANDARD 23`). The project builds without exceptions or RTTI, so use
   `std::expected` through `has_value()` / `*`, never `.value()`.
 - **Upstream docs** (`docs/upstream/`, `docs/DESCUBRIMIENTOS.md`, `docs/analisis/`, Spanish) are kept
-  as reference and not edited for fork-specific changes. Fork changes are documented here and in `AGENTS.md`.
+  as reference and not edited for fork-specific changes. Fork changes are documented here.
 - Still in force from upstream: test only against the local servers, never commit game assets, no
   allocations in the frame loop, zero warnings and all tests passing before every commit.
 
