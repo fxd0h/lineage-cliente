@@ -347,7 +347,9 @@ void dibujar_pagina(App& a, int x0, int y0) {
             // Buttons: N.img, and with the pointer over it N+1 only when it is the same size. N+1 is
             // not always the highlighted variant (for "back" it is an unrelated elf sprite).
             const RegionAtlas base = g.img(el.imagen);  // copy: loading N+1 may move the cache
-            const RegionAtlas hover = encima ? g.img(el.imagen + 1) : base;
+            // Original UI: the exe draws the <img> src picture only, hovered or not (0x4360f0 -> blit 0x4991e0 with
+            // [img + 0x18]; no N+1, no highlight). The same-size N+1 guess belongs to the simple UI.
+            const RegionAtlas hover = (encima && simple) ? g.img(el.imagen + 1) : base;
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
             RegionAtlas r = use_hover ? hover : base;
             const int cut_top = std::max(0, view_top - y), cut_bottom = simple ? 0 : std::max(0, y + el.h - view_bottom);
