@@ -145,7 +145,7 @@ struct AccionVisible {
     u64 inicio = 0;
     bool puntual = false;  // al terminar se vuelve a caminar/quieto
     bool bucle = true;
-    u32 ritmo_num = 1, ritmo_den = 1;  // escala del tiempo transcurrido (los largos de cuadro se dividen por num / den)
+    u8 accion = 0;  // action id drawn (with the weapon), for its frame factors (ritmo_accion)
 };
 AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     const TablaObjetos& o = a.mundo.objetos;
@@ -181,8 +181,6 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         // Solo el ataque y el daño suman la postura del arma; todo otro id de acción es absoluto (SetAction 0x4c96c0): un hechizo
         // (18, 19) o un gesto no debe volverse la fila de otra arma.
         if (base != ACC_ATACAR && base != ACC_DANADO) arma = 0;
-        // Un daño por el golpe de un paquete de ataque se reproduce a la mitad de largo ([+0x11d], 0x4cda90).
-        if (base == ACC_DANADO && o.col<O_DANO_RAPIDO>()[s]) v.ritmo_num *= 2;
     } else if (caminando(a.mundo, s, ahora)) {
         base = ACC_CAMINAR;
         v.inicio = o.col<O_TMOV>()[s];
@@ -195,6 +193,7 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         base = ACC_QUIETO;
     }
     v.rango = a.sprites.accion(gfx, static_cast<u8>(base + arma));
+    v.accion = v.rango ? static_cast<u8>(base + arma) : base;
     // El byte de estado de un monstruo (S_NPCPack) es la acción en la que reposa: el exe la guarda como acción actual
     // y, cuando estado + 3 (quieto) no tiene tabla, sigue mostrando la primera entrada de esa acción (la pose oculta, p. ej.
     // Antharas 20, no muerto hundido 13). Sin esto un monstruo hundido dibujaba la pose quieta de pie.
@@ -813,14 +812,12 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (r) {
             bool termino = false;
             bool camina = !acc.puntual && acc.bucle && caminando(a.mundo, s, ahora);
-            // Modificadores del largo de cuadro de 0x4cda90 (no en la caminata, que sigue el tiempo del paso): haste x3/4, slow x2, y el
-            // daño de media duración de un golpe de ataque.
+            // Frame length factors of 0x4cda90 (not on a walk, which follows the step time): haste, slow, brave, wafer, third
+            // accelerator, Triple Arrow, the half-length damage of a hit and the catch-up of a queue (ritmo_accion).
             u64 transcurrido = ahora - acc.inicio;
             if (!camina) {
-                u32 num = acc.ritmo_num, den = acc.ritmo_den;
-                if (o.col<O_VEL>()[s] == 1) num *= 4, den *= 3;
-                else if (o.col<O_VEL>()[s] == 2) den *= 2;
-                transcurrido = transcurrido * num / den;
+                const Ritmo rt = ritmo_accion(a.mundo, s, acc.accion);
+                transcurrido = transcurrido * rt.den / rt.num;
             }
             const FrameAccion* f =
                 &a.sprites.frame_en(*r, transcurrido, termino, camina ? o.col<O_DURMOV>()[s] : 0, acc.bucle);

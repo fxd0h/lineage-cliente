@@ -19,6 +19,14 @@
 
 namespace lin {
 
+// Busy queue of an object (exe 0x4cb080 / 0x4cb8a0 IsBusy): S_MoveCharPacket, S_DoActionGFX and S_AttackPacket that arrive
+// while the object is still playing an action or a step wait here and run when it ends.
+constexpr u32 MAX_COLA = 8;
+struct ColaObjeto {
+    u8 n = 0;
+    Evento e[MAX_COLA];
+};
+
 // Columnas de la tabla de objetos (personajes, NPCs, monstruos, puertas...).
 enum ColObjeto : size_t {
     O_X, O_Y,            // celda actual (destino si se está moviendo)
@@ -39,9 +47,13 @@ enum ColObjeto : size_t {
     O_ROSA,              // nombre rosa (S_PinkName: atacó a otro jugador) hasta este momento (ms)
     O_ZANCADA,           // step parity: sprites with list.spz attribute 111 (stride) alternate walk actions 0 and 4
     O_DANO_RAPIDO,       // 1: esta acción de daño vino del golpe de un paquete de ataque, se reproduce a la mitad de largo (exe [+0x11d])
+    O_BRAVE,             // brave state (exe [+0x25]): S_CharPack status >> 4 & 7, or the S_SkillBrave type
+    O_TERCERA,           // third accelerator (exe [+0x127]): S_CharPack speed 8 or S_Liquor 8
+    O_RAFAGA,            // fast attacks left (exe [+0x120]): Triple Arrow 4, Foe Slayer 3; -1 at each attack
+    O_COLA,              // actions, attacks and steps waiting for the current one to end (exe busy queue)
 };
 using TablaObjetos = TablaSoa<u16, u16, double, double, u64, u16, u8, u16, u8, u8, u64, u8, u8, u8, u8, u32, u32, i16, u32,
-                              TextoRef, TextoRef, u8, u8, u64, u8, u8>;
+                              TextoRef, TextoRef, u8, u8, u64, u8, u8, u8, u8, u8, ColaObjeto>;
 
 // Efecto con duración sobre el propio personaje (módulo "Buffs" del plan): haste, brave, escudos...
 // Clase EA_* y tipo según el paquete que lo informó (ver ICONO_EFECTO y VELOCIDAD en eventos.h).
@@ -297,5 +309,17 @@ bool caminando(const Mundo& m, Slot s, u64 ahora);
 // Duración de un paso: la animación de caminar del sprite (con el arma), como el servidor
 // (spr_actions); × 3/4 rápido (haste), × 4/3 lento.
 u16 duracion_paso(const Mundo& m, GfxId gfx, u8 arma, u8 velocidad);
+// Frame length factor of a non-walk action (exe 0x4cda90): frames last num / den of their table length. `accion` is the action
+// id with the weapon already added.
+struct Ritmo {
+    u32 num = 1, den = 1;
+};
+Ritmo ritmo_accion(const Mundo& m, Slot s, u8 accion);
+// Action id with the weapon stance, as drawn (only attack and damage add it, SetAction 0x4c96c0).
+u8 accion_con_arma(const Mundo& m, Slot s, u8 base);
+// True while the object plays an action or a step, or has queued ones (exe IsBusy 0x4cb8a0).
+bool ocupado(const Mundo& m, Slot s, u64 ahora);
+// Starts queued actions of objects that are no longer busy. Call once per frame, after aplicar_eventos.
+void avanzar_colas(Mundo& m, u64 ahora);
 
 }  // namespace lin

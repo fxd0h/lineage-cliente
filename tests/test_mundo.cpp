@@ -89,7 +89,7 @@ TEST_CASE("Mundo: el paso dura lo que la animación de caminar del sprite") {
     CHECK(m.objetos.col<O_DURMOV>()[s] == 1440);
 }
 
-TEST_CASE("Mundo: un movimiento que llega antes de terminar el paso sigue desde donde se ve") {
+TEST_CASE("Mundo: a step that arrives mid-step waits in the queue and starts where the current one ends") {
     Mundo m;
     Evento ev[] = {poner(7, 10, 10, "Orco")};
     aplicar_eventos(m, ev, 0);
@@ -106,19 +106,56 @@ TEST_CASE("Mundo: un movimiento que llega antes de terminar el paso sigue desde 
     double x0, y0;
     posicion_interpolada(m, s, medio, x0, y0);
     CHECK(x0 == doctest::Approx(10.5));
-    // Llega el siguiente a mitad del paso: la posición en ese instante no salta.
+    // The next one arrives mid-step: the exe queues it (busy object), the current step is not cut.
     mov.v[0] = 12;
     Evento lote2[] = {mov};
     aplicar_eventos(m, lote2, medio);
+    CHECK(ocupado(m, s, medio));
+    avanzar_colas(m, medio);
     double x1, y1;
     posicion_interpolada(m, s, medio, x1, y1);
     CHECK(x1 == doctest::Approx(x0));
-    posicion_interpolada(m, s, medio + DURACION_PASO_MS, x1, y1);
+    // A few ms after the first step ends the queued one starts at that end, with no pause.
+    const u64 fin = 1000 + DURACION_PASO_MS;
+    avanzar_colas(m, fin + 5);
+    CHECK(m.objetos.col<O_X>()[s] == 12);
+    CHECK(m.objetos.col<O_TMOV>()[s] == fin);
+    posicion_interpolada(m, s, fin + DURACION_PASO_MS, x1, y1);
     CHECK(x1 == doctest::Approx(12.0));
     // La animación de caminar sigue un cuarto de paso más (el próximo paquete suele llegar tarde).
-    CHECK(caminando(m, s, medio + DURACION_PASO_MS + DURACION_PASO_MS / 8));
-    CHECK_FALSE(moviendose(m, s, medio + DURACION_PASO_MS + DURACION_PASO_MS / 8));
-    CHECK_FALSE(caminando(m, s, medio + DURACION_PASO_MS * 2));
+    CHECK(caminando(m, s, fin + DURACION_PASO_MS + DURACION_PASO_MS / 8));
+    CHECK_FALSE(moviendose(m, s, fin + DURACION_PASO_MS + DURACION_PASO_MS / 8));
+    CHECK_FALSE(caminando(m, s, fin + DURACION_PASO_MS * 2));
+}
+
+TEST_CASE("Mundo: frame factors of 0x4cda90 (haste, brave, wafer, Triple Arrow)") {
+    Mundo m;
+    Evento ev[] = {poner(7, 10, 10, "Orco")};
+    aplicar_eventos(m, ev, 0);
+    const Slot s = m.objetos.buscar(7);
+    auto f = [&](u8 accion) {
+        const Ritmo r = ritmo_accion(m, s, accion);
+        return static_cast<double>(r.num) / r.den;
+    };
+    CHECK(f(1) == doctest::Approx(1.0));
+    m.objetos.col<O_VEL>()[s] = 1;
+    CHECK(f(1) == doctest::Approx(0.75));
+    m.objetos.col<O_VEL>()[s] = 0;
+    m.objetos.col<O_BRAVE>()[s] = 3;
+    CHECK(f(1) == doctest::Approx(0.875));
+    m.objetos.col<O_BRAVE>()[s] = 4;  // Holy Walk: steps only
+    CHECK(f(1) == doctest::Approx(1.0));
+    m.objetos.col<O_BRAVE>()[s] = 0;
+    // Triple Arrow: 4 on the effect, one spent per attack, a third of the length on the bow attack row (21).
+    Evento efecto{};
+    efecto.tipo = Ev::EFECTO;
+    efecto.id = 7;
+    efecto.v[EF_GFX] = 4394;
+    Evento lote[] = {efecto};
+    aplicar_eventos(m, lote, 100);
+    CHECK(m.objetos.col<O_RAFAGA>()[s] == 4);
+    CHECK(f(21) == doctest::Approx(1.0 / 3));
+    CHECK(f(1) == doctest::Approx(1.0));
 }
 
 TEST_CASE("Mundo: el sprite se dibuja desde la celda de origen y el frame aporta el avance") {

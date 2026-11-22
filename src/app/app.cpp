@@ -401,7 +401,8 @@ void procesar_red(App& a) {
             empujar_texto_combate(a, "Miss", 230, 230, 230);
     }
     a.mundo.jugador.clase = clase_personaje(a);
-aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    avanzar_colas(a.mundo, a.entrada.ahora_ms);
     a.red.en_juego(a.mundo.en_juego && a.pantalla == Pantalla::JUEGO);  // el keepalive lo manda el hilo de red
     if (a.cfg.texto_dano && a.mundo.jugador.hp_max > 0 && a.mundo.jugador.hp < a.hp_anterior) {
         char t[12];
