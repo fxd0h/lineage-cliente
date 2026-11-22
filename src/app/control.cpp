@@ -453,14 +453,14 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         eventos_cocina(a, ev);
         if (p.size() > 2) a.cocina.pan = static_cast<ObjId>(std::atoi(p[2].c_str()));
     } else if (cmd == "debug-correo") {  // depuración: una carta de <nombre> en la bandeja, mostrada en la ventana de lectura
-        Correo& c = a.correo;
-        c.abierto = true;
-        c.escribiendo = false;
-        c.bandeja = 0;
-        c.cartas.clear();
-        c.cartas.push_back({7, 1700000000u, false, false, p.size() > 1 ? p[1] : "Sender", "Test subject"});
-        c.leyendo = 7;
-        c.texto = "Body of the letter. Second sentence to check the wrapping inside the paper edit area of the window.";
+        Correo& co = a.correo;
+        co.abierto = true;
+        co.escribiendo = false;
+        co.bandeja = 0;
+        co.cartas.clear();
+        co.cartas.push_back({7, 1700000000u, false, false, p.size() > 1 ? p[1] : "Sender", "Test subject"});
+        co.leyendo = 7;
+        co.texto = "Body of the letter. Second sentence to check the wrapping inside the paper edit area of the window.";
     } else if (cmd == "debug-tienda") {  // depuración: una lista de compra de NPC con 3 objetos con bytes de propiedades, como S_ShopSellList
         Evento ev{};
         ev.tipo = Ev::LISTA_TIENDA;
