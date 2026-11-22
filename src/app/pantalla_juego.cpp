@@ -660,6 +660,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
         GfxId gfx = o.col<O_GFX>()[s];
+        if (const char* tg = std::getenv("LIN_TEST_GFX"); tg && !propio) { gfx = static_cast<GfxId>(std::atoi(tg)); o.col<O_GFX>()[s] = gfx; }  // TEMP-DEBUG
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
         float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
@@ -1870,10 +1871,26 @@ void dibujar_chat(App& a) {
             t.remove_prefix(c);
             while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
         }
+        // \fX colour codes (and the hidden \b \i \k \j \c codes) are parsed as the exe's text draw does (0x4334f0):
+        // the colour carries over to the wrapped rows that follow.
+        const bool doble = !es_utf8(l.texto, l.largo);
+        u32 color_fila[8];
+        u32 color = l.color;
+        for (int p = 0; p < k; ++p) {
+            color_fila[p] = color;
+            recorrer_codigos(partes[p], color, doble, [&](std::string_view, u32 c) { color = c; });
+            // A code at the very end of a row still changes the colour of the next one.
+            for (size_t j = 0; j + 2 < partes[p].size(); ++j)
+                if (partes[p][j] == '\\' && partes[p][j + 1] == 'f' && j + 3 == partes[p].size() && es_codigo_color(partes[p][j + 2]))
+                    color = color_codigo(partes[p][j + 2], l.color);
+        }
         for (int p = k - 1; p >= 0 && fila >= 0; --p, --fila) {
             const bool icono = p == 0 && l.dir >= 0;
             if (icono) g.gpu().dibujar(g.img(605 + static_cast<u32>(l.dir)), ac.x, ac.y + fila * pitch, kt);
-            g.texto_sombra(partes[p], ac.x + (icono ? 12 : 0), ac.y + fila * pitch, kt, l.color);
+            float x = static_cast<float>(ac.x + (icono ? 12 : 0));
+            recorrer_codigos(partes[p], color_fila[p], doble, [&](std::string_view tramo, u32 c) {
+                x += g.texto_sombra(tramo, x, static_cast<float>(ac.y + fila * pitch), kt, c);
+            });
             visibles[fila] = partes[p];
         }
     }

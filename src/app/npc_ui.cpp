@@ -331,14 +331,15 @@ void dibujar_pagina(App& a, int x0, int y0) {
     }
     for (const ElementoHtml& el : p.elementos) {
         const int x = ox + el.x, y = oy + el.y;
-        // Clip to the page rect (the original intersects the draw rect with the page rect, 0x4367e5..0x436816): an element
-        // outside is skipped, an image that straddles an edge is cropped, a text run must fit whole (no scissor in the GPU).
+        // Clip to the page rect: in the original UI an element must fit whole (0x4367e5..0x436816, images 0x4360f0).
         const int view_top = y0 + top, view_bottom = view_top + view_h;
         const int text_h = orig_text ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO;
         const int el_h = el.tipo == ElementoHtml::Tipo::IMAGEN ? el.h : text_h;
         if (simple) {  // fork window: first-line test, a taller button is not lost
             if (y < view_top - 2 || y + text_h > view_bottom + 2) continue;
-        } else if (y + el_h <= view_top || y >= view_bottom || (el.tipo == ElementoHtml::Tipo::TEXTO && (y < view_top || y + el_h > view_bottom))) {
+        } else if (y < view_top || y + el_h > view_bottom) {
+            // Original: text runs and <img> pictures (the back button 331 is one) are drawn only when they fit whole
+            // inside the page rect; an image straddling an edge is skipped, not cropped (0x4361b9..0x436240).
             continue;
         }
         const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2) && (simple || (e.my >= view_top && e.my < view_bottom));
@@ -352,7 +353,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
             const RegionAtlas hover = (encima && simple) ? g.img(el.imagen + 1) : base;
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
             RegionAtlas r = use_hover ? hover : base;
-            const int cut_top = std::max(0, view_top - y), cut_bottom = simple ? 0 : std::max(0, y + el.h - view_bottom);
+            const int cut_top = simple ? std::max(0, view_top - y) : 0, cut_bottom = 0;  // simple UI only: the original never crops
             if (cut_top || cut_bottom) {  // crop the region (texel rect; w/h/oy are logical)
                 const int sc = static_cast<int>(r.escala_texel());
                 r.y = static_cast<u16>(r.y + cut_top * sc);
