@@ -442,10 +442,41 @@ void dibujar_titulo(Graficos& g, std::string_view t, float x, float y, u64 clave
 
 // Lo último que dijo el objeto, sobre su nombre (hasta 3 filas centradas). Se quita el
 // "Nombre: " / "<Nombre> " que agrega el servidor porque el nombre ya está debajo.
-void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false, GloboChat* gl = nullptr, float foot_y = 0) {
+// Private shop message (0x4ce3b0): at most 80 bytes; byte 0xff ends a line and starts the next, line 0 is cut at 40 bytes
+// without one, and only two lines are kept.
+void lineas_cartel_tienda(std::string_view t, std::string_view (&lineas)[2]) {
+    t = t.substr(0, std::min<size_t>(t.size(), 80));
+    const size_t ff = t.find('\xff');
+    const size_t fin0 = std::min(ff, std::min<size_t>(t.size(), 40));
+    lineas[0] = t.substr(0, fin0);
+    std::string_view resto = t.substr(fin0 == ff ? fin0 + 1 : fin0);
+    lineas[1] = resto.substr(0, std::min(resto.find('\xff'), std::min<size_t>(resto.size(), 40)));
+}
+
+// Bubble text filter of the original (0x41a9f0, called once by 0x41a600): \f and \b with '0'..'d' and \i with '0'..'5' are
+// dropped (3 bytes); any other backslash is copied as is, so "\\f0f2..." keeps "\f2..." for the code-aware draw.
+std::string_view filtrar_globo(std::string_view t, char* buf, size_t cap) {
+    size_t n = 0;
+    for (size_t i = 0; i < t.size() && n < cap; ++i) {
+        if (t[i] == '\\' && i + 2 < t.size()) {
+            const char c = t[i + 1], x = t[i + 2];
+            if (((c == 'f' || c == 'b') && es_codigo_color(x)) || (c == 'i' && x >= '0' && x <= '5')) {
+                i += 2;
+                continue;
+            }
+        }
+        buf[n++] = t[i];
+    }
+    return {buf, n};
+}
+
+void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, bool original = false, GloboChat* gl = nullptr, float foot_y = 0,
+                   bool quitar_nombre = true) {
     if (t.empty()) return;
+    char filtrado[256];
+    if (original) t = filtrar_globo(t, filtrado, sizeof filtrado);
     size_t corte = std::min(t.find(": "), t.find("> "));
-    if (corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
+    if (quitar_nombre && corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
     // Original client (S_Say -> 0x41a600): plain 20 chars (6 px each) per line, boxed 16; 12 px pitch.
     const bool caja = a.cfg.globos_comic || (a.cfg.opciones_orig >> OPC_BUBBLE & 1);
     const int ANCHO = original ? (caja ? 96 : 120) : 160;
@@ -531,8 +562,16 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         // 0x4334f0 per line: every line starts at the same x (flush left in the rect), 12 px pitch, 1 px black outline, the bubble colour.
         const float tx = static_cast<float>(rx0 + (caja ? 5 : 0));
         const float ty = static_cast<float>(ry0 + (caja ? 5 : 0) + (volteado ? (caja ? 4 : 6) : 0));
-        for (int i = 0; i < n; ++i)
-            a.g->texto_contorno(filas[i], tx, ty + 12.0f * static_cast<float>(i), clave_orden(CAPA_EFECTOS, 2), color_txt);
+        // Code-aware like 0x4334f0: a \fX that survived the filter colours the rest of the bubble.
+        const bool doble = !es_utf8(t.data(), t.size());
+        u32 color_fila = color_txt;
+        for (int i = 0; i < n; ++i) {
+            float x = tx;
+            recorrer_codigos(filas[i], color_fila, doble, [&](std::string_view tramo, u32 c) {
+                x += a.g->texto_contorno(tramo, x, ty + 12.0f * static_cast<float>(i), clave_orden(CAPA_EFECTOS, 2), c);
+                color_fila = c;
+            });
+        }
         if (!caja) {
             // Speech pointer (0x419aeb / 0x419b7f): a black 9 x 5 triangle with the 7 x 4 bubble-coloured one on it, under the text
             // (pointing down), or above it (pointing up) when the bubble was pushed under the sprite. 1 bit per pixel, MSB first.
@@ -933,7 +972,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                     x += g.texto_nombre(t, x, nombre_y, clave_orden(CAPA_EFECTOS, 0), c, contorno_nivel);
                 });
             }
-            if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {  // título de la tienda
+            if (const Vendedor* v = vendedor(a, o.ids()[s]); a.cfg.ui_simple && v && !v->titulo.empty()) {  // título de la tienda
                 dibujar_titulo(g, v->titulo, ex + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
             }
             // Marcado con True Target: la marca y su mensaje encima del nombre.
@@ -967,9 +1006,20 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (em.valida()) g.gpu().dibujar_en(em, ex - 32, ay - 86, clave_orden(CAPA_EFECTOS, 0));
         }
         if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
-        else  // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
-            dibujar_globo(a, a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), ex + 24, top_sprite - 2, true,
-                          a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), pie);
+        else if (const std::string_view dicho = a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000); !dicho.empty())
+            // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
+            dibujar_globo(a, dicho, ex + 24, top_sprite - 2, true, a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), pie);
+        else if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {
+            // Private shop sign (0x487140 -> 0x4ce3b0, 0x41a400): up to two lines, shown as a bubble only over the own character
+            // or in the market maps 340 / 350 / 360 / 370, flipping line every 5 s (an empty second line is skipped).
+            const MapId m = a.mundo.mapa;
+            if (soy_yo || m == 340 || m == 350 || m == 360 || m == 370) {
+                std::string_view lineas[2];
+                lineas_cartel_tienda(v->titulo, lineas);
+                const std::string_view linea = !lineas[1].empty() && (ahora / 5000) % 2 ? lineas[1] : lineas[0];
+                dibujar_globo(a, linea, ex + 24, top_sprite - 2, true, nullptr, pie, false);
+            }
+        }
         g.gpu().sin_zoom_mundo(false);
     }
 }
