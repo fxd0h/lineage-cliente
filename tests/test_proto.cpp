@@ -1237,3 +1237,33 @@ TEST_CASE("Fishing: S_Fishing, S_PacketBox 55 and C_FishClick") {
     tabla_opcodes("s3ep1", us);
     CHECK(cmd::click_pesca(us, false).cuerpo()[0] == 125);
 }
+
+TEST_CASE("Big5 (tw380): ida y vuelta, y el byte 0xFF no se sale de la tabla") {
+    std::string u;
+    big5_a_utf8("\xB4\xFA\xB8\xD5 ok", u);  // 測試 ok
+    CHECK(u == "\xE6\xB8\xAC\xE8\xA9\xA6 ok");
+    std::vector<u8> b;
+    utf8_a_big5(u, b);
+    CHECK(std::string(b.begin(), b.end()) == "\xB4\xFA\xB8\xD5 ok");
+    big5_a_utf8("\xFE\xFF", u);  // segundo byte fuera de 0x40..0xFE: no es un carácter
+    CHECK(u == "??");
+    b.clear();
+    utf8_a_big5("\xF0\x9F\x98\x80", b);  // sin código Big5
+    CHECK(std::string(b.begin(), b.end()) == "?");
+}
+
+TEST_CASE("Escritor: en tw380 las cadenas salen en Big5") {
+    TablaOpcodes tw, jp;
+    REQUIRE(tabla_opcodes("tw380", tw));
+    REQUIRE(tabla_opcodes("jp363", jp));
+    Escritor e(tw, Cli::WHO);
+    e.s("\xE6\xB8\xAC\xE8\xA9\xA6");  // 測試
+    Bytes cuerpo = e.cuerpo();
+    REQUIRE(cuerpo.size() >= 6);
+    CHECK(cuerpo[1] == 0xB4);
+    CHECK(cuerpo[2] == 0xFA);
+    CHECK(cuerpo[5] == 0);
+    Escritor j(jp, Cli::WHO);
+    j.s("abc");
+    CHECK(j.cuerpo()[1] == 'a');
+}

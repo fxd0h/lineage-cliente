@@ -5,16 +5,23 @@
 #include <string_view>
 #include <vector>
 #include "proto/opcodes.h"
+#include "recursos/big5.h"
 
 namespace lin {
 
 class Escritor {
 public:
-    Escritor(const TablaOpcodes& t, Cli op) { buf_.push_back(t.cli(op)); }
+    Escritor(const TablaOpcodes& t, Cli op) : big5_(t.perfil.texto_big5) { buf_.push_back(t.cli(op)); }
     Escritor& c(u8 v) { buf_.push_back(v); return *this; }
     Escritor& h(u16 v) { c(static_cast<u8>(v)); return c(static_cast<u8>(v >> 8)); }
     Escritor& d(u32 v) { h(static_cast<u16>(v)); return h(static_cast<u16>(v >> 16)); }
+    // Cadena terminada en \0. Con el servidor 3.80C de Taiwán el texto va en Big5: lo que llegó se pasó a UTF-8
+    // al leerlo (decodificar.cpp), así que vuelve a Big5 al mandarlo (nombres en susurros, intercambio, clan...).
     Escritor& s(std::string_view t) {
+        if (big5_) {
+            utf8_a_big5(t, buf_);
+            return c(0);
+        }
         buf_.insert(buf_.end(), t.begin(), t.end());
         return c(0);
     }
@@ -26,6 +33,7 @@ public:
 
 private:
     std::vector<u8> buf_;
+    bool big5_ = false;
 };
 
 // Tipos de C_Result: 0 comprar (ítem = índice en la lista de la tienda), 1 vender, 2 guardar en el

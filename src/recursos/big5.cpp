@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <iterator>
+#include <utility>
 #include "recursos/big5.h"
 #include "core/tipos.h"
 
@@ -33,6 +36,42 @@ void big5_a_utf8(std::string_view e, std::string& salida) {
             }
         }
         salida += '?';
+    }
+}
+
+void utf8_a_big5(std::string_view e, std::vector<u8>& salida) {
+    // Tabla inversa (código Unicode -> Big5), ordenada, armada una vez.
+    static const std::vector<std::pair<u16, u16>> inversa = [] {
+        std::vector<std::pair<u16, u16>> v;
+        for (size_t i = 0; i < std::size(TABLA); ++i)
+            if (TABLA[i]) v.emplace_back(TABLA[i], static_cast<u16>(((0x81 + i / ANCHO_FILA) << 8) | (0x40 + i % ANCHO_FILA)));
+        std::sort(v.begin(), v.end());
+        return v;
+    }();
+    for (size_t i = 0; i < e.size();) {
+        const u8 c = static_cast<u8>(e[i]);
+        if (c < 0x80) {
+            salida.push_back(c);
+            ++i;
+            continue;
+        }
+        const size_t largo = (c >> 5) == 6 ? 2 : (c >> 4) == 14 ? 3 : (c >> 3) == 30 ? 4 : 1;
+        u32 cp = largo == 2 ? (c & 0x1Fu) : largo == 3 ? (c & 0x0Fu) : (c & 0x07u);
+        bool ok = largo > 1 && i + largo <= e.size();
+        for (size_t k = 1; ok && k < largo; ++k) {
+            const u8 b = static_cast<u8>(e[i + k]);
+            ok = (b & 0xC0) == 0x80;
+            cp = (cp << 6) | (b & 0x3Fu);
+        }
+        i += ok ? largo : 1;
+        const auto it = ok && cp <= 0xFFFF ? std::lower_bound(inversa.begin(), inversa.end(), std::pair<u16, u16>{static_cast<u16>(cp), 0})
+                                           : inversa.end();
+        if (it != inversa.end() && it->first == cp) {
+            salida.push_back(static_cast<u8>(it->second >> 8));
+            salida.push_back(static_cast<u8>(it->second));
+        } else {
+            salida.push_back('?');
+        }
     }
 }
 
