@@ -150,7 +150,7 @@ void confirmar_prompt(App& a, std::string_view texto) {
     const std::string accion = a.chat_prompt.accion;
     const PromptChat p = a.chat_prompt;
     cancelar_prompt(a);
-    if (accion == "soltar" || accion == "dar") {  // like pick up: empty = the whole stack, 0 or more than it = nothing
+    if (accion == "soltar" || accion == "dar" || accion == "ofrecer") {  // like pick up: empty = the whole stack, 0 or more than it = nothing
         u32 n = p.maximo;
         if (!texto.empty()) {
             long v = 0;
@@ -158,7 +158,10 @@ void confirmar_prompt(App& a, std::string_view texto) {
             n = v > 0 ? static_cast<u32>(v) : 0;
         }
         if (n == 0 || n > p.maximo) return;
-        if (accion == "soltar") {
+        if (accion == "ofrecer") {
+            if (a.intercambio.abierto && !a.intercambio.ok && a.mundo.inventario.items.buscar(p.id) != SIN_SLOT)
+                enviar(a, cmd::ofrecer_item(a.op, p.id, n));
+        } else if (accion == "soltar") {
             const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
             if (yo != SIN_SLOT && a.mundo.inventario.items.buscar(p.id) != SIN_SLOT)
                 enviar(a, cmd::soltar(a.op, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo], p.id, n));
@@ -546,7 +549,16 @@ void ofrecer_en_intercambio(App& a, ObjId item) {
     if (!a.intercambio.abierto || a.intercambio.ok) return;
     Slot s = a.mundo.inventario.items.buscar(item);
     if (s == SIN_SLOT) return;
-    enviar(a, cmd::ofrecer_item(a.op, item, a.mundo.inventario.items.col<I_CANTIDAD>()[s]));
+    const u32 n = a.mundo.inventario.items.col<I_CANTIDAD>()[s];
+    // Original (drag release 0x448230 -> 0x4477b0): a stack of more than one asks how many in the chat line, with the give
+    // prompt (string 140); the callback 0x4472b0 takes empty = all, 0 or more than the stack = nothing.
+    if (!a.cfg.ui_simple && n > 1) {
+        if (a.chat_prompt.activo) return;
+        abrir_prompt(a, texto_con_maximo(a, 140, n), "ofrecer");
+        a.chat_prompt.id = item, a.chat_prompt.maximo = n;
+        return;
+    }
+    enviar(a, cmd::ofrecer_item(a.op, item, n));
 }
 
 bool comando_social(App& a, std::string_view linea) {

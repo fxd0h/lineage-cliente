@@ -2439,6 +2439,7 @@ void frame_juego(App& a) {
     procesar_item_apuntado(a);
     procesar_gm_apuntado(a, ahora);
     procesar_mascotas(a);
+    teclas_lista_tienda(a);  // before the hotbar and the chat line take the digits
     procesar_barra(a);
     if (a.cfg.ui_simple) {  // auto-buff and auto-potion macros: simple UI only
         procesar_autopocion(a);  // before the auto-buffs: if both are due, heal first

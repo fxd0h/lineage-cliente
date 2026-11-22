@@ -106,6 +106,7 @@ void cerrar(App& a) {
     a.tienda = TipoTienda::NINGUNA;
     a.tienda_filas.clear();
     a.tienda_marcada = a.tienda_flecha = -1;
+    a.tienda_digitos = 0;
 }
 
 }  // namespace
@@ -128,6 +129,7 @@ void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
     a.tienda = tipo;
     a.tienda_tipo = window_type ? window_type : TYPES[static_cast<int>(tipo)];
     a.tienda_marcada = a.tienda_flecha = -1;
+    a.tienda_digitos = 0;
     a.tienda_npc = npc;
     a.tienda_filas.clear();
     a.tienda_desplazamiento = 0;
@@ -617,6 +619,7 @@ void draw_list_original(App& a, int x0, int y0) {
             g.gpu().dibujar(g.img(IMG_COIN), price_x - 13, ay, kc);
         }
         // Pointer: the icon column shows the tooltip; an arrow press starts a held arrow; the row press marks it.
+        if (over_row && (e.pulsado || e.clic)) a.tienda_digitos = 0;  // a mouse event in the pane clears the typed amount (0x4be177)
         if (over_row && e.pulsado) a.tienda_marcada = idx;
         if (e.pulsado && over_left) a.tienda_flecha = idx * 2;
         if (e.pulsado && over_right) a.tienda_flecha = idx * 2 + 1;
@@ -665,6 +668,49 @@ void draw_list_original(App& a, int x0, int y0) {
     if (button(LIST_BTN_X, confirm_image)) confirmar(a);
     else if (button(LIST_CANCEL_X, IMG_CANCEL)) cerrar(a);
 }
+
+}  // namespace
+
+// Keys of the list pane (0x4be860, reached through the window's slot 10 at 0x4bf630): with a marked row, digits build the
+// amount (acc * 10 + d) and Backspace drops the last one (acc / 10); Enter is swallowed. The amount saturates at the row
+// limit: the stack size, else the list cap (1000 when buying), the smaller of both, and 10 for a buy row priced 1 000 000
+// or more (0x4be8cb..0x4be937). The digits do not reach the hotbar nor the chat line.
+void teclas_lista_tienda(App& a) {
+    if (a.cfg.ui_simple || a.tienda == TipoTienda::NINGUNA || a.tienda_marcada < 0 ||
+        a.tienda_marcada >= static_cast<int>(a.tienda_filas.size()) || a.cantidad.abierto)
+        return;
+    EntradaFrame& e = a.entrada;
+    FilaTienda& f = a.tienda_filas[static_cast<size_t>(a.tienda_marcada)];
+    const bool buying = a.tienda == TipoTienda::COMPRA;
+    const u32 stack = buying ? 0u : f.maximo, cap = buying ? 1000u : 0u;
+    u32 limite = stack ? (cap ? std::min(stack, cap) : stack) : cap;
+    if (buying && f.precio >= 1000000 && limite > 10) limite = 10;
+    bool cambio = false;
+    int w = 0;
+    for (int i = 0; i < e.ntexto; ++i) {
+        const char c = e.texto[i];
+        if (c >= '0' && c <= '9') {
+            a.tienda_digitos = a.tienda_digitos * 10 + static_cast<u32>(c - '0');
+            if (limite && a.tienda_digitos > limite) a.tienda_digitos = limite;
+            if (a.tienda_digitos > 99999999u) a.tienda_digitos = 99999999u;
+            cambio = true;
+        } else {
+            e.texto[w++] = c;
+        }
+    }
+    e.ntexto = w;
+    e.texto[w] = 0;
+    if (e.retroceso) {
+        a.tienda_digitos /= 10;
+        e.retroceso = false;
+        cambio = true;
+    }
+    if (e.enter) e.enter = false;
+    e.numero = 0;
+    if (cambio) f.elegido = a.tienda_digitos;
+}
+
+namespace {
 
 void dibujar_tienda(App& a, int x0, int y0) {
     if (!a.cfg.ui_simple) return draw_list_original(a, x0, y0);

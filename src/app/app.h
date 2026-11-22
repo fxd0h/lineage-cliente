@@ -497,6 +497,7 @@ struct App {
     u32 tienda_desplazamiento = 0;
     u8 tienda_tipo = 0;       // original list window type (S3EP1U 0x4d1000): 0 buy, 1 sell, 2/3 warehouse, 4/5 clan, 8/9 elf, ...
     int tienda_marcada = -1;  // row marked by a click (image 536)
+    u32 tienda_digitos = 0;   // amount typed on the marked row (pane +0x98), reset by any click in the list
     int tienda_flecha = -1;   // quantity arrow held down: row * 2 + (1 = increase), -1 none
     bool hablar_objetivo = false;  // a.objetivo es un NPC al que se camina para hablarle
     bool objetivo_fijo = false;    // elegido al apretar el botón: se mantiene aunque el puntero ya no esté encima
@@ -864,6 +865,8 @@ bool sobre_forma(const App& a);
 // Tipo de gfx del objeto (TipoGfx); un gfx que no está en la tabla de sprites cuenta como monstruo.
 u8 tipo_objeto(const App& a, Slot s);
 u8 clase_objeto(const App& a, Slot s);  // original client object class (0x4cdd30)
+// Original NPC list: digits / Backspace typed into the marked row's amount (0x4be860); call before the hotbar and chat.
+void teclas_lista_tienda(App& a);
 bool es_npc(const App& a, Slot s);
 // Encola un texto de combate (daño/"Miss") sobre el personaje; descarta el más viejo si no entra.
 void empujar_texto_combate(App& a, const char* t, u8 r, u8 g, u8 b);
