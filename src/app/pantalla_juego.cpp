@@ -660,7 +660,6 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
         GfxId gfx = o.col<O_GFX>()[s];
-        if (const char* tg = std::getenv("LIN_TEST_GFX"); tg && !propio) { gfx = static_cast<GfxId>(std::atoi(tg)); o.col<O_GFX>()[s] = gfx; }  // TEMP-DEBUG
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
         float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
