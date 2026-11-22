@@ -232,7 +232,10 @@ void objetos(App& a, Conexion& c, int radio) {
                       static_cast<unsigned>(o.col<O_ESTADO>()[s]), px, py,
                       o.col<O_ESTADO>()[s] == ESTADO_MUERTO ? " muerto" : s == yo ? " yo" : "");
         // Title, raw bytes (non-ASCII as \xNN), to check colour codes.
-        if (const std::string_view ti = texto(a.mundo, o.col<O_TITULO>()[s]); !ti.empty()) {
+        std::string_view ti = texto(a.mundo, o.col<O_TITULO>()[s]);
+        for (const Vendedor& v : a.tienda_pj.vendedores)
+            if (v.id == id && !v.titulo.empty()) ti = v.titulo;  // private shop sign
+        if (!ti.empty()) {
             std::string esc;
             for (const char ch : ti) {
                 char hx[8];

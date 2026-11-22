@@ -16,9 +16,10 @@ TEST_CASE("Aura: single pixel dilates as a plus of radius 1 and 2") {
     build_bless_aura(icon, aura);
     REQUIRE(aura.ancho == 9);
     REQUIRE(aura.alto == 9);
-    CHECK(alpha_at(aura, 4, 4) == 142);
-    CHECK(alpha_at(aura, 5, 4) == 142);
-    CHECK(alpha_at(aura, 4, 3) == 142);
+    // exe 0x446099..: plus-shaped shifts of +/-2 and +/-1 px, no centre; each pass is one third toward white.
+    CHECK(alpha_at(aura, 4, 4) == 0);  // under the icon, which is drawn on top
+    CHECK(alpha_at(aura, 5, 4) == 85);
+    CHECK(alpha_at(aura, 4, 3) == 85);
     CHECK(alpha_at(aura, 6, 4) == 85);
     CHECK(alpha_at(aura, 4, 2) == 85);
     CHECK(alpha_at(aura, 5, 5) == 0);  // diagonal neighbours are outside a plus-shaped dilation
@@ -37,5 +38,16 @@ TEST_CASE("Aura: transparent icon gives an empty aura, composite keeps the icon"
     CHECK(icon.ancho == 12);
     CHECK(icon.alto == 7);
     CHECK(icon.px[0] == 0xFF0000FFu);
-    CHECK(alpha_at(icon, 4 + 2, 2) == 142);  // the aura image starts at x = w = 4
+    CHECK(alpha_at(icon, 4 + 2 + 1, 2) == 85);  // the aura image starts at x = w = 4; 1 px right of the pixel
+}
+
+TEST_CASE("Aura: both passes overlap at 5/9") {
+    ImagenRGBA icon;
+    icon.preparar(5, 5);
+    icon.px[2 * 5 + 1] = icon.px[2 * 5 + 2] = icon.px[2 * 5 + 3] = 0xFF112233u;  // a 3 px row; aura (3..5, 4)
+    ImagenRGBA aura;
+    build_bless_aura(icon, aura);
+    CHECK(alpha_at(aura, 4, 3) == 85);    // above the middle: only the +/-1 pass (+/-2 hits nothing above)
+    CHECK(alpha_at(aura, 4, 4) == 85);    // middle pixel (under the icon): only 1 px neighbours are opaque
+    CHECK(alpha_at(aura, 2, 4) == 142);   // left end of the halo row: 1 px from (3,4), 2 px from (4,4)
 }

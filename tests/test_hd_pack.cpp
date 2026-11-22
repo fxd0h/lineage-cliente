@@ -59,8 +59,8 @@ TEST_CASE("Aura at HD scale: padding and radius scale") {
     ImagenRGBA aura;
     build_bless_aura(icon, aura, 4);
     CHECK(aura.ancho == 8 + 16);
-    CHECK((aura.px[(4 + 8) * 24 + 4 + 8] >> 24) == 142u);        // centre
-    CHECK((aura.px[(4 + 8) * 24 + 4 + 8 + 4] >> 24) == 142u);    // 1 logical px away
+    CHECK((aura.px[(4 + 8) * 24 + 4 + 8] >> 24) == 0u);          // centre: under the icon
+    CHECK((aura.px[(4 + 8) * 24 + 4 + 8 + 4] >> 24) == 85u);     // 1 logical px away
     CHECK((aura.px[(4 + 8) * 24 + 4 + 8 + 8] >> 24) == 85u);     // 2 logical px away
     agregar_aura(icon, 4);
     CHECK(icon.ancho == 2 * 8 + 16);
