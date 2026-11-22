@@ -433,4 +433,6 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - Others' HP bar (img 930 frame + 931 fill, 44 px): x = frame-rect left + (right - left) / 2 - 21, y = frame-rect top - 4, always drawn (not only on hover) when the server gives a percentage; not for corpses (class 2, 0x4cdd30).
 - Own bars (showhpmp): at the cell's left edge, HP at top - 12, MP (932) at top - 8.
 - Hover label box: 14 px tall (27 with a title) above the frame rect, flipped below it when it would leave the screen; width max(name, title) + 2 (+18 with an emblem), centred on the frame rect (own character: on the cell), clamped to the screen. Name at box top - 3 (+13 under a title), +10 px with an emblem; emblem 20 px left of the name, 1 px higher; title at box top - 3. Bars do not push the label up.
-- Fork: `pantalla_juego.cpp` object overlay, original UI only. Open: absolute x origin of the exe surface (0x30 margin) calibrated against our cell anchor, title fill colour.
+- Title colour: the same word [obj+0x2c] as the name (0x46778e, 0x467a11); 0x4334f0 parses `\f0`..`\fe` colour codes in the string, which is why some titles show another colour.
+- x origin: own items anchor on T - 0x30 + scroll (cell left), others on T + frame rect; both match our cell anchor (own bars at -24 px from the body centre in the original capture, same as the fork).
+- Fork: `pantalla_juego.cpp` object overlay, original UI only.

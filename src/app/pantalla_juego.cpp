@@ -662,8 +662,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
-        float top = sy - 40, pie = sy;
-        float caja_x0 = ex, caja_x1 = ex + 48;  // sprite frame rect, left / right (exe 0x4cbf70)  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
+        float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
+        float caja_x0 = ex, caja_x1 = ex + 48;  // sprite frame rect, left / right (exe 0x4cbf70)
         RegionAtlas rg;
         bool rg_pendiente = false;
         bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
@@ -939,7 +939,9 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (con_clan) dibujar_emblema(a, o.col<O_CLAN>()[s], emblema_x, emblema_y);
             top -= 14;
             if (!titulo.empty()) {
-                dibujar_titulo(g, titulo, titulo_cx, titulo_y, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130), !a.cfg.ui_simple);
+                // Original: same colour as the name (both take [obj+0x2c], 0x46778e / 0x467a11); \f codes in the title override it.
+                dibujar_titulo(g, titulo, titulo_cx, titulo_y, clave_orden(CAPA_EFECTOS, 0), a.cfg.ui_simple ? rgba(230, 200, 130) : color,
+                               !a.cfg.ui_simple);
                 top -= 14;
             }
         }
