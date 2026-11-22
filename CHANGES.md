@@ -7,7 +7,7 @@ con su verificación y lo pendiente, está en [docs/upstream/ENTREGABLES.md](doc
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
-## Sin publicar
+## v0.2.0 (2026-11-22)
 
 ### Agregado
 - **Fork de fxd0h** ([fxd0h/lineage-cliente](https://github.com/fxd0h/lineage-cliente)), traído con sus correcciones (#51):
@@ -31,6 +31,7 @@ anterior (`git log --first-parent <tag anterior>..main`).
 - **C++23.** Los comentarios del código están en español; el README queda en inglés como portada (#51).
 - **Íconos de buff:** la interfaz simple usa los del cliente original, con su tiempo restante (#51).
 - **Casilleros Auto:** si no entran junto a la barra de atajos, van en una fila arriba de ella (#51).
+- **`CHANGES.md`** vuelve a la raíz del repo (#52).
 
 ### Corregido
 - **Taiwán 3.80C:** los nombres con caracteres chinos se mandan en Big5 (susurros, intercambio, correo, clan y
