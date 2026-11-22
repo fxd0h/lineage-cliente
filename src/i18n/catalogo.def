@@ -240,11 +240,23 @@ X(AJ_VENTANAS_RESET, "Posiciones de ventanas restablecidas (al pulsar Guardar)",
 X(AJ_GUARDAR, "Guardar", "Save", "Salvar", "Speichern", "Enregistrer")
 X(AJ_GUARDADO, "Guardado y aplicado.", "Saved and applied.", "Salvo e aplicado.", "Gespeichert und übernommen.",
   "Enregistré et appliqué.")
-X(AJ_GUARDADO_REINICIO, "Guardado. La carpeta del juego y la tabla de sprites se aplican al reiniciar el cliente.",
-  "Saved. The game folder and the sprite table apply when the client restarts.",
-  "Salvo. A pasta do jogo e a tabela de sprites se aplicam ao reiniciar o cliente.",
-  "Gespeichert. Spielordner und Sprite-Tabelle gelten nach dem Neustart des Clients.",
-  "Enregistré. Le dossier du jeu et la table des sprites s'appliquent au redémarrage du client.")
+X(AJ_GUARDADO_REINICIO, "Guardado. Las carpetas del juego, el pack HD y la tabla de sprites valen al reiniciar.",
+  "Saved. Game folders, the HD pack and the sprite table apply after a restart.",
+  "Salvo. As pastas do jogo, o pacote HD e a tabela de sprites valem ao reiniciar.",
+  "Gespeichert. Spielordner, HD-Paket und Sprite-Tabelle gelten nach dem Neustart.",
+  "Enregistré. Dossiers du jeu, pack HD et table des sprites : au redémarrage.")
+X(AJ_CARPETAS_EXTRA, "Carpetas extra (con ;)", "Extra folders (with ;)", "Pastas extra (com ;)", "Extra-Ordner (mit ;)",
+  "Dossiers extra (avec ;)")
+X(AJ_PACK_HD, "Pack HD de la interfaz", "Interface HD pack", "Pacote HD da interface", "HD-Paket der Oberfläche",
+  "Pack HD de l'interface")
+X(AJ_FUENTE_ORIGINAL, "Fuente original (eng.fnt)", "Original font (eng.fnt)", "Fonte original (eng.fnt)",
+  "Originalschrift (eng.fnt)", "Police d'origine (eng.fnt)")
+X(AJ_ESCALADO, "Filtro de escalado (Mayús+F5)", "Upscaling filter (Shift+F5)", "Filtro de escala (Shift+F5)",
+  "Skalierungsfilter (Umsch.+F5)", "Filtre d'échelle (Maj+F5)")
+X(AJ_VISTA, "Vista (fija o amplia)", "View (fixed or wide)", "Vista (fixa ou ampla)", "Ansicht (fest/weit)",
+  "Vue (fixe ou large)")
+X(AJ_ALPHA_ORIG, "Transparencia (UI original)", "Transparency (original UI)", "Transparência (UI original)",
+  "Transparenz (Original-UI)", "Transparence (UI d'origine)")
 X(AJ_TEXTO_HD, "Texto HD", "HD text", "Texto HD", "HD-Text", "Texte HD")
 X(AJ_GLOBOS, "Globos de diálogo con recuadro", "Framed speech balloons", "Balões de fala com moldura",
   "Sprechblasen mit Rahmen", "Bulles de dialogue encadrées")
