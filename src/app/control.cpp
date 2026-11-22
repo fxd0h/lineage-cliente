@@ -231,6 +231,17 @@ void objetos(App& a, Conexion& c, int radio) {
                       a.sprites.accion(gfx, ACC_QUIETO) || a.sprites.accion(gfx, ACC_CAMINAR) ? 1 : 0, a.rec.sprite(spr0).size(),
                       static_cast<unsigned>(o.col<O_ESTADO>()[s]), px, py,
                       o.col<O_ESTADO>()[s] == ESTADO_MUERTO ? " muerto" : s == yo ? " yo" : "");
+        // Title, raw bytes (non-ASCII as \xNN), to check colour codes.
+        if (const std::string_view ti = texto(a.mundo, o.col<O_TITULO>()[s]); !ti.empty()) {
+            std::string esc;
+            for (const char ch : ti) {
+                char hx[8];
+                if (static_cast<unsigned char>(ch) >= 0x20 && static_cast<unsigned char>(ch) < 0x7f) esc += ch;
+                else std::snprintf(hx, sizeof hx, "\\x%02x", static_cast<unsigned char>(ch)), esc += hx;
+            }
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " titulo=\"%s\"", esc.c_str());
+        }
         responder(c, l);
     }
 }

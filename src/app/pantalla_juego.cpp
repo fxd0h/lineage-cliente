@@ -874,7 +874,10 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             nombre = nombre.substr(p + 1);
         }
         if (!nombre.empty()) {
-            int w = ancho_texto(nombre.data(), nombre.size());
+            // Names and titles go through the exe's code-aware text draw (0x4334f0): \fX colours, hidden codes take no room.
+            const bool nombre_doble = !es_utf8(nombre.data(), nombre.size());
+            int w = 0;
+            recorrer_codigos(nombre, 0, nombre_doble, [&](std::string_view t, u32) { w += ancho_texto(t.data(), t.size()); });
             // Los personajes (nombre propio; los NPC y monstruos vienen como "$N") según el
             // alineamiento: legal azul, caótico rojo, neutral blanco; rosa mientras dura el PK
             // (S_PinkName). Los monstruos, según su nivel respecto del jugador (nivel_relativo).
@@ -922,7 +925,12 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 titulo_y = caja_y - 3;
             }
             if (a.cfg.ui_simple) g.texto_sombra(nombre, nombre_x, nombre_y, clave_orden(CAPA_EFECTOS, 0), color);
-            else g.texto_nombre(nombre, nombre_x, nombre_y, clave_orden(CAPA_EFECTOS, 0), color, contorno_nivel);
+            else {
+                float x = nombre_x;
+                recorrer_codigos(nombre, color, nombre_doble, [&](std::string_view t, u32 c) {
+                    x += g.texto_nombre(t, x, nombre_y, clave_orden(CAPA_EFECTOS, 0), c, contorno_nivel);
+                });
+            }
             if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {  // título de la tienda
                 dibujar_titulo(g, v->titulo, ex + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
             }
