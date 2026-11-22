@@ -123,17 +123,10 @@ dice "Compilando Lineage $VERSION ($SO)"
 BUILD=build/instalado
 cmake --preset release -B "$BUILD" "-DLIN_VERSION=$VERSION" >/dev/null
 cmake --build "$BUILD" --target lineage
-
-DEST="$PREFIX/share/lineage-cliente"
-rm -rf "$DEST"
-mkdir -p "$DEST" "$PREFIX/bin" "$PREFIX/share/applications" "$PREFIX/share/icons/hicolor/256x256/apps"
-cp "$BUILD/lineage" "$DEST/"
-cp -R datos "$DEST/datos"
-# Un lanzador en vez de un enlace: el cliente busca datos/ junto al ejecutable real.
-printf '#!/bin/sh\nexec "%s/lineage" "$@"\n' "$DEST" > "$PREFIX/bin/lineage"
-chmod +x "$PREFIX/bin/lineage"
-sed "s|^Exec=.*|Exec=$DEST/lineage|" herramientas/linux/lineage.desktop > "$PREFIX/share/applications/lineage.desktop"
-cp herramientas/linux/lineage.png "$PREFIX/share/icons/hicolor/256x256/apps/lineage.png"
+rm -rf "$PREFIX/share/lineage-cliente"  # sin restos de la versión anterior
+cmake --install "$BUILD" --prefix "$PREFIX" >/dev/null
+# El menú del escritorio no siempre tiene <prefix>/bin en el PATH: el acceso directo va con la ruta completa.
+sed "s|^Exec=.*|Exec=$PREFIX/share/lineage-cliente/lineage|" herramientas/linux/lineage.desktop > "$PREFIX/share/applications/lineage.desktop"
 
 dice "Listo: $PREFIX/bin/lineage (también en el menú de aplicaciones como Lineage)"
-case ":$PATH:" in *":$PREFIX/bin:"*) ;; *) echo "Nota: $PREFIX/bin no está en el PATH; agregarlo o abrir $DEST/lineage." ;; esac
+case ":$PATH:" in *":$PREFIX/bin:"*) ;; *) echo "Nota: $PREFIX/bin no está en el PATH; agregarlo o abrir $PREFIX/share/lineage-cliente/lineage." ;; esac
