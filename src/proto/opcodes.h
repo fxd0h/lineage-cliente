@@ -45,6 +45,7 @@ enum class Cli : u8 {
     CHECKPK,          // C_CheckPK (/checkpk): no body
     EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c action, an emote the server rebroadcasts as S_DoActionGFX
     RANK,             // C_Rank: c sub (1 rank, 2 alliance list, 3 alliance join, 4 alliance leave), c rank, s name
+    FISHCLICK,        // C_FishClick: c bite flag (the server ignores it and judges the timing itself)
     CANTIDAD
 };
 

@@ -369,6 +369,7 @@ void procesar_red(App& a) {
         eventos_npc(a, e);
         eventos_social(a, e);
         eventos_tienda(a, e);
+        eventos_pesca(a, e);
         eventos_tablon(a, e);
         eventos_correo(a, e);
         eventos_casas(a, e);

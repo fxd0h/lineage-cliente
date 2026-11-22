@@ -248,6 +248,7 @@ bool atributos(Lector& l, Evento& e) {
 //  - asedio (0–4): ver abajo.
 constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
+constexpr int CAJA_PESCA = 55;  // FISHING: the bite (exe 0x49184c -> 0x4918fb)
 constexpr int CAJA_CLASES = 21, CAJA_POLIMORFO = 35, CAJA_SIN_CHAT = 36, CAJA_56 = 56, CAJA_QUITA_87 = 59, CAJA_74 = 74, CAJA_75 = 75;
 constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
               CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49, CAJA_COCINA = 52;
@@ -312,6 +313,8 @@ bool caja(Lector& l, Evento& e) {
             else if (extra == 6) e.v[IE_TIPO] = AURA_MALDICION + 2;
             else e.tipo = Ev::IGNORADO;
         }
+    } else if (sub == CAJA_PESCA) {
+        e.tipo = Ev::PESCA_PICADA;
     } else if (sub == CAJA_POCION_AZUL || sub == CAJA_INMUNE) {
         e.tipo = Ev::ICONO_EFECTO;
         e.v[IE_CLASE] = IE_ICONO;
@@ -366,11 +369,16 @@ bool caja(Lector& l, Evento& e) {
 }
 // S_DoActionGFX: d id, c acción. S_DoActionShop (acción 70, tienda abierta): y el título.
 constexpr int ACC_TIENDA = 70;
+constexpr int ACC_PESCA = 71;  // S_Fishing (ActionCodes.ACTION_Fishing)
 bool accion(Lector& l, Evento& e) {
     e.tipo = Ev::ACCION_OBJETO;
     e.id = l.d();
     e.v[0] = l.c();
     if (e.v[0] == ACC_TIENDA && l.quedan(1)) e.s[0] = l.s();
+    if (e.v[0] == ACC_PESCA && l.quedan(4)) {  // S_Fishing: h x, h y of the bobber (then d 0, h 0)
+        e.v[1] = l.h();
+        e.v[2] = l.h();
+    }
     l.error = false;  // el título puede venir sin \0
     return true;
 }

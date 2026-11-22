@@ -331,6 +331,12 @@ inline Escritor borrar_item(const TablaOpcodes& t, u32 item, u32 cantidad) {
     return e;
 }
 // C_EnterPortal: h x, h y de la celda del portal (el servidor la busca en DungeonTable de su mapa).
+// C_FishClick: c 1 when the bobber showed a bite (exe 0x469220).
+inline Escritor click_pesca(const TablaOpcodes& t, bool picada) {
+    Escritor e(t, Cli::FISHCLICK);
+    e.c(picada ? 1 : 0);
+    return e;
+}
 inline Escritor entrar_portal(const TablaOpcodes& t, u16 x, u16 y) {
     Escritor e(t, Cli::ENTERPORTAL);
     e.h(x).h(y);

@@ -85,3 +85,11 @@ Tags: [C] confirmed from decompile, [I] inferred. In REA pass addresses as `ram:
   NPC: 15 only with attack mode and pk, else 4. Characters: self 3 (attack mode 8 / 15); pink ones are targets (Alt 7, attack 8 /
   15, else 6); others 8 / 15 in attack mode, 15 with pk, else unchanged (4 / 6 become 3). Not modelled: tile flag bit 2 -> 14,
   login wait cursor 2, +0x12c -> 16, item-select grids 9, separate Ctrl+X / pk flags.
+- Cursor 14 (pointing hand, group 143): the cell under the pointer has a map portal (tile flag 2, set only from the .s32 portal
+  records at 0x460ddc / .seg 0x4618b1), nothing hovered, no drag, nothing pending (0x469792); fork: `es_portal`. Not done: the
+  right-click portal pick (0x469b12, strings 625-627). Cursor 16 (fishing rod, group 150): while the own fishing bobber is out
+  (player +0x12c, S_Fishing 0x487140 / S_PacketBox 55 bite / C_FishClick 0x469220 / S_CharVisualUpdate 0x487000); fork:
+  `pesca_ui.cpp`.
+- World draw order (0x465c30 / 0x460230): cells by screen row then column, each cell's list by layer; map pieces in their own
+  cell with their layer byte, a character's body at layer 18 in its cell. Fork (original UI): `clave_celda`; characters are one
+  draw at the foot cell (the exe splits .spr parts across cells), ground-hugging pieces (layer <= 15) stay in the ground pass.

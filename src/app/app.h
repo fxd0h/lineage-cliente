@@ -498,6 +498,12 @@ struct App {
     u8 tienda_tipo = 0;       // original list window type (S3EP1U 0x4d1000): 0 buy, 1 sell, 2/3 warehouse, 4/5 clan, 8/9 elf, ...
     int tienda_marcada = -1;  // row marked by a click (image 536)
     u32 tienda_digitos = 0;
+    // Fishing (pesca_ui.cpp): the own bobber cast by S_Fishing.
+    struct Pesca {
+        bool activa = false, picada = false;
+        i32 x = 0, y = 0;
+        u64 inicio = 0;
+    } pesca;
     int cursor_html = 0;           // original UI: cursor the NPC page asked for last frame (1 text, 3 link), 0 none
     int cursor_estado_orig = 3;    // original UI: last cursor state set (0x477c90 is sticky: areas with no setter keep it)   // amount typed on the marked row (pane +0x98), reset by any click in the list
     int tienda_flecha = -1;   // quantity arrow held down: row * 2 + (1 = increase), -1 none
@@ -932,6 +938,9 @@ void dibujar_grupo(App& a);
 void dibujar_equipo(App& a, int x, int y);
 // Tienda de jugadores (tienda_ui.cpp).
 void eventos_tienda(App& a, const Evento& e);
+void eventos_pesca(App& a, const Evento& e);
+bool clic_pesca(App& a);  // a world click while the bobber is out: C_FishClick; true if it took the click
+void dibujar_pesca(App& a, u64 ahora, double ox, double oy);
 void dibujar_tienda(App& a);       // simple UI only
 void dibujar_tienda_original(App& a);  // original window, in the window stack
 Rect rect_tienda_original(const App& a);

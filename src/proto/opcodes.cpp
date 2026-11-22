@@ -68,6 +68,7 @@ constexpr ParCli JP363_CLI[] = {
     {Cli::BOARDDELETE, 12},   {Cli::MAIL, 22},
     {Cli::WAR, 235},          {Cli::TAXRATE, 200},      {Cli::DEPOSIT, 35},       {Cli::DRAWAL, 192},
     {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},    {Cli::RANK, 78},
+    {Cli::FISHCLICK, 26},  // l1j-jp C_OPCODE_FISHCLICK
     {Cli::PROPOSE, 185},           {Cli::FIGHT, 47},              {Cli::CHECKPK, 137},
 };
 
@@ -184,6 +185,7 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::BOARDWRITE, 84}, {Cli::BOARDDELETE, 60}, {Cli::MAIL, 127}, {Cli::WAR, 101},
     {Cli::TAXRATE, 110}, {Cli::DEPOSIT, 68}, {Cli::DRAWAL, 42}, {Cli::CHANGEWARTIME, 98},
     {Cli::SHIP, 33}, {Cli::EXTCOMMAND, 38},
+    {Cli::FISHCLICK, 125},  // C_FishClick (l1j-en C_OPCODE_FISHCLICK; exe 0x469220 sends `cc` 0x7d)
     {Cli::RANK, 78},  // C_Rank: sub 1 rank, 2 / 3 / 4 alliance list / join / leave (0x4053b3..0x4053e3: `cc` 0x4e sub)
     {Cli::PROPOSE, 22}, {Cli::FIGHT, 3}, {Cli::CHECKPK, 70},  // /propose, /duel, /checkpk
     {Cli::LOGINTOSERVEROK, 25},  // the client sends it as `ccc` 0x19 from the chat toggles (0x406abb, 0x406bbb, 0x406cbb)

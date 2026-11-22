@@ -1216,3 +1216,24 @@ TEST_CASE("CA bajo -128 (S_OwnCharAttrDef) y bendición de la lista de una tiend
     CHECK(ev[1].tipo == Ev::ITEM_TIENDA);
     CHECK(ev[1].v[IT_BENDICION] == BLESS_NORMAL);
 }
+
+TEST_CASE("Fishing: S_Fishing, S_PacketBox 55 and C_FishClick") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    // S_DoActionGFX with action 71 (ACTION_Fishing): d id, c 71, h x, h y, d 0, h 0 (S_Fishing.java).
+    std::vector<u8> pesca = {218, 5, 0, 0, 0, 71, 0x55, 0x7f, 0xa6, 0x80, 0, 0, 0, 0, 0, 0};
+    REQUIRE(decodificar(pesca, t, arena, ev));
+    CHECK(ev[0].tipo == Ev::ACCION_OBJETO);
+    CHECK(ev[0].v[0] == 71);
+    CHECK(ev[0].v[1] == 0x7f55);
+    CHECK(ev[0].v[2] == 0x80a6);
+    Escritor w = cmd::click_pesca(t, true);
+    REQUIRE(w.cuerpo().size() >= 2);  // padded to the block size
+    CHECK(w.cuerpo()[0] == 26);
+    CHECK(w.cuerpo()[1] == 1);
+    TablaOpcodes us;
+    tabla_opcodes("s3ep1", us);
+    CHECK(cmd::click_pesca(us, false).cuerpo()[0] == 125);
+}

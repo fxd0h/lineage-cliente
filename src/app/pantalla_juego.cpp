@@ -1105,6 +1105,27 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
     }
 }
 
+}  // namespace
+
+// The own fishing bobber (pesca_ui.cpp): gfx 6299, the bite 6385, looping on its cell.
+void dibujar_pesca(App& a, u64 ahora, double ox, double oy) {
+    const App::Pesca& p = a.pesca;
+    if (!p.activa) return;
+    const GfxId gfx = p.picada ? 6385 : 6299;
+    const RangoAccion* r = a.sprites.accion(gfx, 0);
+    if (!r) return;
+    bool termino = false;
+    const FrameAccion& f = a.sprites.frame_en(*r, ahora - p.inicio, termino, 0, true);
+    const RegionAtlas& rg = a.g->frame_sprite(a.sprites.gfx_archivos(gfx), f.sub, f.frame);
+    const float px = static_cast<float>(mundo_px(p.x, p.y) + ox), py = static_cast<float>(mundo_py(p.x, p.y) + oy);
+    u32 color = BLANCO;
+    Mezcla mezcla = Mezcla::NORMAL;
+    if (!preparar_mezcla(a.sprites, gfx, color, mezcla)) return;
+    a.g->gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, clave_celda(px, py, 18, 6)), color, mezcla);
+}
+
+namespace {
+
 int direccion_hacia(int dx, int dy) {
     double ang = std::atan2(dy * 2.0, static_cast<double>(dx));  // se deshace la compresión isométrica
     int paso = static_cast<int>(std::lround(ang / (3.14159265358979 / 4)));
@@ -1247,6 +1268,11 @@ void mover_jugador(App& a, u64 ahora) {
     // algo, eso queda como objetivo. Soltar lo abandona, salvo con la tecla A (ataque sostenido).
     bool clic_en_mundo = e.presionado && !a.clic_consumido && !sobre_panel && !sobre_alguna_ventana(a) &&
                          a.ventana_arrastrada < 0;
+    // Fishing: a click in the world while the bobber is out pulls it (0x469220).
+    if (clic_en_mundo && e.pulsado && clic_pesca(a)) {
+        a.clic_consumido = true;
+        return;
+    }
     // Invite party (0x402490): the click only picks the target.
     if (a.invitando && clic_en_mundo && e.pulsado) {
         elegir_invitado(a);
@@ -2303,6 +2329,7 @@ void elegir_cursor_original(App& a, u64 ahora) {
         return es_portal(a.mundo, a.rec, tx, ty);
     };
     if (!pendiente && !objeto_bajo_puntero(a, false, true) && portal_bajo_puntero()) return poner(14);
+    if (a.pesca.activa) return poner(16);  // the fishing rod while the bobber is out (0x469e53)
     if (pendiente) {
         // Target in range: the target circle (8), or 15 with Ctrl or the pk option (0x469f85); out of range: 11 (0x46a344).
         if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
@@ -2528,6 +2555,7 @@ void frame_juego(App& a) {
     dibujar_objetos_mapa(a, cam_x, cam_y, ox, oy);
     dibujar_personajes(a, ahora, ox, oy);
     dibujar_efectos(a, ahora, ox, oy);
+    dibujar_pesca(a, ahora, ox, oy);
     aplicar_luz(a, ahora);
     dibujar_clima(a, vm.w, vm.panel_y, ahora);
     dibujar_estados_alterados(a, vi.w, vi.h);
