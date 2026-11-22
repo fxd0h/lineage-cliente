@@ -505,7 +505,7 @@ void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char*
     if (line2[0]) g.texto_sombra(line2, static_cast<float>(x + 5), static_cast<float>(y), kt, color), y += 12;
     for (std::string_view rest(det, nd); !rest.empty();) {
         const size_t end = std::min(rest.find('\n'), rest.size());
-        g.texto_sombra(std::string(rest.substr(0, end)), static_cast<float>(x + 5), static_cast<float>(y), kt, rgba(255, 255, 254));
+        g.texto_sombra(rest.substr(0, end), static_cast<float>(x + 5), static_cast<float>(y), kt, rgba(255, 255, 254));
         y += 12;
         rest.remove_prefix(std::min(end + 1, rest.size()));
     }
