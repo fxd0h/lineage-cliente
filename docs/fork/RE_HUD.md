@@ -91,5 +91,6 @@ Tags: [C] confirmed from decompile, [I] inferred. In REA pass addresses as `ram:
   (player +0x12c, S_Fishing 0x487140 / S_PacketBox 55 bite / C_FishClick 0x469220 / S_CharVisualUpdate 0x487000); fork:
   `pesca_ui.cpp`.
 - World draw order (0x465c30 / 0x460230): cells by screen row then column, each cell's list by layer; map pieces in their own
-  cell with their layer byte, a character's body at layer 18 in its cell. Fork (original UI): `clave_celda`; characters are one
-  draw at the foot cell (the exe splits .spr parts across cells), ground-hugging pieces (layer <= 15) stay in the ground pass.
+  cell with their layer byte; every .spr part of a character in the cell given by its x (half cells) / y offsets with its own
+  layer byte (0x4b0350). Fork (original UI): `clave_celda`; each part is its rectangle of the composed frame (`archivo_spr`,
+  `posicion_tile`), clothes too; ground-hugging map pieces (layer <= 15) stay in the ground pass.

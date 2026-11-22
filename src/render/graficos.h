@@ -45,6 +45,8 @@ public:
     ModoMezcla tile_modo(u32 valor, bool& pendiente);
     // Frame de sprite ya compuesto: archivo "<gfx>-<sub>.spr", frame.
     const RegionAtlas& frame_sprite(GfxId gfx_archivos, u16 sub, u16 frame);
+    // The parsed .spr (cached); nullptr if missing or still loading (`pendiente`). Its parts give the draw order.
+    const ArchivoSpr* archivo_spr(GfxId gfx, u16 sub, bool& pendiente);
     // La región que se devolvió porque el dato todavía no está (se está cargando, o el atlas no tiene
     // lugar este frame): no es un fallo, se pide de nuevo el frame siguiente. Compara la dirección:
     // hay que pasarle la referencia devuelta, no una copia.
@@ -129,7 +131,6 @@ private:
     const RegionAtlas* buscar(u64 k) const;
     // nullptr si no existe o si todavía no está en memoria (`pendiente`).
     const JuegoTiles* juego_tiles(u32 n, bool& pendiente);
-    const ArchivoSpr* archivo_spr(GfxId gfx, u16 sub, bool& pendiente);
 
     Gpu& gpu_;
     const Recursos& rec_;

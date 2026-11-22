@@ -37,6 +37,9 @@ struct ArchivoSpr {
     bool componer_frame(u32 frame, ImagenRGBA& salida) const;
 };
 
+// Screen offset of a part's cell corner from the frame anchor: x in half cells, y in cells (24 x 12 isometric).
+void posicion_tile(const TileDeFrame& t, int& px, int& py);
+
 // Cantidad de imágenes de un .spr leyendo solo el encabezado; 0 si está vacío o roto.
 u32 contar_frames_spr(Bytes spr);
 

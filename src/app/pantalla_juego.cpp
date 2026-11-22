@@ -710,10 +710,74 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         // Others' invisible bodies are not drawn at all (no name, bars or click target) without a Ring of Sayha.
         if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
+        float celda_sx = 0, celda_sy = 0;  // original UI: screen corner of the body's cell
         if (!a.cfg.ui_simple) {
             const int cx = static_cast<int>(std::lround(fx)), cy = static_cast<int>(std::lround(fy));
-            prof = clave_celda(static_cast<float>(mundo_px(cx, cy) + ox), static_cast<float>(mundo_py(cx, cy) + oy), CAPA_CUERPO_ORIGINAL, 4);
+            celda_sx = static_cast<float>(mundo_px(cx, cy) + ox), celda_sy = static_cast<float>(mundo_py(cx, cy) + oy);
+            prof = clave_celda(celda_sx, celda_sy, CAPA_CUERPO_ORIGINAL, 4);
         }
+        // Body layers: the original registers each .spr part in its own cell (0x4b0350: the foot part in the body's cell at
+        // layer 18, the parts above one row further back each, +4 layer per row), so a wall in a later row covers the head
+        // too. The fork draws the frame in 12 px bands, one per cell row above the foot, with those keys.
+        auto dibujar_cuerpo = [&](const RegionAtlas& r, GfxId archivo, u16 sub_p, u16 frame_p, bool partes, float x, float y, u32 extra,
+                                  u32 col, Mezcla mz) {
+            if (a.cfg.ui_simple) return g.gpu().dibujar_en(r, x, y, clave_orden(CAPA_MUNDO, prof + extra), col, mz);
+            // The .spr parts themselves (0x4b0350): each part's rectangle of the composed frame, keyed by its own cell
+            // (x in half cells, y in cells from the body's cell) and its own layer byte.
+            bool pend = false;
+            const ArchivoSpr* sp = partes ? g.archivo_spr(archivo, sub_p, pend) : nullptr;
+            if (sp && frame_p < sp->frames.size() && sp->frames[frame_p].ntiles) {
+                const FrameSpr& fr = sp->frames[frame_p];
+                const int sc = static_cast<int>(r.escala_texel());
+                for (u32 j = 0; j < fr.ntiles; ++j) {
+                    const TileDeFrame& t = sp->tiles_frame[fr.primer_tile + j];
+                    if (t.tile >= sp->tiles.size() || sp->tiles[t.tile].size() < 4) continue;
+                    const Bytes d = sp->tiles[t.tile];
+                    int cx_off, cy_off;
+                    posicion_tile(t, cx_off, cy_off);
+                    const int rx = cx_off + d[0] - r.ox, ry = cy_off + d[1] - r.oy;  // in the composed image
+                    const int x0 = std::max(0, rx), y0 = std::max(0, ry);
+                    const int x1 = std::min(static_cast<int>(r.w), rx + d[2]), y1 = std::min(static_cast<int>(r.h), ry + d[3]);
+                    if (x1 <= x0 || y1 <= y0) continue;
+                    RegionAtlas parte = r;
+                    parte.x = static_cast<u16>(r.x + x0 * sc);
+                    parte.y = static_cast<u16>(r.y + y0 * sc);
+                    parte.w = static_cast<u16>(x1 - x0);
+                    parte.h = static_cast<u16>(y1 - y0);
+                    parte.ox = static_cast<i16>(r.ox + x0);
+                    parte.oy = static_cast<i16>(r.oy + y0);
+                    const u32 clave = clave_celda(celda_sx + static_cast<float>(cx_off), celda_sy + static_cast<float>(cy_off), t.h, 4 + extra);
+                    g.gpu().dibujar_en(parte, x, y, clave_orden(CAPA_MUNDO, clave), col, mz);
+                }
+                return;
+            }
+            // 24 x 12 blocks on the cell grid (one block per half cell, the size of a .spr part's cell).
+            const float t = y + r.oy, b = t + r.h, l = x + r.ox, d = l + r.w, limite = celda_sy + 12.0f;
+            const int sc = static_cast<int>(r.escala_texel());
+            const int j0 = static_cast<int>(std::floor((l - celda_sx) / 24.0f)), j1 = static_cast<int>(std::ceil((d - celda_sx) / 24.0f));
+            for (int k = 0; k < 16; ++k) {
+                const float abajo = k == 0 ? b : limite - 12.0f * static_cast<float>(k - 1);
+                const float arriba = std::max(t, limite - 12.0f * static_cast<float>(k));
+                if (abajo <= t) break;
+                const int corte_arriba = static_cast<int>(std::lround(arriba - t)), corte_abajo = static_cast<int>(std::lround(b - std::min(abajo, b)));
+                if (corte_arriba + corte_abajo >= r.h) continue;
+                for (int j = j0; j < j1; ++j) {
+                    const float izq = std::max(l, celda_sx + 24.0f * static_cast<float>(j)), der = std::min(d, celda_sx + 24.0f * static_cast<float>(j + 1));
+                    const int corte_izq = static_cast<int>(std::lround(izq - l)), corte_der = static_cast<int>(std::lround(d - der));
+                    if (corte_izq + corte_der >= r.w) continue;
+                    RegionAtlas bloque = r;
+                    bloque.x = static_cast<u16>(r.x + corte_izq * sc);
+                    bloque.w = static_cast<u16>(r.w - corte_izq - corte_der);
+                    bloque.ox = static_cast<i16>(r.ox + corte_izq);
+                    bloque.y = static_cast<u16>(r.y + corte_arriba * sc);
+                    bloque.h = static_cast<u16>(r.h - corte_arriba - corte_abajo);
+                    bloque.oy = static_cast<i16>(r.oy + corte_arriba);
+                    const u32 clave = clave_celda(celda_sx + 24.0f * static_cast<float>(j), celda_sy - 12.0f * static_cast<float>(k),
+                                                  CAPA_CUERPO_ORIGINAL + 4u * static_cast<u32>(k), 4 + extra);
+                    g.gpu().dibujar_en(bloque, x, y, clave_orden(CAPA_MUNDO, clave), col, mz);
+                }
+            }
+        };
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
@@ -725,10 +789,13 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         const FrameAccion* frame_cuerpo = nullptr;  // for the clothes layers (attribute 105)
         u16 sub_cuerpo = 0;
         // pendiente() compara la dirección: se consulta sobre la referencia, antes de copiarla a rg.
+        u16 spr_sub = 0, spr_frame = 0;
+        bool spr_partes = false;  // rg is exactly that frame (not the previous one kept while loading)
         auto pedir_frame = [&](u16 sub_pedido, u16 frame) {
             const RegionAtlas& r = g.frame_sprite(a.sprites.gfx_archivos(gfx), sub_pedido, frame);
             rg_pendiente = g.pendiente(r);
             rg = r;
+            spr_sub = sub_pedido, spr_frame = frame, spr_partes = !rg_pendiente && rg.valida();
             if (s >= a.last_frames.size()) return;  // more objects than tracked: no fallback
             App::LastFrame& last = a.last_frames[s];
             if (!rg_pendiente) {
@@ -787,11 +854,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 u32 color_cuerpo = color;
                 Mezcla mezcla_cuerpo = Mezcla::NORMAL;
                 if (preparar_mezcla(a.sprites, gfx, color_cuerpo, mezcla_cuerpo)) {
-                    g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color_cuerpo, mezcla_cuerpo);
+                    const GfxId archivo = a.sprites.gfx_archivos(gfx);
+                    dibujar_cuerpo(rg, archivo, spr_sub, spr_frame, spr_partes, px, py, 0, color_cuerpo, mezcla_cuerpo);
                     if ((o.col<O_FLAGS>()[s] & FLAG_VENENO) && mezcla_cuerpo == Mezcla::NORMAL)
-                        g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof + 4),
-                                           (pulso_veneno(ahora) & 0x00FFFFFFu) | (color_cuerpo & 0xFF000000u),
-                                           Mezcla::SILUETA_ADITIVA);
+                        dibujar_cuerpo(rg, archivo, spr_sub, spr_frame, spr_partes, px, py, 4, (pulso_veneno(ahora) & 0x00FFFFFFu) | (color_cuerpo & 0xFF000000u),
+                                       Mezcla::SILUETA_ADITIVA);
                 }
             }
             // Clothes (attribute 105): after the body, same sub-sprite and frame, each with its own attribute
@@ -819,8 +886,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                         u32 color_capa = color;
                         Mezcla mezcla_capa = Mezcla::NORMAL;
                         if (!preparar_mezcla(a.sprites, gfx_capa[i], color_capa, mezcla_capa)) continue;
-                        g.gpu().dibujar_en(capas[i], px, py, clave_orden(CAPA_MUNDO, prof + 1 + static_cast<u32>(i)),
-                                           color_capa, mezcla_capa);
+                        dibujar_cuerpo(capas[i], gfx_capa[i], sub_cuerpo, frame_cuerpo->frame, true, px, py, 1 + static_cast<u32>(i), color_capa,
+                                       mezcla_capa);
                     }
             }
             // Tapado por un objeto del mapa: también su silueta encima de todo (varias piezas
