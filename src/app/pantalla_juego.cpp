@@ -808,7 +808,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         // 0xFF para los monstruos en L1J-JP) y nombre; el objetivo del ataque, en amarillo.
         const bool soy_yo = o.ids()[s] == a.mundo.jugador.id;
         const u8 hp = o.col<O_HP>()[s];
-        if (hp <= 100 && !soy_yo) {
+        // A corpse has no bar: the exe classes a dead monster as 2 (0x4cdd30), and only class 0xa gets the bar (0x467856).
+        if (hp <= 100 && !soy_yo && o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
             overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
             top -= 8;
         }
