@@ -2248,7 +2248,7 @@ void elegir_cursor_original(App& a) {
         return poner(a.entrada.ctrl || a.modo_pk ? 15 : 8);
     }
     const Vista vi = vista(a);
-    if (sobre_alguna_ventana(a)) return poner(5);
+    if (sobre_alguna_ventana(a)) return poner(3);  // window mouse handlers set 3 when no button is held (e.g. list pane 0x4be1a4)
     if (a.entrada.my >= vi.panel_y || sobre_barra(a)) return poner(1);  // arrow over the HUD
     const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
     // Attack mode: the fork's one flag stands for both Ctrl+X ([0x703105]) and the "pk" option ([0x6f1dac]).
