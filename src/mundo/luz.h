@@ -32,9 +32,17 @@ bool mapa_oscuro(MapId m);
 // clima de lluvia o nieve. Mapas con nivel fijo (ver luz.cpp) ignoran la hora.
 int nivel_ambiente(MapId m, int minuto, int dia_anio, bool lluvia);
 
+// En qué mitad del día está el reloj del juego y cuánto lleva de ella (indicador de la página de estado original, 0x4b2e30): el día
+// va del amanecer al anochecer (los umbrales de nivel_ambiente), la noche es el resto. `elapsed` y `length` están en minutos.
+struct DayPhase {
+    bool night;
+    int elapsed, length;
+};
+DayPhase day_phase(int minute, int day_of_year);
+
 // Día del año (0 = 1 de enero) de una hora de juego de S_GameTime. El original la trata como una fecha
 // (segundos desde 1970, sub_4bad30): las estaciones siguen al reloj del juego, no al de la máquina.
-int dia_del_anio(i32 segundos);
+int dia_del_anio(i64 segundos);
 
 // Radio de la máscara de un objeto a partir de su luz: el jugador nunca baja de 5 (S_OwnCharPack manda 0)
 // y el tope es 14, la última máscara de source.lmp con datos.
@@ -46,6 +54,8 @@ int nivel_con_luz_hechizo(int nivel);
 // Infravisión: el elfo y el elfo oscuro ven en la oscuridad con un filtro propio en lugar de la
 // luz normal. No aplica con agua (submarino), con ceguera, con el nivel en día ni si la opción
 // está apagada.
-Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera);
+// `infracon` is the "/infracon" toggle (0x6f1e4b, on by default): with it on classes 2 and 4 get their own filter; with it off only
+// S_Ability 4 = 1 (`habilidad4`) grants one (class 4 keeps its own filter, others use the elf one). RE_ROUND4 section 2.
+Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera, bool infracon = true, u8 habilidad4 = 0);
 
 }  // namespace lin

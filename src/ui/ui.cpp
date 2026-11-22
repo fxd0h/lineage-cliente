@@ -79,11 +79,11 @@ bool desplegable(Graficos& g, EntradaFrame& e, std::span<const std::string> opci
     g.texto("v", x + ancho - 6, y, clave_orden(CAPA_UI_TEXTO, 0), rgba(214, 190, 140));
     bool cambio = false;
     if (abierto) {
-        // La lista va en un nivel de ventana propio, encima de todo: si no, el texto de los
-        // controles de abajo (que va en CAPA_UI_TEXTO) se vería a través de ella.
+        // La lista va en CAPA_ARRASTRE, encima de todo: en un nivel de ventana, el texto de los controles de abajo
+        // del mismo nivel (la ventana de ajustes ya usa el 31) quedaba sobre su fondo y se veía a través.
         const u32 nivel_antes = g.gpu().nivel_ventana();
-        g.gpu().nivel_ventana(31);
-        const u64 kf = clave_orden(CAPA_UI, 200), kt = clave_orden(CAPA_UI_TEXTO, 200);
+        g.gpu().nivel_ventana(0);
+        const u64 kf = clave_orden(CAPA_ARRASTRE, 200), kt = clave_orden(CAPA_ARRASTRE, 210);
         const int ly = y - 4 + fila, lh = fila * static_cast<int>(opciones.size());
         g.gpu().rectangulo(x - 5, ly - 1, ancho + 10, lh + 2, kf, rgba(150, 130, 90));
         for (size_t i = 0; i < opciones.size(); ++i) {
@@ -260,6 +260,11 @@ bool barra_evento(Gpu& gpu, SDL_Window* v, Barra& b, const SDL_Event& ev, bool a
             b.boton = boton;
             return true;
         }
+#if !defined(__APPLE__)
+        // Linux/Windows: mover y redimensionar lo hace el administrador de ventanas con la prueba de acierto
+        // (activar_hit_test); una ventana sin borde no puede moverse sola en Wayland.
+        if (boton == 0) return false;
+#endif
         const int bordes = b.redimensionable ? bordes_bajo(v, ev.button.x, ev.button.y) : 0;
         if (bordes) {
             b.pulsada = true;
@@ -338,6 +343,52 @@ void poner_icono(SDL_Window* ventana, const char* archivo) {
         SDL_SetWindowIcon(ventana, s);
         SDL_DestroySurface(s);
     }
+}
+
+
+#if !defined(__APPLE__)
+namespace {
+struct HitTestData {
+    Gpu* gpu;
+    Barra* barra;
+};
+HitTestData hit_test_data;
+
+// Prueba de acierto del administrador de ventanas: los bordes redimensionan, la barra de título (salvo sus botones) mueve la ventana, como una
+// ventana normal con decoración. No se usa en macOS (ver la nota sobre barra_evento en ui.h).
+SDL_HitTestResult hit_test(SDL_Window* v, const SDL_Point* p, void* data) {
+    const auto* d = static_cast<const HitTestData*>(data);
+    if (SDL_GetWindowFlags(v) & SDL_WINDOW_FULLSCREEN) return SDL_HITTEST_NORMAL;
+    const float x = static_cast<float>(p->x), y = static_cast<float>(p->y);
+    int gx = 0, gy = 0;
+    d->gpu->a_grilla(x, y, gx, gy);
+    const int boton = boton_bajo(*d->gpu, gx, gy);
+    if (boton > 0) return SDL_HITTEST_NORMAL;  // minimizar / cerrar los maneja barra_evento
+    switch (d->barra->redimensionable ? bordes_bajo(v, x, y) : 0) {
+    case BORDE_IZQ | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPLEFT;
+    case BORDE_DER | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPRIGHT;
+    case BORDE_IZQ | BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+    case BORDE_DER | BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+    case BORDE_ARR: return SDL_HITTEST_RESIZE_TOP;
+    case BORDE_ABA: return SDL_HITTEST_RESIZE_BOTTOM;
+    case BORDE_IZQ: return SDL_HITTEST_RESIZE_LEFT;
+    case BORDE_DER: return SDL_HITTEST_RESIZE_RIGHT;
+    default: break;
+    }
+    return boton == 0 ? SDL_HITTEST_DRAGGABLE : SDL_HITTEST_NORMAL;
+}
+}  // namespace
+#endif
+
+void activar_hit_test(SDL_Window* v, Gpu& gpu, Barra& b) {
+    SDL_SetWindowMinimumSize(v, TAM_MIN_W, TAM_MIN_H);
+#if !defined(__APPLE__)
+    hit_test_data = {&gpu, &b};
+    SDL_SetWindowHitTest(v, hit_test, &hit_test_data);
+#else
+    (void)gpu;
+    (void)b;
+#endif
 }
 
 }  // namespace lin::ui

@@ -30,6 +30,7 @@ void eventos_mascotas(App& a, const Evento& e) {
             if (it != a.mascotas.end()) a.mascotas.erase(it);
         } else if (it == a.mascotas.end()) {
             a.mascotas.push_back({e.id, std::string(e.s[0])});
+            a.ventana_mascota = true;  // la invocación abre su ventana (S_PetCtrlMenu, 0x495473)
         }
         break;
     }
@@ -44,7 +45,7 @@ void eventos_mascotas(App& a, const Evento& e) {
 }
 
 bool sobre_mascotas(const App& a) {
-    return !a.mascotas.empty() && ui::sobre(a.entrada, 4, y_lista(a), ANCHO_LISTA + 4, static_cast<int>(a.mascotas.size()) * FILA);
+    return a.cfg.ui_simple && !a.mascotas.empty() && ui::sobre(a.entrada, 4, y_lista(a), ANCHO_LISTA + 4, static_cast<int>(a.mascotas.size()) * FILA);
 }
 
 void procesar_mascotas(App& a) {
@@ -64,13 +65,73 @@ void procesar_mascotas(App& a) {
     }
 }
 
+// ---- Ventana original de mascota (marco 1170; ctor 0x495473, dibujo 0x494880, manejador de órdenes 0x494650 de S3EP1U.bin) ----
+//  - fondo 1169 en (7,7), marco 1170, adorno 1171, cerrar 1177 en (165,17), zona de arrastre (1,5,189,20);
+//  - botones de órdenes (imagen, hover = imagen + 1) en x 45 / 79 / 113, y 180 y 214: agresivo 1183, defensivo 1185, quieto 1193 /
+//    dispersarse 1187, alerta 1179, y 1191 (el caso 7 del exe cierra la ventana: el fork pone ahí "attackchr", la única forma de
+//    ordenar un ataque). Cada uno manda la acción de NPC de la mascota (0x4a7df0 "cdss" 0x41 + nombre; aquí C_NPCAction sobre la mascota).
+//  - el HP de la mascota es el porcentaje de S_HpMeter (el servidor no manda nivel / exp / hambre de las mascotas: los campos NAME / LEVEL / Exp /
+//    MP / State / Hunger del arte quedan vacíos). La bolsa (1351, 0x547 de la segunda variante de ventana) abre la bolsa de la mascota.
+// Sin verificar: las posiciones del nombre y de la barra de HP (estimadas sobre el arte), cuál de las dos variantes del ctor usa el cliente US para
+// las mascotas domadas (el fork muestra esta para mascotas e invocaciones por igual), los tooltips (textos 884..892).
+namespace {
+
+struct PetBtn { u32 img; int x, y; const char* accion; int tip; };
+constexpr PetBtn PET_BTNS[] = {{1183, 45, 180, "aggressive", 884}, {1185, 79, 180, "defensive", 888}, {1193, 113, 180, "stay", 887},
+                               {1187, 45, 214, "extend", 889},     {1179, 79, 214, "alert", 890},     {1191, 113, 214, "attackchr", 892}};
+constexpr u32 IMG_PET_BG = 1169, IMG_PET_FRAME = 1170, IMG_PET_ORN = 1171, IMG_PET_CLOSE = 1177, IMG_PET_BAG = 1351;
+
+}  // namespace
+
+bool mascota_orig_abierta(const App& a) { return !a.cfg.ui_simple && a.ventana_mascota && !a.mascotas.empty(); }
+
+Rect rect_mascota_orig(const App& a) {
+    const RegionAtlas f = a.g ? a.g->img(IMG_PET_FRAME) : RegionAtlas{};
+    return {16, 60, f.w, f.h};
+}
+
+void dibujar_mascota_orig(App& a) {
+    if (!mascota_orig_abierta(a)) return;
+    Graficos& g = *a.g;
+    EntradaFrame& e = a.entrada;
+    arrastrar_ventana(a, IdVentana::MASCOTA);
+    const Rect r = rect_ventana(a, IdVentana::MASCOTA);
+    if (a.mascota_activa >= a.mascotas.size()) a.mascota_activa = 0;
+    const Mascota& m = a.mascotas[a.mascota_activa];
+    const u64 kt = clave_orden(CAPA_UI_TEXTO, 16), ko = clave_orden(CAPA_UI, 15), kc = clave_orden(CAPA_UI, 16);
+    if (draw_original_frame(a, r.x, r.y, IMG_PET_BG, 7, 7, IMG_PET_FRAME, 165, 17) || e.escape) {
+        a.ventana_mascota = false;
+        e.escape = false;
+        return;
+    }
+    (void)IMG_PET_CLOSE;
+    g.gpu().dibujar(g.img(IMG_PET_ORN), r.x - 2, r.y + 11, ko);
+    const TablaObjetos& o = a.mundo.objetos;
+    const Slot s = o.buscar(m.id);
+    char nombre[128];
+    const size_t n = expandir_desc(a.desc, s != SIN_SLOT ? texto(a.mundo, o.col<O_NOMBRE>()[s]) : std::string_view(m.nombre), nombre, sizeof nombre);
+    if (a.mascotas.size() > 1 && ui::sobre(e, r.x + 20, r.y + 34, 140, ALTO_GLIFO + 4) && e.clic) a.mascota_activa = (a.mascota_activa + 1) % a.mascotas.size();
+    g.texto_sombra({nombre, n}, static_cast<float>(r.x + 62), static_cast<float>(r.y + 38), kt, rgba(255, 255, 254));
+    const u8 hp = s != SIN_SLOT ? o.col<O_HP>()[s] : 0xFF;
+    if (hp <= 100) {
+        RegionAtlas fill = g.img(1173);
+        const int full = fill.w;
+        fill.w = static_cast<u16>(full * hp / 100);
+        if (fill.w > 0) g.gpu().dibujar(fill, r.x + 53, r.y + 70, kc);
+    }
+    for (const PetBtn& b : PET_BTNS) {
+        if (draw_original_button(a, r.x + b.x, r.y + b.y, b.img, b.img + 1) && s != SIN_SLOT) enviar(a, cmd::accion_npc(a.op, m.id, b.accion));
+    }
+    if (draw_original_button(a, r.x + 73, r.y + 135, IMG_PET_BAG, IMG_PET_BAG + 1)) enviar(a, cmd::inventario_mascota(a.op, m.id));
+}
+
 void dibujar_mascotas(App& a) {
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;
     const u64 kf = clave_orden(CAPA_UI, 4), kt = clave_orden(CAPA_UI_TEXTO, 4);
     const TablaObjetos& o = a.mundo.objetos;
     int y = y_lista(a);
-    for (size_t i = 0; i < a.mascotas.size(); ++i, y += FILA) {
+    for (size_t i = 0; a.cfg.ui_simple && i < a.mascotas.size(); ++i, y += FILA) {  // interfaz original: la ventana de mascota
         const Mascota& m = a.mascotas[i];
         const Slot s = o.buscar(m.id);
         const int x = 4, w_nombre = ANCHO_LISTA - BOTON - 4;

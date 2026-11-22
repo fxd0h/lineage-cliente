@@ -11,19 +11,38 @@
 #include <cstring>
 #include <filesystem>
 #include "app/app.h"
+#include "proto/comandos.h"
 
 namespace lin {
 
 namespace {
 
-constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio"};
+constexpr std::string_view NOMBRES[] = {"estado", "inventario", "hechizos", "npc", "salida", "social", "intercambio", "volumen", "hpmp", "tiendapriv", "lista", "mascota", "destino", "cartel", "cocina"};
 static_assert(std::size(NOMBRES) == static_cast<size_t>(IdVentana::CANTIDAD));
-static_assert(static_cast<int>(IdVentana::CANTIDAD) == 7, "App::orden_ventanas se inicializa con 0..6");
+static_assert(static_cast<int>(IdVentana::CANTIDAD) == 15, "App::orden_ventanas se inicializa con 0..14");
 constexpr int ANCHO_SALIDA = 200, ALTO_SALIDA = 120;
+// Original exit window (client draw at 0x4a1570, built at 0x4a1180): background 1058 at (7,7), frame 1059, ornaments
+// 1060 at (0,6), close button at (108,11), buttons Restart 1063 / Quit 1065 / Cancel 1067 (hover +1) at x 31, y 34/52/70.
+constexpr int EXIT_W = 130, EXIT_H = 112;
 constexpr int SEPARACION = 4, MARGEN = 7;
 constexpr int PASO_LUGAR = 8;  // px entre los lugares que se prueban para una ventana que se abre
 
 int indice(IdVentana v) { return static_cast<int>(v); }
+
+// Ventanas de la interfaz original que viven en la lista emergente del cliente (0x4d0f30: como mucho 4 abiertas, una 5.ª cierra la más vieja) y
+// comparten la zona de arrastre de 0x47bcd0: inventario, estado, libro de hechizos, intercambio, y el inventario de mascota solo en la lista.
+bool original_listed(const App& a, IdVentana v) {
+    if (a.cfg.ui_simple) return false;
+    return v == IdVentana::ESTADO || v == IdVentana::INVENTARIO || v == IdVentana::HECHIZOS || v == IdVentana::INTERCAMBIO ||
+           v == IdVentana::MASCOTA || v == IdVentana::COCINA;
+}
+bool original_draggable(const App& a, IdVentana v) { return original_listed(a, v) && v != IdVentana::MASCOTA; }
+constexpr int MAX_LISTED_WINDOWS = 4;
+// Rect de la zona de arrastre (0x47bcd0), relativo a la ventana: inventario/estado (0,5,191,25), intercambio 199 de ancho, libro de hechizos (6,9,197,29).
+Rect original_drag_handle(IdVentana v) {
+    if (v == IdVentana::HECHIZOS) return {6, 9, 197, 29};
+    return {0, 5, v == IdVentana::INTERCAMBIO ? 199 : 191, 25};
+}
 
 void cargar_posiciones(App& a) {
     a.ventanas_cargadas = true;
@@ -50,21 +69,52 @@ void guardar_posiciones(App& a) {
 // cada una a la izquierda de las anteriores que estén abiertas y en su lugar (una movida deja libre
 // el suyo).
 Rect por_defecto(const App& a, IdVentana v) {
-    const int w = ui::VENTANA_ANCHO, h = ui::VENTANA_ALTO, y = ui::VENTANA_Y;
+    const int y = ui::VENTANA_Y;
+    // Las ventanas con marco del cliente original tienen el tamaño de su imagen de marco.
+    auto ancho = [&](IdVentana o) {
+        if (!uses_original_frame(a, o)) return ui::VENTANA_ANCHO;
+        return o == IdVentana::HECHIZOS ? SPELLBOOK_WINDOW_W : ORIGINAL_WINDOW_W;
+    };
+    const int w = ancho(v), h = !uses_original_frame(a, v) ? ui::VENTANA_ALTO : v == IdVentana::HECHIZOS ? SPELLBOOK_WINDOW_H : ORIGINAL_WINDOW_H;
     auto ocupa = [&](bool abierta_, IdVentana o) {
         const PosVentana& p = a.pos_ventanas[indice(o)];
-        return abierta_ && !p.movida && !p.colocada ? w + SEPARACION : 0;
+        return abierta_ && !p.movida && !p.colocada ? ancho(o) + SEPARACION : 0;
     };
-    const int x_inv = a.gpu.ancho() - w - MARGEN;
-    const int x_estado = x_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
+    // Bordes derechos de la pila contra el borde derecho de la pantalla.
+    const int der_inv = a.gpu.ancho() - MARGEN;
+    const int der_estado = der_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
+    const int der_hechizos = der_estado - ocupa(a.ventana_estado, IdVentana::ESTADO);
+    if (!a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO || v == IdVentana::HECHIZOS)) {
+        // Valores por omisión originales (0x44cf6a, 0x4aefcb): inventario en 640-190, libro de hechizos en 640-207, estado en 0; y 0 del
+        // bloque de 640x480, que se centra en una vista más ancha (nuestra franja del título queda arriba de la vista, no dentro).
+        const int hx = (a.gpu.ancho() - 640) / 2;
+        return {hx + (v == IdVentana::INVENTARIO ? 640 - ORIGINAL_WINDOW_W : v == IdVentana::HECHIZOS ? 640 - SPELLBOOK_WINDOW_W : 0),
+                0, w, h};
+    }
     switch (v) {
-    case IdVentana::INVENTARIO: return {x_inv, y, w, h};
-    case IdVentana::ESTADO: return {x_estado, y, w, h};
-    case IdVentana::HECHIZOS: return {x_estado - ocupa(a.ventana_estado, IdVentana::ESTADO), y, w, h};
-    case IdVentana::NPC: return {MARGEN, y, w, h};
-    case IdVentana::SALIDA: return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
+    case IdVentana::INVENTARIO: return {der_inv - w, y, w, h};
+    case IdVentana::ESTADO: return {der_estado - w, y, w, h};
+    case IdVentana::HECHIZOS: return {der_hechizos - w, y, w, h};
+    case IdVentana::NPC:
+        if (!a.cfg.ui_simple) {
+            int nw, nh;
+            original_npc_size(a, nw, nh);
+            return {MARGEN, y, nw, nh};
+        }
+        return {MARGEN, y, w, h};
+    case IdVentana::SALIDA:
+        if (!a.cfg.ui_simple) return {(a.gpu.ancho() - EXIT_W) / 2, a.gpu.alto() / 3, EXIT_W, EXIT_H};
+        return {(a.gpu.ancho() - ANCHO_SALIDA) / 2, a.gpu.alto() / 3, ANCHO_SALIDA, ALTO_SALIDA};
     case IdVentana::SOCIAL: return rect_social(a);
     case IdVentana::INTERCAMBIO: return rect_intercambio(a);
+    case IdVentana::VOLUMEN: return rect_volumen(a);
+    case IdVentana::HPMP: return rect_hpmp_flotante(a);
+    case IdVentana::TIENDA_PRIV: return rect_tienda_original(a);
+    case IdVentana::LISTA: return rect_lista_orig(a);
+    case IdVentana::MASCOTA: return rect_mascota_orig(a);
+    case IdVentana::DESTINO: return rect_destino_orig(a);
+    case IdVentana::CARTEL: return rect_cartel(a);
+    case IdVentana::COCINA: return rect_cocina(a);
     default: return {0, y, w, h};
     }
 }
@@ -78,6 +128,14 @@ bool abierta(const App& a, IdVentana v) {
     case IdVentana::SALIDA: return a.ventana_salida;
     case IdVentana::SOCIAL: return a.ventana_social;
     case IdVentana::INTERCAMBIO: return a.intercambio.abierto;
+    case IdVentana::VOLUMEN: return a.ventana_volumen;
+    case IdVentana::HPMP: return hpmp_flotante_abierta(a);
+    case IdVentana::TIENDA_PRIV: return tienda_original_abierta(a);
+    case IdVentana::LISTA: return a.lista.abierta && !a.cfg.ui_simple;
+    case IdVentana::MASCOTA: return mascota_orig_abierta(a);
+    case IdVentana::DESTINO: return destino_orig_abierto(a);
+    case IdVentana::CARTEL: return a.cartel.abierto;
+    case IdVentana::COCINA: return cocina_abierta(a);
     default: return false;
     }
 }
@@ -109,12 +167,13 @@ void al_frente(App& a, IdVentana v) {
 void colocar(App& a, IdVentana v) {
     PosVentana& p = a.pos_ventanas[indice(v)];
     p.colocada = false;
-    if (p.movida) return;
+    if (original_draggable(a, v)) return;  // el original nunca aparta una ventana
+    if (p.movida || v == IdVentana::HPMP) return;  // el par flotante de HP/MP siempre empieza arriba al centro
     const Rect r = rect_ventana(a, v);
     auto libre = [&](const Rect& c) {
         for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
             const IdVentana o = static_cast<IdVentana>(i);
-            if (o != v && abierta(a, o) && solapan(c, rect_ventana(a, o))) return false;
+            if (o != v && o != IdVentana::HPMP && abierta(a, o) && solapan(c, rect_ventana(a, o))) return false;
         }
         return true;
     };
@@ -131,7 +190,49 @@ void colocar(App& a, IdVentana v) {
     }
 }
 
+// Cierra una ventana de la lista como lo haría su propia X (el intercambio se cancela en el servidor).
+void cerrar_listada(App& a, IdVentana v) {
+    switch (v) {
+    case IdVentana::ESTADO: a.ventana_estado = false; break;
+    case IdVentana::INVENTARIO: a.ventana_inventario = false; break;
+    case IdVentana::HECHIZOS: a.ventana_hechizos = false; break;
+    case IdVentana::MASCOTA: a.ventana_mascota = false; break;
+    case IdVentana::COCINA: a.cocina.abierta = false; break;
+    case IdVentana::INTERCAMBIO: enviar(a, cmd::cancelar_intercambio(a.op)); break;
+    default: break;
+    }
+}
+
+// 0x4d0f30: una ventana recién abierta va al frente de la lista de 4 casillas; con la lista llena se cierra la más vieja (la que está
+// más atrás en el orden de apilado).
+void limitar_abiertas(App& a, IdVentana nueva) {
+    int abiertas = 0;
+    for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
+        const IdVentana o = static_cast<IdVentana>(i);
+        abiertas += original_listed(a, o) && abierta(a, o);
+    }
+    for (int k = 0; k < indice(IdVentana::CANTIDAD) && abiertas > MAX_LISTED_WINDOWS; ++k) {
+        const IdVentana o = static_cast<IdVentana>(a.orden_ventanas[k]);  // de atrás hacia adelante
+        if (o == nueva || !original_listed(a, o) || !abierta(a, o)) continue;
+        cerrar_listada(a, o);
+        --abiertas;
+    }
+}
+
 }  // namespace
+
+bool alguna_ventana_abierta(const App& a) {
+    for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i)
+        if (static_cast<IdVentana>(i) != IdVentana::HPMP && abierta(a, static_cast<IdVentana>(i))) return true;  // la barra flotante de HP/MP siempre está
+    return false;
+}
+
+void close_listed_windows(App& a) {
+    a.ventana_estado = a.ventana_inventario = a.ventana_hechizos = a.ventana_salida = false;
+    if (!a.cfg.ui_simple && a.intercambio.abierto) enviar(a, cmd::cancelar_intercambio(a.op));  // Esc cancela un intercambio pendiente
+}
+
+void guardar_posiciones_ventanas(App& a) { guardar_posiciones(a); }
 
 void actualizar_ventanas(App& a) {
     if (!a.ventanas_cargadas) cargar_posiciones(a);
@@ -141,18 +242,29 @@ void actualizar_ventanas(App& a) {
         if (ab && !a.ventana_abierta_antes[i]) {
             colocar(a, v);
             al_frente(a, v);
+            if (original_listed(a, v)) limitar_abiertas(a, v);
         }
         if (!ab) a.pos_ventanas[i].colocada = false;
         a.ventana_abierta_antes[i] = ab;
     }
     a.ventana_arriba = ventana_bajo_puntero(a);
     if (a.entrada.pulsado && a.ventana_arriba >= 0) al_frente(a, static_cast<IdVentana>(a.ventana_arriba));
+    // Un doble clic derecho dentro de una ventana la cierra (WM_RBUTTONDBLCLK, inventario 0x44d1b0 -> 0x4d1200).
+    if (a.entrada.doble_derecho && a.ventana_arriba >= 0 && original_draggable(a, static_cast<IdVentana>(a.ventana_arriba))) {
+        cerrar_listada(a, static_cast<IdVentana>(a.ventana_arriba));
+        a.entrada.doble_derecho = a.entrada.clic_derecho = false;
+        a.clic_consumido = true;
+    }
 }
 
 Rect rect_ventana(const App& a, IdVentana v) {
     Rect r = por_defecto(a, v);
     const PosVentana& p = a.pos_ventanas[indice(v)];
-    if (p.movida || p.colocada) {
+    if ((p.movida || p.colocada) && original_draggable(a, v)) {
+        // El original mantiene una ventana arrastrada entera dentro de la pantalla (0x47bd90).
+        r.x = std::clamp(p.x, 0, std::max(0, a.gpu.ancho() - r.w));
+        r.y = std::clamp(p.y, 0, std::max(0, a.gpu.alto() - r.h));
+    } else if (p.movida || p.colocada) {
         // Siempre con la barra de título dentro de la pantalla (la ventana puede haber quedado fuera
         // al achicar la ventana del sistema o cambiar el zoom).
         r.x = std::clamp(p.x, 40 - r.w, a.gpu.ancho() - 40);
@@ -176,8 +288,15 @@ void arrastrar_ventana(App& a, IdVentana v) {
     const EntradaFrame& e = a.entrada;
     Rect r = rect_ventana(a, v);
     PosVentana& p = a.pos_ventanas[indice(v)];
-    // Se toma de la barra de título, salvo el botón de cerrar (los últimos 30 px).
-    if (e.pulsado && a.ventana_arrastrada < 0 && ui::sobre(e, r.x, r.y, r.w - 30, ui::ALTO_TITULO)) {
+    // Se toma de la barra de título, salvo el botón de cerrar (los últimos 30 px). The original windows only take the
+    // drag handle rect of their ctor (0x47bcd0), minus the close button.
+    Rect grab{r.x, r.y, r.w - 30, ui::ALTO_TITULO};
+    const bool original = original_draggable(a, v);
+    if (original) {
+        const Rect hr = original_drag_handle(v);
+        grab = {r.x + hr.x, r.y + hr.y, std::min(hr.w, r.w - 30) - hr.x, hr.h};
+    }
+    if (e.pulsado && a.ventana_arrastrada < 0 && ui::sobre(e, grab.x, grab.y, grab.w, grab.h)) {
         a.ventana_arrastrada = indice(v);
         a.arrastre_dx = e.mx - r.x;
         a.arrastre_dy = e.my - r.y;
@@ -187,6 +306,10 @@ void arrastrar_ventana(App& a, IdVentana v) {
     if (e.presionado) {
         p.x = e.mx - a.arrastre_dx;
         p.y = e.my - a.arrastre_dy;
+        if (original) {
+            p.x = std::clamp(p.x, 0, std::max(0, a.gpu.ancho() - r.w));
+            p.y = std::clamp(p.y, 0, std::max(0, a.gpu.alto() - r.h));
+        }
         p.movida = true;
         p.colocada = false;
     } else {
@@ -198,6 +321,10 @@ void arrastrar_ventana(App& a, IdVentana v) {
 // La de los ajustes; opaca para la ventana que se está dibujando si tapa a otra (se leería el
 // texto de la de abajo a través de su fondo).
 u8 opacidad_ventanas(const App& a) {
+    if (!a.cfg.ui_simple) {  // original: opción [0x6e1008] = 31, 20, 13 o 7 (de 31), la fija la acción "alpha" de la página de Opciones
+        static constexpr u8 PASOS[4] = {255, 165, 107, 58};
+        return PASOS[std::clamp(a.cfg.alpha_orig, 0, 3)];
+    }
     return a.ventana_sobre_otra ? 255 : static_cast<u8>(std::clamp(a.cfg.opacidad_ventanas, 60, 255));
 }
 
@@ -210,26 +337,95 @@ bool tapa_a_otra(const App& a, IdVentana v) {
     return false;
 }
 
-// Botón con imagen N (normal) y N+1 (resaltado): ui::boton, con la ayuda arriba al pasar el puntero.
-static bool boton_panel(App& a, u32 n, int x, int y, std::string_view ayuda) {
+// Botón de la franja inferior (ctor 0x47c6d0, dibujo 0x47c760): el primer id `n` en reposo, el segundo (n + 1) mientras el puntero está encima o
+// presionado (el hover fija +0x2d, la presión +0x2c: ambos eligen el id +0x4c / primero + 1). El botón de correo es arte simple y alterna
+// la ventana de correo (correo_ui.cpp). El arte en reposo es la versión del archivo base (Graficos::img_base).
+static bool boton_panel(App& a, u32 n, int x, int y, bool mono = true) {
     Graficos& g = *a.g;
-    bool encima = ui::sobre(a.entrada, x, y, g.img(n).w, g.img(n).h);
+    const RegionAtlas reposo = mono ? g.img_base(n) : g.img(n);
+    const bool encima = ui::sobre(a.entrada, x, y, reposo.w, std::max<int>(reposo.h, 16));
+    const u64 k = clave_orden(CAPA_UI, 1);
     if (encima) {
-        int w = ancho_texto(ayuda.data(), ayuda.size());
-        g.gpu().rectangulo(x - 3, y - 19, w + 6, ALTO_GLIFO + 4, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
-        g.texto(ayuda, static_cast<float>(x), static_cast<float>(y - 17), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
+        g.gpu().dibujar(g.img(n + 1), x, y, k);
+    } else {
+        g.gpu().dibujar(reposo, x, y, k);
     }
-    return ui::boton(g, a.entrada, n, x, y);
+    return encima && a.entrada.clic;
+}
+
+// Ayudas de la franja (administrador de ayudas [0x8f0b6c], ítems armados en 0x4bc1ef..: rect {l, t, r, b} (r, b exclusivos), x del ancla, índice de string-e).
+// El puntero debe quedarse dentro del rect 700 ms (0x2bc, temporizador 0x4ba8e0 -> 0x4bb830); un clic la oculta y rearma la espera (0x4bbb50).
+// Dibujo 0x4bb8f0: ancho 142 (22 celdas de 6 px + 10) o, para una sola línea, 6 * largo + 21 si es más angosto; alto 12 * líneas + 10;
+// en (x del ancla, 478), corrida a la izquierda para caber en 640 y arriba de la franja (460 - h) porque pasaría de 480; relleno oscurecido al 50%
+// (0x49a440), bisel de 2 px gris claro 23/31 (arriba, izquierda) y gris 15/31 (abajo, derecha), texto blanco en (x + 5, y + 5), paso de 12 px.
+struct HintBoton { int l, r, ancla_x; u16 texto; };
+constexpr HintBoton HINTS_PANEL[8] = {{491, 506, 495, 613}, {506, 525, 495, 1250}, {526, 543, 516, 614}, {544, 562, 537, 615},
+                                      {563, 579, 558, 616}, {580, 600, 579, 617}, {601, 617, 600, 618}, {618, 639, 621, 619}};
+
+static void hint_panel(App& a, int vx, int vy) {
+    int idx = -1;
+    const int mx = a.entrada.mx - vx, my = a.entrada.my - vy;
+    if (my >= 460 && my < 478)
+        for (int i = 0; i < 8; ++i)
+            if (mx >= HINTS_PANEL[i].l && mx < HINTS_PANEL[i].r) idx = i;
+    const u64 ahora = a.entrada.ahora_ms;
+    if (idx != a.hint_boton || (idx >= 0 && a.entrada.clic)) {
+        a.hint_boton = idx;
+        a.hint_t0 = ahora;
+    }
+    if (idx < 0 || !(a.cfg.opciones_orig >> OPC_TOOLTIP & 1) || ahora - a.hint_t0 < 700) return;
+    std::string_view t = a.mensajes.linea(HINTS_PANEL[idx].texto);
+    if (t.empty()) return;
+    std::string_view filas[8];
+    int n = 0;
+    while (!t.empty() && n < 8) {
+        const size_t c = bytes_que_caben(t.data(), t.size(), 22 * 6);
+        if (c == 0) break;
+        filas[n++] = t.substr(0, c);
+        t.remove_prefix(c);
+        while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
+    }
+    if (n == 0) return;
+    int w = 142;
+    if (n == 1) w = std::min(w, 6 * static_cast<int>(filas[0].size()) + 21);
+    w &= ~3;
+    const int h = 12 * n + 10;
+    int x = HINTS_PANEL[idx].ancla_x, y = 478;
+    if (x + w > 640) x = 640 - w;
+    if (y + h > 480) y = 460 - h;
+    x += vx, y += vy;
+    Gpu& gpu = a.g->gpu();
+    const u64 kf = clave_orden(CAPA_UI, 30), kt = clave_orden(CAPA_UI_TEXTO, 30);
+    const u32 claro = rgba(189, 189, 189), oscuro = rgba(123, 123, 123);
+    gpu.rectangulo(x, y, w, h, kf, rgba(0, 0, 0, 128));
+    gpu.rectangulo(x, y, w - 1, 1, kf, claro);
+    gpu.rectangulo(x + 1, y + 1, w - 2, 1, kf, claro);
+    gpu.rectangulo(x, y + 1, 1, h - 1, kf, claro);
+    gpu.rectangulo(x + 1, y + 2, 1, h - 2, kf, claro);
+    gpu.rectangulo(x + 1, y + h - 1, w - 1, 1, kf, oscuro);
+    gpu.rectangulo(x + 2, y + h - 2, w - 2, 1, kf, oscuro);
+    gpu.rectangulo(x + w - 1, y, 1, h - 1, kf, oscuro);
+    gpu.rectangulo(x + w - 2, y + 1, 1, h - 2, kf, oscuro);
+    for (int i = 0; i < n; ++i)
+        a.g->texto_sombra(filas[i], static_cast<float>(x + 5), static_cast<float>(y + 5 + 12 * i), kt, rgba(255, 255, 254));
 }
 
 void dibujar_botones_panel(App& a, int x, int y) {
-    // Panel original: arriba del panel derecho (1019.img), en la franja sobre las teclas F.
-    if (boton_panel(a, 1005, x, y, "Magic (Alt+S)")) a.ventana_hechizos = !a.ventana_hechizos;
-    if (boton_panel(a, 1007, x + 22, y, "Status (Alt+C)")) a.ventana_estado = !a.ventana_estado;
-    if (boton_panel(a, 1011, x + 40, y, "Inventory (Alt+I)")) a.ventana_inventario = !a.ventana_inventario;
-    if (boton_panel(a, 1009, x + 58, y, "Options")) a.ventana_ajustes = true;
-    if (boton_panel(a, 1013, x + 74, y, "Restart / Quit")) a.ventana_salida = !a.ventana_salida;
-    if (boton_panel(a, 1015, x + 94, y, "Party, trade, clan")) a.ventana_social = !a.ventana_social;
+    // Franja inferior original (S3EP1U 0x459595..0x45980a): ocho botones en y=460 de la pantalla de 640x480; x es
+    // 491 ayuda, 507 correo, 527 estado, 544 magia, 563 inventario, 580 social, 601 opciones, 618 salir.
+    constexpr int BY = 460;
+    if (boton_panel(a, 1017, x + 491, y + BY)) alternar_ayuda(a);
+    if (boton_panel(a, 1585, x + 507, y + BY, false)) {
+        if (a.correo.abierto) a.correo.abierto = a.correo.escribiendo = false;
+        else comando_correo(a, "mail");
+    }
+    if (boton_panel(a, 1007, x + 527, y + BY)) a.ventana_estado = !a.ventana_estado;
+    if (boton_panel(a, 1005, x + 544, y + BY)) a.ventana_hechizos = !a.ventana_hechizos;
+    if (boton_panel(a, 1011, x + 563, y + BY)) a.ventana_inventario = !a.ventana_inventario;
+    if (boton_panel(a, 1015, x + 580, y + BY)) alternar_comunidad(a);
+    if (boton_panel(a, 1009, x + 601, y + BY)) alternar_opciones(a);
+    if (boton_panel(a, 1013, x + 618, y + BY)) a.ventana_salida = !a.ventana_salida;
+    hint_panel(a, x, y);
 }
 
 // UI simple: 6 botones en 2 columnas × 3 filas, a la izquierda del minimapa.
@@ -285,9 +481,10 @@ void dibujar_ayuda_teclas(App& a) {
         {"F1", "This help"},
         {"F2", "Simple / original interface"},
         {"F3 / Shift+F3", "Debug overlay / FPS counter"},
-        {"F4 / Shift+F4", "Camera / shade in shadows"},
-        {"F5-F12", "Cast the assigned spell"},
-        {"Shift+F12", "Screenshot (captura.bmp)"},
+        {"F4 / Shift+F4", "Pick up a nearby item (simple UI: camera) / shade in shadows"},
+        {"F5-F12 / Ctrl+1..8", "Use the assigned spell or item (Alt+F10 = F10)"},
+        {"Shift+F5", "Cycle scaling filter (integer/xBR/FSR/CRT)"},
+        {"Ctrl+P / Shift+F12", "Screenshot (Capture/LinC0000.bmp, simple UI: captura.bmp)"},
         {"Shift+click", "Turn that way (to face someone)"},
         {"1..0 / Alt+1..0", "Shortcut bar (spells, items)"},
         {"Enter", "Open chat / send (Esc: cancel)"},
@@ -297,7 +494,10 @@ void dibujar_ayuda_teclas(App& a) {
         {"/exclude Name", "Block / unblock a player (no name: list)"},
         {"/buddy, /addbuddy, /delbuddy", "Buddy list"},
         {"Middle click", "Select bar slot / use it on target"},
-        {"Alt+I / Alt+C / Alt+S", "Inventory / status / magic"},
+        {"Ctrl+I / A / S", "Inventory / status / magic"},
+        {"Ctrl+C / V / Q / H", "Social / options / restart-quit / this help"},
+        {"Ctrl+T / Ctrl+O / Ctrl+X", "Chat size (4 steps) / chat colours / PK attack mode (original UI)"},
+        {"Ctrl+Y / Ctrl+Z", "GM only: pick a target, send opcode 83 (Z repeats)"},
         {"Ctrl +/- / Ctrl 0", "Zoom in / out / auto"},
         {"Arrows, mouse", "Walk; click a monster to attack"},
         {"Ctrl+click", "Attack a player or NPC"},
@@ -354,6 +554,36 @@ void dibujar_salida(App& a) {
     if (!a.ventana_salida) return;
     arrastrar_ventana(a, IdVentana::SALIDA);
     Rect r = rect_ventana(a, IdVentana::SALIDA);
+    if (!a.cfg.ui_simple) {
+        if (draw_original_frame(a, r.x, r.y, 1058, 7, 7, 1059, 108, 11)) a.ventana_salida = false;
+        draw_original_overlay(a, r.x, r.y + 6, 1060);
+        // Menú de Esc (0x4a1180): botón 1 = Reiniciar estando muerto (C_RESTART) / cambiar de personaje estando vivo (C_CHANGECHAR,
+        // rechazado dentro de los 15 s de un combate, texto 130); botón 2 = salir (rechazado dentro de los 15 s de un combate salvo muerto o
+        // en una celda segura, texto 131); el botón 3 cierra. RE_ROUND4 sección 5.
+        const bool muerto = a.mundo.jugador.muerto;
+        const bool combate = a.t_combate && a.entrada.ahora_ms < a.t_combate + 15000;
+        auto aviso = [&](size_t id) { a.chat.agregar(a.mensajes.linea(id), rgba(255, 255, 255), CHAT_SISTEMA); };
+        if (draw_original_button(a, r.x + 31, r.y + 34, 1063, 1064)) {
+            if (muerto) {
+                reiniciar(a);
+                a.ventana_salida = false;
+            } else if (combate) {
+                aviso(130);
+            } else {
+                enviar(a, cmd::cambiar_personaje(a.op));
+                a.ventana_salida = false;
+            }
+        } else if (draw_original_button(a, r.x + 31, r.y + 52, 1065, 1066)) {
+            const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+            const bool segura = yo != SIN_SLOT && tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo],
+                                                                  a.mundo.objetos.col<O_Y>()[yo]) == TipoZona::SEGURA;
+            if (!muerto && !segura && combate) aviso(131);
+            else a.salir = true;  // cerrar_app sends C_QUITGAME
+        } else if (draw_original_button(a, r.x + 31, r.y + 70, 1067, 1068)) {
+            a.ventana_salida = false;
+        }
+        return;
+    }
     if (recuadro(a, r, "Exit")) {
         a.ventana_salida = false;
         return;
@@ -376,7 +606,7 @@ void avisar_mapa(App& a, MapId mapa) {
     char t[160];
     std::snprintf(t, sizeof t, "map/%u", mapa);
     std::error_code ec;
-    if (std::filesystem::is_directory(ruta_real(a.rec.carpeta() + t), ec)) return;
+    if (std::filesystem::is_directory(a.rec.ruta_archivo(t), ec)) return;
     std::snprintf(t, sizeof t,
                   "The server sent you to map %u, which this game installation does not have. Use Exit > Restart to go back.",
                   mapa);

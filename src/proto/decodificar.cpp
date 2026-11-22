@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include "recursos/big5.h"
 
 namespace lin {
 
@@ -30,15 +32,20 @@ struct Lector : LectorBinario {
         std::string_view v(reinterpret_cast<const char*>(datos.data() + ini), pos - ini);
         if (pos < datos.size()) ++pos;
         else error = true;
+        if (perfil.texto_big5) {
+            static thread_local std::string utf8;
+            big5_a_utf8(v, utf8);
+            return arena->copiar(utf8);
+        }
         return arena->copiar(v);
     }
 };
 
 using Decodificador = bool (*)(Lector&, Evento&);
 
-// CA propia: el servidor la manda en un byte con signo (writeC). El cliente original le resta 256 desde
-// 0x28 (0x4b0c16), así que una CA por debajo de -128 (0x7f...0x28) se lee bien y no como positiva.
-int ca_de_byte(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
+// CA del personaje propio como la muestra el original (0x4b0c16, 0x4b4ce2, 0x4b3b09): el byte [0x8f07df] se extiende con signo y después
+// a todo lo >= 0x28 se le resta 0x100, así un byte 0x28..0x7f del protocolo se lee como -216..-129 en vez de +40..+127.
+int ca_original(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
 
 bool ignorar(Lector&, Evento& e) { e.tipo = Ev::IGNORADO; return true; }
 
@@ -60,7 +67,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_LEGAL] = static_cast<i16>(l.h());
     e.v[PJ_HP] = l.h();
     e.v[PJ_MP] = l.h();
-    e.v[PJ_CA] = ca_de_byte(l.c());
+    e.v[PJ_CA] = ca_original(l.c());
     e.v[PJ_NIVEL] = l.c();
     e.v[PJ_FUE] = l.c();
     e.v[PJ_DES] = l.c();
@@ -68,6 +75,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_SAB] = l.c();
     e.v[PJ_CAR] = l.c();
     e.v[PJ_INT] = l.c();
+    e.v[PJ_GM] = l.quedan(1) ? l.c() : 0;  // byte "es Administrador" (S_CharPacks): habilita los atajos de GM
     return true;
 }
 // S_CharCreateStatus: c motivo (2 ok, 6 ya existe, 9 nombre inválido, 21 reparto/cantidad)
@@ -87,7 +95,7 @@ bool estado(Lector& l, Evento& e) {
     e.v[EP_HPMAX] = l.vida();
     e.v[EP_MP] = l.vida();
     e.v[EP_MPMAX] = l.vida();
-    e.v[EP_CA] = ca_de_byte(l.c());
+    e.v[EP_CA] = ca_original(l.c());
     l.d();
     e.v[EP_COMIDA] = l.c();
     e.v[EP_PESO] = l.c();
@@ -99,25 +107,27 @@ bool estado(Lector& l, Evento& e) {
 // el largo (S_MapID trae 11 bytes). El tiempo: minutos desde 1997-01-01 17:00 (hora local), menos
 // 1200, divididos por 182 (S_WarTime.java); se devuelve en minutos desde 1970-01-01 00:00.
 constexpr i32 MINUTOS_1997 = 9862 * 1440 + 17 * 60;  // 1997-01-01 17:00 desde 1970
-bool mapa(Lector& l, Evento& e) {
-    if (l.quedan(30)) {
-        e.tipo = Ev::FECHA_ASEDIO;
-        const int n = std::min<int>(l.h(), 6);
-        e.s[0] = l.s();
+// S_WarTime: h cantidad (máx. 6), s zona horaria, c c c, cantidad x (d hora, c 0). Opcode propio en s3ep1 / tw380.
+bool tiempo_guerra(Lector& l, Evento& e) {
+    e.tipo = Ev::FECHA_ASEDIO;
+    const int n = std::min<int>(l.h(), 6);
+    e.s[0] = l.s();
+    l.c();
+    l.c();
+    l.c();
+    int validas = 0;
+    for (int i = 0; i < n && !l.error; ++i) {
+        // En i64; una fecha que no entra en i32 (un valor absurdo del servidor) se descarta en vez de
+        // truncarse a otra fecha cualquiera.
+        const i64 m = MINUTOS_1997 + 1200 + static_cast<i64>(static_cast<i32>(l.d())) * 182;
         l.c();
-        l.c();
-        l.c();
-        int validas = 0;
-        for (int i = 0; i < n; ++i) {
-            // En i64; una fecha que no entra en i32 (un valor absurdo del servidor) se descarta en vez de
-            // truncarse a otra fecha cualquiera.
-            const i64 m = MINUTOS_1997 + 1200 + static_cast<i64>(static_cast<i32>(l.d())) * 182;
-            l.c();
-            if (m >= INT32_MIN && m <= INT32_MAX) e.v[FA_MINUTOS + validas++] = static_cast<i32>(m);
-        }
-        e.v[FA_N] = validas;
-        return true;
+        if (m >= INT32_MIN && m <= INT32_MAX) e.v[FA_MINUTOS + validas++] = static_cast<i32>(m);
     }
+    e.v[FA_N] = validas;
+    return !l.error;
+}
+bool mapa(Lector& l, Evento& e) {
+    if (l.quedan(30)) return tiempo_guerra(l, e);  // jp363 comparte el opcode: se distinguen por el largo
     e.tipo = Ev::MAPA;
     e.v[0] = l.h();
     e.v[1] = l.c();
@@ -151,7 +161,7 @@ bool poner(Lector& l, Evento& e) {
         std::memcpy(p + dueno.size(), "'s", 2);
         e.s[1] = {p, dueno.size() + 2};
     }
-    l.c();
+    e.v[OB_RANGO] = l.c() >> 4;
     e.v[OB_HP] = l.c();
     l.c();
     e.v[OB_NIVEL] = l.c();  // S_NPCPack: el nivel; S_OtherCharPacks: 0
@@ -203,6 +213,11 @@ bool chat(Lector& l, Evento& e) {
     e.v[0] = l.c();
     if (e.origen != Srv::GLOBALCHAT) e.id = l.d();
     e.s[0] = l.s();
+    if (e.v[0] == CHAT_GRITO && e.origen != Srv::GLOBALCHAT && l.quedan(4)) {  // el grito trae la celda de quien habla
+        e.v[CH_X] = l.h();
+        e.v[CH_Y] = l.h();
+        e.v[CH_CON_POS] = 1;
+    }
     return true;
 }
 // S_Exp: c nivel, d experiencia acumulada
@@ -214,7 +229,7 @@ bool sp_mr(Lector& l, Evento& e) { e.tipo = Ev::SP_MR; e.v[0] = static_cast<i8>(
 // S_OwnCharAttrDef: c CA, c fuego, c agua, c viento, c tierra
 bool defensa(Lector& l, Evento& e) {
     e.tipo = Ev::DEFENSA;
-    e.v[DF_CA] = ca_de_byte(l.c());
+    e.v[DF_CA] = ca_original(l.c());
     for (int i = DF_FUEGO; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
     return true;
 }
@@ -231,7 +246,54 @@ bool atributos(Lector& l, Evento& e) {
 //    S_SkillIconGFX que manda L1J para efectos con duración (34 poción azul, 40 Immune to Harm:
 //    h segundos) y S_SkillIconWisdomPotion (0x39: c 0x2c, h segundos / 4).
 //  - asedio (0–4): ver abajo.
+constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
+constexpr int CAJA_PESCA = 55;  // FISHING: la picada (exe 0x49184c -> 0x4918fb)
+constexpr int CAJA_CLASES = 21, CAJA_POLIMORFO = 35, CAJA_SIN_CHAT = 36, CAJA_56 = 56, CAJA_QUITA_87 = 59, CAJA_74 = 74, CAJA_75 = 75;
+constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
+              CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49, CAJA_COCINA = 52;
+// Subtipos de S_PacketBox que son solo un mensaje de string-e.tbl, convertidos en MENSAJE_SERVIDOR (ids revisados
+// contra la tabla de textos: 130 "cannot restart while in combat", 672/673 límites de nivel de objetos, 678-683 espíritu
+// del elfo, 764 alcalde nuevo, 1045-1047 Battle Coliseum).
+//  - 12: c mín, c máx (l1j-en manda 0 y el nivel máximo): sobre el máx -> 673 con el número;
+//  - 15: c n: 1 el espíritu se disolvió (678); 2..5 la fuerza de fuego / agua / viento / tierra (679 + elemento);
+//  - 23: s nombre; 43: sin cuerpo; 49: c id: 1 empieza, 2 cancelado, 3 terminado.
+void caja_mensaje(Lector& l, Evento& e, int sub) {
+    static constexpr const char* ELEMENTOS[] = {"fire", "water", "wind", "earth"};  // string-e.tbl 680-683
+    e.tipo = Ev::MENSAJE_SERVIDOR;
+    e.v[MS_NARGS] = 0;
+    if (sub == CAJA_SIN_REINICIO) {
+        e.v[MS_ID] = 130;
+    } else if (sub == CAJA_ALCALDE) {
+        e.v[MS_ID] = 764;
+        e.s[0] = l.s();
+        e.v[MS_NARGS] = 1;
+    } else if (sub == CAJA_NIVEL) {
+        l.c();  // nivel mínimo: l1j-en solo manda el caso "sobre el máx", el mín necesita el nivel propio
+        const int maximo = l.c();
+        char* p = l.arena->reservar_arreglo<char>(4);
+        if (maximo == 0 || !p) { e.tipo = Ev::IGNORADO; return; }
+        const int n = std::snprintf(p, 4, "%d", maximo);
+        e.v[MS_ID] = 673;
+        e.s[0] = {p, static_cast<size_t>(n)};
+        e.v[MS_NARGS] = 1;
+    } else if (sub == CAJA_ELFO) {
+        const int n = l.c();
+        if (n == 1) {
+            e.v[MS_ID] = 678;
+        } else if (n >= 2 && n <= 5) {
+            e.v[MS_ID] = 679;
+            e.s[0] = ELEMENTOS[n - 2];
+            e.v[MS_NARGS] = 1;
+        } else {
+            e.tipo = Ev::IGNORADO;
+        }
+    } else {  // CAJA_COLISEO
+        const int id = l.c();
+        if (id < 1 || id > 3) e.tipo = Ev::IGNORADO;
+        else e.v[MS_ID] = id == 1 ? 1045 : id == 2 ? 1047 : 1046;
+    }
+}
 bool caja(Lector& l, Evento& e) {
     int sub = l.c();
     if (sub == 10 || sub == 11) {
@@ -242,6 +304,17 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_CLASE] = IE_AURA;
         e.v[IE_TIPO] = l.c();
         e.v[IE_SEG] = l.h();
+        // El aura 221 trae un byte que elige la casilla (S3EP1U 0x4904b8): 2 maldición de Yahee, 1 maldición de Barlog,
+        // 6 una tercera casilla; cualquier otro valor no muestra nada. Se pliega en el tipo como 221 / 222 / 223.
+        if (e.v[IE_TIPO] == AURA_MALDICION) {
+            const int extra = l.quedan(1) ? l.c() : 0;
+            if (extra == 2) e.v[IE_TIPO] = AURA_MALDICION;
+            else if (extra == 1) e.v[IE_TIPO] = AURA_MALDICION + 1;
+            else if (extra == 6) e.v[IE_TIPO] = AURA_MALDICION + 2;
+            else e.tipo = Ev::IGNORADO;
+        }
+    } else if (sub == CAJA_PESCA) {
+        e.tipo = Ev::PESCA_PICADA;
     } else if (sub == CAJA_POCION_AZUL || sub == CAJA_INMUNE) {
         e.tipo = Ev::ICONO_EFECTO;
         e.v[IE_CLASE] = IE_ICONO;
@@ -253,6 +326,37 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_TIPO] = sub;
         l.c();
         e.v[IE_SEG] = l.h() * 4;
+    } else if (sub == CAJA_DUELO) {
+        // d id del rival (0 = terminó el duelo), d id propio
+        const u32 id = l.d();
+        e.tipo = id ? Ev::DUELO : Ev::IGNORADO;
+        e.id = id;
+    } else if (sub == CAJA_NIVEL || sub == CAJA_ELFO || sub == CAJA_ALCALDE || sub == CAJA_SIN_REINICIO || sub == CAJA_COLISEO) {
+        caja_mensaje(l, e, sub);
+    } else if (sub == CAJA_CLASES || sub == CAJA_POLIMORFO || sub == CAJA_SIN_CHAT || sub == CAJA_56 || sub == CAJA_QUITA_87 ||
+               sub == CAJA_74 || sub == CAJA_75) {
+        // Íconos de buff cuya casilla depende del sprite propio o de la clase: se resuelven en icono_de_caja (mundo.cpp).
+        //  - 21: c b0..b3 (duración b*16-8 s cada uno); 35 polymorph, 36 chat ban, 74: h segundos;
+        //  - 56: h segundos, [h]; 59: h 0 (quita); 75: c n (0 quita).
+        e.tipo = Ev::ICONO_EFECTO;
+        e.v[IE_CLASE] = IE_CONTEXTO;
+        e.v[IE_TIPO] = sub;
+        if (sub == CAJA_CLASES) {
+            for (int i = 0; i < 4; ++i) e.v[IE_EXTRA + i] = l.c();
+        } else if (sub == CAJA_75) {
+            e.v[IE_EXTRA] = l.c();
+        } else {
+            e.v[IE_SEG] = static_cast<i16>(l.h());
+            if (sub == CAJA_56 && l.quedan(2)) e.v[IE_EXTRA] = l.h();
+        }
+    } else if (sub == CAJA_COCINA) {
+        // COOK_WINDOW (S3EP1U 0x49135f): d constante, c 1 (0: el exe responde con C_ItemUse, nunca se manda), c etapa - 1.
+        l.d();
+        e.tipo = Ev::COCINA;
+        e.v[0] = l.c();
+        e.v[1] = l.c();
+    } else if (sub == CAJA_LOGOUT) {
+        e.tipo = Ev::VOLVER_PERSONAJES;  // vuelta a la selección de personajes con la lista guardada
     } else if (sub <= 4) {
         // Asedio: 0 empieza, 1 termina, 2 sigue (c castillo, h 0); 3 iniciativa y 4 ocupado (nada más).
         e.tipo = Ev::ASEDIO;
@@ -265,11 +369,16 @@ bool caja(Lector& l, Evento& e) {
 }
 // S_DoActionGFX: d id, c acción. S_DoActionShop (acción 70, tienda abierta): y el título.
 constexpr int ACC_TIENDA = 70;
+constexpr int ACC_PESCA = 71;  // S_Fishing (ActionCodes.ACTION_Fishing)
 bool accion(Lector& l, Evento& e) {
     e.tipo = Ev::ACCION_OBJETO;
     e.id = l.d();
     e.v[0] = l.c();
     if (e.v[0] == ACC_TIENDA && l.quedan(1)) e.s[0] = l.s();
+    if (e.v[0] == ACC_PESCA && l.quedan(4)) {  // S_Fishing: h x, h y del corcho (después d 0, h 0)
+        e.v[1] = l.h();
+        e.v[2] = l.h();
+    }
     l.error = false;  // el título puede venir sin \0
     return true;
 }
@@ -444,6 +553,13 @@ bool intercambio_fin(Lector& l, Evento& e) {
     return true;
 }
 // S_CharTitle: d personaje, s título
+// S_ChangeName: d id de objeto, s nombre (puede ser "$nnnn", se resuelve al dibujar como todo nombre de objeto)
+bool cambio_nombre(Lector& l, Evento& e) {
+    e.tipo = Ev::CAMBIO_NOMBRE;
+    e.id = l.d();
+    e.s[0] = l.s();
+    return true;
+}
 bool titulo(Lector& l, Evento& e) {
     e.tipo = Ev::TITULO;
     e.id = l.d();
@@ -530,21 +646,27 @@ bool mascota(Lector& l, Evento& e) {
         e.tipo = Ev::REINICIO;
         e.v[RE_TIPO] = sub;
         if (sub == 1) {
-            e.v[RE_HP] = l.h();
-            e.v[RE_MP] = l.h();
+            e.v[RE_HP] = l.vida();
+            e.v[RE_MP] = l.vida();
             e.v[RE_AC] = l.c();
             e.v[RE_MAX] = l.c();
             e.v[RE_NIVEL] = 1;
         } else if (sub == 2) {
             e.v[RE_NIVEL] = l.c();
             e.v[RE_MAX] = l.c();
-            e.v[RE_HP] = l.h();
-            e.v[RE_MP] = l.h();
+            e.v[RE_HP] = l.vida();
+            e.v[RE_MP] = l.vida();
             e.v[RE_AC] = l.h();
             for (int i = 0; i < 6; ++i) e.v[RE_FUE + i] = l.c();
         } else {
             e.v[RE_PUNTOS] = l.c();
         }
+        return true;
+    }
+    if (sub == 0x3c && l.perfil.texto_big5) {  // 3.80C S_CharSynAck emblem sync: d object, d emblem id
+        e.tipo = Ev::CLAN_EMBLEMA_OBJETO;
+        e.id = l.d();
+        e.v[0] = static_cast<i32>(l.d());
         return true;
     }
     if (sub != 0x0c) {
@@ -574,14 +696,17 @@ bool marca_objetivo(Lector& l, Evento& e) {
     e.s[0] = l.s();
     return true;
 }
-// S_Bookmarks: s nombre, h mapa, d id, h x, h y (uno por marcador; todos al entrar)
+// S_Bookmarks: s nombre, h mapa, d id (+ h x, h y en L1J-JP; en l1j-en/s3ep1 termina después del id).
+// Uno por marcador; todos en el login.
 bool marcador(Lector& l, Evento& e) {
     e.tipo = Ev::MARCADOR;
     e.s[0] = l.s();
     e.v[MK_MAPA] = l.h();
     e.id = l.d();
-    e.v[MK_X] = l.h();
-    e.v[MK_Y] = l.h();
+    if (l.quedan(4)) {
+        e.v[MK_X] = l.h();
+        e.v[MK_Y] = l.h();
+    }
     return true;
 }
 // S_Teleport: c 0, c 0x40, d personaje
@@ -663,7 +788,7 @@ bool correo(Lector& l, Evento& e) {
         e.id = l.d();
         e.s[1] = texto_utf16(l);
     } else if (t == 0x20 || t == 0x21) {
-        e.v[CO_OK] = l.c();
+        e.v[CO_OK] = l.quedan(1) ? l.c() : 0;  // l1j-en manda el tipo solo, y solo cuando el buzón está lleno
     } else if ((t >= 0x30 && t <= 0x32) || t == 0x40 || t == 0x41) {
         e.id = l.d();
     } else if (t == 0x50) {
@@ -728,6 +853,8 @@ bool item_bendicion(Lector& l, Evento& e) { e.tipo = Ev::ITEM_BENDICION; e.id = 
 
 // S_HouseMap: d tablón, d casa.
 bool casa_mapa(Lector& l, Evento& e) { e.tipo = Ev::CASA_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
+// S_UseMap: d objid del objeto, d número de mapa (1..18; el cliente original lo lee como un byte).
+bool usar_mapa(Lector& l, Evento& e) { e.tipo = Ev::USAR_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
 // S_War: c tipo, s clan 1, s clan 2.
 bool guerra(Lector& l, Evento& e) {
     e.tipo = Ev::GUERRA;
@@ -839,6 +966,12 @@ constexpr Decodificador TABLA[] = {
     fondos_castillo,  // TAXRATE
     fondos_castillo,  // DEPOSIT
     fondos_castillo,  // DRAWAL
+    usar_mapa,      // USEMAP
+    mensaje,        // REDMESSAGE
+    ignorar,        // CLANNAME
+    ignorar,        // CLANATTENTION
+    cambio_nombre,  // CHANGENAME
+    tiempo_guerra,  // WARTIME
 };
 static_assert(sizeof(TABLA) / sizeof(TABLA[0]) == static_cast<size_t>(Srv::CANTIDAD));
 
@@ -858,7 +991,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
         // c 42, c 105, c 0, c 2, 104 × c (índices o 0xff), c 100, c 0, c n, c 0; y n × (h x, h y, s nombre,
         // h mapa, d id). Un evento por marcador, como S_Bookmarks.
         l.c();
-        for (int i = 0; i < 3 + 104 + 2; ++i) l.c();
+        for (int i = 0; i < 3 + l.perfil.marcadores_ranuras + 2; ++i) l.c();
         const int n = l.c();
         l.c();
         for (int i = 0; i < n && !l.error; ++i) {
@@ -922,7 +1055,10 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
                            : e.origen == Srv::SHOWSHOPSELLLIST ? LISTA_VENTA : LISTA_RETIRO;
         lista.v[LT_CANTIDAD] = n;
         // Almacén: c 3; inventario de una mascota (S_PetInventory, mismo formato de ítems): c 0x0b.
-        if (e.origen == Srv::SHOWRETRIEVELIST && l.c() == 0x0b) lista.v[LT_TIPO] = LISTA_MASCOTA;
+        if (e.origen == Srv::SHOWRETRIEVELIST) {
+            lista.v[LT_ALMACEN] = l.c();
+            if (lista.v[LT_ALMACEN] == 0x0b) lista.v[LT_TIPO] = LISTA_MASCOTA;
+        }
         if (l.error) return false;
         salida.push_back(lista);
         for (int i = 0; i < n && !l.error; ++i) {
@@ -935,7 +1071,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
                 it.v[IT_BENDICION] = 1;  // la tienda no lo manda: normal (0 sería bendito)
                 it.s[0] = l.s();
-                l.saltar(l.c());
+                it.s[1] = atributos_item(l);  // los bytes de estado: las líneas de propiedades del tooltip
             } else if (e.origen == Srv::SHOWSHOPSELLLIST) {
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
             } else {
@@ -1070,8 +1206,19 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             c.v[CO_LISTA] = 1;
             c.id = l.d();
             c.v[CO_LEIDA] = l.c();
-            c.v[CO_FECHA] = static_cast<i32>(l.d());
-            c.v[CO_ENVIADA] = l.c();
+            if (l.perfil.correo_ymd) {
+                // bytes aa mm dd -> segundos a las 12:00 UTC de ese día (la lista muestra solo la fecha)
+                int y = 2000 + l.c();
+                const int mo = l.c(), d = l.c();
+                if (mo <= 2) --y;  // days_from_civil: el año empieza en marzo
+                const int era = y / 400, yoe = y - era * 400;
+                const int doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+                const int days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;
+                c.v[CO_FECHA] = days * 86400 + 43200;
+            } else {
+                c.v[CO_FECHA] = static_cast<i32>(l.d());
+                c.v[CO_ENVIADA] = l.c();
+            }
             c.s[0] = l.s();
             c.s[1] = texto_utf16(l);
             if (!l.error) salida.push_back(c);

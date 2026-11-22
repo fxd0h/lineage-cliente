@@ -1,0 +1,3 @@
+# Teleports missing from Whale's teleport_list.yaml, taken from L1J-JP Teleporter.xml (npc ids mapped to Whale's).
+# action	npc_id	x	y	map_id	heading	price	note
+teleport giranD	81287	32810	32731	53	6	0	Wizard Merlin: Giran -> Giran Dungeon (L1J-JP NpcId 91065)

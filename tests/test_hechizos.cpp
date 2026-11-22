@@ -3,6 +3,7 @@
 #include <doctest/doctest.h>
 #include "comun.h"
 #include "mundo/mundo.h"
+#include "mundo/tabla_buffs.h"
 #include "proto/comandos.h"
 #include "proto/decodificar.h"
 #include "plataforma/rutas.h"
@@ -94,6 +95,13 @@ TEST_CASE("Hechizos: S_UseAttackSkill lleva el proyectil y el daño llega con é
     Slot so = m.objetos.buscar(0x20);
     CHECK(m.objetos.col<O_ACCION>()[so] == ACC_DANADO);
     CHECK(m.objetos.col<O_TACCION>()[so] == ef.inicio + ef.vuelo_ms);
+}
+
+// Ayuda de test: ¿corre una casilla de buff? (el byte [0x81680c + casilla] del exe).
+static bool ranura_activa_para_prueba(const EstadoJugador& j, int r) {
+    for (u32 k = 0; k < j.n_efectos; ++k)
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == r) return true;
+    return false;
 }
 
 TEST_CASE("Hechizos: efectos, haste, brave e íconos") {
@@ -326,4 +334,123 @@ TEST_CASE("Flechas: alcance por arma y la flecha vuela hasta el objetivo") {
     CHECK(m.efectos[0].gfx == 66);
     CHECK(m.efectos[0].vuelo_ms == 4 * MS_VUELO_CELDA);
     CHECK(m.efectos[0].dir == 1);
+}
+
+TEST_CASE("sprite table: the ']N' frame suffix is parsed as a spawned effect, not swallowed") {
+    TablaSprites sprites;
+    // Acción 0: tres cuadros, el segundo lanza el efecto 3586 (el topo cavando), el tercero un sonido.
+    std::string tabla = std::string("x") + "1 0 1 3 56 12 2 56 12 2]3586 56 12 2[1209" + '\0';
+    REQUIRE(sprites.cargar(std::vector<u8>(tabla.begin(), tabla.end())));
+    const RangoAccion* r = sprites.accion(0, 0);
+    REQUIRE(r != nullptr);
+    REQUIRE(r->cantidad == 3);
+    CHECK(sprites.frame(r->primer).efecto == 0);
+    CHECK(sprites.frame(r->primer + 1).efecto == 3586);
+    CHECK(sprites.frame(r->primer + 2).efecto == 0);
+    CHECK(sprites.frame(r->primer + 2).sonido == 1209);
+}
+
+TEST_CASE("Hechizos: spellbook slot tables of the original client") {
+    CHECK(spellbook_skill_id(3, 0) == 1);
+    CHECK(spellbook_skill_id(3, 79) == 80);
+    CHECK(spellbook_skill_id(3, 80) == 0);
+    CHECK(spellbook_skill_id(1, 8) == 87);   // el caballero reemplaza la pestaña 2
+    CHECK(spellbook_skill_id(1, 10) == 88);
+    CHECK(spellbook_skill_id(1, 11) == 12);
+    CHECK(spellbook_skill_id(0, 48) == 113);
+    CHECK(spellbook_skill_id(2, 98) == 179);
+    CHECK(spellbook_skill_id(4, 20) == 109);
+    CHECK(spellbook_skill_id(4, 21) == 0);
+    CHECK(spellbook_skill_id(4, 36) == 111);
+    CHECK(spellbook_skill_id(5, 14) == 195);
+    CHECK(spellbook_skill_id(6, 19) == 220);
+    CHECK(spellbook_max_scroll(2) == 21);
+}
+
+TEST_CASE("Hechizos: buff exclusion groups and end messages") {
+    EstadoJugador j;
+    poner_efecto_activo(j, EA_ESCUDO, 5, 100, 0);   // slot 4, group 5
+    poner_efecto_activo(j, EA_ESCUDO, 6, 100, 0);   // slot 6, same group: replaces
+    CHECK(j.n_efectos == 1);
+    CHECK(j.efectos[0].tipo == 6);
+    poner_efecto_activo(j, EA_AURA, 147, 100, 0);   // slot 18, group 1: unrelated
+    CHECK(j.n_efectos == 2);
+    poner_efecto_activo(j, EA_AURA, 147, 0, 1000);  // quitarlo encola su mensaje de fin (casilla 18 -> idx 723)
+    CHECK(j.n_fin_pendientes == 1);
+    CHECK(j.fin_pendientes[0].msg == 723);
+}
+
+TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage") {
+    Mundo m;
+    m.jugador.id = 7;
+    m.jugador.clase = 3;  // wizard
+    Evento brave{};
+    brave.tipo = Ev::VELOCIDAD;
+    brave.id = 7;
+    brave.v[VE_CLASE] = VE_BRAVE;
+    brave.v[VE_TIPO] = 4;
+    brave.v[VE_SEG] = 60;
+    aplicar_eventos(m, std::span<const Evento>(&brave, 1), 0);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x2a);
+    brave.v[VE_TIPO] = 0;
+    aplicar_eventos(m, std::span<const Evento>(&brave, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento par{};
+    par.tipo = Ev::PARALISIS;
+    par.v[0] = 24;  // bind
+    aplicar_eventos(m, std::span<const Evento>(&par, 1), 0);
+    CHECK(m.jugador.n_efectos == 1);
+    par.v[0] = 25;
+    aplicar_eventos(m, std::span<const Evento>(&par, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento msg{};
+    msg.tipo = Ev::MENSAJE_SERVIDOR;
+    msg.v[MS_ID] = 0x11e;
+    msg.s[0] = "3";
+    aplicar_eventos(m, std::span<const Evento>(&msg, 1), 1000);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(m.jugador.efectos[0].fin == 1000 + 60000);
+    msg.v[MS_ID] = 0x120;
+    aplicar_eventos(m, std::span<const Evento>(&msg, 1), 1000);
+    CHECK(m.jugador.n_efectos == 0);
+
+    Evento snd{};
+    snd.tipo = Ev::EFECTO;
+    snd.id = 7;
+    snd.v[EF_GFX] = 0x8ed;  // slot 0x10
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x10);
+
+    // El gráfico 0xbe elige la casilla según el sprite propio; Bless of Eva (opcode 0x11) es la casilla 0xb.
+    m.jugador.n_efectos = 0;
+    const Slot yo = m.objetos.insertar(7);
+    m.objetos.col<O_GFX>()[yo] = 0x9aa;
+    snd.v[EF_GFX] = 0xbe;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    REQUIRE(m.jugador.n_efectos == 1);
+    CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x50);
+    CHECK(ranura_de_efecto_activo(EA_EVA, 0) == 0xb);
+
+    // 0x1130 / 0x16c1 inician la casilla 0x38 / 0x42 y pasan a la otra mientras corre (bytes de flag en 0x48acd4 / 0x48ad4f).
+    m.jugador.n_efectos = 0;
+    auto activa = [&](int r) { return ranura_activa_para_prueba(m.jugador, r); };
+    snd.v[EF_GFX] = 0x16c1;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(activa(0x42));
+    snd.v[EF_GFX] = 0x1130;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(activa(0x42));
+    CHECK(!activa(0x38));
+    // Cancellation (gráfico 870) quita las casillas listadas en silencio, pero conserva los miembros del rango 0x46 / 0x47 y el resto.
+    m.jugador.n_efectos = 0;
+    snd.v[EF_GFX] = 0x8e8;  // slot 0x1c
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    REQUIRE(activa(0x1c));
+    snd.v[EF_GFX] = 870;
+    aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
+    CHECK(m.jugador.n_efectos == 0);
 }

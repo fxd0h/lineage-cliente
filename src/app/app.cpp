@@ -1,10 +1,12 @@
 #include <algorithm>
+#include <fstream>
+#include <filesystem>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
+#include <ctime>
 #include "app/app.h"
+#include "mundo/ataque.h"
 #include "recursos/sprites.h"
 #include "i18n/textos.h"
 #include "core/asignaciones.h"
@@ -30,11 +32,33 @@ void SDLCALL al_elegir_carpeta(void*, const char* const* lista, int) {
     }
 }
 
-// Tabla de sprites del cliente (texto plano): lista_sprites= de settings.ini o, si no, la de la carpeta del juego:
-// list.spz, spritelist/list.spz o un .txt de la raíz que empiece con el encabezado de la lista ("12414 0 41211" o
-// "S21972 0 41210": TW13032701.txt del cliente taiwanés). Agrega los gfx que sprite_table.txt no tiene (llega
-// al 8682), validados contra los .pak: sin ella esos se dibujan quietos o como bloque magenta.
-static std::string buscar_lista_sprites(const App& a) {
+// Listas de sprites (texto plano, las pone el usuario, nunca se distribuyen). La principal: lista_sprites= de settings.ini, si no
+// <carpeta del juego>/list.spz o <carpeta del juego>/spritelist/list.spz. Después cada carpeta juego_extra=, en orden:
+// list.spz, spritelist/list.spz y cualquier *.txt de primer nivel que empiece con una cabecera de lista ("12317 0 41211" o
+// "S21972 0 41210"; el TW13081901.txt del cliente TW). Un gfx ya conocido se conserva: ganan las fuentes anteriores.
+static bool tiene_cabecera_lista(const std::filesystem::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    std::string l;
+    if (!f || !std::getline(f, l)) return false;
+    unsigned a = 0, b = 0, c = 0;
+    return std::sscanf(l.c_str(), "S%u %u %u", &a, &b, &c) == 3 || std::sscanf(l.c_str(), "%u %u %u", &a, &b, &c) == 3;
+}
+
+static std::vector<std::string> listas_de_extra(const std::string& carpeta) {
+    namespace fs = std::filesystem;
+    std::vector<std::string> v;
+    std::error_code ec;
+    for (const char* rel : {"list.spz", "spritelist/list.spz"})
+        if (fs::exists(carpeta + rel, ec)) v.push_back(carpeta + rel);
+    std::vector<std::string> txt;
+    for (const auto& e : fs::directory_iterator(carpeta, ec))
+        if (e.is_regular_file(ec) && e.path().extension() == ".txt" && tiene_cabecera_lista(e.path())) txt.push_back(e.path().string());
+    std::sort(txt.begin(), txt.end());
+    v.insert(v.end(), txt.begin(), txt.end());
+    return v;
+}
+
+static std::string lista_de_juego(const App& a) {
     namespace fs = std::filesystem;
     if (!a.cfg.lista_sprites.empty()) return a.cfg.lista_sprites;
     const std::string& j = a.cfg.carpeta_juego;
@@ -56,29 +80,44 @@ static std::string buscar_lista_sprites(const App& a) {
 }
 
 static void cargar_lista_sprites(App& a) {
-    const std::string ruta = buscar_lista_sprites(a);
-    if (ruta.empty()) return;
-    const ContadorFrames contador = [&a](GfxId g, u16 sub) {
-        char n[32];
-        std::snprintf(n, sizeof n, "%u-%u.spr", g, sub);
-        return contar_frames_spr(a.rec.sprite(n));
-    };
-    ResumenLista r;
-    if (!a.sprites.fusionar_lista_archivo(ruta, r, &contador)) {
-        LIN_LOG("Tabla de sprites: %s no tiene entradas útiles", ruta.c_str());
-        return;
+    LIN_LOG("Sprite table: %u gfx from sprite_table.txt", a.sprites.gfx_de_tabla());
+    std::vector<std::string> rutas;
+    if (const std::string p = lista_de_juego(a); !p.empty()) {
+        rutas.push_back(p);
+        if (!a.cfg.lista_sprites.empty() && !std::filesystem::exists(p)) LIN_LOG("Sprite table: lista_sprites=%s does not exist", p.c_str());
     }
-    LIN_LOG("Tabla de sprites: %s agrega %u gfx con acciones y %u solo con atributos (%u ya estaban, %u omitidos, %u con "
-            "frames quitados)", ruta.c_str(), r.nuevos, r.atributos, r.reemplazados, r.omitidos, r.recortados);
+    for (const std::string& e : a.cfg.carpetas_extra)
+        for (std::string& r : listas_de_extra(e)) rutas.push_back(std::move(r));
+    // Una lista puede venir de un cliente más nuevo: se revisa cada fila contra los archivos de sprites que sí tenemos.
+    const ContadorFrames contador = [&a](GfxId g, u16 sub) {
+        char nombre[32];
+        std::snprintf(nombre, sizeof nombre, "%u-%u.spr", g, sub);
+        return contar_frames_spr(a.rec.sprite(nombre));
+    };
+    for (const std::string& ruta : rutas) {
+        ResumenLista r;
+        if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
+            LIN_LOG("Sprite table: %u gfx from %s (%u new with actions, %u attribute-only, %u already known kept, %u skipped; "
+                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos + r.atributos, ruta.c_str(), r.nuevos, r.atributos,
+                    r.reemplazados, r.omitidos, r.sin_archivo, r.recortados);
+        else
+            LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
+    }
 }
 
 bool cargar_recursos(App& a) {
-    if (!a.rec.abrir(a.cfg.carpeta_juego)) {
+    if (!a.rec.abrir(a.cfg.carpeta_juego, a.cfg.carpetas_extra)) {
         LIN_LOG("No se pudieron abrir los .pak en %s", a.cfg.carpeta_juego.c_str());
         return false;
     }
+    usar_fuente_original(a.cfg.fuente_original);
     if (!a.fuente.cargar(a.cfg.carpeta_juego)) LIN_LOG("Aviso: no se encontró font/eng.fnt");
     a.desc.cargar(a.rec, "desc-e.tbl");
+    a.zonas.cargar(a.rec);
+    {
+        TablaTexto q;
+        if (q.cargar(a.rec, "itemquest.tbl")) cargar_item_quest(q, a.item_quest);
+    }
     a.intro.cargar(a.rec, "intro-e.tbl");
     if (!a.mensajes.cargar(a.rec, "string-e.tbl")) LIN_LOG("Aviso: no se encontró string-e.tbl (mensajes del servidor)");
     // datos/sprite_table.txt junto al ejecutable o en el directorio actual.
@@ -91,6 +130,8 @@ bool cargar_recursos(App& a) {
     if (!cargar_formas(a)) LIN_LOG("Aviso: no se encontró datos/formas.txt ni polymorph.tbl (sugerencias de polymorph)");
     if (!a.hechizos.cargar(a.rec)) LIN_LOG("Aviso: no se encontró spelldesc-e.tbl (nombres de los hechizos)");
     a.g = std::make_unique<Graficos>(a.gpu, a.rec, a.fuente);
+    if (!a.cfg.carpeta_hd.empty() && !a.g->abrir_hd(a.cfg.carpeta_hd))
+        LIN_LOG("HD: no manifest.tsv in %s: using the original images", a.cfg.carpeta_hd.c_str());
     cargar_sonidos(a);
     preparar_luz(a);
     return true;
@@ -98,12 +139,14 @@ bool cargar_recursos(App& a) {
 
 void leer_entrada(App& a) {
     EntradaFrame& e = a.entrada;
-    e.clic = e.clic_derecho = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = false;
+    e.clic = e.clic_derecho = e.doble_derecho = e.doble_izquierdo = e.clic_medio = e.enter = e.tab = e.escape = e.retroceso = e.suprimir = false;
     e.pagina_arriba = e.pagina_abajo = e.alt_c = e.alt_i = e.alt_s = e.pulsado = false;
+    e.atajo_ctrl = 0;
     e.tecla_f = 0;
     e.alt_numero = 0;
     e.numero = 0;
     e.tecla_a = false;
+    e.solto_fuera = false;
     int texto_antes = 0;  // para distinguir Alt+número de un carácter escrito con Option (ver abajo)
     e.rueda = 0;
     e.zoom = 0;
@@ -121,16 +164,27 @@ void leer_entrada(App& a) {
         case SDL_EVENT_MOUSE_MOTION: a.gpu.a_logico(ev.motion.x, ev.motion.y, e.mx, e.my); break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             a.gpu.a_logico(ev.button.x, ev.button.y, e.mx, e.my);
-            if (ev.button.button == SDL_BUTTON_LEFT) e.presionado = e.pulsado = true;
-            if (ev.button.button == SDL_BUTTON_RIGHT) e.derecho_presionado = true;
+            if (ev.button.button == SDL_BUTTON_LEFT)
+                e.presionado = e.pulsado = true, e.salio_con_boton = false, e.doble_izquierdo = ev.button.clicks >= 2;
+            if (ev.button.button == SDL_BUTTON_RIGHT) e.derecho_presionado = true, e.doble_derecho = ev.button.clicks >= 2;
             if (ev.button.button == SDL_BUTTON_MIDDLE) e.medio_presionado = true;
             break;
         case SDL_EVENT_MOUSE_BUTTON_UP:
             a.gpu.a_logico(ev.button.x, ev.button.y, e.mx, e.my);
-            if (ev.button.button == SDL_BUTTON_LEFT) { e.presionado = false; e.clic = true; }
+            if (ev.button.button == SDL_BUTTON_LEFT) {
+                // SDL captura el mouse mientras hay un botón apretado (SDL_HINT_MOUSE_AUTO_CAPTURE, por defecto),
+                // así que este evento llega aunque se suelte fuera de la ventana, con coordenadas fuera de ella.
+                int vw = 0, vh = 0;
+                SDL_GetWindowSize(a.ventana, &vw, &vh);
+                e.solto_fuera = e.salio_con_boton || punto_fuera_de_ventana(ev.button.x, ev.button.y, vw, vh);
+                e.salio_con_boton = false;
+                e.presionado = false;
+                e.clic = true;
+            }
             if (ev.button.button == SDL_BUTTON_RIGHT) { e.derecho_presionado = false; e.clic_derecho = true; }
             if (ev.button.button == SDL_BUTTON_MIDDLE) { e.medio_presionado = false; e.clic_medio = true; }
             break;
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE: e.salio_con_boton = e.presionado; break;
         case SDL_EVENT_MOUSE_WHEEL: e.rueda += ev.wheel.y > 0 ? 1 : (ev.wheel.y < 0 ? -1 : 0); break;
         case SDL_EVENT_TEXT_INPUT:
             if (SDL_GetModState() & (SDL_KMOD_CTRL | SDL_KMOD_GUI)) break;  // atajos (zoom), no texto
@@ -139,30 +193,43 @@ void leer_entrada(App& a) {
         case SDL_EVENT_KEY_DOWN:
             switch (ev.key.key) {
             case SDLK_RETURN: case SDLK_KP_ENTER:
-                if (ev.key.mod & SDL_KMOD_ALT) {  // Alt+Enter: pantalla completa o ventana (sin repetir al mantenerla)
+                if (ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_GUI)) {  // Alt+Enter (Cmd+Enter en Mac): pantalla completa o ventana
                     if (!ev.key.repeat) {
                         alternar_pantalla_completa(a);
                         guardar_config(a.cfg);
                     }
                 } else e.enter = true;
                 break;
+            case SDLK_F:  // Ctrl+Cmd+F: el atajo de pantalla completa de macOS
+                if ((ev.key.mod & SDL_KMOD_GUI) && (ev.key.mod & SDL_KMOD_CTRL) && !ev.key.repeat) {
+                    alternar_pantalla_completa(a);
+                    guardar_config(a.cfg);
+                }
+                break;
             case SDLK_TAB: e.tab = true; break;
             case SDLK_ESCAPE: e.escape = true; break;
             case SDLK_BACKSPACE: e.retroceso = true; break;
+            case SDLK_DELETE: e.suprimir = true; break;
             case SDLK_PAGEUP: e.pagina_arriba = true; break;
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
-            case SDLK_C:
-                if (ev.key.mod & SDL_KMOD_ALT) e.alt_c = true;
+            // El cliente 2009 abre sus ventanas con Ctrl+letra (WM_CHAR 1..26). Alt+I/C/S y A del original solo
+            // valen en la interfaz simple; la interfaz original conserva solo las teclas originales.
+            case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: case SDLK_P:
+            case SDLK_T: case SDLK_O: case SDLK_X: case SDLK_Y: case SDLK_Z: {
+                const SDL_Keymod m = ev.key.mod;
+                if ((m & SDL_KMOD_ALT) && !(m & SDL_KMOD_CTRL)) {
+                    if (!a.cfg.ui_simple) break;
+                    if (ev.key.key == SDLK_C) e.alt_c = true;
+                    else if (ev.key.key == SDLK_I) e.alt_i = true;
+                    else if (ev.key.key == SDLK_S) e.alt_s = true;
+                } else if ((m & SDL_KMOD_CTRL) && !(m & (SDL_KMOD_ALT | SDL_KMOD_SHIFT))) {
+                    if (ev.key.repeat) break;
+                    e.atajo_ctrl = static_cast<char>(ev.key.key - SDLK_A + 'A');
+                } else if (a.cfg.ui_simple && ev.key.key == SDLK_A && !(m & (SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_GUI | SDL_KMOD_SHIFT))) {
+                    e.tecla_a = true;
+                }
                 break;
-            case SDLK_I:
-                if (ev.key.mod & SDL_KMOD_ALT) e.alt_i = true;
-                break;
-            case SDLK_S:
-                if (ev.key.mod & SDL_KMOD_ALT) e.alt_s = true;
-                break;
-            case SDLK_A:
-                if (!(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_GUI | SDL_KMOD_SHIFT))) e.tecla_a = true;
-                break;
+            }
             case SDLK_EQUALS: case SDLK_PLUS: case SDLK_KP_PLUS:
                 if (ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)) e.zoom = 1;
                 break;
@@ -177,14 +244,17 @@ void leer_entrada(App& a) {
                 break;
             case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8:
             case SDLK_9:
-                if ((ev.key.mod & SDL_KMOD_ALT) && !(ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)))
+                if ((ev.key.mod & SDL_KMOD_CTRL) && !(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_SHIFT)) && ev.key.key <= SDLK_8) {
+                    // Cliente original: Ctrl+1..8 usan las mismas ocho casillas que F5..F12.
+                    if (!ev.key.repeat) e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_1);
+                } else if ((ev.key.mod & SDL_KMOD_ALT) && !(ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)))
                     e.alt_numero = 1 + static_cast<int>(ev.key.key - SDLK_1);  // SDLK_1..SDLK_9 son consecutivos
                 else if (!(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_SHIFT | SDL_KMOD_CTRL | SDL_KMOD_GUI)))
                     e.numero = 1 + static_cast<int>(ev.key.key - SDLK_1);
                 texto_antes = e.ntexto;
                 break;
             case SDLK_F1:
-                if (!ev.key.repeat) a.ayuda_teclas = !a.ayuda_teclas;
+                if (!ev.key.repeat && a.cfg.ui_simple) a.ayuda_teclas = !a.ayuda_teclas;  // original: F1 no es la lista de teclas
                 break;
             case SDLK_F3:  // con Shift, el contador de fps
                 if (ev.key.repeat) break;  // mantenida, alternaría y escribiría settings.ini en cada repetición
@@ -199,6 +269,10 @@ void leer_entrada(App& a) {
                 guardar_config(a.cfg);
                 break;
             case SDLK_F4:
+                if (!a.cfg.ui_simple && !(ev.key.mod & SDL_KMOD_SHIFT)) {  // original: recoge un objeto cercano
+                    if (a.pantalla == Pantalla::JUEGO) pick_up_nearby(a);
+                    break;
+                }
                 if (ev.key.repeat) break;
                 // Cámara a saltos (como el original) o suave; con Shift, personajes oscurecidos en
                 // la sombra o no.
@@ -208,12 +282,28 @@ void leer_entrada(App& a) {
                 break;
             case SDLK_F12:
                 if (ev.key.mod & SDL_KMOD_SHIFT) {
-                    a.gpu.pedir_captura("captura.bmp");
+                    tomar_captura(a);
                     break;
                 }
                 e.tecla_f = 12;
                 break;
-            case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
+            case SDLK_F5:
+                if (ev.key.mod & SDL_KMOD_SHIFT) {  // Shift+F5: rota el filtro de escalado de la presentación final
+                    if (ev.key.repeat) break;
+                    const int sig = (static_cast<int>(escalado_desde(a.cfg.escalado)) + 1) % N_ESCALADOS;
+                    a.cfg.escalado = nombre_escalado(static_cast<Escalado>(sig));
+                    guardar_config(a.cfg);
+                    {  // avisa al jugador qué filtro quedó activo
+                        char t[48];
+                        std::snprintf(t, sizeof t, "Upscaling: %s (Shift+F5)", a.cfg.escalado.c_str());
+                        a.chat.agregar(t, rgba(255, 200, 120), CHAT_SISTEMA);
+                    }
+                    break;
+                }
+                e.tecla_f = 5;
+                break;
+            case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
+                // Alt+F10 es WM_SYSKEYDOWN en el original y hace lo mismo que F10 (casilla 6).
                 e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_F5);  // los códigos F5..F11 son consecutivos
                 break;
             default: break;
@@ -285,14 +375,17 @@ void procesar_red(App& a) {
         eventos_npc(a, e);
         eventos_social(a, e);
         eventos_tienda(a, e);
+        eventos_pesca(a, e);
         eventos_tablon(a, e);
         eventos_correo(a, e);
         eventos_casas(a, e);
+        eventos_mapa(a, e);
         eventos_castillos(a, e);
         if (e.tipo == Ev::SONIDO) a.audio.efecto(static_cast<u32>(e.v[0]), 1.0f, a.entrada.ahora_ms);  // S_Sound
         eventos_cantidad(a, e);
         eventos_reinicio(a, e);
         eventos_mascotas(a, e);
+        eventos_cocina(a, e);
         eventos_marcadores(a, e);
         eventos_hechizos(a, e);
         eventos_autobuffs(a, e);
@@ -300,11 +393,15 @@ void procesar_red(App& a) {
         if (e.tipo == Ev::MAPA && (a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO)) avisar_mapa(a, static_cast<MapId>(e.v[0]));
         // "Miss" sobre el personaje: un ataque que lo tiene de objetivo y no acierta (el daño recibido
         // se detecta por la caída de HP tras aplicar los eventos, abajo).
+        // Someone attacks the player: combat music (0x4c654f, attacker = the object).
+        if (e.tipo == Ev::ATAQUE && static_cast<ObjId>(e.v[AT_OBJETIVO]) == a.mundo.jugador.id && e.id != a.mundo.jugador.id)
+            combate_musica(a, a.mundo.objetos.buscar(e.id), a.entrada.ahora_ms);
         if (a.cfg.texto_dano && e.tipo == Ev::ATAQUE && static_cast<ObjId>(e.v[AT_OBJETIVO]) == a.mundo.jugador.id &&
             !e.v[AT_GOLPE])
             empujar_texto_combate(a, "Miss", 230, 230, 230);
     }
-    aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    a.mundo.jugador.clase = clase_personaje(a);
+aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
     a.red.en_juego(a.mundo.en_juego && a.pantalla == Pantalla::JUEGO);  // el keepalive lo manda el hilo de red
     if (a.cfg.texto_dano && a.mundo.jugador.hp_max > 0 && a.mundo.jugador.hp < a.hp_anterior) {
         char t[12];
@@ -312,7 +409,11 @@ void procesar_red(App& a) {
         empujar_texto_combate(a, t, 255, 80, 60);
     }
     a.hp_anterior = a.mundo.jugador.hp;
-    aplicar_chat(a.chat, a.mensajes, a.desc, a.eventos, a.entrada.ahora_ms);
+    a.chat.original_ui = !a.cfg.ui_simple;
+    a.chat.globo_comercio = a.cfg.opciones_orig >> OPC_MARKETMSG & 1;
+    const Slot yo_chat = a.mundo.objetos.buscar(a.mundo.jugador.id);
+    aplicar_chat(a.chat, a.mensajes, a.desc, a.eventos, a.entrada.ahora_ms,
+                 yo_chat == SIN_SLOT ? -1 : a.mundo.objetos.col<O_X>()[yo_chat], yo_chat == SIN_SLOT ? -1 : a.mundo.objetos.col<O_Y>()[yo_chat]);
 }
 
 void frame_elegir_carpeta(App& a) {
@@ -333,6 +434,7 @@ void frame_elegir_carpeta(App& a) {
 }  // namespace
 
 void enviar(App& a, Escritor e) {
+    if (!e.definido()) return;  // el comando no existe en esta versión del protocolo (C_Ship fuera de s3ep1...)
     Bytes b = e.cuerpo();
     if (g_traza) {
         char hex[3 * 16 + 1] = {};
@@ -359,12 +461,15 @@ bool iniciar_app(App& a) {
     }
     // Tamaño en puntos (en Retina, el doble de píxeles): el de la última vez (settings.ini).
     // Sin borde del sistema: la barra la dibuja el juego (ventana_ui.cpp).
+    // Automated relaunches (tests) must not steal the user's focus.
+    if (SDL_getenv("LIN_NO_FOCUS")) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
     a.ventana = SDL_CreateWindow("Lineage", a.cfg.ventana_ancho, a.cfg.ventana_alto,
                                  SDL_WINDOW_RESIZABLE | SDL_WINDOW_BORDERLESS | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!a.ventana || !a.gpu.iniciar(a.ventana, 640, 480)) return false;
     ui::poner_icono(a.ventana, "lineage.png");
     if (a.cfg.pantalla_completa) SDL_SetWindowFullscreen(a.ventana, true);
     a.ventana_sin_borde.redimensionable = true;
+    activar_hit_test(a.ventana, a.gpu, a.ventana_sin_borde);
     SDL_StartTextInput(a.ventana);
     crear_cursores(a);
     if (carpeta_juego_valida(a.cfg.carpeta_juego) && cargar_recursos(a)) {
@@ -393,6 +498,28 @@ bool iniciar_app(App& a) {
 }
 
 // Cierra el segundo de medición: promedios y máximos para el overlay F3 y --perf.
+// Viajes en barco (s3ep1): el original manda C_Ship desde el reloj de su escena del barco, una vez por ciclo de 180 s reales
+// (0x4a6630 -> 0x4a6750..0x4a6bc8): en los mapas 6 / 83 / 446 en el segundo 90 del ciclo, en los mapas 5 / 84 / 447 en el 0.
+// El mapa de destino y una celda junto al muelle son fijos (el original suma un desvío al azar de 0-9 celdas; el servidor
+// acepta +-20 celdas respecto de su propia tabla).
+static void barco_llegada(App& a) {
+    if (a.pantalla != Pantalla::JUEGO) return;
+    struct Llegada { MapId desde; u16 destino, x, y; u32 segundo; };
+    static constexpr Llegada L[] = {
+        {5, 4, 32564, 32726, 0},      {6, 0, 32631, 32972, 90},      {83, 70, 32936, 33052, 90},
+        {84, 4, 33426, 33489, 0},     {446, 445, 32748, 32855, 90},  {447, 440, 32296, 33066, 0},
+    };
+    static i64 ultimo = 0;
+    const i64 t = static_cast<i64>(std::time(nullptr));
+    if (t == ultimo) return;
+    ultimo = t;
+    for (const Llegada& l : L)
+        if (a.mundo.mapa == l.desde && static_cast<u32>(t % 180) == l.segundo) {
+            enviar(a, cmd::barco(a.op, l.destino, l.x, l.y));
+            return;
+        }
+}
+
 static void cerrar_medicion(App& a) {
     a.fps = a.frames_fps * 1000.0f / static_cast<float>(a.entrada.ahora_ms - a.t_fps);
     a.ms_cpu = static_cast<float>(a.acum_cpu / a.frames_fps);
@@ -417,12 +544,18 @@ void bucle_app(App& a) {
         u64 t0 = SDL_GetPerformanceCounter();
         u64 asign0 = asignaciones_hilo();
         a.cursor = Cursor::MANO;
-        if (a.g) {
-            a.g->nuevo_frame();
-            a.g->texto_hd(a.cfg.texto_hd);
+        // Pantallas originales de login / personajes: la flecha (1, 0x474695 / 0x474c00), el cursor de espera (2) mientras hay
+        // un pedido en curso (0x470476..0x472680).
+        if (!a.cfg.ui_simple && a.pantalla != Pantalla::JUEGO) {
+            const Cursor c = cursor_estado(a.esperando ? 2 : 1);
+            if (a.cursores[static_cast<int>(c)]) a.cursor = c;
         }
-        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. Con la UI simple
-        // el zoom es solo del mapa: la interfaz queda del mismo tamaño.
+        if (a.g) a.g->nuevo_frame();
+        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. Con la interfaz simple el
+        // zoom es solo del mapa: la interfaz conserva su tamaño.
+        a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
+        a.gpu.fijar_texto_hd(a.cfg.texto_hd);
+        a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");
         a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a),
                             a.cfg.ui_simple);
 #if LIN_CONTROL
@@ -453,11 +586,13 @@ void bucle_app(App& a) {
         case Pantalla::CARGANDO:
         case Pantalla::JUEGO: frame_juego(a); break;
         }
+        barco_llegada(a);
         if (ajustes) {
             a.entrada = entrada;
             dibujar_ajustes(a);
         }
         actualizar_sonido(a, a.entrada.ahora_ms);
+        emblemas_guardar(a, a.entrada.ahora_ms, false);
         ++a.frames_en_pantalla;
         dibujar_barra_ventana(a);
         // CPU y allocations: todo menos presentar, que espera el vsync y llama al driver (el de
@@ -494,6 +629,7 @@ void cerrar_app(App& a) {
     }
     a.red.cerrar();
     a.audio.cerrar();
+    emblemas_guardar(a, a.entrada.ahora_ms, true);
     a.g.reset();
     destruir_cursores(a);
     a.gpu.cerrar();

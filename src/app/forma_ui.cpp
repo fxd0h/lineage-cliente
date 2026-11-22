@@ -78,7 +78,7 @@ void abrir_forma(App& a, ObjId pergamino) {
 }
 
 void eventos_forma(App& a, const Evento& e) {
-    if (e.tipo == Ev::HTML && e.s[0] == "monlist" && e.id == a.mundo.jugador.id) abrir_forma(a, 0);
+    if (a.cfg.ui_simple && e.tipo == Ev::HTML && e.s[0] == "monlist" && e.id == a.mundo.jugador.id) abrir_forma(a, 0);
 }
 
 void dibujar_forma(App& a) {

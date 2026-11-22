@@ -1,0 +1,74 @@
+From 11b34a3c78943261066c1ce4134504ca20949aef Mon Sep 17 00:00:00 2001
+From: local <l@l>
+Date: Tue, 17 Nov 2026 05:39:45 -0300
+Subject: [PATCH] Lift the 1000 item buy limit with overflow-safe arithmetic
+ (#3)
+
+---
+ .../server/server/clientpackets/C_Result.java |  8 +++----
+ .../server/model/shop/L1ShopBuyOrderList.java | 21 +++++++------------
+ 2 files changed, 12 insertions(+), 17 deletions(-)
+
+diff --git a/src/l1j/server/server/clientpackets/C_Result.java b/src/l1j/server/server/clientpackets/C_Result.java
+index e5c11bc6..aa5babf5 100644
+--- a/src/l1j/server/server/clientpackets/C_Result.java
++++ b/src/l1j/server/server/clientpackets/C_Result.java
+@@ -120,8 +120,8 @@ public class C_Result extends ClientBasePacket {
+ 			for (int i = 0; i < size; i++) {
+ 				orderNumber = readD();
+ 				count = readD();
+-				if (count > 1000 || count < 1) {
+-					pc.sendPackets(new S_SystemMessage("Temporary 1000 item limit."));
++				if (count > 2000000000 || count < 1) {
++					pc.sendPackets(new S_SystemMessage("Invalid item count."));
+ 					continue;
+ 				}
+ 				orderList.add(orderNumber, count);
+@@ -139,8 +139,8 @@ public class C_Result extends ClientBasePacket {
+ 			for (int i = 0; i < size; i++) {
+ 				itemObjId = readD();
+ 				count = readD();
+-				if (count > 1000 || count < 1) {
+-					pc.sendPackets(new S_SystemMessage("Temporary 1000 item limit."));
++				if (count > 2000000000 || count < 1) {
++					pc.sendPackets(new S_SystemMessage("Invalid item count."));
+ 					continue;
+ 				}
+ 				orderList.add(itemObjId, count);
+diff --git a/src/l1j/server/server/model/shop/L1ShopBuyOrderList.java b/src/l1j/server/server/model/shop/L1ShopBuyOrderList.java
+index 2a02673e..145d6b8e 100644
+--- a/src/l1j/server/server/model/shop/L1ShopBuyOrderList.java
++++ b/src/l1j/server/server/model/shop/L1ShopBuyOrderList.java
+@@ -54,21 +54,16 @@ public class L1ShopBuyOrderList {
+ 		L1ShopItem shopItem = _shop.getSellingItems().get(orderNumber);
+ 		int price = (int) (shopItem.getPrice() * Config.RATE_SHOP_SELLING_PRICE);
+ 		
+-		for (int j = 0; j <= count; j++) {
+-			if (price * j < 0) {
+-				return;
+-			}
+-		}
+-		
+-		if (_totalPriceTaxIncluded < 0) {
++		// Overflow guard in long arithmetic (replaces the old 1000 item cap, issue #3).
++		long wanted = (long) price * count;
++		long packed = (long) count * shopItem.getPackCount();
++		if (count < 1 || wanted > 2000000000L || packed > 2000000000L
++				|| (!shopItem.getItem().isStackable() && packed > 1000)
++				|| (long) shopItem.getItem().getWeight() * packed > 2000000000L
++				|| _totalPriceTaxIncluded < 0) {
+ 			return;
+ 		}
+-		int addTotal = price * count;
+-		
+-		if (addTotal < 0) {
+-			return;
+-		}
+-
++		int addTotal = (int) wanted;
+ 		if (_npcid != 70017 && _npcid != 70049) { // Exclude Orim and Rozen from
+ 													// taxes
+ 			int taxGenerated = _taxCalc.layTax(shopItem, count);
+-- 
+2.43.0
+

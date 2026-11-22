@@ -135,6 +135,22 @@ void seleccion_simple(App& a) {
     g.texto(tr(Tx::UI_F2_ORIGINAL), LISTA_X, by + 5, kt, rgba(120, 110, 90));
 }
 
+// Vuelta a la pantalla de selección: descarta lo que era del personaje anterior (también se usa al volver
+// del juego con C_ChangeChar o tras perder la conexión: el servidor vuelve a mandar señores de castillos, asedios
+// y emblemas).
+void volver_a_personajes(App& a) {
+    a.mundo.limpiar();
+    a.tienda_pj.vendedores.clear();
+    a.tienda_pj.vista = 0;
+    a.castillos = {};
+    a.emblemas_pedidos.clear();
+    emblemas_abrir(a);  // la caché de este servidor (Emblem.dat)
+    a.pj_sel = -1;
+    a.pagina = 0;
+    a.esperando = false;
+    cambiar_pantalla(a, Pantalla::PERSONAJES);
+}
+
 }  // namespace
 
 const char* nombre_clase(int c) {
@@ -147,20 +163,17 @@ const char* nombre_clase(int c) {
 void eventos_personajes(App& a, const Evento& e) {
     switch (e.tipo) {
     case Ev::CANTIDAD_PERSONAJES:
-        // También al volver desde el juego (C_ChangeChar) o tras perder la conexión: lo del personaje
-        // anterior ya no vale (el servidor vuelve a mandar señores de castillo, asedios y emblemas).
-        a.mundo.limpiar();
-        a.tienda_pj.vendedores.clear();
-        a.tienda_pj.vista = 0;
-        a.castillos = {};
-        a.emblemas_pedidos.clear();
         a.cantidad_pj = e.v[0];
         a.max_pj = e.v[1];
         a.pjs.clear();
-        a.pj_sel = -1;
-        a.pagina = 0;
-        a.esperando = false;
-        cambiar_pantalla(a, Pantalla::PERSONAJES);
+        volver_a_personajes(a);
+        break;
+    case Ev::VOLVER_PERSONAJES:
+        // S_PacketBox 42: l1j-en responde a C_NewCharSelect solo con esto; el cliente conserva la lista que
+        // recibió en el login. Sin una lista guardada (nunca llegó a la selección) se ignora.
+        if (a.pjs.empty()) break;
+        a.ventana_salida = false;
+        volver_a_personajes(a);
         break;
     case Ev::PERSONAJE:
     case Ev::PERSONAJE_NUEVO: {
@@ -183,7 +196,13 @@ void eventos_personajes(App& a, const Evento& e) {
     case Ev::ENTRAR_JUEGO:
         a.mascotas.clear();  // las de esta sesión llegan con S_PetCtrlMenu (y los marcadores, con S_Bookmarks)
         a.marcadores.clear();
+        if (clase_personaje(a) != 2) a.telcon = false;  // /telcon sobrevive a un login solo para los elfos
         a.mascota_eligiendo = 0;
+        a.es_gm = hay_elegido(a) && a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_GM] != 0;
+        a.gm_apuntando = 0;
+        a.gm_repeticiones = 0;
+        a.chat_tam = 0;
+        a.paleta_chat = false;
         cambiar_pantalla(a, Pantalla::JUEGO);
         break;
     default: break;

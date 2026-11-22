@@ -1,3 +1,4 @@
+#include <cstring>
 #include "mundo/inventario.h"
 #include <algorithm>
 #include <cstdarg>
@@ -54,6 +55,44 @@ struct Lineas {
 std::string_view atributos_item(const Inventario& inv, Slot s) {
     TextoRef r = inv.items.col<I_ATRIBUTOS>()[s];
     return {inv.textos.data() + r.ofs, r.len};
+}
+
+namespace {
+// Ajuste voraz en los espacios a `ancho` columnas (una palabra más larga se corta). Devuelve false cuando la salida está llena.
+void envolver(std::string_view t, size_t ancho, LineasTip& o, size_t max_lineas) {
+    while (!t.empty() && o.n < max_lineas) {
+        while (t.starts_with(' ')) t.remove_prefix(1);
+        if (t.empty()) break;
+        size_t corte = std::min(t.size(), ancho);
+        if (t.size() > ancho) {
+            const size_t sp = t.rfind(' ', ancho);
+            if (sp != std::string_view::npos && sp > 0) corte = sp;
+        }
+        std::memcpy(o.texto[o.n], t.data(), corte);
+        o.texto[o.n][corte] = 0;
+        ++o.n;
+        t.remove_prefix(corte);
+    }
+}
+}  // namespace
+
+void armar_tooltip_item(std::string_view nombre, std::string_view detalles, LineasTip& salida) {
+    salida.n = salida.nombre = 0;
+    if (nombre.size() <= 23) {
+        std::memcpy(salida.texto[0], nombre.data(), nombre.size());
+        salida.texto[0][nombre.size()] = 0;
+        salida.n = 1;
+    } else {
+        envolver(nombre, 23, salida, 2);  // el exe corta una sola vez; el resto de un nombre muy largo se pierde
+    }
+    salida.nombre = salida.n;
+    while (!detalles.empty() && salida.n < LineasTip::MAX_LINEAS) {
+        const size_t fin = std::min(detalles.find('\n'), detalles.size());
+        const std::string_view linea = detalles.substr(0, fin);
+        if (linea.empty()) salida.texto[salida.n][0] = 0, ++salida.n;
+        else envolver(linea, 22, salida, LineasTip::MAX_LINEAS);
+        detalles.remove_prefix(std::min(fin + 1, detalles.size()));
+    }
 }
 
 size_t describir_atributos(std::string_view bytes, char* salida, size_t capacidad) {
@@ -153,6 +192,17 @@ bool item_equipado(std::string_view n) {
     return n.find(" ($9)") != std::string_view::npos || n.find(" ($117)") != std::string_view::npos;
 }
 
+size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap) {
+    const size_t n = std::min(inv.items.tamano(), cap);
+    size_t k = 0;
+    for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
+        if (item_equipado(nombre_item(inv, s))) salida[k++] = s;
+    // Los objetos puestos más allá de `cap` (tamaños de inventario absurdos) no se reordenan: quedan en orden natural abajo.
+    for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
+        if (!item_equipado(nombre_item(inv, s))) salida[k++] = s;
+    return k;
+}
+
 void mover_items(Inventario& inv, std::span<const ObjId> mover, ObjId destino) {
     TablaItems& t = inv.items;
     const Slot sd = t.buscar(destino);
@@ -229,6 +279,30 @@ void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
         default: break;
         }
     }
+}
+
+void cargar_item_quest(const TablaTexto& tabla, std::vector<ItemMision>& salida) {
+    // "<gfx> <entrada de desc>" por línea, con un ";comentario" opcional (el exe lee los mismos dos números).
+    salida.clear();
+    for (size_t i = 0; i < tabla.cantidad(); ++i) {
+        const std::string l(tabla.linea(i));
+        unsigned g = 0, d = 0;
+        if (std::sscanf(l.c_str(), "%u %u", &g, &d) == 2) salida.push_back({static_cast<u16>(g), d});
+    }
+}
+
+bool item_de_mision(const std::vector<ItemMision>& quest, const TablaTexto& desc, u16 gfx, std::string_view name) {
+    // El nombre del servidor lleva la cantidad, el encantamiento y los sufijos de puesto: "$N" o el nombre llano, después " (..)".
+    if (const size_t p = name.find(" ("); p != std::string_view::npos) name = name.substr(0, p);
+    while (!name.empty() && (name[0] == '+' || name[0] == '-')) {
+        const size_t sp = name.find(' ');
+        if (sp == std::string_view::npos) break;
+        name.remove_prefix(sp + 1);
+    }
+    const std::string_view full = desc.resolver(name);
+    for (const auto& q : quest)
+        if (q.gfx == gfx && (full == desc.linea(q.desc) || name == desc.linea(q.desc))) return true;
+    return false;
 }
 
 }  // namespace lin

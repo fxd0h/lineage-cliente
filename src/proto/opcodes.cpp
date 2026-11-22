@@ -41,7 +41,7 @@ constexpr ParSrv JP363_SRV[] = {
     {84, Srv::SOUND},         {190, Srv::PRIVATESHOPLIST},
     {64, Srv::BOARD},         {56, Srv::BOARDREAD},      {1, Srv::MAIL},
     {24, Srv::HOUSELIST},     {44, Srv::HOUSEMAP},       {123, Srv::WAR},          {66, Srv::CASTLEMASTER},
-    {72, Srv::TAXRATE},       {203, Srv::DEPOSIT},       {224, Srv::DRAWAL},
+    {72, Srv::TAXRATE},       {203, Srv::DEPOSIT},       {224, Srv::DRAWAL},       {100, Srv::USEMAP},
     // WARTIME usa el número de MAPID (150): se distinguen por el largo (ver mapa en decodificar.cpp).
     // SKILLICONGFX y SKILLICONAURA usan el número de PACKETBOX (40): son subtipos de esa caja.
 };
@@ -67,16 +67,16 @@ constexpr ParCli JP363_CLI[] = {
     {Cli::BOARD, 73},         {Cli::BOARDREAD, 59},     {Cli::BOARDNEXT, 221},    {Cli::BOARDWRITE, 14},
     {Cli::BOARDDELETE, 12},   {Cli::MAIL, 22},
     {Cli::WAR, 235},          {Cli::TAXRATE, 200},      {Cli::DEPOSIT, 35},       {Cli::DRAWAL, 192},
-    {Cli::CHANGEWARTIME, 4},
+    {Cli::CHANGEWARTIME, 4},       {Cli::LOGINTOSERVEROK, 75},    {Cli::RANK, 78},
+    {Cli::FISHCLICK, 26},  // l1j-jp C_OPCODE_FISHCLICK
+    {Cli::PROPOSE, 185},           {Cli::FIGHT, 47},              {Cli::CHECKPK, 137},
 };
 
 // L1J 3.80C de Taiwán: internal/net/packet/opcodes.go de L1JGO-Whale (commit 9a19405), por nombre.
 // Sin equivalente en esa tabla (quedan en 0 y no se mandan o no se reconocen): COMMONNEWS, TELEPORT,
-// BLUEMESSAGE, DELSKILL, PETCTRL y, del cliente, CLAN, PETMENU, USEPETITEM, SELECTTARGET,
+// BLUEMESSAGE, DELSKILL y, del cliente, PETMENU, USEPETITEM, SELECTTARGET,
 // SELECTLIST, RETURNTOLOGIN, BOARDNEXT, CHANGEWARTIME.
-// El servidor manda y el cliente aún no decodifica: S_CharSynAck (64), S_RedMessage (105),
-// S_ChangeName (46), S_ClanName (72), S_ClanAttention (200), S_ClanMatching (0). Ver
-// docs/analisis/OPCODES_PENDIENTES.md.
+// S_CharSynAck (64) shares PETCTRL's decoder (subtype in the first byte); S_ClanMatching (0) is still unmapped.
 constexpr ParSrv TW380_SRV[] = {
     {139, Srv::SERVERVERSION}, {233, Srv::LOGINRESULT},   {178, Srv::CHARAMOUNT},   {93, Srv::CHARLIST},
     {127, Srv::NEWCHARPACK},   {98, Srv::NEWCHARWRONG},   {6, Srv::DETELECHAROK},   {223, Srv::LOGINTOGAME},
@@ -100,7 +100,11 @@ constexpr ParSrv TW380_SRV[] = {
     {140, Srv::PRIVATESHOPLIST}, {68, Srv::BOARD},        {148, Srv::BOARDREAD},    {186, Srv::MAIL},
     {156, Srv::HOUSELIST},     {187, Srv::HOUSEMAP},      {84, Srv::WAR},           {69, Srv::CASTLEMASTER},
     {185, Srv::TAXRATE},       {4, Srv::DEPOSIT},         {141, Srv::DRAWAL},
-    {231, Srv::MAPID},  // S_WarTime: el decodificador de S_MapID lo distingue por el largo
+    // USEMAP: el Opcodes.java de 3.80c no tiene S_OPCODE_USEMAP, así que aquí el número no se conoce.
+    // 64 es S_CharReset / S_PetCtrlMenu / S_BookmarkLoad / S_EquipmentSlot / sincronización de emblemas (primer byte = subtipo).
+    {64, Srv::PETCTRL},        {105, Srv::REDMESSAGE},    {72, Srv::CLANNAME},      {200, Srv::CLANATTENTION},
+    {46, Srv::CHANGENAME},
+    {231, Srv::WARTIME},
 };
 constexpr ParCli TW380_CLI[] = {
     {Cli::CLIENTVERSION, 14},  {Cli::LOGINPACKET, 119},  {Cli::COMMONCLICK, 16},   {Cli::NEWCHAR, 84},
@@ -112,7 +116,7 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::CREATEPARTY, 43},    {Cli::PARTYLIST, 230},    {Cli::LEAVEPARTY, 33},    {Cli::BANPARTY, 255},
     {Cli::TRADE, 2},           {Cli::TRADEADDITEM, 37},  {Cli::TRADEADDOK, 71},    {Cli::TRADEADDCANCEL, 86},
     {Cli::CREATECLAN, 222},    {Cli::JOINCLAN, 194},     {Cli::LEAVECLAN, 61},     {Cli::BANCLAN, 69},
-    {Cli::TITLE, 90},          {Cli::PLEDGE, 68},        {Cli::WHO, 206},          {Cli::EMBLEM, 18},
+    {Cli::TITLE, 90},          {Cli::PLEDGE, 68},        {Cli::WHO, 206},          {Cli::EMBLEM, 18},         {Cli::CLAN, 72},
     {Cli::SKILLBUY, 145},      {Cli::SKILLBUYOK, 39},    {Cli::DOOR, 41},          {Cli::GIVEITEM, 45},
     {Cli::AMOUNT, 11},         {Cli::CHANGECHAR, 7},     {Cli::FIXWEAPONLIST, 118}, {Cli::BOOKMARK, 165},
     {Cli::BOOKMARKDELETE, 3},  {Cli::DELETEINVENTORYITEM, 138}, {Cli::EXITGHOST, 173}, {Cli::ENTERPORTAL, 219},
@@ -120,7 +124,8 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::DELETEBUDDY, 202},   {Cli::CHATPARTY, 199},    {Cli::SHOP, 38},          {Cli::SHOPLIST, 47},
     {Cli::BOARD, 23},          {Cli::BOARDREAD, 114},    {Cli::BOARDWRITE, 141},   {Cli::BOARDDELETE, 153},
     {Cli::MAIL, 87},           {Cli::WAR, 227},          {Cli::TAXRATE, 19},       {Cli::DEPOSIT, 56},
-    {Cli::DRAWAL, 44},
+    {Cli::DRAWAL, 44},         {Cli::RANK, 63},
+    {Cli::PROPOSE, 50},        {Cli::FIGHT, 5},          {Cli::CHECKPK, 51},  // Whale: C_OPCODE_MARRIAGE / DUEL / CHECK_PK
 };
 
 // L1J 3.0 English / US 2009 (S3EP1): encryptions/Opcodes.java de l1j-en/classic, por nombre. El
@@ -154,7 +159,10 @@ constexpr ParSrv S3EP1_SRV[] = {
     {43, Srv::LIQUOR}, {17, Srv::BLESSOFEVA}, {86, Srv::ABILITY}, {83, Srv::SOUND},
     {115, Srv::PRIVATESHOPLIST}, {93, Srv::BOARD}, {91, Srv::BOARDREAD}, {127, Srv::MAIL},
     {72, Srv::HOUSELIST}, {113, Srv::HOUSEMAP}, {94, Srv::WAR}, {111, Srv::CASTLEMASTER},
-    {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::MAPID},
+    {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::WARTIME},
+    {38, Srv::CHANGENAME},  // S_ChangeName: d id, s nombre
+    {27, Srv::PETCTRL},     // S_CharReset: classic no tiene S_PetCtrlMenu, así que 27 es solo el reinicio del personaje
+    {14, Srv::USEMAP},  // S_UseMap: manejador 0x48e0b0 de S3EP1U.bin, formato "dc"
 };
 constexpr ParCli S3EP1_CLI[] = {
     {Cli::CLIENTVERSION, 34}, {Cli::LOGINPACKET, 113}, {Cli::COMMONCLICK, 46}, {Cli::NEWCHAR, 50},
@@ -176,6 +184,11 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::SHOPLIST, 17}, {Cli::BOARD, 24}, {Cli::BOARDREAD, 19}, {Cli::BOARDNEXT, 87},
     {Cli::BOARDWRITE, 84}, {Cli::BOARDDELETE, 60}, {Cli::MAIL, 127}, {Cli::WAR, 101},
     {Cli::TAXRATE, 110}, {Cli::DEPOSIT, 68}, {Cli::DRAWAL, 42}, {Cli::CHANGEWARTIME, 98},
+    {Cli::SHIP, 33}, {Cli::EXTCOMMAND, 38},
+    {Cli::FISHCLICK, 125},  // C_FishClick (l1j-en C_OPCODE_FISHCLICK; exe 0x469220 sends `cc` 0x7d)
+    {Cli::RANK, 78},  // C_Rank: sub 1 rank, 2 / 3 / 4 alliance list / join / leave (0x4053b3..0x4053e3: `cc` 0x4e sub)
+    {Cli::PROPOSE, 22}, {Cli::FIGHT, 3}, {Cli::CHECKPK, 70},  // /propose, /duel, /checkpk
+    {Cli::LOGINTOSERVEROK, 25},  // el cliente lo manda como `ccc` 0x19 desde las opciones de chat (0x406abb, 0x406bbb, 0x406cbb)
 };
 
 const char* NOMBRES[] = {
@@ -190,7 +203,9 @@ const char* NOMBRES[] = {
     "SHOWSHOPSELLLIST", "SHOWRETRIEVELIST", "YES_NO", "TRADE", "TRADEADDITEM", "TRADESTATUS", "EMBLEM", "SKILLBUY",
     "DOOR", "PARALYSIS", "POISON", "CURSEBLIND", "INPUTAMOUNT", "PETCTRL", "SELECTTARGET", "TRUETARGET",
     "BOOKMARKS", "SELECTLIST", "IDENTIFYDESC", "INVIS", "RESURRECTION", "STRUP", "DEXUP", "PINKNAME", "LIQUOR", "BLESSOFEVA", "ABILITY", "SOUND", "PRIVATESHOPLIST", "BOARD", "BOARDREAD", "MAIL",
-    "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL",
+    "HOUSELIST", "HOUSEMAP", "WAR", "CASTLEMASTER", "TAXRATE", "DEPOSIT", "DRAWAL", "USEMAP",
+    "REDMESSAGE", "CLANNAME", "CLANATTENTION", "CHANGENAME",
+    "WARTIME",
 };
 static_assert(sizeof(NOMBRES) / sizeof(NOMBRES[0]) == static_cast<size_t>(Srv::CANTIDAD));
 
@@ -200,16 +215,20 @@ template <size_t NS, size_t NC>
 void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u8 init, PerfilProtocolo perfil) {
     for (Srv& s : t.srv_de_cable) s = Srv::DESCONOCIDO;
     for (u8& c : t.cable_de_cli) c = 0;
+    for (bool& d : t.cli_definido) d = false;
     for (const ParSrv& p : srv) t.srv_de_cable[p.cable] = p.interno;
-    for (const ParCli& p : cli) t.cable_de_cli[static_cast<int>(p.interno)] = p.cable;
+    for (const ParCli& p : cli) {
+        t.cable_de_cli[static_cast<int>(p.interno)] = p.cable;
+        t.cli_definido[static_cast<int>(p.interno)] = true;
+    }
     t.cable_init = init;
     t.perfil = perfil;
 }
 
 bool tabla_opcodes(std::string_view version, TablaOpcodes& t) {
     if (version == "jp363") cargar(t, JP363_SRV, JP363_CLI, 161, PerfilProtocolo{});
-    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4});
-    else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1});
+    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true});
+    else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1, .correo_ymd = true});
     else return false;
     return true;
 }

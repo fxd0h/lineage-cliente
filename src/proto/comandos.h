@@ -5,16 +5,26 @@
 #include <string_view>
 #include <vector>
 #include "proto/opcodes.h"
+#include "recursos/big5.h"
 
 namespace lin {
 
 class Escritor {
 public:
-    Escritor(const TablaOpcodes& t, Cli op) { buf_.push_back(t.cli(op)); }
+    Escritor(const TablaOpcodes& t, Cli op) : definido_(t.tiene(op)), big5_(t.perfil.texto_big5) { buf_.push_back(t.cli(op)); }
+    // false si el comando no existe en esta versión del protocolo: enviar() no lo manda (iría con un
+    // número de otro paquete, el 0).
+    bool definido() const { return definido_; }
     Escritor& c(u8 v) { buf_.push_back(v); return *this; }
     Escritor& h(u16 v) { c(static_cast<u8>(v)); return c(static_cast<u8>(v >> 8)); }
     Escritor& d(u32 v) { h(static_cast<u16>(v)); return h(static_cast<u16>(v >> 16)); }
+    // Cadena terminada en \0. Con el servidor 3.80C de Taiwán el texto va en Big5: lo que llegó se pasó a UTF-8
+    // al leerlo (decodificar.cpp), así que vuelve a Big5 al mandarlo (nombres en susurros, intercambio, clan...).
     Escritor& s(std::string_view t) {
+        if (big5_) {
+            utf8_a_big5(t, buf_);
+            return c(0);
+        }
         buf_.insert(buf_.end(), t.begin(), t.end());
         return c(0);
     }
@@ -26,10 +36,13 @@ public:
 
 private:
     std::vector<u8> buf_;
+    bool definido_ = true;
+    bool big5_ = false;
 };
 
 // Tipos de C_Result: 0 comprar (ítem = índice en la lista de la tienda), 1 vender, 2 guardar en el
-// almacén, 3 retirar.
+// almacén, 3 retirar. The warehouse types are the window types of the original client: 4 / 5 clan warehouse,
+// 8 / 9 elf warehouse (S3EP1U 0x4d1000; the L1J server reads them in C_Result).
 enum TipoResultado : u8 { RESULTADO_COMPRA = 0, RESULTADO_VENTA = 1, RESULTADO_DEPOSITO = 2, RESULTADO_RETIRO = 3 };
 struct LineaResultado {
     u32 item, cantidad;
@@ -90,6 +103,12 @@ inline Escritor usar_item(const TablaOpcodes& t, u32 item) {
     e.d(item).c(0);
     return e;
 }
+// C_UseItem de un libro de cocina con una receta elegida (S3EP1U 0x4d3900, "cdcc"): d objeto, c 1 (cookStatus), c receta.
+inline Escritor cocinar(const TablaOpcodes& t, u32 item, u8 receta) {
+    Escritor e(t, Cli::USEITEM);
+    e.d(item).c(1).c(receta);
+    return e;
+}
 // C_PickUpItem / C_DropItem: h x, h y, d ítem, d cantidad (recoger: a 3 celdas o menos)
 inline Escritor recoger(const TablaOpcodes& t, u16 x, u16 y, u32 item, u32 cantidad) {
     Escritor e(t, Cli::PICKUPITEM);
@@ -116,6 +135,12 @@ inline Escritor usar_hechizo(const TablaOpcodes& t, u32 id, u32 objetivo, u16 x,
 inline Escritor usar_item_sobre(const TablaOpcodes& t, u32 item, u32 objetivo) {
     Escritor e(t, Cli::USEITEM);
     e.d(item).d(objetivo);
+    return e;
+}
+// C_UseItem de un objeto apuntado a un objeto o una celda (useType 5, 17, 39: varitas, pergaminos de hechizo): d objeto, d objetivo, h x, h y.
+inline Escritor usar_item_apuntado(const TablaOpcodes& t, u32 item, u32 objetivo, u16 x, u16 y) {
+    Escritor e(t, Cli::USEITEM);
+    e.d(item).d(objetivo).h(x).h(y);
     return e;
 }
 inline Escritor usar_item_texto(const TablaOpcodes& t, u32 item, std::string_view texto) {
@@ -161,7 +186,7 @@ inline Escritor responder(const TablaOpcodes& t, u32 numero, u16 tipo, bool si) 
     e.h(tipo);
     // Forma larga (3.63/3.80): repite número y tipo y responde en 2 bytes. Corta (US 2009, sin
     // número en el perfil): la respuesta en 1 byte, el tipo ya alcanza para elegir la pregunta.
-    if (t.perfil.bytes_numero_pregunta) e.d(numero).h(tipo).h(si ? 1 : 0);
+    if (t.perfil.bytes_numero_pregunta && !t.perfil.respuesta_corta) e.d(numero).h(tipo).h(si ? 1 : 0);
     else e.c(si ? 1 : 0);
     return e;
 }
@@ -179,6 +204,46 @@ inline Escritor guerra(const TablaOpcodes& t, TipoGuerra tipo, std::string_view 
     e.c(tipo).s(clan);
     return e;
 }
+// C_Ship (s3ep1): h mapa de destino, h x, h y. El original (0x4a6750..0x4a6bc8) lo manda desde el reloj de la escena del barco.
+inline Escritor barco(const TablaOpcodes& t, u16 mapa, u16 x, u16 y) {
+    Escritor e(t, Cli::SHIP);
+    e.h(mapa).h(x).h(y);
+    return e;
+}
+// C_Rank sub 2 / 3 / 4: lista de alianza / unirse / salir (Whale lee c sub, c rango, s nombre; s3ep1 solo c sub).
+inline Escritor alianza(const TablaOpcodes& t, u8 sub, std::string_view clan = {}) {
+    Escritor e(t, Cli::RANK);
+    e.c(sub);
+    if (t.perfil.bytes_numero_pregunta) e.c(0).s(clan);  // el cliente US 2009 manda solo `cc` (unirse = cara a cara)
+    return e;
+}
+// C_Rank sub 1 (/rank): c 1, c rank, s name.
+inline Escritor rango_clan(const TablaOpcodes& t, u8 rango, std::string_view nombre) {
+    Escritor e(t, Cli::RANK);
+    e.c(1).c(rango).s(nombre);
+    return e;
+}
+// C_ExtraCommand (s3ep1): c action id (Alt+1 / 2 / 3 send 0x44 / 0x45 / 0x43).
+inline Escritor emote(const TablaOpcodes& t, u8 accion) {
+    Escritor e(t, Cli::EXTCOMMAND);
+    e.c(accion);
+    return e;
+}
+// C_Propose: c 0 le propone al personaje que uno tiene enfrente, c 1 se divorcia.
+inline Escritor proponer(const TablaOpcodes& t, bool divorcio) {
+    Escritor e(t, Cli::PROPOSE);
+    e.c(divorcio ? 1 : 0);
+    return e;
+}
+// C_Fight (/duel, el personaje que uno tiene enfrente) y C_CheckPK (/checkpk): solo el opcode.
+inline Escritor duelo(const TablaOpcodes& t) { return Escritor(t, Cli::FIGHT); }
+inline Escritor ver_pk(const TablaOpcodes& t) { return Escritor(t, Cli::CHECKPK); }
+// C_CreateParty tipo 2 (/chatinvite): s nombre (invita al grupo de chat).
+inline Escritor invitar_chat(const TablaOpcodes& t, std::string_view nombre) {
+    Escritor e(t, Cli::CREATEPARTY);
+    e.c(2).s(nombre);
+    return e;
+}
 // C_TaxRate: d personaje, c tasa (10–50).
 inline Escritor tasa_castillo(const TablaOpcodes& t, u32 personaje, u8 tasa) {
     Escritor e(t, Cli::TAXRATE);
@@ -194,9 +259,15 @@ inline Escritor fondos_castillo(const TablaOpcodes& t, bool depositar, u32 perso
 // C_ChangeWarTime: sin datos; el servidor responde S_WarTime con la fecha del próximo asedio.
 inline Escritor fecha_asedio(const TablaOpcodes& t) { return Escritor(t, Cli::CHANGEWARTIME); }
 // Grupo. C_CreateParty: c 0 (reparto normal; 1 automático), d personaje invitado.
-inline Escritor invitar_grupo(const TablaOpcodes& t, u32 personaje) {
+inline Escritor invitar_grupo(const TablaOpcodes& t, u32 personaje, u8 tipo = 0) {
     Escritor e(t, Cli::CREATEPARTY);
-    e.c(0).d(personaje);
+    e.c(tipo).d(personaje);
+    return e;
+}
+// C_LoginToServerOK: c qué (0 chat del mundo, 2 susurro, 6 chat de comercio), c 1 recibir / 0 rechazar (las opciones de chat de la página de Opciones).
+inline Escritor opcion_chat(const TablaOpcodes& t, u8 que, bool recibir) {
+    Escritor e(t, Cli::LOGINTOSERVEROK);
+    e.c(que).c(recibir ? 1 : 0);
     return e;
 }
 inline Escritor ver_grupo(const TablaOpcodes& t) { return Escritor(t, Cli::PARTYLIST); }  // S_Party "party"
@@ -272,6 +343,12 @@ inline Escritor borrar_item(const TablaOpcodes& t, u32 item, u32 cantidad) {
     return e;
 }
 // C_EnterPortal: h x, h y de la celda del portal (el servidor la busca en DungeonTable de su mapa).
+// C_FishClick: c 1 when the bobber showed a bite (exe 0x469220).
+inline Escritor click_pesca(const TablaOpcodes& t, bool picada) {
+    Escritor e(t, Cli::FISHCLICK);
+    e.c(picada ? 1 : 0);
+    return e;
+}
 inline Escritor entrar_portal(const TablaOpcodes& t, u16 x, u16 y) {
     Escritor e(t, Cli::ENTERPORTAL);
     e.h(x).h(y);
@@ -311,11 +388,14 @@ inline Escritor grupo_chat(const TablaOpcodes& t, u8 tipo, std::string_view nomb
 struct LineaTienda {
     u32 item, precio, cantidad;
 };
-inline Escritor abrir_tienda(const TablaOpcodes& t, std::span<const LineaTienda> venta, std::string_view titulo) {
+inline Escritor abrir_tienda(const TablaOpcodes& t, std::span<const LineaTienda> venta, std::string_view titulo,
+                             std::span<const LineaTienda> compra = {}) {
     Escritor e(t, Cli::SHOP);
     e.c(0).h(static_cast<u16>(venta.size()));
     for (const LineaTienda& l : venta) e.d(l.item).d(l.precio).d(l.cantidad);
-    e.h(0).s(titulo);
+    e.h(static_cast<u16>(compra.size()));
+    for (const LineaTienda& l : compra) e.d(l.item).d(l.precio).d(l.cantidad);
+    e.s(titulo);
     return e;
 }
 inline Escritor cerrar_tienda(const TablaOpcodes& t) {

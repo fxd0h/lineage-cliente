@@ -8,8 +8,21 @@
 
 namespace lin {
 
-// Glifos TTF en el espacio de glifos del atlas: GLIFO_TTF_BASE + punto de código Unicode.
-constexpr u32 GLIFO_TTF_BASE = 0x100000;
+// Espacios de glifos del atlas: base + punto de código Unicode. Las bases van de a 0x200000, más que el mayor
+// punto de código (0x10FFFF): con 0x100000 entre ellas, los planos 15 y 16 de un espacio pisaban el siguiente.
+// Glifos TTF de la interfaz.
+constexpr u32 GLIFO_TTF_BASE = 0x200000;
+// Glifos de la cara de las páginas HTML (Arial en el cliente original).
+constexpr u32 GLIFO_HTML_BASE = 0x400000;
+// La misma cara en negrita (<b>; reemplazo de la Arial Bold de GDI, con avances propios).
+constexpr u32 GLIFO_HTML_NEGRITA_BASE = 0x600000;
+static_assert(GLIFO_HTML_BASE - GLIFO_TTF_BASE > 0x10FFFF && GLIFO_HTML_NEGRITA_BASE - GLIFO_HTML_BASE > 0x10FFFF);
+// Alto de línea de las páginas HTML en la interfaz original (tmHeight de la fuente de tamaño 13).
+constexpr int ALTO_LINEA_HTML_ORIGINAL = 13;
+int ancho_html(u32 codepunto, bool negrita = false);
+bool rasterizar_html(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
+// Campo HD (recursos/fuente_hd.h) desde los contornos reales; false para glifos sin tinta.
+bool rasterizar_html_hd(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
 
 // Avance del carácter en píxeles (proporcional). Un carácter que la fuente no tiene se dibuja como '?'.
 int ancho_ttf(u32 codepunto);

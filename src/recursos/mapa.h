@@ -2,7 +2,7 @@
 //
 // Formato (handle_s32 de l1j-client):
 //   64×64 × {u32 suelo izquierdo, u32 suelo derecho}   (valor: juego de tiles << 8 | tile)
-//   u16 n, n × 6 bytes (desconocido)
+//   u16 n, n × {u8 x en medias celdas, u8 y, u32 tile}   (segunda capa de suelo: ver abajo)
 //   64×64 × {u16 atributo izquierdo, u16 atributo derecho}
 //   u32 nobjetos, nobjetos × {u16 índice, u16 ntiles, ntiles × {u8 x, u8 y, u8 capa, u32 tile}}
 //     (un par x=0xCD,y=0xCD es relleno de 7 bytes que no cuenta)
@@ -13,6 +13,7 @@
 // El orden de las celdas en el archivo es fila por fila: y exterior, x interior. Esto está
 // verificado contra los mapas del servidor en tests/test_recursos.cpp.
 #pragma once
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -21,6 +22,13 @@
 namespace lin {
 
 constexpr int CELDAS_SEGMENTO = 64;
+
+// Segunda capa de suelo (la tabla de n x 6 bytes después del suelo): tiles transparentes (los tiles de borde de
+// pasto de 89.til 134, 156, 178, 182, 187, 190...) puestos sobre el suelo a media celda. La capa de suelo
+// sola deja en los bosques una retícula regular de medias celdas de tierra marrón (mapa 4, alrededor de
+// 32639,32985) porque son estos tiles los que las tapan. decodificar_s32 los agrega como un
+// pseudoobjeto de piezas de capa 0 (la capa más baja, pegada al suelo), así se dibujan sobre el suelo
+// y debajo de las sombras.
 
 struct TileObjetoMapa {
     u8 x, y;     // x en medias celdas, y en celdas (relativas al segmento)
@@ -35,6 +43,15 @@ struct TileObjetoMapa {
 struct ObjetoMapa {
     u32 primera, cantidad;
     u8 x0, y0, x1, y1;
+    u16 gid = 0xFFFF;  // id de grupo de objetos del archivo (los registros de techo lo referencian); 0xFFFF = ninguno
+};
+
+// Registro de techo del .s32 (bloque después de los objetos de tiles): el grupo de objetos `gid` se desvanece mientras el jugador local está
+// en la celda. tipo 0 se desvanece al 50%, tipo 1 hasta ocultarse. x es la columna de la celda (medias celdas / 2), relativa al segmento.
+struct TechoMapa {
+    u8 x, y;
+    u16 gid;
+    u8 tipo;
 };
 
 // Orden de dibujo de los objetos del mapa. Un objeto (árbol, casa, cerca) son muchas piezas de
@@ -66,6 +83,7 @@ struct SegmentoMapa {
     std::vector<TileObjetoMapa> tiles_objetos;     // aplanado, en orden de archivo
     std::vector<ObjetoMapa> objetos;
     std::vector<PortalMapa> portales;
+    std::vector<TechoMapa> techos;                 // sorted by (y, x); see techos_en
     // Celdas con una pieza de sombra (tile translúcido; ver tiles.h), un u64 por fila. Hace falta
     // leer los .til para saberlo: lo calcula el render la primera vez que lo necesita.
     mutable std::vector<u64> sombra;
@@ -73,6 +91,23 @@ struct SegmentoMapa {
     u32 suelo_en(int x, int y, int mitad) const { return suelo[(y * CELDAS_SEGMENTO + x) * 2 + mitad]; }
     u16 atributo_en(int x, int y, int mitad) const { return atributos[(y * CELDAS_SEGMENTO + x) * 2 + mitad]; }
 };
+
+// Tipo de zona de una celda, según el atributo de su mitad IZQUIERDA (verificado contra los mapas del servidor en
+// el mapa 4: tile del servidor & 0x30 == 0x10 <-> bit 2 del atributo, == 0x20 <-> bit 3; con ambos bits el
+// servidor siempre dice segura).
+enum class TipoZona : u8 { NORMAL, SEGURA, COMBATE };
+constexpr TipoZona tipo_zona_de_atributo(u16 atributo_izq) {
+    if (atributo_izq & 4) return TipoZona::SEGURA;
+    if (atributo_izq & 8) return TipoZona::COMBATE;
+    return TipoZona::NORMAL;
+}
+// Etiqueta que el original muestra abajo a la derecha de la pantalla ("Normal zone" / "Safety zone" / "Combat zone").
+constexpr const char* rotulo_zona(TipoZona t) {
+    return t == TipoZona::SEGURA ? "Safety zone" : t == TipoZona::COMBATE ? "Combat zone" : "Normal zone";
+}
+
+// Registros de techo registrados en la celda absoluta (x, y) del segmento (vacío si está fuera).
+std::span<const TechoMapa> techos_en(const SegmentoMapa& s, int x, int y);
 
 // Nombre del archivo del segmento que contiene la celda (x, y).
 std::string nombre_segmento(MapId mapa, int x, int y);

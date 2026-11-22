@@ -1,9 +1,21 @@
 #include "plataforma/archivo_mapeado.h"
 #include "recursos/cp949.h"
 #include "recursos/fuente.h"
+#include "recursos/fuente_hd.h"
 #include "recursos/fuente_ttf.h"
 
 namespace lin {
+
+namespace {
+bool fuente_original = false;
+// Glifo y ancho de un punto Unicode de un texto UTF-8.
+GlifoTexto glifo_cp(u32 cp) {
+    if (fuente_original && cp >= 0x20 && cp < 0x7F) return {cp - 0x20, ANCHO_GLIFO_ASCII};
+    return {GLIFO_TTF_BASE + cp, static_cast<u8>(ancho_ttf(cp))};
+}
+}  // namespace
+
+void usar_fuente_original(bool si) { fuente_original = si; }
 
 bool FuenteBitmap::cargar(const std::string& carpeta) {
     if (!leer_archivo(carpeta + "font/eng.fnt", ascii) || ascii.size() < 95 * 12) return false;
@@ -12,6 +24,8 @@ bool FuenteBitmap::cargar(const std::string& carpeta) {
 }
 
 bool FuenteBitmap::rasterizar(u32 glifo, ImagenRGBA& salida) const {
+    if (glifo >= GLIFO_HTML_NEGRITA_BASE) return rasterizar_html(glifo - GLIFO_HTML_NEGRITA_BASE, salida, true);
+    if (glifo >= GLIFO_HTML_BASE) return rasterizar_html(glifo - GLIFO_HTML_BASE, salida);
     if (glifo >= GLIFO_TTF_BASE) return rasterizar_ttf(glifo - GLIFO_TTF_BASE, salida);
     if (glifo < 95) {
         salida.preparar(ANCHO_GLIFO_ASCII, ALTO_GLIFO_BITMAP);
@@ -31,6 +45,14 @@ bool FuenteBitmap::rasterizar(u32 glifo, ImagenRGBA& salida) const {
             if (fila & (0x8000 >> x)) salida.px[y * ANCHO_GLIFO_KOR + x] = 0xFFFFFFFFu;
     }
     return true;
+}
+
+bool FuenteBitmap::rasterizar_hd(u32 glifo, ImagenRGBA& salida) const {
+    if (glifo >= GLIFO_HTML_NEGRITA_BASE) return rasterizar_html_hd(glifo - GLIFO_HTML_NEGRITA_BASE, salida, true);
+    if (glifo >= GLIFO_HTML_BASE) return rasterizar_html_hd(glifo - GLIFO_HTML_BASE, salida);
+    static thread_local ImagenRGBA mascara;  // reused cell
+    if (!rasterizar(glifo, mascara)) return false;
+    return campo_de_mascara(mascara, salida);
 }
 
 size_t largo_utf8(const char* t, size_t n, size_t i, u32& cp) {
@@ -66,7 +88,7 @@ void glifos_de_texto(const char* t, size_t n, std::vector<GlifoTexto>& salida) {
         for (size_t i = 0; i < n;) {
             u32 cp = 0;
             const size_t largo = largo_utf8(t, n, i, cp);
-            salida.push_back({GLIFO_TTF_BASE + cp, static_cast<u8>(ancho_ttf(cp))});
+            salida.push_back(glifo_cp(cp));
             i += largo;
         }
         return;
@@ -84,13 +106,38 @@ void glifos_de_texto(const char* t, size_t n, std::vector<GlifoTexto>& salida) {
     }
 }
 
+void glifos_de_texto_html(const char* t, size_t n, std::vector<GlifoTexto>& salida, bool negrita) {
+    salida.clear();
+    const bool utf8 = es_utf8(t, n);
+    for (size_t i = 0; i < n;) {
+        u32 cp = static_cast<u8>(t[i]);
+        size_t largo = 1;
+        if (utf8) largo = largo_utf8(t, n, i, cp);
+        salida.push_back({(negrita ? GLIFO_HTML_NEGRITA_BASE : GLIFO_HTML_BASE) + cp, static_cast<u8>(ancho_html(cp, negrita))});
+        i += largo;
+    }
+}
+
+int ancho_texto_html(const char* t, size_t n, bool negrita) {
+    int w = 0;
+    const bool utf8 = es_utf8(t, n);
+    for (size_t i = 0; i < n;) {
+        u32 cp = static_cast<u8>(t[i]);
+        size_t largo = 1;
+        if (utf8) largo = largo_utf8(t, n, i, cp);
+        w += ancho_html(cp, negrita);
+        i += largo;
+    }
+    return w;
+}
+
 int ancho_texto(const char* t, size_t n) {
     int w = 0;
     if (es_utf8(t, n)) {
         for (size_t i = 0; i < n;) {
             u32 cp = 0;
             i += largo_utf8(t, n, i, cp);
-            w += ancho_ttf(cp);
+            w += glifo_cp(cp).ancho;
         }
         return w;
     }
@@ -116,7 +163,7 @@ size_t bytes_que_caben(const char* t, size_t n, int ancho_max) {
         if (utf8) {
             u32 cp = 0;
             largo = largo_utf8(t, n, i, cp);
-            cw = ancho_ttf(cp);
+            cw = glifo_cp(cp).ancho;
         } else {
             u8 c = static_cast<u8>(t[i]);
             largo = (c >= 0x81 && i + 1 < n) ? 2 : 1;

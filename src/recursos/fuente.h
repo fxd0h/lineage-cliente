@@ -26,6 +26,8 @@ struct FuenteBitmap {
     // Glifo blanco sobre transparente; el color se aplica al dibujar. `glifo`: 0–94 ASCII,
     // 1000+ índice coreano.
     bool rasterizar(u32 glifo, ImagenRGBA& salida) const;
+    // El mismo glifo como campo HD (recursos/fuente_hd.h) para la pasada de texto posterior al filtro; false si no tiene tinta.
+    bool rasterizar_hd(u32 glifo, ImagenRGBA& salida) const;
 };
 
 // Texto UTF-8 válido: se dibuja con la fuente TTF (recursos/fuente_ttf.h), proporcional. Cualquier
@@ -42,5 +44,12 @@ int ancho_texto(const char* texto, size_t n);
 // Bytes del comienzo del texto que entran en `ancho_max` píxeles, sin partir caracteres CP949 y
 // cortando preferentemente en un espacio (para el ajuste de línea del chat). Al menos 1 carácter.
 size_t bytes_que_caben(const char* texto, size_t n, int ancho_max);
+// Con la fuente original, el ASCII imprimible de los textos UTF-8 se dibuja con eng.fnt (6×12),
+// como el cliente original; lo demás (acentos, símbolos) sigue en la TTF. Se fija al arrancar.
+void usar_fuente_original(bool si);
+// Texto de las páginas HTML de la interfaz original: cara proporcional (recursos/fuente_ttf.h). UTF-8 válido, o bytes
+// Latin-1 si no lo es. `glifos_de_texto_html` produce glifos GLIFO_HTML_BASE + cp.
+void glifos_de_texto_html(const char* texto, size_t n, std::vector<GlifoTexto>& salida, bool negrita = false);
+int ancho_texto_html(const char* texto, size_t n, bool negrita = false);
 
 }  // namespace lin

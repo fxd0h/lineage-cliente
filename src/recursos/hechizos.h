@@ -19,6 +19,56 @@
 namespace lin {
 
 constexpr u32 CANTIDAD_HECHIZOS = 28 * 8;  // 28 filas (niveles) de 8 en S_AddSkill
+// Diseño original del libro de hechizos (exe 2009, tablas de casillas cerca de 0x4424xx). Ids de clase: 0 príncipe, 1 caballero, 2 elfo, 3 mago,
+// 4 elfo oscuro, 5 caballero dragón, 6 ilusionista. Una casilla es fila * 4 + columna; id de habilidad = idx + 1. Devuelve 0 para una casilla vacía.
+constexpr u32 spellbook_skill_id(int cls, int slot) {
+    if (slot < 0) return 0;
+    auto in = [&](int lo, int hi) { return slot >= lo && slot <= hi; };
+    int idx = -1;
+    switch (cls) {
+    case 0:  // prince
+        if (in(0, 47)) idx = slot;
+        else if (in(48, 55)) idx = slot - 48 + 112;
+        break;
+    case 2:  // elf
+        if (in(0, 47)) idx = slot;
+        else if (in(48, 98)) idx = slot - 48 + 128;
+        break;
+    case 4:  // dark elf
+        if (in(0, 15)) idx = slot;
+        else if (in(16, 19)) idx = slot - 16 + 96;
+        else if (slot == 20) idx = 108;
+        else if (in(24, 27)) idx = slot - 24 + 100;
+        else if (slot == 28) idx = 109;
+        else if (in(32, 35)) idx = slot - 32 + 104;
+        else if (slot == 36) idx = 110;
+        break;
+    case 5:  // dragon knight
+        if (in(0, 14)) idx = slot + 180;
+        break;
+    case 6:  // illusionist
+        if (in(0, 19)) idx = slot + 200;
+        break;
+    case 1:  // caballero: la pestaña 2 tiene las habilidades de caballero
+        if (in(0, 79)) {
+            switch (slot) {
+            case 8: idx = 86; break;
+            case 9: idx = 88; break;
+            case 10: idx = 87; break;
+            case 13: idx = 89; break;
+            case 14: idx = 90; break;
+            default: idx = slot;
+            }
+        }
+        break;
+    default:  // mago y desconocidos
+        if (in(0, 79)) idx = slot;
+    }
+    return idx < 0 ? 0 : static_cast<u32>(idx + 1);
+}
+// Primera fila de grilla más alta de la barra de scroll (límites de 0x47e9d0) y cantidad de pestañas de la imagen de la franja.
+constexpr int spellbook_max_scroll(int cls) { return cls == 0 ? 13 : cls == 2 ? 21 : cls == 4 ? 9 : 19; }
+
 constexpr u8 ACC_HECHIZO_ATAQUE = 18, ACC_HECHIZO = 19;  // ActionCodes.ACTION_SkillAttack / SkillBuff
 
 struct Hechizo {

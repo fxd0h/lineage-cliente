@@ -31,7 +31,7 @@ public:
     Audio& operator=(const Audio&) = delete;
 
     // `carpeta_juego` termina en "/"; los archivos están en <carpeta>sound/.
-    bool abrir(const std::string& carpeta_juego);
+    bool abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras = {});
     void cerrar();
     bool abierto() const { return dispositivo_ != 0; }
 
@@ -42,8 +42,12 @@ public:
     // entre repeticiones.
     void musica(i32 n, u32 intervalo_s, u64 ahora_ms);
     i32 musica_actual() const { return musica_n_; }
+    // Lo mismo, pero una pista que está sonando primero se desvanece (0x479ed0 + temporizador 0x479dd0 del original: volumen -8/127
+    // cada 50 ms, unos 0,8 s) y después la nueva empieza a volumen completo. Repetir la llamada no hace daño.
+    void musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms);
     // Un efecto, con `ganancia` de 0 a 1 (además del volumen de efectos).
-    void efecto(u32 id, float ganancia, u64 ahora_ms);
+    // `solapar`: puede empezar mientras el mismo sonido todavía suena; `unico`: solo empieza si no está sonando para nada.
+    void efecto(u32 id, float ganancia, u64 ahora_ms, bool solapar = false, bool unico = false);
     // Sonido de ambiente en bucle (-1 = ninguno).
     void ambiente(i32 id);
 
@@ -59,7 +63,7 @@ private:
     const Wav* wav(u32 id);
     void abrir_mp3(u64 ahora_ms);
     void cerrar_mp3();
-    void tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms);
+    void tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms, bool solapar = false, bool unico = false);
     void poner_ambiente(const Wav* w);
     void bucle_cargador();
     void recoger_cargados(u64 ahora_ms);
@@ -68,6 +72,8 @@ private:
     static void alimentar_ambiente(void* yo, SDL_AudioStream* s, int falta, int total);
 
     std::string carpeta_;
+    std::vector<std::string> carpetas_;  // <juego>/sound/ y después las de juego_extra=, en orden de búsqueda
+    std::string ruta_sonido(const std::string& nombre) const;
     u32 dispositivo_ = 0;
     SDL_AudioStream* stream_musica_ = nullptr;
     SDL_AudioStream* stream_ambiente_ = nullptr;
@@ -105,6 +111,10 @@ private:
     void* mp3_ = nullptr;  // drmp3; se cambia con stream_musica_ bloqueado
     std::atomic<bool> mp3_termino_{false};  // lo marca el callback: el hilo principal lo cierra
     i32 musica_n_ = -1;
+    static constexpr i32 SIN_FUNDIDO = -2;
+    i32 fundido_n_ = SIN_FUNDIDO;  // tema al que se pasa al terminar el fundido
+    u32 fundido_intervalo_ = 0;
+    u64 fundido_ini_ = 0;
     u32 intervalo_s_ = 0;
     u64 reanudar_ms_ = 0;  // terminada: vuelve a empezar en este momento (0 = sonando)
     float pcm_[4096 * 2];

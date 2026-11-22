@@ -66,7 +66,7 @@ struct Conexion {
 // Un paso de mouse inyectado: se aplica en un frame (después de leer la entrada real).
 struct PasoMouse {
     int x, y;
-    u8 boton;  // 0 izquierdo, 1 derecho, 2 medio
+    u8 boton;  // 0 izquierdo, 1 derecho, 2 medio, 4 doble clic derecho, 5 doble clic izquierdo
     bool apretar, soltar;
     int rueda = 0;  // pasos de la rueda en ese frame (+ hacia arriba)
 };
@@ -181,6 +181,7 @@ bool* ventana(App& a, std::string_view n) {
     if (n == "forma") return &a.ventana_forma;
     if (n == "social") return &a.ventana_social;
     if (n == "salida") return &a.ventana_salida;
+    if (n == "volumen") return &a.ventana_volumen;
     if (n == "teclas") return &a.ayuda_teclas;
     return nullptr;
 }
@@ -230,6 +231,28 @@ void objetos(App& a, Conexion& c, int radio) {
                       a.sprites.accion(gfx, ACC_QUIETO) || a.sprites.accion(gfx, ACC_CAMINAR) ? 1 : 0, a.rec.sprite(spr0).size(),
                       static_cast<unsigned>(o.col<O_ESTADO>()[s]), px, py,
                       o.col<O_ESTADO>()[s] == ESTADO_MUERTO ? " muerto" : s == yo ? " yo" : "");
+        // Título, bytes crudos (lo no ASCII como \xNN), para revisar los códigos de color.
+        if (o.col<O_MASCOTA>()[s]) {
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " mascota=%u clase=%u", static_cast<unsigned>(o.col<O_MASCOTA>()[s]),
+                          static_cast<unsigned>(clase_objeto(a, s)));
+        } else if (tipo_objeto(a, s) == TIPO_MONSTRUO) {
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " clase=%u", static_cast<unsigned>(clase_objeto(a, s)));
+        }
+        std::string_view ti = texto(a.mundo, o.col<O_TITULO>()[s]);
+        for (const Vendedor& v : a.tienda_pj.vendedores)
+            if (v.id == id && !v.titulo.empty()) ti = v.titulo;  // private shop sign
+        if (!ti.empty()) {
+            std::string esc;
+            for (const char ch : ti) {
+                char hx[8];
+                if (static_cast<unsigned char>(ch) >= 0x20 && static_cast<unsigned char>(ch) < 0x7f) esc += ch;
+                else std::snprintf(hx, sizeof hx, "\\x%02x", static_cast<unsigned char>(ch)), esc += hx;
+            }
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " titulo=\"%s\"", esc.c_str());
+        }
         responder(c, l);
     }
 }
@@ -273,15 +296,18 @@ void estado(App& a, Conexion& c) {
     const Slot s = a.mundo.objetos.buscar(j.id);
     const int x = s != SIN_SLOT ? a.mundo.objetos.col<O_X>()[s] : 0, y = s != SIN_SLOT ? a.mundo.objetos.col<O_Y>()[s] : 0;
     const std::string_view nombre = nombre_personaje(a);
-    std::snprintf(l, sizeof l, "personaje=%.*s mapa=%u x=%d y=%d nivel=%d hp=%d/%d mp=%d/%d muerto=%d estado=%d",
+    std::snprintf(l, sizeof l, "personaje=%.*s mapa=%u x=%d y=%d nivel=%d hp=%d/%d mp=%d/%d muerto=%d estado=%d musica=%d",
                   static_cast<int>(nombre.size()), nombre.data(), static_cast<unsigned>(a.mundo.mapa), x, y, j.nivel, j.hp,
-                  j.hp_max, j.mp, j.mp_max, j.muerto ? 1 : 0, s != SIN_SLOT ? a.mundo.objetos.col<O_ESTADO>()[s] : -1);
+                  j.hp_max, j.mp, j.mp_max, j.muerto ? 1 : 0, s != SIN_SLOT ? a.mundo.objetos.col<O_ESTADO>()[s] : -1, a.audio.musica_actual());
     responder(c, l);
     std::string asedios = "asedios=";
     for (int k = 1; k <= 8; ++k)
         if (a.castillos.asedio[k]) (asedios += std::to_string(k)) += ',';
     if (u8 cs = castillo_de(a, j.id)) asedios += " senor=" + std::to_string(cs);
     responder(c, asedios);
+    // Cursor aplicado el cuadro anterior (a.cursor se vuelve a la mano al empezar cada cuadro): el estado 1..16 de la interfaz original, <= 0 un rol del fork.
+    const int cs = static_cast<int>(a.cursor_aplicado) - static_cast<int>(Cursor::ESTADO_1) + 1;
+    responder(c, "cursor=" + std::to_string(cs));
 }
 
 const char* AYUDA[] = {
@@ -295,13 +321,13 @@ const char* AYUDA[] = {
     "accion <vínculo de la página>   responder si|no|\"texto\"   cantidad <n>",
     "usar <ítem> [sobre <ítem>]   soltar <ítem>   dar <ítem> <objeto>   borrar <ítem>   lanzar <hechizo> [objeto]",
     "abrir|cerrar inventario|estado|hechizos|ajustes|social|salida|teclas",
-    "girar <0-7>   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
-    "clic <x> <y> [der|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
+    "girar <0-7>   cartel <id desc-e> [rumbo]   ofrecer <ítem> (intercambio)   aceptar-intercambio   cancelar-intercambio",
+    "mover <x> <y> <frames> (puntero sin botón)   clic <x> <y> [der|dder|dizq|medio]   arrastrar <x1> <y1> <x2> <y2>   mantener <x> <y> <frames>   raton <x> <y> down|up",
     "tecla-mantener <1-0, con alt+ si se quiere> <ms>   (apretada ese tiempo: la barra la ve mantenida)",
     "rueda <x> <y> <pasos>   barra-pagina [n]   (página visible de la barra de atajos; sin n, la dice)",
     "tecla <nombre> (ctrl+ alt+ shift+)   texto \"...\"   ctrl on|off   shift on|off",
     "esperar pantalla=X | paquete=NOMBRE | html=X | ventana=X | dialogo=pregunta|cantidad | chat=texto | frames=n | ms=n  [plazo=ms]",
-    "captura <ruta.bmp>   mudo on|off   traza on|off   traza-html on|off   perf on|off   depuracion on|off   salir",
+    "captura <ruta.bmp>   captura-final <ruta.bmp> (tras el filtro)   texto-hd on|off   escalado entero|xbr|fsr|crt|anime4k   mudo on|off   traza on|off   traza-html on|off   perf on|off   depuracion on|off   salir",
     "forzar-hora <segundos del día 0-86399>|off (luz y sonido, para pruebas; el día del año pasa a ser el 1 de enero)",
 };
 
@@ -360,6 +386,9 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.tipo = Espera::CREAR;
         es.texto = p[1];
         return false;
+    } else if (cmd == "cartel") {  // abre la ficha de cartel sin un cartel cerca (l1j-en solo manda ids `$` desde el parche 0102)
+        if (a.pantalla != Pantalla::JUEGO || p.size() < 2) return error("uso: cartel <id desc-e> [rumbo 0-7] (en el juego)");
+        a.cartel = {true, static_cast<u8>(p.size() > 2 ? std::atoi(p[2].c_str()) & 7 : 0), static_cast<u32>(std::atoi(p[1].c_str()))};
     } else if (cmd == "girar") {
         if (a.pantalla != Pantalla::JUEGO || p.size() < 2) return error("uso: girar <0-7> (en el juego)");
         const u8 d = static_cast<u8>(std::atoi(p[1].c_str()) & 7);
@@ -378,6 +407,9 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         if (!a.intercambio.abierto) return error("no hay un intercambio abierto");
         enviar(a, cmd::aceptar_intercambio(a.op));
         a.intercambio.ok = true;
+    } else if (cmd == "pagina") {
+        if (p.size() < 2) return error("uso: pagina <id>");
+        abrir_pagina_local(a, p[1]);
     } else if (cmd == "traza-html") {
         g_traza_html = p.size() < 2 || p[1] == "on";
     } else if (cmd == "forzar-hora") {
@@ -390,6 +422,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             const long s = std::strtol(p[1].c_str(), &fin, 10);
             if (fin == p[1].c_str() || *fin || s < 0 || s > 86399) return error("la hora va de 0 a 86399, o off");
             a.hora_forzada = static_cast<i32>(s);
+            ++a.mundo.hora_n;  // como un paquete S_GameTime: vuelve a armar la transición del orbe
         }
     } else if (cmd == "perf") {
         a.perf = p.size() < 2 || p[1] == "on";
@@ -405,6 +438,57 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         inventario(a, c);
     } else if (cmd == "html") {
         html(a, c);
+    } else if (cmd == "debug-mascota") {  // depuración: mascota <id> <nombre> como lo haría S_PetCtrlMenu
+        Evento ev{};
+        ev.tipo = Ev::MASCOTA;
+        ev.id = p.size() > 1 ? static_cast<ObjId>(std::atoi(p[1].c_str())) : 1;
+        ev.v[MA_AGREGAR] = 1;
+        ev.s[0] = p.size() > 2 ? std::string_view(p[2]) : std::string_view("Pet");
+        eventos_mascotas(a, ev);
+    } else if (cmd == "debug-cocina") {  // depuración: ventana de cocina para la etapa <1..5> del libro como S_PacketBox 52, id de libro opcional
+        Evento ev{};
+        ev.tipo = Ev::COCINA;
+        ev.v[0] = 1;
+        ev.v[1] = (p.size() > 1 ? std::atoi(p[1].c_str()) : 1) - 1;
+        eventos_cocina(a, ev);
+        if (p.size() > 2) a.cocina.pan = static_cast<ObjId>(std::atoi(p[2].c_str()));
+    } else if (cmd == "debug-correo") {  // depuración: una carta de <nombre> en la bandeja, mostrada en la ventana de lectura
+        Correo& co = a.correo;
+        co.abierto = true;
+        co.escribiendo = false;
+        co.bandeja = 0;
+        co.cartas.clear();
+        co.cartas.push_back({7, 1700000000u, false, false, p.size() > 1 ? p[1] : "Sender", "Test subject"});
+        co.leyendo = 7;
+        co.texto = "Body of the letter. Second sentence to check the wrapping inside the paper edit area of the window.";
+    } else if (cmd == "debug-tienda") {  // depuración: una lista de compra de NPC con 3 objetos con bytes de propiedades, como S_ShopSellList
+        Evento ev{};
+        ev.tipo = Ev::LISTA_TIENDA;
+        ev.id = a.mundo.jugador.id;
+        ev.v[LT_TIPO] = LISTA_COMPRA;
+        ev.v[LT_CANTIDAD] = 3;
+        eventos_npc(a, ev);
+        static const char ATRIBUTOS[] = "\x01\x06\x08\x0b\x00\x00\x03\xe8\x13\x05";
+        for (int i = 0; i < 3; ++i) {
+            Evento it{};
+            it.tipo = Ev::ITEM_TIENDA;
+            it.id = static_cast<ObjId>(i);
+            it.v[IT_GFX] = 20 + i;
+            it.v[TI_PRECIO] = 1000 * (i + 1);
+            it.s[0] = "Test sword";
+            it.s[1] = std::string_view(ATRIBUTOS, sizeof ATRIBUTOS - 1);
+            eventos_npc(a, it);
+        }
+        a.tienda_filas[1].elegido = 1;
+    } else if (cmd == "debug-html") {  // depuración: debug-html <pagina> <dato1> <dato2> ... como lo haría S_ShowHTML
+        Evento ev{};
+        ev.tipo = Ev::HTML;
+        ev.id = a.mundo.jugador.id;
+        ev.s[0] = p.size() > 1 ? std::string_view(p[1]) : std::string_view();
+        std::string datos;
+        for (size_t i = 2; i < p.size(); ++i) datos += (i > 2 ? std::string(1, SEPARADOR_DATOS) : std::string()) + p[i];
+        ev.s[1] = datos;
+        eventos_npc(a, ev);
     } else if (cmd == "ventanas") {
         std::string l = "abiertas=";
         for (const char* v : VENTANAS)
@@ -512,6 +596,10 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         for (int i = 1; i <= PASOS; ++i)
             g.mouse.push_back({x1 + (x2 - x1) * i / PASOS, y1 + (y2 - y1) * i / PASOS, 0, true, false});
         g.mouse.push_back({x2, y2, 0, false, true});
+    } else if (cmd == "mover") {
+        if (p.size() < 4) return error("uso: mover <x> <y> <frames>");
+        const int x = std::atoi(p[1].c_str()), y = std::atoi(p[2].c_str());
+        for (int i = std::max(1, std::atoi(p[3].c_str())); i-- > 0;) g.mouse.push_back({x, y, 0, false, false});
     } else if (cmd == "mantener") {
         if (p.size() < 4) return error("uso: mantener <x> <y> <frames>");
         const int x = std::atoi(p[1].c_str()), y = std::atoi(p[2].c_str());
@@ -540,8 +628,8 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         if (p.size() > 1) cambiar_pagina_barra(a, std::atoi(p[1].c_str()) - 1);
         responder(c, "pagina=" + std::to_string(a.pagina_barra + 1) + " paginas=" + std::to_string(a.cfg.paginas_barra));
     } else if (cmd == "clic") {
-        if (p.size() < 3) return error("uso: clic <x> <y> [der|medio]");
-        clic(std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), p.size() > 3 ? (p[3] == "der" ? 1 : p[3] == "medio" ? 2 : 0) : 0);
+        if (p.size() < 3) return error("uso: clic <x> <y> [der|dder|medio]");
+        clic(std::atoi(p[1].c_str()), std::atoi(p[2].c_str()), p.size() > 3 ? (p[3] == "der" ? 1 : p[3] == "dder" ? 4 : p[3] == "dizq" ? 5 : p[3] == "medio" ? 2 : 0) : 0);
     } else if (cmd == "tecla") {
         if (p.size() < 2 || !tecla(p[1])) return error("tecla desconocida");
     } else if (cmd == "texto") {
@@ -551,6 +639,12 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         g.ctrl = p.size() > 1 && p[1] == "on";
     } else if (cmd == "shift") {
         g.shift = p.size() > 1 && p[1] == "on";
+    } else if (cmd == "mapa") {  // depuración: mapa <1..18> abre la ventana del mapa del mundo como S_UseMap
+        Evento ev{};
+        ev.tipo = Ev::USAR_MAPA;
+        ev.v[0] = p.size() > 1 ? std::atoi(p[1].c_str()) : 0;
+        eventos_mapa(a, ev);
+        responder(c, "mapa=" + std::to_string(a.mapa_item.numero));
     } else if (cmd == "mudo") {
         a.mudo = p.size() < 2 || p[1] == "on";
         aplicar_volumenes(a);
@@ -562,6 +656,18 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.tipo = Espera::FRAMES;
         es.frame = a.frame + 2;  // se escribe al presentar
         return false;
+    } else if (cmd == "captura-final") {
+        if (p.size() < 2) return error("uso: captura-final <ruta.bmp>");
+        a.gpu.pedir_captura_final(p[1]);
+        es.tipo = Espera::FRAMES;
+        es.frame = a.frame + 2;
+        return false;
+    } else if (cmd == "texto-hd") {
+        if (p.size() < 2) return error("uso: texto-hd on|off");
+        a.cfg.texto_hd = p[1] == "on" || p[1] == "1";
+    } else if (cmd == "escalado") {
+        if (p.size() < 2) return error("uso: escalado entero|xbr|fsr|crt");
+        a.cfg.escalado = nombre_escalado(escalado_desde(p[1]));
     } else if (cmd == "esperar") {
         if (std::string_view v_pantalla = opcion(p, "pantalla"); !v_pantalla.empty()) {
             es.tipo = Espera::PANTALLA;
@@ -730,13 +836,15 @@ void control_entrada(App& a) {
     g.mouse.pop_front();
     e.mx = m.x;
     e.my = m.y;
-    if (m.boton == 0) {
+    if (m.boton == 0 || m.boton == 5) {  // 5 = left double click
+        e.doble_izquierdo = m.boton == 5 && m.apretar;
         e.pulsado = m.apretar && !g.izquierdo;  // apretado en este paso, no mantenido desde el anterior
         e.presionado = g.izquierdo = m.apretar;
         e.clic = m.soltar;
-    } else if (m.boton == 1) {
+    } else if (m.boton == 1 || m.boton == 4) {  // 4 = right double click
         e.derecho_presionado = m.apretar;
         e.clic_derecho = m.soltar;
+        e.doble_derecho = m.boton == 4 && m.apretar;
     } else if (m.boton == 2) {
         e.medio_presionado = m.apretar;
         e.clic_medio = m.soltar;

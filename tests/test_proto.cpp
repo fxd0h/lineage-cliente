@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include "comun.h"
 #include "mundo/mundo.h"
 #include "proto/comandos.h"
 #include "proto/decodificar.h"
@@ -39,6 +40,26 @@ TEST_CASE("Decodificar: S_MoveCharPacket lleva la posición anterior") {
     CHECK(ev[0].id == 0x10);
     CHECK(ev[0].v[0] == 101);
     CHECK(ev[0].v[1] == 201);
+}
+
+TEST_CASE("Decodificar: S_OwnCharAttrDef lee la CA como el original (byte >= 0x28 es negativo)") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    auto ca = [&](u8 byte) {
+        const u8 p[] = {15, byte, 1, 2, 3, 4};  // 15 = OWNCHARATTRDEF en el protocolo jp363
+        Arena arena(1024);
+        std::vector<Evento> ev;
+        REQUIRE(decodificar({p, sizeof p}, t, arena, ev));
+        REQUIRE(ev.size() == 1);
+        REQUIRE(ev[0].tipo == Ev::DEFENSA);
+        return ev[0].v[DF_CA];
+    };
+    CHECK(ca(0xFA) == -6);
+    CHECK(ca(10) == 10);
+    CHECK(ca(0x27) == 39);
+    CHECK(ca(0x28) == 40 - 256);  // el original da la vuelta 0x28..0x7f a -216..-129
+    CHECK(ca(0x7f) == 127 - 256);
+    CHECK(ca(0x80) == -128);
 }
 
 TEST_CASE("Decodificar: S_CharPacks y paquete truncado") {
@@ -295,6 +316,21 @@ TEST_CASE("Tablón y correo: S_Board, S_BoardRead, S_Mail y comandos") {
     CHECK(ev[1].id == 9);
     CHECK(ev[1].s[0] == "Ana");
     CHECK(ev[1].s[1] == "Hi");
+    // Lista de l1j-en classic (s3ep1): d id, c leída, c aa, c mm, c dd, s remitente, asunto; y la respuesta sola 0x20 (buzón lleno).
+    TablaOpcodes t2;
+    tabla_opcodes("s3ep1", t2);
+    ev.clear();
+    std::vector<u8> lista2 = {127, 0, 1, 0, 9, 0, 0, 0, 0, 26, 11, 20, 'A', 'n', 'a', 0, 'H', 0, 'i', 0, 0, 0};
+    REQUIRE(decodificar(lista2, t2, arena, ev));
+    REQUIRE(ev.size() == 2);
+    CHECK(ev[1].id == 9);
+    CHECK(ev[1].v[CO_FECHA] == 1795176000);
+    CHECK(ev[1].s[0] == "Ana");
+    CHECK(ev[1].s[1] == "Hi");
+    ev.clear();
+    std::vector<u8> lleno = {127, 0x20};
+    REQUIRE(decodificar(lleno, t2, arena, ev));
+    CHECK(ev[0].v[CO_OK] == 0);
     // El texto (0x10) y el aviso de carta nueva (0x50).
     ev.clear();
     std::vector<u8> texto = {1, 0x10, 9, 0, 0, 0, 'o', 0, 'k', 0, 0, 0};
@@ -500,6 +536,12 @@ TEST_CASE("Social: preguntas, intercambio, título, emblema, página del clan y 
     CHECK(cmd::aceptar_intercambio(t).cuerpo()[0] == 110);
     CHECK(cmd::cancelar_intercambio(t).cuerpo()[0] == 167);
     CHECK(cmd::invitar_grupo(t, 1).cuerpo()[0] == 166);
+    {  // C_LoginToServerOK: c qué, c flag (opciones de chat de la página de Opciones); byte de tipo de invitación
+        Escritor oc = cmd::opcion_chat(t, 6, true);
+        CHECK(oc.cuerpo()[1] == 6);
+        CHECK(oc.cuerpo()[2] == 1);
+        CHECK(cmd::invitar_grupo(t, 1, 1).cuerpo()[1] == 1);
+    }
     CHECK(cmd::crear_clan(t, "X").cuerpo()[0] == 154);
     u8 emblema[BYTES_EMBLEMA] = {};
     Escritor em = cmd::subir_emblema(t, emblema);
@@ -632,6 +674,10 @@ TEST_CASE("Puertas, estados alterados, cantidad y mascotas: decodificar, aplicar
     igual(cmd::inventario_mascota(t, 5), {217, 5, 0, 0, 0});
     igual(cmd::borrar_item(t, 0x33, 2), {209, 0x33, 0, 0, 0, 2, 0, 0, 0});
     igual(cmd::usar_item_sobre(t, 0x33, 0x44), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0});
+    // Wand of Polymorph (useType spell_long): d item, d target, h x, h y (C_UseItem.java).
+    igual(cmd::usar_item_apuntado(t, 0x33, 0x44, 0x7f55, 0x80a6), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0, 0x55, 0x7f, 0xa6, 0x80});
+    // Pergamino de polymorph o varita con Ring of Polymorph Control: d objeto, s nombre del monstruo.
+    igual(cmd::usar_item_texto(t, 0x33, "orc"), {44, 0x33, 0, 0, 0, 'o', 'r', 'c', 0});
     igual(Escritor(t, Cli::EXITGHOST), {210});
     igual(Escritor(t, Cli::RETURNTOLOGIN), {218});
     igual(cmd::entrar_portal(t, 32686, 33376), {249, 0xAE, 0x7F, 0x60, 0x82});
@@ -678,6 +724,13 @@ TEST_CASE("Reparar armas, marcadores y cambiar de personaje: decodificar y coman
     CHECK(ev[0].id == 1);
     CHECK(ev[0].v[MK_X] == 32598);
     CHECK(ev[0].v[MK_Y] == 33000);
+    // l1j-en (s3ep1) ends after the id: no x, y.
+    ev.clear();
+    std::vector<u8> bm2 = {11, 'B', 'o', 's', 'q', 'u', 'e', 0, 4, 0, 1, 0, 0, 0};
+    REQUIRE(decodificar(bm2, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::MARCADOR);
+    CHECK(ev[0].id == 1);
 
     auto igual = [](Escritor w, std::vector<u8> esperado) {
         REQUIRE(w.cuerpo().size() >= esperado.size());
@@ -686,6 +739,12 @@ TEST_CASE("Reparar armas, marcadores y cambiar de personaje: decodificar y coman
     igual(cmd::cambiar_personaje(t), {237});
     igual(cmd::armas_a_reparar(t), {106});
     igual(cmd::reparar_arma(t, 0x10015307, 0x1003fa8b), {238, 0x07, 0x53, 0x01, 0x10, 0x8b, 0xfa, 0x03, 0x10});
+    igual(cmd::rango_clan(t, 2, "Ana"), {78, 1, 2, 'A', 'n', 'a', 0});
+    igual(cmd::proponer(t, false), {185, 0});
+    igual(cmd::proponer(t, true), {185, 1});
+    igual(cmd::duelo(t), {47});
+    igual(cmd::ver_pk(t), {137});
+    igual(cmd::invitar_chat(t, "Ana"), {166, 2, 'A', 'n', 'a', 0});
     igual(cmd::marcar_lugar(t, "Plaza"), {134, 'P', 'l', 'a', 'z', 'a', 0});
     igual(cmd::borrar_marcador(t, "Plaza"), {223, 'P', 'l', 'a', 'z', 'a', 0});
     igual(cmd::usar_teleport(t, 9, 4, 1), {44, 9, 0, 0, 0, 4, 0, 1, 0, 0, 0});
@@ -719,6 +778,107 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
     REQUIRE(decodificar(mapa, t, arena, ev));
     CHECK(ev[0].tipo == Ev::CASA_MAPA);
     CHECK(ev[0].v[0] == 262145);
+    // S_UseMap (jp363 opcode 100): item objid 0x01020304, map number 16.
+    ev.clear();
+    std::vector<u8> usemap = {100, 4, 3, 2, 1, 16, 0, 0, 0};
+    REQUIRE(decodificar(usemap, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::USAR_MAPA);
+    CHECK(ev[0].id == 0x01020304);
+    CHECK(ev[0].v[0] == 16);
+    {
+        TablaOpcodes us;  // el cliente US 2009: manejador 14 de S3EP1U.bin
+        tabla_opcodes("s3ep1", us);
+        ev.clear();
+        std::vector<u8> usmap = {14, 4, 3, 2, 1, 16, 0, 0, 0};
+        REQUIRE(decodificar(usmap, us, arena, ev));
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::USAR_MAPA);
+        CHECK(ev[0].v[0] == 16);
+        auto igual_us = [](Escritor w, std::vector<u8> esperado) {
+            REQUIRE(w.cuerpo().size() >= esperado.size());
+            CHECK(std::memcmp(w.cuerpo().data(), esperado.data(), esperado.size()) == 0);
+        };
+        // El opcode 26 de s3ep1 es S_WarTime (no MapID); 73 es S_MapID: "hc" mapa 4, bajo el agua 1, después relleno.
+        ev.clear();
+        std::vector<u8> uswar = {26, 6, 0, 'J', 'S', 'T', 0, 0, 0, 0};
+        for (u32 i = 0; i < 6; ++i) {
+            const u32 v = 86204 + 4 * i;
+            for (int b = 0; b < 4; ++b) uswar.push_back(static_cast<u8>(v >> (8 * b)));
+            uswar.push_back(0);
+        }
+        REQUIRE(decodificar(uswar, us, arena, ev));
+        CHECK(ev[0].tipo == Ev::FECHA_ASEDIO);
+        CHECK(ev[0].v[FA_N] == 6);
+        ev.clear();
+        std::vector<u8> usmapid = {73, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+        REQUIRE(decodificar(usmapid, us, arena, ev));
+        CHECK(ev[0].tipo == Ev::MAPA);
+        CHECK(ev[0].v[0] == 4);
+        // Los subtipos de mensaje de S_PacketBox (62) pasan a mensajes del servidor; 5 es el duelo, 42 el cierre de sesión.
+        auto caja_us = [&](std::vector<u8> b) {
+            ev.clear();
+            REQUIRE(decodificar(b, us, arena, ev));
+        };
+        // S_ChangeName (38): d id, s name; S_CharReset (27) subtype 3: c elixir points left.
+        caja_us({38, 4, 3, 2, 1, '$', '1', '2', '3', '4', 0});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::CAMBIO_NOMBRE);
+        CHECK(ev[0].id == 0x01020304);
+        CHECK(ev[0].s[0] == "$1234");
+        caja_us({27, 3, 7});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::REINICIO);
+        CHECK(ev[0].v[RE_PUNTOS] == 7);
+        caja_us({62, 43});
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::MENSAJE_SERVIDOR);
+        CHECK(ev[0].v[MS_ID] == 130);
+        caja_us({62, 12, 0, 45});  // level limit: l1j-en sends min 0, max 45
+        CHECK(ev[0].v[MS_ID] == 673);
+        CHECK(ev[0].s[0] == "45");
+        caja_us({62, 15, 3});
+        CHECK(ev[0].v[MS_ID] == 679);
+        CHECK(ev[0].s[0] == "water");
+        caja_us({62, 15, 1});
+        CHECK(ev[0].v[MS_ID] == 678);
+        caja_us({62, 23, 'G', 'l', 'u', 'd', 'i', 'o', 0});
+        CHECK(ev[0].v[MS_ID] == 764);
+        CHECK(ev[0].s[0] == "Gludio");
+        caja_us({62, 49, 3});
+        CHECK(ev[0].v[MS_ID] == 1046);
+        caja_us({62, 5, 4, 3, 2, 1, 8, 7, 6, 5});
+        CHECK(ev[0].tipo == Ev::DUELO);
+        CHECK(ev[0].id == 0x01020304);
+        caja_us({62, 5, 0, 0, 0, 0, 8, 7, 6, 5});  // id 0: terminó el duelo, nada que mostrar
+        CHECK(ev.empty());
+        caja_us({62, 42});
+        CHECK(ev[0].tipo == Ev::VOLVER_PERSONAJES);
+        caja_us({62, 52, 0xdb, 0x31, 0xdf, 0x02, 1, 3});  // COOK_WINDOW: junk dword, c 1, stage 4 (value 3)
+        CHECK(ev[0].tipo == Ev::COCINA);
+        CHECK(ev[0].v[0] == 1);
+        CHECK(ev[0].v[1] == 3);
+        caja_us({62, 35, 0x58, 0x02});  // polymorph icon, 600 s
+        CHECK(ev[0].tipo == Ev::ICONO_EFECTO);
+        CHECK(ev[0].v[IE_CLASE] == IE_CONTEXTO);
+        CHECK(ev[0].v[IE_TIPO] == 35);
+        CHECK(ev[0].v[IE_SEG] == 600);
+        caja_us({62, 21, 0, 0, 0, 2});  // class icons: b3 = 2
+        CHECK(ev[0].v[IE_TIPO] == 21);
+        CHECK(ev[0].v[IE_EXTRA + 3] == 2);
+        caja_us({62, 56, 5, 0, 0x21, 0x0c});  // t = 5 con el segundo h 0xc21
+        CHECK(ev[0].v[IE_SEG] == 5);
+        CHECK(ev[0].v[IE_EXTRA] == 0xc21);
+        caja_us({62, 75, 4});
+        CHECK(ev[0].v[IE_EXTRA] == 4);
+        igual_us(cmd::rango_clan(us, 3, "Ana"), {78, 1, 3, 'A', 'n', 'a', 0});
+        igual_us(cmd::proponer(us, false), {22, 0});
+        igual_us(cmd::proponer(us, true), {22, 1});
+        igual_us(cmd::duelo(us), {3});
+        igual_us(cmd::ver_pk(us), {70});
+        igual_us(cmd::emote(us, 0x44), {38, 0x44});  // C_ExtraCommand
+        igual_us(cmd::invitar_chat(us, "Ana"), {130, 2, 'A', 'n', 'a', 0});
+    }
     // S_War 1: "A" declara la guerra a "B". S_CastleMaster: castillo 1, personaje 5.
     ev.clear();
     std::vector<u8> war = {123, 1, 'A', 0, 'B', 0, 66, 1, 5, 0, 0, 0};
@@ -869,6 +1029,13 @@ TEST_CASE("Decodificar y responder S_MessageYN: forma larga (jp363) y corta (s3e
     const u8 esp_corto[] = {s3.cli(Cli::ATTR), 0xb9, 0x03, 1};  // opcode + h tipo + c sí = 4 bytes justos
     REQUIRE(rc.cuerpo().size() == 4);
     CHECK(std::memcmp(rc.cuerpo().data(), esp_corto, sizeof esp_corto) == 0);
+    // tw380 (L1JGO-Whale) decodifica la pregunta larga pero responde corta: [h tipo][c sí]
+    TablaOpcodes tw;
+    REQUIRE(tabla_opcodes("tw380", tw));
+    Escritor rt = cmd::responder(tw, 1337, 223, true);
+    const u8 esp_tw[] = {tw.cli(Cli::ATTR), 223, 0, 1};
+    REQUIRE(rt.cuerpo().size() == 4);
+    CHECK(std::memcmp(rt.cuerpo().data(), esp_tw, sizeof esp_tw) == 0);
 }
 
 TEST_CASE("3.0 English / US 2009 (s3ep1): tabla de opcodes y saludo") {
@@ -948,6 +1115,83 @@ TEST_CASE("S_BookmarkLoad (opcode 33, subtipo 42): todos los marcadores al entra
     CHECK(ev.empty());
 }
 
+TEST_CASE("S_AddSkill de .addskill de un caballero: los 8 hechizos generales y las 5 habilidades de clase") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    // L1AddSkill (caballero, nivel máximo de hechizo 1): cabecera 32, nivel 1 = 255, filas de caballero 10/11 = 192, 7,
+    // las otras 16 filas 0, después 2 x writeD(0).
+    std::vector<u8> p = {48, 32, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 7};
+    p.insert(p.end(), 16 + 8, 0);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    REQUIRE(decodificar(p, t, arena, ev));
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::HECHIZOS);
+    Mundo m;
+    aplicar_eventos(m, ev, 0);
+    for (u32 id = 1; id <= 8; ++id) CHECK(m.jugador.sabe(id));
+    CHECK_FALSE(m.jugador.sabe(9));
+    CHECK_FALSE(m.jugador.sabe(86));
+    // 87 Shock Stun, 88 Reduction Armor (row 10 bits 6, 7); 89 Bounce Attack, 90 Solid Carriage,
+    // 91 Counter Barrier (row 11 bits 0..2).
+    for (u32 id = 87; id <= 91; ++id) CHECK(m.jugador.sabe(id));
+    CHECK_FALSE(m.jugador.sabe(92));
+    CHECK_FALSE(m.jugador.sabe(113));
+    // C_UseSkill de Counter Barrier: fila 11, columna 2.
+    Escritor e = cmd::usar_hechizo(t, 91, 0, 0, 0);  // Bytes apunta dentro del escritor
+    Bytes b = e.cuerpo();
+    REQUIRE(b.size() == 4);
+    CHECK(b[1] == 11);
+    CHECK(b[2] == 2);
+}
+
+#include "recursos/big5.h"
+TEST_CASE("Big5 a UTF-8: ASCII intacto, par Big5 convertido, byte suelto '?'") {
+    std::string s;
+    lin::big5_a_utf8(std::string_view("ab\xA7\x41\xA6\x6E", 6), s);  // ab + U+4F60 (ni) + U+597D (hao)
+    CHECK(s == "ab\xE4\xBD\xA0\xE5\xA5\xBD");
+    lin::big5_a_utf8(std::string_view("a\x80", 2), s);
+    CHECK(s == "a?");
+}
+
+// S_InvList real del servidor l1j-en classic (s3ep1, cable 8), capturado con `traza on`: cantidad 1, después
+// d id, c uso, c 0, h gfx, c bendición, d cantidad, c identificado, s nombre, c nattr (sin catalizador, sin cola fija).
+// La poción tiene tipo de uso 0 ("normal"); por eso la interfaz original la ordena en "Miscellaneous", no en equipo.
+TEST_CASE("s3ep1: S_InvList (bytes reales de l1j-en) y filtros de pestanas del inventario original") {
+    TablaOpcodes t;
+    REQUIRE(tabla_opcodes("s3ep1", t));
+    Arena arena(4096);
+    std::vector<Evento> ev;
+    const u8 inv[] = {8, 2,
+                      0x31, 0x1b, 0x0f, 0x00, 0x00, 0x00, 0x4f, 0x00, 0x01, 0x05, 0x00, 0x00, 0x00, 0x01, '$', '7', 0, 0,
+                      0x32, 0x1b, 0x0f, 0x00, 0x01, 0x00, 0x23, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, '$', '8', 0, 0};
+    REQUIRE(decodificar({inv, sizeof inv}, t, arena, ev));
+    REQUIRE(ev.size() == 3);
+    CHECK(ev[1].id == 0x0f1b31);
+    CHECK(ev[1].v[IT_USO] == 0);
+    CHECK(ev[1].v[IT_GFX] == 79);
+    CHECK(ev[1].v[IT_CANTIDAD] == 5);
+    CHECK(ev[2].v[IT_USO] == 1);  // dagger: weapon
+    CHECK(ev[2].v[IT_GFX] == 35);
+
+    const std::string dir = carpeta_juego();
+    if (dir.empty()) return;
+    Recursos rec;
+    REQUIRE(rec.abrir(dir));
+    TablaTexto q, desc;
+    REQUIRE(q.cargar(rec, "itemquest.tbl"));
+    REQUIRE(desc.cargar(rec, "desc-e.tbl"));
+    std::vector<ItemMision> quest;
+    cargar_item_quest(q, quest);
+    REQUIRE(quest.size() > 500);
+    CHECK(quest[1].gfx == 2265);  // "2265 499": Totem of Atuba
+    CHECK(quest[1].desc == 499);
+    CHECK(item_de_mision(quest, desc, 2265, "$499"));
+    CHECK(item_de_mision(quest, desc, 2265, "Totem of Atuba (2)"));
+    CHECK_FALSE(item_de_mision(quest, desc, 79, "Potion of Bravery (5)"));
+    CHECK_FALSE(item_de_mision(quest, desc, 2265, "$500"));
+}
+
 TEST_CASE("CA bajo -128 (S_OwnCharAttrDef) y bendición de la lista de una tienda") {
     TablaOpcodes t;
     tabla_opcodes("jp363", t);
@@ -970,5 +1214,66 @@ TEST_CASE("CA bajo -128 (S_OwnCharAttrDef) y bendición de la lista de una tiend
     REQUIRE(decodificar({tienda, sizeof tienda}, t, arena, ev));
     REQUIRE(ev.size() == 2);
     CHECK(ev[1].tipo == Ev::ITEM_TIENDA);
-    CHECK(ev[1].v[IT_BENDICION] == BENDICION_NORMAL);
+    CHECK(ev[1].v[IT_BENDICION] == BLESS_NORMAL);
+}
+
+TEST_CASE("Fishing: S_Fishing, S_PacketBox 55 and C_FishClick") {
+    TablaOpcodes t;
+    tabla_opcodes("jp363", t);
+    Arena arena(1024);
+    std::vector<Evento> ev;
+    // S_DoActionGFX with action 71 (ACTION_Fishing): d id, c 71, h x, h y, d 0, h 0 (S_Fishing.java).
+    std::vector<u8> pesca = {218, 5, 0, 0, 0, 71, 0x55, 0x7f, 0xa6, 0x80, 0, 0, 0, 0, 0, 0};
+    REQUIRE(decodificar(pesca, t, arena, ev));
+    CHECK(ev[0].tipo == Ev::ACCION_OBJETO);
+    CHECK(ev[0].v[0] == 71);
+    CHECK(ev[0].v[1] == 0x7f55);
+    CHECK(ev[0].v[2] == 0x80a6);
+    Escritor w = cmd::click_pesca(t, true);
+    REQUIRE(w.cuerpo().size() >= 2);  // rellenado al tamaño de bloque
+    CHECK(w.cuerpo()[0] == 26);
+    CHECK(w.cuerpo()[1] == 1);
+    TablaOpcodes us;
+    tabla_opcodes("s3ep1", us);
+    CHECK(cmd::click_pesca(us, false).cuerpo()[0] == 125);
+}
+
+TEST_CASE("Big5 (tw380): ida y vuelta, y el byte 0xFF no se sale de la tabla") {
+    std::string u;
+    big5_a_utf8("\xB4\xFA\xB8\xD5 ok", u);  // 測試 ok
+    CHECK(u == "\xE6\xB8\xAC\xE8\xA9\xA6 ok");
+    std::vector<u8> b;
+    utf8_a_big5(u, b);
+    CHECK(std::string(b.begin(), b.end()) == "\xB4\xFA\xB8\xD5 ok");
+    big5_a_utf8("\xFE\xFF", u);  // segundo byte fuera de 0x40..0xFE: no es un carácter
+    CHECK(u == "??");
+    b.clear();
+    utf8_a_big5("\xF0\x9F\x98\x80", b);  // sin código Big5
+    CHECK(std::string(b.begin(), b.end()) == "?");
+}
+
+TEST_CASE("Escritor: en tw380 las cadenas salen en Big5") {
+    TablaOpcodes tw, jp;
+    REQUIRE(tabla_opcodes("tw380", tw));
+    REQUIRE(tabla_opcodes("jp363", jp));
+    Escritor e(tw, Cli::WHO);
+    e.s("\xE6\xB8\xAC\xE8\xA9\xA6");  // 測試
+    Bytes cuerpo = e.cuerpo();
+    REQUIRE(cuerpo.size() >= 6);
+    CHECK(cuerpo[1] == 0xB4);
+    CHECK(cuerpo[2] == 0xFA);
+    CHECK(cuerpo[5] == 0);
+    Escritor j(jp, Cli::WHO);
+    j.s("abc");
+    CHECK(j.cuerpo()[1] == 'a');
+}
+
+TEST_CASE("Escritor: un comando sin número en esta versión del protocolo no se manda") {
+    TablaOpcodes jp, us;
+    REQUIRE(tabla_opcodes("jp363", jp));
+    REQUIRE(tabla_opcodes("s3ep1", us));
+    CHECK_FALSE(cmd::barco(jp, 4, 1, 2).definido());  // C_Ship solo existe en s3ep1
+    CHECK(cmd::barco(us, 4, 1, 2).definido());
+    CHECK(us.tiene(Cli::BOOKMARK));  // su número es 0, pero existe
+    CHECK(us.cli(Cli::BOOKMARK) == 0);
 }

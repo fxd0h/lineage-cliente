@@ -187,6 +187,35 @@ TEST_CASE("Chat: anillo de tamaño fijo, recorte CP949 y globos") {
     CHECK(c.globo(7, 1000).empty());
 }
 
+TEST_CASE("Chat: shout direction icon (S3EP1U 0x483500)") {
+    CHECK(direccion_grito(0, 0) == -1);
+    CHECK(direccion_grito(5, 0) == 1);     // 0 deg, dx >= 0
+    CHECK(direccion_grito(5, 5) == 0);     // 45 deg
+    CHECK(direccion_grito(0, 5) == 7);     // +90 deg
+    CHECK(direccion_grito(0, -5) == 3);    // -90 deg
+    CHECK(direccion_grito(5, -5) == 2);    // -45 deg
+    CHECK(direccion_grito(-5, 0) == 5);    // 0 deg, dx < 0
+    CHECK(direccion_grito(-5, -5) == 4);   // atan(1) = 45 deg
+    CHECK(direccion_grito(-5, 5) == 6);    // -45 deg
+    CHECK(direccion_grito(-1, 10) == 7);   // atan(-10) < -73
+    Chat c;
+    c.original_ui = true;
+    TablaTexto vacia;
+    Evento e{};
+    e.tipo = Ev::CHAT;
+    e.v[0] = CHAT_GRITO;
+    e.id = 42;
+    e.s[0] = "Ana: hola";
+    e.v[CH_X] = 105;
+    e.v[CH_Y] = 100;
+    e.v[CH_CON_POS] = 1;
+    Evento lote[] = {e};
+    aplicar_chat(c, vacia, vacia, lote, 1000, 100, 100);
+    CHECK(c.reciente(0).dir == 1);
+    aplicar_chat(c, vacia, vacia, lote, 1000, 105, 100);  // same tile: no icon
+    CHECK(c.reciente(0).dir == -1);
+}
+
 TEST_CASE("Chat: S_ServerMessage con string-e.tbl y desc-e.tbl reales") {
     std::string dir = carpeta_juego();
     if (dir.empty()) return;
@@ -253,15 +282,25 @@ TEST_CASE("Chat: códigos de color y miles") {
     CHECK(std::string(con_miles(1234567, b, sizeof b)) == "1.234.567");
 }
 
-TEST_CASE("Chat: color del nombre según el alineamiento") {
-    auto c = [](u8 r, u8 g, u8 b) { return static_cast<u32>(r | (g << 8) | (b << 16)) | 0xFF000000u; };
-    CHECK(color_alineamiento(0) == c(240, 240, 240));
-    CHECK(color_alineamiento(8000) == c(150, 215, 255));
-    CHECK(color_alineamiento(16000) == c(70, 120, 255));
-    CHECK(color_alineamiento(32767) == c(70, 120, 255));
-    CHECK(color_alineamiento(-8000) == c(255, 170, 195));
-    CHECK(color_alineamiento(-16000) == c(255, 60, 50));
-    CHECK(color_alineamiento(-32768) == c(255, 60, 50));
-    CHECK(color_alineamiento(4000) == c(195, 228, 247));  // punto medio del primer tramo
-    CHECK(color_alineamiento(-4000) != color_alineamiento(4000));
+TEST_CASE("Chat: color del nombre según el alineamiento (0x4cc140)") {
+    CHECK(color_alineamiento(0) == rgb555(0x7fff));
+    CHECK(color_alineamiento(499) == rgb555(0x7fff));
+    CHECK(color_alineamiento(500) == rgb555((30 << 10) | (30 << 5) | 31));  // first lawful step
+    CHECK(color_alineamiento(500 + 255) == color_alineamiento(500));
+    CHECK(color_alineamiento(500 + 256) == rgb555((29 << 10) | (29 << 5) | 31));
+    CHECK(color_alineamiento(8180) == rgb555(0x001f));  // full blue
+    CHECK(color_alineamiento(32767) == rgb555(0x001f));
+    CHECK(color_alineamiento(-1) == rgb555(0x7c00 | (30 << 5) | 30));  // first chaotic step
+    CHECK(color_alineamiento(-64) == rgb555(0x7c00 | (29 << 5) | 29));
+    CHECK(color_alineamiento(-1920) == rgb555(0x7c00));  // full red
+    CHECK(color_alineamiento(-32768) == rgb555(0x7c00));
+}
+
+TEST_CASE("original client chat colours and monster level tiers") {
+    CHECK(color_chat_original(0, true, "Ana: hi") == (255u | 255u << 8 | 255u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(0, true, "Ana: (hi") == (189u | 238u << 8 | 230u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(CHAT_COMERCIO, false, "Ana: x") == (189u | 164u << 8 | 106u << 16 | 0xFF000000u));
+    CHECK(color_chat_original(CHAT_NORMAL, false, "x") == (255u | 246u << 8 | 180u << 16 | 0xFF000000u));
+    CHECK(color_nivel_original(12, 30) == 0xFF00BD00u);
+    CHECK(color_nivel_original(5, 30) == 0u);
 }

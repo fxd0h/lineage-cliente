@@ -5,7 +5,8 @@
 //   #<gfx> <subsprites>[=<gfx de archivos>][$] <nombre>   una entrada por gfx, '#' al principio de la línea
 //   <id>.<nombre>(<dir> <n>,<sub>.<frame>:<ticks>[sufijo] ...)   acción (id < 100 o >= 121)
 //   <id>.<nombre>(<valor> ...)                   atributo (100-120): 101 sombra, 102 tipo, 104 atributo,
-//                                                109 "n gfx" gráfico siguiente, 110 velocidad
+//                                                109 "n gfx" gráfico siguiente, 110 velocidad, 111 stride,
+//                                                105 "n gfx..." clothes
 // Sufijos pegados a un frame: ! impacto, [N o <N sonido; ]N ^ > { } se ignoran.
 // El formato varía (tabulador, espacios o nada; varias acciones en una línea; "1 10.8.9:4" por
 // "1 10,8.9:4"), así que se recorren tokens y no líneas. Los frames vienen como en sprite_table.txt (el
@@ -53,6 +54,11 @@ struct Entrada {
     u8 tipo = 0;
     u16 atributos = 0;
     GfxId siguiente = 0;
+    bool zancada = false;
+    bool flash = false;  // attribute 109 type 2
+    GfxId morfo = 0;  // attribute 113
+    std::vector<RectTransparencia> transp;  // attribute 100
+    std::vector<GfxId> ropa;
     std::vector<std::pair<u8, RangoAccion>> acciones;  // id de la acción -> rango en `frames`
     std::vector<FrameAccion> frames;
 };
@@ -83,7 +89,9 @@ void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
             else if (con_numero) {
                 const bool hay = c.digito();
                 const int n = c.numero();
-                if (hay && (s == '[' || s == '<')) f.sonido = static_cast<i16>(n);
+                if (hay && (s == '<' || s == '[' || s == '^'))
+                    agregar_sonido(f, s == '<' ? SONIDO_SOLAPA : s == '[' ? SONIDO_UNICO : SONIDO_DISTANCIA, n);
+                else if (hay && s == ']') f.efecto = static_cast<u16>(n);  // "{" y "}" (clientes más nuevos) se saltan
             }
         }
         frames.push_back(f);
@@ -116,13 +124,39 @@ void leer_entrada(const char* p, const char* fin, Entrada& e) {
             }
         } else {
             switch (id) {
+            case 100: {
+                const int n = b.numero_con_signo();
+                for (int i = 0; i < n && i < 16; ++i) {
+                    RectTransparencia r{};
+                    r.x1 = static_cast<i16>(b.numero_con_signo());
+                    r.y1 = static_cast<i16>(b.numero_con_signo());
+                    r.x2 = static_cast<i16>(b.numero_con_signo());
+                    r.y2 = static_cast<i16>(b.numero_con_signo());
+                    e.transp.push_back(r);
+                }
+                break;
+            }
             case 101: e.sombra = static_cast<i16>(b.numero_con_signo()); break;
             case 102: e.tipo = static_cast<u8>(b.numero_con_signo()); break;
             case 104: e.atributos = static_cast<u16>(b.numero_con_signo()); break;
             case 109: {
-                b.numero_con_signo();
+                e.flash = b.numero_con_signo() == 2;
                 const int g = b.numero_con_signo();
                 e.siguiente = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
+                break;
+            }
+            case 113: {
+                const int g = b.numero_con_signo();
+                e.morfo = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
+                break;
+            }
+            case 111: e.zancada = b.numero_con_signo() != 0; break;
+            case 105: {
+                const int n = b.numero_con_signo();
+                for (int i = 0; i < n && i < 16; ++i) {
+                    const int g = b.numero_con_signo();
+                    if (g > 0 && g < 0xFFFF) e.ropa.push_back(static_cast<GfxId>(g));
+                }
                 break;
             }
             case 110: {
@@ -229,6 +263,8 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             tipo_.resize(n, 0);
             atributos_.resize(n, 0);
             siguiente_.resize(n, 0);
+            zancada_.resize(n, false);
+            ropa_.resize(n);
         }
         if (e.acciones.empty()) {
             // Sin acciones (ítems del suelo, objetos): sus atributos, si sprite_table.txt no tiene el gfx. El tipo
@@ -239,6 +275,11 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
                 tipo_[e.gfx] = e.tipo;
                 atributos_[e.gfx] = e.atributos;
                 siguiente_[e.gfx] = e.siguiente;
+                zancada_[e.gfx] = e.zancada;
+                ropa_[e.gfx] = e.ropa;
+                if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                if (e.flash) flash_.poner(e.gfx, 1);
+                poner_transparencia(e.gfx, e.transp);
                 ++resumen.atributos;
             } else {
                 ++resumen.omitidos;
@@ -271,6 +312,11 @@ bool TablaSprites::fusionar_lista(std::string_view texto, ResumenLista& resumen,
             tipo_[e.gfx] = e.tipo;
             atributos_[e.gfx] = e.atributos;
             siguiente_[e.gfx] = e.siguiente;
+            zancada_[e.gfx] = e.zancada;
+            ropa_[e.gfx] = e.ropa;
+            if (e.morfo) morfo_.poner(e.gfx, e.morfo);
+                if (e.flash) flash_.poner(e.gfx, 1);
+                poner_transparencia(e.gfx, e.transp);
             const u32 base = static_cast<u32>(frames_.size());
             frames_.insert(frames_.end(), e.frames.begin(), e.frames.end());
             for (auto& [id, r] : e.acciones) {

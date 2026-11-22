@@ -48,6 +48,8 @@ Servidor leer_servidor(std::string_view v) {
 
 void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view valor) {
     if (clave == "juego") c.carpeta_juego = valor;
+    else if (clave == "juego_extra") { if (!valor.empty()) c.carpetas_extra.emplace_back(valor); }
+    else if (clave == "hd") c.carpeta_hd = valor;
     else if (clave == "servidor") c.servidores.push_back(leer_servidor(valor));
     else if (clave == "servidor_elegido") ant.elegido = valor;
     else if (clave == "host") ant.host = valor;
@@ -55,6 +57,8 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
     else if (clave == "protocolo") ant.protocolo = valor;
     else if (clave == "usuario") ant.usuario = valor;
     else if (clave == "zoom") c.zoom = std::atoi(std::string(valor).c_str());
+    else if (clave == "escalado") c.escalado = valor;
+    else if (clave == "vista") c.vista = valor == "fija" ? "fija" : "amplia";
     else if (clave == "camara_a_saltos") c.camara_a_saltos = valor == "1";
     else if (clave == "ui_simple") c.ui_simple = valor != "0";
     else if (clave == "sombra_personajes") c.sombra_personajes = valor != "0";
@@ -76,16 +80,19 @@ void aplicar(Config& c, Anterior& ant, std::string_view clave, std::string_view 
         c.ms_mantener_tecla = std::clamp(std::atoi(std::string(valor).c_str()), MS_MANTENER_MIN, MS_MANTENER_MAX);
     else if (clave == "paginas_barra") c.paginas_barra = std::clamp(std::atoi(std::string(valor).c_str()), 1, PAGINAS_BARRA_MAX);
     else if (clave == "ventanas") c.ventanas = valor;
+    else if (clave == "opciones_orig") c.opciones_orig = std::atoi(std::string(valor).c_str());
+    else if (clave == "alpha_orig") c.alpha_orig = std::clamp(std::atoi(std::string(valor).c_str()), 0, 3);
     else if (clave == "opacidad_ventanas") c.opacidad_ventanas = std::atoi(std::string(valor).c_str());
     else if (clave == "volumen_musica") c.volumen_musica = std::atoi(std::string(valor).c_str());
     else if (clave == "volumen_efectos") c.volumen_efectos = std::atoi(std::string(valor).c_str());
     else if (clave == "logo") c.logo = valor;
     else if (clave == "chat_con_enter") c.chat_con_enter = valor != "0";
     else if (clave == "barra_personaje") c.barra_personaje = valor == "1";
+    else if (clave == "texto_hd") c.texto_hd = valor == "1";
+    else if (clave == "lista_sprites") c.lista_sprites = valor;
+    else if (clave == "fuente_original") c.fuente_original = valor == "1";
     else if (clave == "texto_dano") c.texto_dano = valor == "1";
     else if (clave == "globos_comic") c.globos_comic = valor == "1";
-    else if (clave == "texto_hd") c.texto_hd = valor != "0";
-    else if (clave == "lista_sprites") c.lista_sprites = valor;
     else if (clave == "compensar_ataque") c.compensar_ataque = valor != "0";
     else if (clave == "ventana") {
         const size_t x = valor.find('x');
@@ -134,6 +141,8 @@ Config cargar_config_de(const std::string& ruta) {
     Config c = leer_archivo(ruta, ini) ? leer_config({reinterpret_cast<const char*>(ini.data()), ini.size()})
                                        : leer_config({});
     if (!c.carpeta_juego.empty() && c.carpeta_juego.back() != '/') c.carpeta_juego += '/';
+    for (std::string& e : c.carpetas_extra)
+        if (e.back() != '/') e += '/';
     return c;
 }
 
@@ -221,11 +230,15 @@ std::string escribir_config(const Config& c) {
         t += '\n';
     };
     linea("juego", c.carpeta_juego);
+    for (const std::string& e : c.carpetas_extra) linea("juego_extra", e);
+    if (!c.carpeta_hd.empty()) linea("hd", c.carpeta_hd);
     // Servidores: nombre|host|puerto|protocolo|cuenta (la última usada en ese servidor).
     for (const Servidor& sv : c.servidores)
         linea("servidor", sv.nombre + '|' + sv.host + '|' + std::to_string(sv.puerto) + '|' + sv.protocolo + '|' + sv.usuario);
     linea("servidor_elegido", servidor_elegido(c).nombre);
     linea("zoom", std::to_string(c.zoom));
+    linea("escalado", c.escalado);
+    linea("vista", c.vista);
     linea("camara_a_saltos", c.camara_a_saltos ? "1" : "0");
     linea("ui_simple", c.ui_simple ? "1" : "0");
     linea("sombra_personajes", c.sombra_personajes ? "1" : "0");
@@ -246,15 +259,18 @@ std::string escribir_config(const Config& c) {
     linea("paginas_barra", std::to_string(c.paginas_barra));
     linea("ms_mantener_tecla", std::to_string(c.ms_mantener_tecla));
     linea("ventanas", c.ventanas);
+    linea("opciones_orig", std::to_string(c.opciones_orig));
+    linea("alpha_orig", std::to_string(c.alpha_orig));
     linea("opacidad_ventanas", std::to_string(c.opacidad_ventanas));
     linea("volumen_musica", std::to_string(c.volumen_musica));
     linea("volumen_efectos", std::to_string(c.volumen_efectos));
     linea("logo", c.logo);
     linea("chat_con_enter", c.chat_con_enter ? "1" : "0");
     linea("barra_personaje", c.barra_personaje ? "1" : "0");
+    linea("texto_hd", c.texto_hd ? "1" : "0");
+    linea("fuente_original", c.fuente_original ? "1" : "0");
     linea("texto_dano", c.texto_dano ? "1" : "0");
     linea("globos_comic", c.globos_comic ? "1" : "0");
-    linea("texto_hd", c.texto_hd ? "1" : "0");
     linea("lista_sprites", c.lista_sprites);
     linea("compensar_ataque", c.compensar_ataque ? "1" : "0");
     linea("ventana", std::to_string(c.ventana_ancho) + 'x' + std::to_string(c.ventana_alto));

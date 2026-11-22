@@ -97,7 +97,7 @@ static void pintar_tile(Bytes t, const std::vector<u16>& paleta, ImagenRGBA& sal
 }
 
 // Posición en píxeles del tile (x en medias celdas, y en celdas), con división hacia abajo.
-static void posicion_tile(const TileDeFrame& t, int& px, int& py) {
+void posicion_tile(const TileDeFrame& t, int& px, int& py) {
     int hx = (t.x >= 0) ? t.x / 2 : -((1 - t.x) / 2);
     int impar = t.x - 2 * hx;
     px = 24 * (hx + t.y) + 24 * impar;

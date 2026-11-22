@@ -37,6 +37,9 @@ struct ArchivoSpr {
     bool componer_frame(u32 frame, ImagenRGBA& salida) const;
 };
 
+// Desplazamiento en pantalla de la esquina de la celda de una parte desde el ancla del cuadro: x en medias celdas, y en celdas (isométrico de 24 x 12).
+void posicion_tile(const TileDeFrame& t, int& px, int& py);
+
 // Cantidad de imágenes de un .spr leyendo solo el encabezado; 0 si está vacío o roto.
 u32 contar_frames_spr(Bytes spr);
 

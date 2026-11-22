@@ -226,12 +226,47 @@ void cambiar_pagina_barra(App& a, int pagina) {
     a.pagina_barra = (pagina % n + n) % n;
 }
 
+// Acción de gesto (C_ExtraCommand 66 Think, 67 Aggress, 68 Salute, 69 Cheer) de Alt+n para el sprite propio, 0 = ninguna.
+// Sprites estándar: Alt+1..4 -> 68, 69, 67, 66; el juego especial: Alt+1..3 -> 67, 68, 69. Los demás no hacen nada.
+static int accion_emote(int n, u32 gfx) {
+    // Sprites humanos estándar (exe 0x456b30) y los dos rangos de sprites que agrega el manejador de teclas.
+    static constexpr u32 HUMANOS[] = {0, 1, 0x3d, 0x30, 0x8a, 0x25, 0xae2, 0xaec, 0x2de, 0x4a2, 0x1a02, 0x1a05, 0x1a0f, 0x19fa};
+    bool humano = (gfx >= 0x1aa6 && gfx <= 0x1aeb) || (gfx >= 0x1be3 && gfx <= 0x1bfe);
+    for (u32 h : HUMANOS) humano = humano || gfx == h;
+    const bool solo_alt1 = gfx == 0xea6 || gfx == 0xebf || gfx == 0xf12;
+    const bool especial = gfx == 0x17ce || gfx == 0x17c0 || gfx == 0x1a57 || gfx == 0x1a58 || gfx == 0x1a5a || gfx == 0x1a5b ||
+                          gfx == 0x1a5d || gfx == 0x1a5e || gfx == 0x1a60 || gfx == 0x1a61;
+    const bool estandar = humano;
+    if (solo_alt1) return n == 1 ? 68 : 0;
+    if (especial) return n <= 3 ? 66 + n : 0;
+    if (!estandar) return 0;
+    static constexpr int ESTANDAR[4] = {68, 69, 67, 66};
+    return ESTANDAR[n - 1];
+}
+
 void procesar_barra(App& a) {
     if (a.barra_de != nombre_personaje(a)) cargar_barra(a);
     // Con menos páginas (opciones), la visible pasa a la última que queda.
     a.pagina_barra = std::min(a.pagina_barra, paginas(a) - 1);
     // La rueda sobre la barra o el selector: hacia arriba, la página siguiente (como "^").
     if (a.entrada.rueda && paginas(a) > 1 && sobre_atajos(a)) cambiar_pagina_barra(a, a.pagina_barra + a.entrada.rueda);
+    // Teclas 1–0 / Alt+1–0 de la barra de atajos del original: solo interfaz simple (la interfaz original no tiene esa barra).
+    if (!a.cfg.ui_simple) {
+        // Interfaz original: Alt+1..4 son gestos (manejador de teclas, RE_ROUND3.md): C_ExtraCommand 66..69 según el sprite propio, y
+        // el sprite propio hace la acción de inmediato (el servidor solo la reenvía a los demás).
+        const int n = a.entrada.alt_numero;
+        const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
+        if (n >= 1 && n <= 4 && yo != SIN_SLOT && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto) {
+            const u32 gfx = a.mundo.objetos.col<O_GFX>()[yo];
+            const int accion = accion_emote(n, gfx);
+            if (accion) {
+                enviar(a, cmd::emote(a.op, static_cast<u8>(accion)));
+                a.mundo.objetos.col<O_ACCION>()[yo] = static_cast<u8>(accion);
+                a.mundo.objetos.col<O_TACCION>()[yo] = a.entrada.ahora_ms;
+            }
+        }
+        return mantener_numero(a);
+    }
     if (a.entrada.alt_numero) usar_numero(a, a.entrada.alt_numero);
     // 1–0 sin Alt: con el chat cerrado (chat con Enter) y sin otro diálogo de texto abierto.
     if (a.entrada.numero && a.cfg.chat_con_enter && !a.escribiendo_chat && !escribiendo_en_ventana(a) && !a.cantidad.abierto)
@@ -247,14 +282,23 @@ void dibujar_barra(App& a, int y) {
     const EntradaFrame& e = a.entrada;
     // Atajos, selector, auto-buffs y el botón de auto-poción (los que se usan), centrados; en una vista
     // más angosta que todo, pegados a la izquierda.
-    const int ancho = ancho_total(a) + (a.cfg.usar_autobuffs ? SEPARACION_AUTO + ANCHO_AUTO : 0) +
-                      (a.cfg.usar_autopocion ? SEPARACION_AUTO + CELDA_AUTO : 0);
-    a.barra_x = std::max(2, (a.gpu.ancho() - ancho) / 2);
-    a.autobuffs.x = a.barra_x + ancho_total(a) + SEPARACION_AUTO;
-    a.autobuffs.y = a.autopocion.y = y + (CELDA - CELDA_AUTO);
+    // Si no entran en una fila (la vista fija mide 640), los casilleros Auto van arriba de la barra, alineados a su derecha.
+    const int ancho_autos = (a.cfg.usar_autobuffs ? SEPARACION_AUTO + ANCHO_AUTO : 0) +
+                            (a.cfg.usar_autopocion ? SEPARACION_AUTO + CELDA_AUTO : 0);
+    const bool dos_filas = ancho_autos > 0 && ancho_total(a) + ancho_autos > a.gpu.ancho() - 4;
+    a.barra_x = std::max(2, (a.gpu.ancho() - ancho_total(a) - (dos_filas ? 0 : ancho_autos)) / 2);
+    a.autobuffs.x = dos_filas ? a.barra_x + ancho_total(a) - (ancho_autos - SEPARACION_AUTO)
+                              : a.barra_x + ancho_total(a) + SEPARACION_AUTO;
+    a.autobuffs.y = a.autopocion.y = dos_filas ? y - CELDA_AUTO - ALTO_GLIFO - 8 : y + (CELDA - CELDA_AUTO);
     a.autopocion.x = a.cfg.usar_autobuffs ? a.autobuffs.x + ANCHO_AUTO + SEPARACION_AUTO : a.autobuffs.x;
     Atajo* pagina = visible(a);
     a.barra_y = y;
+    // Panel original: no hay barra de atajos ni casilleros Auto dibujados (los atajos de teclado siguen);
+    // se sacan de la pantalla para que tampoco reciban clics. barra_y se conserva (lo usan las ventanas).
+    if (!a.cfg.ui_simple) {
+        a.barra_x = a.autobuffs.x = a.autopocion.x = -10000;
+        return;
+    }
     const u64 kf = clave_orden(CAPA_UI, 5), ki = clave_orden(CAPA_UI, 6), kt = clave_orden(CAPA_UI_TEXTO, 5);
     const int bajo = casillero_bajo_puntero(a);
     // Algo que se está arrastrando hacia la barra: se resalta el casillero de destino.

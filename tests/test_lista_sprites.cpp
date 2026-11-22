@@ -47,20 +47,31 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
         "\t0.walk(1 2,0.0:2 0.1:3<478<479)\n"
         "\t3.breath(1 10.8.9:4 8.0:4)\n"  // en algunas filas la coma es un '.'
         "\t8.death(1 3,40.2:5 40.0:5[191 40.1:5)\n"
-        "\t101.shadow(9)\n\t102.type(10)\n"
+        "\t101.shadow(9)\n\t102.type(10)\n\t113.morph(5000)\n"
         "#8 1 misma linea 0.walk(1 1,0.0:2!) 110.framerate(12) 1.attack(1 1,8.0:3]77)\n"
-        "#9 1 solo atributos\n\t102.type(0)\n";
+        "#9 1 solo atributos\n\t102.type(0)\n\t100.see(1 0 -2 4 0)\n";
     CHECK(t.fusionar_lista(txt, r));
     CHECK(r.nuevos == 2);
     CHECK(r.atributos == 1);  // #9: solo el tipo, porque la tabla vacía no lo tenía
     CHECK(t.tipo(9) == 0);
+    // Atributo 100: x en medias celdas (0..4 -> celdas 0..2), y en celdas (-2..0), relativo al objeto.
+    CHECK(t.dentro_transparencia(9, 0, -2));
+    CHECK(t.dentro_transparencia(9, 2, 0));
+    CHECK_FALSE(t.dentro_transparencia(9, 3, 0));
+    CHECK_FALSE(t.dentro_transparencia(9, 0, 1));
+    CHECK_FALSE(t.tiene_transparencia(7));
     CHECK(t.gfx_archivos(7) == 5);
     CHECK(t.sombra(7) == 9);
     CHECK(t.tipo(7) == 10);
+    CHECK(t.morfo(7) == 5000);
+    CHECK(t.morfo(8) == 0);
     const RangoAccion* w = t.accion(7, ACC_CAMINAR);
     REQUIRE(w);
     CHECK(w->cantidad == 2);
-    CHECK(t.frame(w->primer + 1).sonido == 479);
+    CHECK(t.frame(w->primer + 1).n_sonidos == 2);  // "<478<479": se conservan los dos, se elige uno al azar en cada muestra
+    CHECK(t.frame(w->primer + 1).sonido == 478);
+    CHECK(t.frame(w->primer + 1).sonido_mas[0] == 479);
+    CHECK(t.frame(w->primer + 1).modo_sonido[0] == SONIDO_SOLAPA);
     const RangoAccion* b = t.accion(7, ACC_QUIETO);
     REQUIRE(b);
     CHECK(b->cantidad == 2);

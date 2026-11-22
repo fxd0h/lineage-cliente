@@ -1,0 +1,61 @@
+diff --git a/internal/handler/broadcast.go b/internal/handler/broadcast.go
+index dde7bbe..a48397e 100644
+--- a/internal/handler/broadcast.go
++++ b/internal/handler/broadcast.go
+@@ -58,7 +58,7 @@ func sendOwnCharPackPlayer(sess *net.Session, p *world.PlayerInfo) {
+ 	status |= playerPoisonStatusBit(p)
+ 	status |= p.BraveSpeed * 16
+ 	w.WriteC(status)
+-	w.WriteD(0) // clan emblem ID
++	w.WriteD(clanEmblemID(p)) // clan emblem ID
+ 	w.WriteS(p.ClanName)
+ 	w.WriteS("") // null
+ 	// Clan rank (OwnCharPack specific — OtherCharPacks always writes 0)
+@@ -102,7 +102,7 @@ func SendPutObject(viewer *net.Session, p *world.PlayerInfo) {
+ 	status |= playerPoisonStatusBit(p)
+ 	status |= p.BraveSpeed * 16 // brave speed encoded in bits 4-5
+ 	w.WriteC(status)            // status flags
+-	w.WriteD(0)                 // clan emblem ID
++	w.WriteD(clanEmblemID(p))   // clan emblem ID
+ 	w.WriteS(p.ClanName)
+ 	w.WriteS("")          // null
+ 	w.WriteC(0)           // unknown (always 0 for other PCs)
+@@ -1191,3 +1191,11 @@ func BroadcastToGMs(ws *world.State, info string) {
+ 		}
+ 	})
+ }
++
++// clanEmblemID returns the emblem ID of the player's clan (0 without clan or emblem).
++func clanEmblemID(p *world.PlayerInfo) int32 {
++	if p.ClanID == 0 {
++		return 0
++	}
++	return world.EmblemLookup(p.ClanID)
++}
+diff --git a/internal/world/clan.go b/internal/world/clan.go
+index 3d70e86..93fb2f6 100644
+--- a/internal/world/clan.go
++++ b/internal/world/clan.go
+@@ -76,7 +76,22 @@ type ClanManager struct {
+ }
+ 
+ // NewClanManager creates an empty ClanManager.
++// EmblemLookup returns the emblem ID of a clan (0 if none); set by NewClanManager.
++// Used by the char packs so clients can request the emblem (S_Emblem download).
++var EmblemLookup = func(clanID int32) int32 { return 0 }
++
+ func NewClanManager() *ClanManager {
++	m := newClanManager()
++	EmblemLookup = func(clanID int32) int32 {
++		if c := m.GetClan(clanID); c != nil {
++			return c.EmblemID
++		}
++		return 0
++	}
++	return m
++}
++
++func newClanManager() *ClanManager {
+ 	return &ClanManager{
+ 		clans:      make(map[int32]*ClanInfo),
+ 		playerClan: make(map[int32]int32),

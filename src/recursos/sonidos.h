@@ -51,6 +51,7 @@ struct DefSonidos {
     std::vector<u32> grupos_ambiente;
     std::vector<AmbienteZona> ambiente;
     i16 musica_login = 0, musica_muerte = -1;
+    i16 musica_caza = -1, musica_pk = -1;  // "Hunting" y "PlayrtKilling" (sic): las pistas de música de combate
 
     // `music_def` y `envsound_def` deben vivir mientras se use la tabla (los nombres apuntan ahí).
     void cargar(std::string_view music_def, std::string_view envsound_def);

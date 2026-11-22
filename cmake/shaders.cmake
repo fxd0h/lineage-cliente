@@ -1,46 +1,36 @@
-# Shaders: una sola fuente en HLSL (src/render/shaders/*.hlsl), compilada en cada plataforma al
-# formato de su backend de SDL_GPU e incrustada en ${CMAKE_BINARY_DIR}/generado/shaders.h.
-# - Windows (D3D12): DXIL con dxc.exe del SDK de Windows (viene con Visual Studio; firma el DXIL).
-# - Linux (Vulkan): SPIR-V con glslangValidator (paquete glslang-tools) o, si está, dxc del Vulkan SDK.
-# - macOS (Metal): MSL con spirv-cross desde el SPIR-V de glslang (brew install glslang spirv-cross).
-#   --msl-decoration-binding usa el binding de SPIR-V como índice de [[buffer]]/[[texture]]/[[sampler]];
-#   con -DLIN_MSL, sprite.hlsl corre el storage buffer a buffer(1), detrás de los uniformes, como pide SDL.
+# Solo Windows (se incluye desde CMakeLists.txt dentro de if(WIN32)): los fuentes HLSL de src/render/shaders/*.hlsl se
+# compilan a DXIL con dxc.exe (Windows SDK, viene con Visual Studio; firma el DXIL) y se embeben en
+# ${CMAKE_BINARY_DIR}/generado/shaders.h como arreglos de bytes SHADER_<ENTRADA>, que Gpu::crear_pipeline elige cuando
+# SDL_GetGPUShaderFormats() informa SDL_GPU_SHADERFORMAT_DXIL.
+# Linux/Vulkan usa los gemelos GLSL (*.vert/*.frag -> SPIR-V con herramientas/compilar_shaders.sh) y macOS/Metal el
+# MSL escrito a mano en gpu.cpp y shaders_msl_anime4k.h. Un cambio de shader se hace en los tres; ver docs/fork/README.md.
+# Un punto de entrada por salida; los archivos cuyas entradas enlazan texturas distintas en el mismo registro se separan
+# (texto / texto_comp, anime4k_c1..c4 / d2s / resample).
 
 set(LIN_SHADERS_FUENTE ${CMAKE_SOURCE_DIR}/src/render/shaders)
 # archivo:entrada:etapa
 set(LIN_SHADERS
     sprite:vs_sprite:vert sprite:fs_sprite:frag
+    texto:fs_texto:frag texto_comp:fs_texto_comp:frag
     brillo:vs_brillo:vert brillo:fs_brillo:frag
-    mundo:vs_mundo:vert mundo:fs_mundo:frag)
+    mundo:vs_mundo:vert mundo:fs_mundo:frag
+    escalado:fs_escalado_xbr:frag escalado:fs_escalado_fsr:frag escalado:fs_escalado_crt:frag
+    anime4k_c1:fs_anime4k_c1:frag anime4k_c2:fs_anime4k_c2:frag anime4k_c3:fs_anime4k_c3:frag
+    anime4k_c4:fs_anime4k_c4:frag anime4k_d2s:fs_anime4k_d2s:frag anime4k_resample:fs_anime4k_resample:frag)
 
 set(LIN_SHADERS_DIR ${CMAKE_BINARY_DIR}/generado)
 set(LIN_SHADERS_H ${LIN_SHADERS_DIR}/shaders.h)
 file(MAKE_DIRECTORY ${LIN_SHADERS_DIR})
 
-if(WIN32)
-    # Con la consola de desarrollador, WindowsSdkVerBinPath apunta a ...\Windows Kits\10\bin\<versión>\.
-    find_program(LIN_DXC dxc
-        HINTS "$ENV{WindowsSdkVerBinPath}/x64" "$ENV{WindowsSdkVerBinPath}/arm64"
-        DOC "dxc.exe del SDK de Windows (DXIL)")
-    if(NOT LIN_DXC)
-        message(FATAL_ERROR "No se encontró dxc.exe (SDK de Windows). Compilar desde la consola de desarrollador "
-                            "de Visual Studio, o pasar -DLIN_DXC=<ruta a dxc.exe>.")
-    endif()
-    set(LIN_SHADERS_EXT dxil)
-else()
-    find_program(LIN_GLSLANG NAMES glslangValidator glslang DOC "glslang (HLSL a SPIR-V)")
-    if(NOT LIN_GLSLANG)
-        message(FATAL_ERROR "No se encontró glslangValidator: instalar glslang-tools (apt) o glslang (brew).")
-    endif()
-    set(LIN_SHADERS_EXT spv)
-    if(APPLE)
-        find_program(LIN_SPIRV_CROSS spirv-cross DOC "spirv-cross (SPIR-V a MSL)")
-        if(NOT LIN_SPIRV_CROSS)
-            message(FATAL_ERROR "No se encontró spirv-cross: brew install spirv-cross.")
-        endif()
-        set(LIN_SHADERS_EXT metal)
-    endif()
+# Con la consola de desarrollador, WindowsSdkVerBinPath apunta a ...\Windows Kits\10\bin\<versión>\.
+find_program(LIN_DXC dxc
+    HINTS "$ENV{WindowsSdkVerBinPath}/x64" "$ENV{WindowsSdkVerBinPath}/arm64"
+    DOC "dxc.exe from the Windows SDK (DXIL)")
+if(NOT LIN_DXC)
+    message(FATAL_ERROR "dxc.exe (Windows SDK) not found. Build from the Visual Studio developer console, "
+                        "or pass -DLIN_DXC=<path to dxc.exe>.")
 endif()
+set(LIN_SHADERS_EXT dxil)
 
 set(LIN_SHADERS_BINARIOS "")
 foreach(s IN LISTS LIN_SHADERS)
@@ -49,24 +39,12 @@ foreach(s IN LISTS LIN_SHADERS)
     list(GET partes 1 entrada)
     list(GET partes 2 etapa)
     set(salida ${LIN_SHADERS_DIR}/${entrada}.${LIN_SHADERS_EXT})
-    if(WIN32)
-        if(etapa STREQUAL vert)
-            set(perfil vs_6_0)
-        else()
-            set(perfil ps_6_0)
-        endif()
-        set(comando ${LIN_DXC} -nologo -T ${perfil} -E ${entrada} -O3 -Fo ${salida} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl)
-    elseif(APPLE)
-        set(spv ${LIN_SHADERS_DIR}/${entrada}.spv)
-        set(comando ${LIN_GLSLANG} -D -V --quiet --auto-sampled-textures -DLIN_MSL -S ${etapa} -e ${entrada}
-                -o ${spv} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl
-            COMMAND ${LIN_SPIRV_CROSS} --msl --msl-version 20100 --msl-decoration-binding ${spv} --output ${salida})
+    if(etapa STREQUAL vert)
+        set(perfil vs_6_0)
     else()
-        # --auto-sampled-textures: textura y sampler en el mismo binding pasan a ser un sampler
-        # combinado, que es lo que espera el backend Vulkan de SDL_GPU.
-        set(comando ${LIN_GLSLANG} -D -V --quiet --auto-sampled-textures -S ${etapa} -e ${entrada}
-            -o ${salida} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl)
+        set(perfil ps_6_0)
     endif()
+    set(comando ${LIN_DXC} -nologo -T ${perfil} -E ${entrada} -O3 -Fo ${salida} ${LIN_SHADERS_FUENTE}/${archivo}.hlsl)
     add_custom_command(OUTPUT ${salida} COMMAND ${comando}
         DEPENDS ${LIN_SHADERS_FUENTE}/${archivo}.hlsl
         COMMENT "Shader ${entrada} (${LIN_SHADERS_EXT})" VERBATIM)

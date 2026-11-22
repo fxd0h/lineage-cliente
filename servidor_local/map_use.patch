@@ -1,0 +1,21 @@
+diff --git a/src/jp/l1j/server/packets/client/C_UseItem.java b/src/jp/l1j/server/packets/client/C_UseItem.java
+index 71bcc33..cde345c 100644
+--- a/src/jp/l1j/server/packets/client/C_UseItem.java
++++ b/src/jp/l1j/server/packets/client/C_UseItem.java
+@@ -97,6 +97,7 @@ import static jp.l1j.server.model.skill.L1SkillId.*;
+ import jp.l1j.server.model.skill.L1SkillUse;
+ import jp.l1j.server.packets.server.S_CurseBlind;
+ import jp.l1j.server.packets.server.S_DragonGate;
++import jp.l1j.server.packets.server.S_UseMap;
+ import jp.l1j.server.packets.server.S_Fishing;
+ import jp.l1j.server.packets.server.S_IdentifyDesc;
+ import jp.l1j.server.packets.server.S_ItemName;
+@@ -673,6 +674,8 @@ public class C_UseItem extends ClientBasePacket {
+ 				pc.save();
+ 				L1PolyMorph.doPoly(pc, pc.getClassId(), 0, L1PolyMorph.MORPH_BY_ITEMMAGIC);
+ 				pc.getInventory().removeItem(item, 1);
++			} else if (itemId >= 40373 && itemId <= 40390) { // 地図
++				pc.sendPackets(new S_UseMap(pc, item.getId(), itemId));
+ 			} else if (itemId == 49168) { // 破壊の秘薬　
+ 				pc.setSkillEffect(STATUS_DESTRUCTION_NOSTRUM, 600 * 1000);
+ 				pc.sendPackets(new S_SkillIconAura(221, 600, 6));

@@ -1,0 +1,38 @@
+From bbbdf5f92f5e5b8e1ba6d9364f2ed0b5fcba998f Mon Sep 17 00:00:00 2001
+From: local <l@l>
+Date: Tue, 17 Nov 2026 05:58:21 -0300
+Subject: [PATCH] Clip the buddy list html so long lists do not disconnect the
+ client (#18)
+
+---
+ src/l1j/server/server/serverpackets/S_Buddy.java | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/src/l1j/server/server/serverpackets/S_Buddy.java b/src/l1j/server/server/serverpackets/S_Buddy.java
+index ec755631..0b343e1c 100644
+--- a/src/l1j/server/server/serverpackets/S_Buddy.java
++++ b/src/l1j/server/server/serverpackets/S_Buddy.java
+@@ -39,8 +39,18 @@ public class S_Buddy extends ServerBasePacket {
+ 		writeH(0x02);
+ 		writeH(0x02);
+ 
+-		writeS(buddy.getBuddyListString());
+-		writeS(buddy.getOnlineBuddyListString());
++		writeS(clip(buddy.getBuddyListString()));
++		writeS(clip(buddy.getOnlineBuddyListString()));
++	}
++
++	// The client overflows its html argument buffer on long lists and disconnects (issue #18):
++	// keep each list under 250 characters, cut on a name boundary.
++	private static String clip(String list) {
++		if (list == null || list.length() <= 250) {
++			return list;
++		}
++		int cut = list.lastIndexOf(' ', 250);
++		return list.substring(0, cut > 0 ? cut : 250);
+ 	}
+ 
+ 	@Override
+-- 
+2.43.0
+

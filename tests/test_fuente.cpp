@@ -94,24 +94,32 @@ TEST_CASE("FuenteBitmap: los glifos TTF no necesitan la carpeta del juego") {
     CHECK(img.alto == ALTO_GLIFO);
 }
 
-TEST_CASE("ampliar_glifo_suave: trazos del mismo grosor y escalera suavizada") {
-    ImagenRGBA g;
-    g.preparar(4, 4);
-    for (int x = 0; x < 4; ++x) g.px[1 * 4 + x] = 0xFFFFFFFFu;  // una línea horizontal de 1 px en la fila 1
-    ImagenRGBA s;
-    ampliar_glifo_suave(g, 3, s);
-    REQUIRE(s.ancho == 12);
-    REQUIRE(s.alto == 12);
-    auto a = [&](int x, int y) { return s.px[static_cast<size_t>(y) * s.ancho + x] >> 24; };
-    CHECK(a(6, 4) == 255);  // centro de la línea
-    CHECK(a(6, 0) == 0);    // lejos de ella
-    int filas = 0;          // sigue midiendo 3 píxeles de salida (1 de la fuente × 3)
-    for (int y = 0; y < 12; ++y) filas += a(6, y) >= 128;
-    CHECK(filas == 3);
-    // Escalera diagonal: entre dos píxeles que se tocan por la esquina queda un puente (no un hueco).
-    ImagenRGBA d;
-    d.preparar(2, 2);
-    d.px[0] = d.px[3] = 0xFFFFFFFFu;
-    ampliar_glifo_suave(d, 4, s);
-    CHECK((s.px[4 * s.ancho + 4] >> 24) >= 64);
+TEST_CASE("cara HTML original: proporcional, alto de celda 13 y sin colisión con la TTF") {
+    CHECK(ancho_html('i') < ancho_html('M'));
+    CHECK(ancho_html(' ') > 0);
+    std::vector<GlifoTexto> g;
+    glifos_de_texto_html("Hi", 2, g);
+    REQUIRE(g.size() == 2);
+    CHECK(g[0].glifo == GLIFO_HTML_BASE + 'H');
+    CHECK(g[0].ancho + g[1].ancho == ancho_texto_html("Hi", 2));
+    ImagenRGBA img;
+    REQUIRE(rasterizar_html('H', img));
+    CHECK(img.alto == ALTO_LINEA_HTML_ORIGINAL);
+    bool tinta = false;
+    for (u32 px : img.px) tinta |= px != 0;
+    CHECK(tinta);
+}
+
+TEST_CASE("cara HTML en negrita (<b>): avances propios, glifos aparte y misma celda") {
+    CHECK(ancho_html('M', true) > ancho_html('M'));
+    std::vector<GlifoTexto> g;
+    glifos_de_texto_html("Hi", 2, g, true);
+    REQUIRE(g.size() == 2);
+    CHECK(g[0].glifo == GLIFO_HTML_NEGRITA_BASE + 'H');
+    CHECK(g[0].ancho + g[1].ancho == ancho_texto_html("Hi", 2, true));
+    ImagenRGBA img, reg;
+    REQUIRE(rasterizar_html('a', img, true));
+    REQUIRE(rasterizar_html('a', reg));
+    CHECK(img.alto == ALTO_LINEA_HTML_ORIGINAL);
+    CHECK((img.ancho != reg.ancho || img.px != reg.px));  // su propio bitmap
 }

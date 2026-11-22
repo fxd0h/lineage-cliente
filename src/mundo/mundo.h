@@ -37,9 +37,11 @@ enum ColObjeto : size_t {
     O_NIVEL,             // de S_CharPack (los monstruos; 0 en los personajes): color del nombre
     O_MASCOTA,           // 1 si es mascota o invocación de un jugador (trae el nombre del dueño)
     O_ROSA,              // nombre rosa (S_PinkName: atacó a otro jugador) hasta este momento (ms)
+    O_ZANCADA,           // step parity: sprites with list.spz attribute 111 (stride) alternate walk actions 0 and 4
+    O_DANO_RAPIDO,       // 1: esta acción de daño vino del golpe de un paquete de ataque, se reproduce a la mitad de largo (exe [+0x11d])
 };
 using TablaObjetos = TablaSoa<u16, u16, double, double, u64, u16, u8, u16, u8, u8, u64, u8, u8, u8, u8, u32, u32, i16, u32,
-                              TextoRef, TextoRef, u8, u8, u64>;
+                              TextoRef, TextoRef, u8, u8, u64, u8, u8>;
 
 // Efecto con duración sobre el propio personaje (módulo "Buffs" del plan): haste, brave, escudos...
 // Clase EA_* y tipo según el paquete que lo informó (ver ICONO_EFECTO y VELOCIDAD en eventos.h).
@@ -53,11 +55,18 @@ struct EfectoActivo {
     u64 fin;  // ms
 };
 constexpr u32 MAX_EFECTOS_ACTIVOS = 24;
+// Mensaje de chat de fin de efecto (tabla de buffs +0x10) esperando su turno: se imprime a los `due` ms salvo que el servidor mande el mismo texto.
+struct FinEfectoPendiente {
+    u16 msg;
+    u64 due;
+};
+constexpr u32 MAX_FIN_PENDIENTES = 6;
 
 // Estado del propio personaje (módulo "Player" del plan). Lo actualizan S_OwnCharStatus y los
 // paquetes parciales (HP, MP, EXP, alineamiento, SP/MR, defensa, atributos, peso, comida).
 struct EstadoJugador {
     ObjId id = 0;
+    i32 rango_clan = 0xb;  // rango de clan del pack del personaje propio (4 = príncipe, 0xb = ninguno)
     i32 nivel = 0, exp = 0, fue = 0, int_ = 0, sab = 0, des = 0, con = 0, car = 0;
     i32 hp = 0, hp_max = 0, mp = 0, mp_max = 0, ca = 0, legal = 0;
     i32 comida = 0;  // 0–225 (225 = lleno)
@@ -71,11 +80,15 @@ struct EstadoJugador {
     bool tercera = false;  // tercer acelerador (S_Liquor 8): todo × 0,87, como la waffle
     bool borracho = false; // S_Liquor 1: la pantalla se mece
     bool luz_hechizo = false;  // S_Light 20 propio (hechizo LIGHT): radio 14 y 5 niveles más de luz ambiente
+    u8 habilidad[6] = {};  // valores de S_Ability por índice (3 = condición para ver invisibles, 1..3)
+    int clase = -1;        // byte de clase del personaje (0 príncipe .. 6 ilusionista), -1 desconocido; lo fija la app
     u8 anillos = 0;        // S_Ability: bit 1 control de teletransporte, bit 5 control de invocación
     u8 inmovil = 0;   // S_Paralysis: el que empezó (PARALISIS_*), 0 = puede moverse y actuar
     u8 ceguera = 0;   // S_CurseBlind: 0 ve, 1 ciego, 2 ciego con Floating Eye
     EfectoActivo efectos[MAX_EFECTOS_ACTIVOS];
     u32 n_efectos = 0;
+    FinEfectoPendiente fin_pendientes[MAX_FIN_PENDIENTES] = {};
+    u32 n_fin_pendientes = 0;
 
     bool sabe(u32 hechizo) const {
         return hechizo >= 1 && hechizo <= FILAS_HECHIZOS * 8u && ((hechizos[(hechizo - 1) / 8] >> ((hechizo - 1) % 8)) & 1);
@@ -112,7 +125,12 @@ struct EfectoVisual {
     u64 inicio = 0;
     u32 vuelo_ms = 0;
     u32 sonido = 0;  // último frame dibujado (como O_SONIDO)
+    u8 flash = 0;    // mantiene la luz al máximo mientras vive desde su cuadro N (1 = 3.er cuadro, sprites de S_UseAttackSkill tipo 2;
+                     // 2 = 2.º cuadro, apariciones con el flag): ver luz_flash_ef y RE_ROUND4 sección 4
 };
+// gfx cuyas apariciones llevan el flag de destello en el original (meteoro de Valakas 762, "give fire" 214, petardos / bengalas
+// 2029-2055, efectos Cube* 6712 / 6718 / 6724).
+constexpr bool gfx_con_flash(GfxId g) { return g == 762 || g == 214 || (g >= 2029 && g <= 2055) || g == 6712 || g == 6718 || g == 6724; }
 constexpr u32 MAX_EFECTOS_VISUALES = 128;
 // Velocidad de los proyectiles (hechizos y flechas). No está en los datos: estimada mirando el
 // original en video (una celda cada ~40 ms).
@@ -120,6 +138,8 @@ constexpr u32 MS_VUELO_CELDA = 40;
 
 // Porcentaje de experiencia dentro del nivel actual (tabla de ExpTable.java de L1J).
 float porcentaje_exp(i32 nivel, i32 exp);
+// Proporción entera de experiencia como el HUD original (0x4b0c80): (exp - base) * escala / (siguiente - base), 0 bajo la base.
+i64 exp_escalada(i32 nivel, i32 exp, i64 escala);
 
 // Paso normal de los personajes (spr_actions de L1J: 640 ms por celda); también el de los objetos
 // cuyo sprite no está en la tabla de sprites.
@@ -161,6 +181,7 @@ struct Mundo {
     MapId mapa = 0;
     bool submarino = false;  // S_MapID: el mapa es bajo el agua (efecto azul y ola)
     i32 hora = 0;
+    u32 hora_n = 0;  // S_GameTime packets applied (the original re-arms the orb transition on every one)
     u8 nieve = 0, lluvia = 0;  // intensidad 0-3 de cada clima (S_Weather): son independientes
     bool en_juego = false;
     EfectoVisual efectos[MAX_EFECTOS_VISUALES];
@@ -206,8 +227,27 @@ constexpr NivelRelativo nivel_relativo(int monstruo, int jugador) {
 static_assert(nivel_relativo(5, 30) == NivelRelativo::FACIL && nivel_relativo(28, 30) == NivelRelativo::PAREJO &&
               nivel_relativo(36, 30) == NivelRelativo::DIFICIL && nivel_relativo(45, 30) == NivelRelativo::PELIGROSO);
 
+// Rango de nivel del cliente original para el nombre de un monstruo (S3EP1U 0x467856..0x4679e2, configuración US): color de contorno 0xAABBGGRR,
+// o 0 si no hay. d = nivel del monstruo - nivel del jugador.
+constexpr u32 color_nivel_original(int monstruo, int jugador) {
+    const int d = monstruo - jugador;
+    return d >= 10 ? 0xFF0000FFu : d >= 3 ? 0xFF008383u : d >= -1 ? 0xFFFF0000u : d >= -4 - (jugador >> 1) ? 0xFF00BD00u : 0u;
+}
+static_assert(color_nivel_original(40, 30) == 0xFF0000FFu && color_nivel_original(33, 30) == 0xFF008383u &&
+              color_nivel_original(29, 30) == 0xFFFF0000u && color_nivel_original(12, 30) == 0xFF00BD00u &&
+              color_nivel_original(5, 30) == 0u);
+
 // Pone (o quita, con 0 segundos) un efecto activo del propio personaje.
 void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 ahora);
+
+// Íconos de buff de S_PacketBox (subtipos 21, 35, 36, 56, 59, 74, 75) recuperados de S3EP1U.bin: cada uno es un efecto EA_ICONO
+// de tipo EFECTO_RANURA + casilla, casilla = fila de la tabla de buffs del original en 0x6e1020 (campo 0 = ícono clásico).
+// `extra` = los bytes extra del subtipo (ver IE_CONTEXTO en eventos.h), `gfx_propio` = el sprite propio (ícono de
+// polymorph), `clase` = el byte de clase del personaje (0 príncipe .. 6 ilusionista).
+constexpr u8 EFECTO_RANURA = 100;
+// Inicia (segundos > 0) o limpia (<= 0) una casilla de buff de la tabla del original como efecto EA_ICONO.
+void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora);
+void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora);
 // Quita los efectos activos que ya terminaron.
 void vencer_efectos(EstadoJugador& j, u64 ahora);
 // Al pedir el reinicio (C_Restart) el servidor reubica al personaje y vuelve a mandar lo que ve:
@@ -224,6 +264,8 @@ const SegmentoMapa* segmento_cargado(Mundo& m, const Recursos& rec, int x, int y
 // llamada.
 void actualizar_segmentos(Mundo& m, int x, int y, int radio);
 bool celda_pasable(Mundo& m, const Recursos& rec, int x, int y);
+// Tipo de zona (normal / segura / combate) de una celda; NORMAL si su segmento no existe.
+TipoZona tipo_zona_celda(Mundo& m, const Recursos& rec, int x, int y);
 // ¿Hay un portal del mapa del cliente en la celda? (ver PortalMapa)
 bool es_portal(Mundo& m, const Recursos& rec, int x, int y);
 

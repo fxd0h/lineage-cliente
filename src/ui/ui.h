@@ -18,15 +18,19 @@ struct EntradaFrame {
     bool ctrl = false;            // Ctrl (o Cmd) mantenido
     bool shift = false;           // Shift mantenido
     bool clic_derecho = false;
+    bool doble_izquierdo = false; // doble clic del botón izquierdo en este cuadro (WM_LBUTTONDBLCLK)
+    bool doble_derecho = false;   // doble clic del botón derecho en este cuadro (WM_RBUTTONDBLCLK)
     bool derecho_presionado = false;
     bool clic_medio = false;      // botón del medio (rueda) soltado este frame
     bool medio_presionado = false;  // botón del medio mantenido
     bool enter = false, tab = false, escape = false, retroceso = false;
+    bool suprimir = false;        // Supr en este cuadro
     bool arriba = false, abajo = false, izquierda = false, derecha = false;  // mantenidas
     bool pagina_arriba = false, pagina_abajo = false;  // Re Pág / Av Pág este frame
     bool alt_c = false;           // Alt+C este frame (ventana de estado)
     bool alt_i = false;           // Alt+I este frame (inventario)
     bool alt_s = false;           // Alt+S este frame (hechizos)
+    char atajo_ctrl = 0;          // Ctrl+letter this frame (original client hotkeys: I S A Q H C V), else 0
     int tecla_f = 0;              // F5..F12 apretada este frame (5..12; 0 = ninguna): atajos de hechizos
     int alt_numero = 0;           // Alt+1..Alt+9, Alt+0 este frame (1..10; 0 = ninguna): barra de atajos
     bool tecla_a = false;         // A sin modificadores este frame (ataque sostenido, si no se escribe en el chat)
@@ -37,6 +41,8 @@ struct EntradaFrame {
     char texto[64] = {};          // texto escrito este frame (UTF-8; solo se acepta ASCII)
     int ntexto = 0;
     u64 ahora_ms = 0;
+    bool solto_fuera = false;     // botón izquierdo soltado este frame con el puntero fuera de la ventana
+    bool salio_con_boton = false; // el puntero salió de la ventana con el botón izquierdo mantenido (hasta soltarlo)
 };
 
 namespace ui {
@@ -116,6 +122,9 @@ struct Barra {
 bool barra_evento(Gpu& gpu, SDL_Window* ventana, Barra& b, const SDL_Event& ev, bool activa);
 // Cada frame: sigue el arrastre (lo suelta si el botón ya no está) y devuelve la acción pedida.
 AccionBarra barra_frame(SDL_Window* ventana, Barra& b);
+// Deja que el administrador de ventanas mueva/redimensione la ventana sin borde (barra de título y bordes) como una
+// ventana normal; en macOS solo fija el tamaño mínimo.
+void activar_hit_test(SDL_Window* ventana, Gpu& gpu, Barra& b);
 
 // Ícono de la ventana (y del Dock en macOS): datos/iconos/<archivo> junto al ejecutable o en el directorio
 // actual (tools/generar_iconos.py). Sin el archivo, queda el del sistema.

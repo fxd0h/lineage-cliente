@@ -1,0 +1,35 @@
+From 922bab593e2c8674666e2acd3192ea7333d3984c Mon Sep 17 00:00:00 2001
+From: local <l@l>
+Date: Tue, 17 Nov 2026 05:55:22 -0300
+Subject: [PATCH] Spells on dead targets fail without consuming MP (#42)
+
+---
+ src/l1j/server/server/model/skill/L1SkillUse.java | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/l1j/server/server/model/skill/L1SkillUse.java b/src/l1j/server/server/model/skill/L1SkillUse.java
+index 45bdbe1f..ab9cc899 100644
+--- a/src/l1j/server/server/model/skill/L1SkillUse.java
++++ b/src/l1j/server/server/model/skill/L1SkillUse.java
+@@ -550,6 +550,18 @@ public class L1SkillUse {
+ 				}
+ 			}
+ 
++			// A spell aimed at an already dead target fails before any MP/reagent is spent (issue #42).
++			if (type == TYPE_NORMAL && targetId > 0 && attacker == null) {
++				L1Object deadCheck = L1World.getInstance().findObject(targetId);
++				if (deadCheck instanceof L1Character && ((L1Character) deadCheck).isDead()
++						&& _skillId != CREATE_ZOMBIE && _skillId != RESURRECTION
++						&& _skillId != GREATER_RESURRECTION && _skillId != CALL_OF_NATURE) {
++					player.sendPackets(new S_ServerMessage(280)); // Spell failed.
++					setCheckedUseSkill(false);
++					return;
++				}
++			}
++
+ 			switch (type) { // When casting magic
+ 			case TYPE_NORMAL:
+ 				// Fix for stacking if that option is on
+-- 
+2.43.0
+

@@ -197,7 +197,7 @@ void eventos_autobuffs(App& a, const Evento& e) {
 }
 
 void dibujar_autobuffs(App& a) {
-    if (!a.cfg.usar_autobuffs) return;
+    if (!a.cfg.usar_autobuffs || !a.cfg.ui_simple) return;
     AutoBuffs& ab = a.autobuffs;
     Graficos& g = *a.g;
     const EntradaFrame& e = a.entrada;

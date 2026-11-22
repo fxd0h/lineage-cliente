@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 project(lineage_cliente LANGUAGES C CXX)
 
-# C++20 en estilo "C con plantillas": sin excepciones ni RTTI (ver analisis/PLAN_CLIENTE.md §2.2)
-set(CMAKE_CXX_STANDARD 20)
+# C++23 en estilo "C con plantillas": sin excepciones ni RTTI (ver analisis/PLAN_CLIENTE.md §2.2)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -85,16 +85,21 @@ target_link_libraries(lin_proto PUBLIC lin_core lin_plataforma)
 add_library(lin_recursos STATIC
     src/recursos/des.cpp
     src/recursos/pak.cpp
+    src/recursos/pe_resources.cpp
     src/recursos/imagen.cpp
+    src/recursos/hd_pack.cpp
     src/recursos/tiles.cpp
     src/recursos/sprites.cpp
     src/recursos/tabla_sprites.cpp
     src/recursos/lista_sprites.cpp
     src/recursos/mapa.cpp
     src/recursos/fuente.cpp
+    src/recursos/fuente_hd.cpp
     src/recursos/fuente_ttf.cpp
     src/recursos/cp949.cpp
+    src/recursos/big5.cpp
     src/recursos/textos.cpp
+    src/recursos/zonas.cpp
     src/recursos/precarga.cpp
     src/recursos/hechizos.cpp
     src/recursos/html.cpp
@@ -111,14 +116,19 @@ add_library(lin_mundo STATIC
     src/mundo/inventario.cpp)
 target_link_libraries(lin_mundo PUBLIC lin_core lin_proto lin_recursos)
 
-include(cmake/shaders.cmake)
 add_library(lin_render STATIC
     src/render/atlas.cpp
     src/render/gpu.cpp
+    src/render/gpu_anime4k.cpp
     src/render/graficos.cpp
-    ${LIN_SHADERS_H})
+    src/render/icon_aura.cpp)
 target_link_libraries(lin_render PUBLIC lin_core lin_recursos SDL3::SDL3)
-target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
+if(WIN32)
+    # D3D12 shaders: HLSL -> DXIL (dxc) -> generado/shaders.h (cmake/shaders.cmake).
+    include(cmake/shaders.cmake)
+    target_sources(lin_render PRIVATE ${LIN_SHADERS_H})
+    target_include_directories(lin_render PRIVATE ${LIN_SHADERS_DIR})
+endif()
 
 add_library(lin_audio STATIC
     src/audio/audio.cpp)
@@ -129,6 +139,8 @@ add_library(lin_ui STATIC
 target_link_libraries(lin_ui PUBLIC lin_core lin_render)
 
 add_executable(lineage
+    src/app/cartel_ui.cpp
+    src/app/cocina_ui.cpp
     src/app/main.cpp
     src/app/ajustes_ui.cpp
     src/app/app.cpp
@@ -137,17 +149,23 @@ add_executable(lineage
     src/app/pantalla_crear.cpp
     src/app/pantalla_juego.cpp
     src/app/inventario_ui.cpp
+    src/app/item_icon.cpp
     src/app/hechizos_ui.cpp
     src/app/barra_ui.cpp
     src/app/autobuffs_ui.cpp
     src/app/autopocion_ui.cpp
     src/app/forma_ui.cpp
     src/app/npc_ui.cpp
+    src/app/pesca_ui.cpp
+    src/app/original_window.cpp
     src/app/ventanas.cpp
     src/app/cursores.cpp
     src/app/social_ui.cpp
+    src/app/float_hpmp_ui.cpp
+    src/app/volume_ui.cpp
     src/app/sonido.cpp
     src/app/clima.cpp
+    src/app/lista_ui.cpp
     src/app/luz_ui.cpp
     src/app/ventana_ui.cpp
     src/app/cantidad_ui.cpp
@@ -158,6 +176,7 @@ add_executable(lineage
     src/app/reinicio_ui.cpp
     src/app/tablon_ui.cpp
     src/app/tienda_ui.cpp
+    src/app/map_ui.cpp
     src/app/mascotas_ui.cpp
     src/app/marcadores_ui.cpp
     src/core/asignaciones.cpp)  # operator new instrumentado (ver core/asignaciones.h)
@@ -210,20 +229,27 @@ if(LIN_TESTS)
         tests/test_des.cpp
         tests/test_proto.cpp
         tests/test_recursos.cpp
+        tests/test_muerte_ogro.cpp
         tests/test_lista_sprites.cpp
+        tests/test_pe_resources.cpp
         tests/test_mundo.cpp
         tests/test_chat.cpp
         tests/test_atlas.cpp
+        tests/test_icon_aura.cpp
+        tests/test_hd_pack.cpp
         tests/test_asignaciones.cpp
         tests/test_hechizos.cpp
         tests/test_luz.cpp
         tests/test_npc.cpp
         tests/test_sonidos.cpp
         tests/test_fuente.cpp
+        tests/test_fuente_hd.cpp
         tests/test_textos.cpp
         tests/test_ajustes.cpp
+        tests/test_vista.cpp
         tests/test_autobuffs.cpp
         tests/test_autopocion.cpp
+        tests/test_ataque.cpp
         tests/test_socket.cpp
         tests/test_gpu.cpp
         src/core/asignaciones.cpp)

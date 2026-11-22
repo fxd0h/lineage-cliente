@@ -21,6 +21,11 @@ enum class Ev : u8 {
     PUERTA, PARALISIS, VENENO, CEGUERA, PEDIR_CANTIDAD, MASCOTA, ELEGIR_OBJETIVO_MASCOTA, MARCA_OBJETIVO,
     MARCADOR, INVISIBLE, RESUCITAR, NOMBRE_ROSA, LICOR, ANILLO, REINICIO, GRUPO, BLOQUEADO, SONIDO, TIENDA, TIENDA_LINEA, TABLON, TABLON_TEMA, TABLON_LEER, CORREO,
     CASAS, CASA, CASA_MAPA, GUERRA, ASEDIO, SENOR_CASTILLO, CASTILLO_FONDOS, FECHA_ASEDIO,
+    USAR_MAPA, CLAN_EMBLEMA_OBJETO,
+    DUELO, VOLVER_PERSONAJES,  // S_PacketBox 5 (id = el rival) y 42
+    CAMBIO_NOMBRE,             // S_ChangeName: id = objeto, s[0] = el nombre nuevo
+    COCINA,                    // S_PacketBox 52 (COOK_WINDOW): v[0] = sub (1 = abrir), v[1] = etapa del libro de cocina - 1
+    PESCA_PICADA,              // S_PacketBox 55 (FISHING): el corcho propio muestra una picada
     IGNORADO,
 };
 
@@ -36,15 +41,16 @@ struct Evento {
 static_assert(sizeof(Evento) <= 112, "Evento debe seguir siendo pequeño y POD");
 
 // Campos de PERSONAJE / PERSONAJE_NUEVO (lista de personajes).
-enum : int { PJ_CLASE, PJ_SEXO, PJ_LEGAL, PJ_HP, PJ_MP, PJ_CA, PJ_NIVEL, PJ_FUE, PJ_DES, PJ_CON, PJ_SAB, PJ_CAR, PJ_INT };
+enum : int { PJ_CLASE, PJ_SEXO, PJ_LEGAL, PJ_HP, PJ_MP, PJ_CA, PJ_NIVEL, PJ_FUE, PJ_DES, PJ_CON, PJ_SAB, PJ_CAR, PJ_INT, PJ_GM };
 // Campos de PONER_OBJETO.
 // OB_CANTIDAD: el campo "exp" de S_CharPack, que en los ítems del suelo (S_DropItem) es la cantidad.
 // OB_CLAN: id del clan (0 sin clan; para pedir su emblema).
+// OB_RANGO: clan rank (high nibble of the byte after the owner string; 4 = prince, 0xb = no clan).
 // OB_NIVEL: el nivel del monstruo (en los personajes, 0).
 // OB_MASCOTA: 1 si trae el nombre del dueño (S_PetPack, S_SummonPack): mascota o invocación de un
 // jugador. Un personaje propio y un NPC lo traen vacío.
 enum : int { OB_X, OB_Y, OB_GFX, OB_ESTADO, OB_DIR, OB_LUZ, OB_VEL, OB_LEGAL, OB_FLAGS, OB_HP, OB_CANTIDAD, OB_CLAN, OB_NIVEL,
-             OB_MASCOTA };
+             OB_MASCOTA, OB_RANGO };
 // Campos de ESTADO_PROPIO.
 enum : int { EP_NIVEL, EP_EXP, EP_FUE, EP_INT, EP_SAB, EP_DES, EP_CON, EP_CAR, EP_HP, EP_HPMAX, EP_MP, EP_MPMAX,
              EP_CA, EP_COMIDA, EP_PESO, EP_LEGAL };
@@ -77,7 +83,10 @@ enum : int { VE_CLASE, VE_TIPO, VE_SEG };
 enum : int { VE_HASTE, VE_BRAVE };
 // ICONO_EFECTO (S_SkillIconShield, S_SkillIconAura, S_SkillIconGFX): clase, tipo y segundos
 // (0 = se terminó).
-enum : int { IE_CLASE, IE_TIPO, IE_SEG };
+// IE_CONTEXTO (subtipos de ícono de S_PacketBox que necesitan el sprite propio o la clase para elegir la casilla, ver
+// icono_de_caja en mundo.h): IE_TIPO = el subtipo (21, 35, 36, 56, 59, 74, 75), IE_SEG = segundos,
+// IE_EXTRA... = los bytes extra (21: b0..b3; 56: el segundo h; 75: n).
+enum : int { IE_CLASE, IE_TIPO, IE_SEG, IE_EXTRA };
 // GRUPO (S_PacketBox 104–110): GR_TIPO GR_VACIAR (llega la lista entera), GR_MIEMBRO (e.id, s[0]
 // nombre, GR_HP en % o 0xFF, GR_LIDER), GR_LIDER_NUEVO (e.id). BLOQUEADO (S_PacketBox 17–19): s[0]
 // el nombre, v[0] 1 agregado / 0 quitado. SONIDO (S_Sound): v[0] el sonido.
@@ -95,6 +104,7 @@ enum : int { GR_TIPO, GR_HP, GR_LIDER };
 // CASAS (S_HouseList): e.id el tablón de subastas; una CASA por casa: e.id la casa, s[0] el nombre,
 // CS_AREA, CS_MES y CS_DIA (cierre de la subasta) y CS_PRECIO (puja actual).
 // CASA_MAPA (S_HouseMap): e.id el tablón, v[0] la casa.
+// USAR_MAPA (S_UseMap): e.id the map item, v[0] the map number (1..18).
 enum : int { CS_AREA, CS_MES, CS_DIA, CS_PRECIO };
 // GUERRA (S_War): GU_TIPO (1 declara, 2 se rinde, 3 termina, 4 gana, 6/7 alianza, 8 "en guerra
 // con"), s[0] y s[1] los clanes. ASEDIO (S_PacketBox 0–4): GU_TIPO (0 empieza, 1 termina, 2 sigue,
@@ -115,7 +125,7 @@ enum : int { GR_VACIAR, GR_MIEMBRO, GR_LIDER_NUEVO };
 // (RE_HP, RE_MP, RE_AC, RE_MAX), 2 estado tras cada paso (RE_NIVEL, RE_MAX, RE_HP, RE_MP, RE_AC y los
 // 6 atributos desde RE_FUE: fue, int, sab, des, con, car), 3 faltan puntos de elixir (RE_PUNTOS).
 enum : int { RE_TIPO, RE_NIVEL, RE_MAX, RE_HP, RE_MP, RE_AC, RE_FUE, RE_PUNTOS = RE_FUE + 6 };
-enum : int { IE_ESCUDO, IE_AURA, IE_ICONO, IE_FUERZA, IE_DESTREZA, IE_EVA };
+enum : int { IE_ESCUDO, IE_AURA, IE_ICONO, IE_FUERZA, IE_DESTREZA, IE_EVA, IE_CONTEXTO };
 // CAMBIO_FORMA (S_ChangeShape; id = objeto): gfx nuevo y si conserva el arma (0 = se la sacó).
 enum : int { CF_GFX, CF_ARMA };
 // HTML (S_NPCTalkReturn / S_ShowHTML; id = objeto que la muestra): s[0] = id de la página
@@ -128,7 +138,8 @@ enum : int { HT_DATOS, HT_CASA };
 // LISTA_TIENDA (id = NPC) abre una lista: LT_TIPO (TipoLista) y LT_CANTIDAD; le siguen tantos
 // ITEM_TIENDA (id = índice en la tienda o id del ítem, IT_GFX, TI_PRECIO, IT_CANTIDAD,
 // IT_BENDICION, s[0] = nombre).
-enum : int { LT_TIPO, LT_CANTIDAD };
+// LT_ALMACEN: the warehouse byte of S_Retrieve*List (3 personal, 5 clan, 9 elf; 0x0b pet bag), 0 for shops.
+enum : int { LT_TIPO, LT_CANTIDAD, LT_ALMACEN };
 // LISTA_REPARAR (S_SelectList / S_FixWeaponList): las armas dañadas; IT_CANTIDAD = el daño y
 // TI_PRECIO = lo que cuesta repararla (200 adena por punto).
 enum TipoLista : u8 { LISTA_COMPRA, LISTA_VENTA, LISTA_RETIRO, LISTA_MASCOTA, LISTA_REPARAR };
@@ -165,6 +176,8 @@ enum : int { MA_AGREGAR };
 enum : int { MK_MAPA, MK_X, MK_Y };
 // CHAT: v[0] = tipo de chat del servidor (TipoChat), id = quien habla (0 si no se sabe),
 // s[0] = texto ya armado por el servidor ("Nombre: hola"), s[1] = remitente (solo susurros).
+// Shouts (type 2) also carry the speaker's tile: CH_CON_POS = 1 when CH_X / CH_Y are set.
+enum : int { CH_X = 1, CH_Y, CH_CON_POS };
 enum TipoChat : u8 {
     CHAT_NORMAL = 0, CHAT_GRITO = 2, CHAT_GLOBAL = 3, CHAT_CLAN = 4, CHAT_SISTEMA = 9,  // 9 también es el eco del susurro enviado
     CHAT_GRUPO = 11, CHAT_COMERCIO = 12, CHAT_ALIANZA = 13, CHAT_GRUPO_CHAT = 14, CHAT_SUSURRO = 16,

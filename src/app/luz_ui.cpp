@@ -142,7 +142,13 @@ void preparar_luz(App& a) {
     a.gpu.reservar_brillo(bw, bh);
 }
 
-i32 hora_de_juego(const App& a) { return a.hora_forzada >= 0 ? a.hora_forzada : a.mundo.hora; }
+// Reloj del juego como lo lee 0x4bad30: el dword de S_GameTime sin signo, los valores >= 2^31 antes corridos en 0x879e0800 (mód 2^32),
+// después gmtime. El orbe, el nivel de luz, el indicador de la ventana de estado y el ambiente usan todos este mismo valor.
+i64 hora_de_juego(const App& a) {
+    if (a.hora_forzada >= 0) return a.hora_forzada;
+    const u32 crudo = static_cast<u32>(a.mundo.hora);
+    return crudo >= 0x80000000u ? static_cast<u32>(crudo + 0x879e0800u) : crudo;
+}
 
 void aplicar_luz(App& a, u64 ahora) {
     const Mundo& m = a.mundo;
@@ -156,16 +162,20 @@ void aplicar_luz(App& a, u64 ahora) {
         return;
     }
 
-    const i32 hora = hora_de_juego(a);
-    const int seg = static_cast<int>(((hora % DIA) + DIA) % DIA);
+    const i64 hora = hora_de_juego(a);
+    const int seg = static_cast<int>(hora % DIA);
     const bool lluvia = m.nieve > 0 || m.lluvia > 0;
     int nivel = nivel_ambiente(m.mapa, seg / 60, dia_del_anio(hora), lluvia);
     if (m.jugador.luz_hechizo) nivel = nivel_con_luz_hechizo(nivel);
+    // Original: la ceguera no tiene imagen superpuesta; el mundo se dibuja con nivel de luz 0 (0x4626c0).
+    if (m.jugador.ceguera && !a.cfg.ui_simple) nivel = 0;
+    // Un efecto de destello fuerza brillo máximo (el actualizador de día/noche se salta mientras dura); la ceguera se dibuja después.
+    else if (a.flash_luz_frame && a.frame - a.flash_luz_frame <= 1) nivel = 15;
 
     // Elfo y elfo oscuro: la visión reemplaza a la luz (no hay luces ni mapa de brillo).
     const int clase = (a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) ? a.pjs[a.pj_sel].v[PJ_CLASE] : -1;
     const Vision vis = modo_vision(static_cast<u8>(clase < 0 ? 255 : clase), a.cfg.efecto_infravision, nivel, false,
-                                   m.jugador.ceguera);
+                                   m.jugador.ceguera, a.infracon, m.jugador.habilidad[4]);
     if (vis != Vision::NINGUNA) {
         a.gpu.reemplazar_mundo(-1, vis == Vision::ELFO ? 1 : 2, fase_borracho);
         return;

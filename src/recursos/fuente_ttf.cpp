@@ -5,6 +5,11 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 #include "recursos/fuente.h"
+#include "recursos/fuente_hd.h"
+#include "recursos/fuente_html_datos.inc"
+#include "recursos/fuente_html_hd_datos.inc"
+#include "recursos/fuente_html_negrita_datos.inc"
+#include "recursos/fuente_html_negrita_hd_datos.inc"
 #include "recursos/fuente_ui_datos.inc"
 
 namespace lin {
@@ -66,6 +71,37 @@ const Ttf& ttf() {
     return t;
 }
 
+
+// ---- Letra de las páginas HTML (interfaz original) -------------------------------------------------
+// El cliente 2009 dibuja las páginas de NPC con una fuente GDI, no con eng.fnt: 0x4359f0 arma un LOGFONT (alto 13, peso 400/700,
+// charset 0, familia 0x22, calidad 0 = por omisión) y 0x435520 fija la letra "Arial" (texto en 0x5037a2). lfHeight 13 es
+// un alto de celda: equivale a 11 ppem (ascenso 10 + descenso 3 = 13, que también es el alto de línea que usa 0x43d90c).
+// Windows XP dibuja Arial a ese tamaño con hinting y sin suavizado, así que los glifos son bitmaps de 1 bit con hinting
+// prerrenderizados de Liberation Sans (métricas de Arial, OFL) hechos por tools/generar_fuente_html.py, con avances enteros con hinting.
+constexpr int ALTO_CELDA_HTML = ALTO_LINEA_HTML_ORIGINAL;
+
+// Letra de píxeles con hinting de las páginas HTML: normal, o negrita (<b>: peso 700 del LOGFONT, 0x4359f0 / manejador de la etiqueta 0x437a2c).
+// Las dos tablas cubren los mismos puntos de código en el mismo orden.
+struct CaraHtml {
+    const unsigned short* cp;
+    const unsigned char* ancho;
+    const unsigned short (*filas)[ALTO_CELDA_HTML];
+    int n, pluma, ascenso;
+};
+constexpr CaraHtml CARA_REGULAR{FUENTE_HTML_CP, FUENTE_HTML_ANCHO, FUENTE_HTML_FILAS, FUENTE_HTML_N, FUENTE_HTML_PLUMA,
+                                FUENTE_HTML_ASCENSO};
+constexpr CaraHtml CARA_NEGRITA{FUENTE_HTML_B_CP, FUENTE_HTML_B_ANCHO, FUENTE_HTML_B_FILAS, FUENTE_HTML_B_N,
+                                FUENTE_HTML_B_PLUMA, FUENTE_HTML_B_ASCENSO};
+const CaraHtml& cara(bool negrita) { return negrita ? CARA_NEGRITA : CARA_REGULAR; }
+
+int indice_html(const CaraHtml& c, u32 cp) {
+    const unsigned short* fin = c.cp + c.n;
+    const unsigned short* it = std::lower_bound(c.cp, fin, cp);
+    if (it != fin && *it == cp) return static_cast<int>(it - c.cp);
+    if (cp == '?') return 0;
+    return indice_html(c, '?');
+}
+
 }  // namespace
 
 int ancho_ttf(u32 cp) {
@@ -99,6 +135,57 @@ bool rasterizar_ttf(u32 cp, ImagenRGBA& salida) {
         }
     }
     return true;
+}
+
+int ancho_html(u32 cp, bool negrita) {
+    const CaraHtml& c = cara(negrita);
+    return c.ancho[indice_html(c, cp)];
+}
+
+bool rasterizar_html(u32 cp, ImagenRGBA& salida, bool negrita) {
+    const CaraHtml& c = cara(negrita);
+    const int idx = indice_html(c, cp);
+    const int avance = std::max(1, static_cast<int>(c.ancho[idx]));
+    salida.preparar(static_cast<u16>(avance), ALTO_CELDA_HTML);
+    for (int y = 0; y < ALTO_CELDA_HTML; ++y) {
+        const unsigned bits = c.filas[idx][y];
+        for (int col = 0; col < 16; ++col) {
+            const int x = col - c.pluma;
+            if (!(bits & (0x8000u >> col)) || x < 0 || x >= avance) continue;
+            salida.px[static_cast<size_t>(y) * avance + x] = 0xFFFFFFFFu;  // opaque white (premultiplied)
+        }
+    }
+    return true;
+}
+
+// Variante HD de la letra HTML: los contornos reales (sin hinting) de Liberation Sans rasterizados a HD_ESCALA veces el tamaño de 11 ppem,
+// ubicados en la misma posición de pluma y línea base que el glifo de píxeles, así que solo cambian los bordes.
+bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida, bool negrita) {
+    static const stbtt_fontinfo* infos[2] = {
+        [] {
+            static stbtt_fontinfo f;
+            return stbtt_InitFont(&f, FUENTE_HTML_HD_DATOS, 0) ? &f : nullptr;
+        }(),
+        [] {
+            static stbtt_fontinfo f;
+            return stbtt_InitFont(&f, FUENTE_HTML_B_HD_DATOS, 0) ? &f : nullptr;
+        }()};
+    const stbtt_fontinfo* info = infos[negrita ? 1 : 0];
+    if (!info) return false;
+    const CaraHtml& c = cara(negrita);
+    const int fila = indice_html(c, cp);
+    const int avance = std::max(1, static_cast<int>(c.ancho[fila]));
+    u32 real = c.cp[fila];  // el punto de código que realmente se dibuja ('?' para los desconocidos)
+    const int idx = stbtt_FindGlyphIndex(info, static_cast<int>(real));
+    const float escala = stbtt_ScaleForMappingEmToPixels(info, 11.0f * HD_ESCALA);
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetGlyphBitmapBox(info, idx, escala, escala, &x0, &y0, &x1, &y1);
+    const int w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) return false;
+    static thread_local std::vector<unsigned char> cob;
+    cob.assign(static_cast<size_t>(w) * h, 0);
+    stbtt_MakeGlyphBitmap(info, cob.data(), w, h, w, escala, escala, idx);
+    return campo_de_cobertura(cob.data(), w, h, x0, c.ascenso * HD_ESCALA + y0, avance, ALTO_CELDA_HTML, salida);
 }
 
 }  // namespace lin

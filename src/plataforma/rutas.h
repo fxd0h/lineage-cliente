@@ -19,14 +19,31 @@ struct Servidor {
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
 constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
 
+// Flags de las páginas de Opciones del cliente original (option11/12/13, despachador 0x40b1de..0x40c660), un bit cada una.
+// Máscara por omisión = los bytes iniciales de los datos del original: getall 0x4ff200, dochat 0x4ff202, dotradechat 0x4ff203,
+// dowhisper 0x4ff204, showMargetMsg 0x6da619, shortcutscroll 0x6da618, tooltip 0x6e50b8, accepttrade 0x6da629 valen 1.
+enum OpcionOrig : unsigned {
+    OPC_GETALL, OPC_BUBBLE, OPC_DOCHAT, OPC_DOTRADECHAT, OPC_DOWHISPER, OPC_MARKETMSG, OPC_RANDOMPARTY, OPC_PARTYREJECT,
+    OPC_COMBATMUSIC, OPC_SHORTCUTSCROLL, OPC_TOOLTIP, OPC_ACCEPTTRADE, OPC_TELCON, OPC_INFRACON, OPC_FLOATHPMP
+};
+constexpr int OPCIONES_ORIG_DEFECTO = (1 << OPC_GETALL) | (1 << OPC_DOCHAT) | (1 << OPC_DOTRADECHAT) | (1 << OPC_DOWHISPER) |
+                                      (1 << OPC_MARKETMSG) | (1 << OPC_SHORTCUTSCROLL) | (1 << OPC_TOOLTIP) | (1 << OPC_ACCEPTTRADE) |
+                                      (1 << OPC_FLOATHPMP);
+
 struct Config {
+    int opciones_orig = OPCIONES_ORIG_DEFECTO;  // "opciones_orig=": OpcionOrig bit mask
+    int alpha_orig = 0;                         // "alpha_orig=": window transparency step 0..3 (0x7030e0; opaque, 20/31, 13/31, 7/31)
+    std::string carpeta_hd;        // "hd=": carpeta del pack HD de la interfaz (img_<id>.png, tbt_<id>.png); vacío = apagado
+    std::vector<std::string> carpetas_extra;  // "juego_extra=" (repetible, en orden): carpetas del juego de respaldo para lo que le falta a juego=
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)
     size_t servidor = 0;           // el elegido ("servidor_elegido=Nombre")
     int ventana_ancho = 1280, ventana_alto = 960;  // "ventana=AxB": en puntos, el de la última vez
+    std::string vista = "amplia";  // "amplia": la vista ocupa toda la ventana; "fija": 640x480 escalada, con barras negras
     int zoom = 0;                  // escala en el juego (píxeles reales por píxel lógico); 0 = automática
+    std::string escalado = "fsr";  // final-present filter: entero | xbr | fsr | crt | anime4k (Shift+F5)
     bool camara_a_saltos = false;  // la cámara sigue los frames de caminar, como el original (F4)
-    bool ui_simple = true;         // UI de texto (estilo ASCII) en el juego; false = panel original (F2)
+    bool ui_simple = false;         // UI de texto (estilo ASCII) en el juego; false = panel original (F2)
     bool mostrar_fps = false;      // fps y ms por frame en la esquina superior derecha (Shift+F3)
     bool pantalla_completa = false;  // juego: a pantalla completa (1) o en ventana sin borde (0, Alt+Enter)
     bool sombra_personajes = true; // los personajes parados en la sombra de un árbol se oscurecen (Shift+F4)
@@ -66,15 +83,14 @@ struct Config {
     // (Enter envía, Esc cancela). false: se escribe siempre y la barra va con Alt+número.
     bool chat_con_enter = true;
     bool barra_personaje = false;  // barra de HP/MP sobre el propio personaje
+    bool texto_hd = true;          // text drawn after the scaling filter at output resolution (docs/fork/hd_text.md)
+    bool fuente_original = true;   // texto ASCII con eng.fnt del juego (como el original)
     bool texto_dano = false;       // daño recibido / "Miss" flotante sobre el personaje
-    // "lista_sprites=": la tabla de sprites del cliente en texto plano (TW13032701.txt, list.spz); vacío = buscarla
-    // en la carpeta del juego (ver app.cpp).
-    std::string lista_sprites;
-    bool texto_hd = true;          // "texto_hd=": texto suavizado a la resolución real (Graficos::texto_hd)
     bool globos_comic = false;     // lo que dice un personaje, en globo con recuadro y cola (no solo texto)
     // Compensación de ataque: al atacar, mostrar el golpe (swing propio y flinch del objetivo) ya,
     // sin esperar el eco del servidor, para que con latencia alta el combate se sienta instantáneo.
     bool compensar_ataque = true;
+    std::string lista_sprites;     // "lista_sprites=": list.spz en texto plano que agrega a / reemplaza sprite_table.txt; vacío = buscar en la carpeta del juego
 };
 
 // Valores por personaje dentro de una opción ("Nombre:valor;Otro:valor").

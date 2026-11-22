@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include "app/app.h"
+#include "app/item_icon.h"
 
 namespace lin {
 
@@ -19,20 +20,21 @@ namespace {
 constexpr u32 IMG_EQUIPO = 981;  // 179×275
 
 struct Recuadro {
-    u8 uso;  // tipo de uso del ítem (ItemTable)
-    int x, y, w, h;
+    u8 uso;       // tipo de uso del objeto (ItemTable)
+    int px, py;   // esquina superior izquierda del ícono desde la esquina de la ventana: tabla en 0x8f0818 (la llena 0x4b2f50), la usa 0x4b3220
     const char* nombre;
 };
-// Tipos de uso: 1 arma, 2 armadura, 18 camiseta, 19 capa, 20 guantes, 21 botas, 22 casco, 24 collar,
-// 25 escudo, 37 cinturón, 40 aro.
+// Tipos de uso: 1 arma, 2 armadura, 18 camiseta, 19 capa (también 10), 20 guantes, 21 botas, 22 casco, 24 collar,
+// 25 escudo, 37 cinturón, 40 aro. La casilla elegida por tipo es la clasificación de 0x4b30d0.
 constexpr Recuadro RECUADROS[] = {
-    {22, 55, 36, 37, 33, "Helm"},     {40, 93, 45, 36, 33, "Earring"}, {19, 35, 80, 35, 33, "Cloak"},
-    {24, 70, 80, 35, 33, "Amulet"},   {18, 105, 80, 35, 33, "T-shirt"}, {2, 71, 122, 36, 33, "Armor"},
-    {20, 25, 116, 36, 33, "Gloves"},  {1, 25, 149, 36, 63, "Weapon"},   {25, 113, 116, 36, 33, "Shield"},
-    {37, 113, 149, 36, 32, "Belt"},   {21, 71, 180, 36, 33, "Boots"},
+    {22, 77, 46, "Helm"},     {40, 38, 52, "Earring"}, {19, 116, 89, "Cloak"},  {24, 116, 52, "Amulet"},
+    {18, 38, 89, "T-shirt"},  {2, 77, 89, "Armor"},    {20, 33, 189, "Gloves"}, {1, 33, 157, "Weapon"},
+    {25, 121, 125, "Shield"}, {37, 78, 131, "Belt"},   {21, 78, 189, "Boots"},
 };
 constexpr u8 USO_ANILLO = 23;
-constexpr int ANILLOS_X = 113, ANILLOS_Y = 184, LADO_ANILLO = 17;
+// Las dos casillas de anillo (el primer anillo toma la primera).
+constexpr int ANILLO_POS[2][2] = {{33, 125}, {121, 157}};
+constexpr int LADO_ANILLO = 32;
 
 }  // namespace
 
@@ -41,7 +43,9 @@ void dibujar_equipo(App& a, int x0, int y0) {
     const EntradaFrame& e = a.entrada;
     const Inventario& inv = a.mundo.inventario;
     const TablaItems& t = inv.items;
-    const u64 kf = clave_orden(CAPA_UI, 3), ki = clave_orden(CAPA_UI, 5), kt = clave_orden(CAPA_UI_TEXTO, 5);
+    const bool framed_ui = uses_original_frame(a, IdVentana::ESTADO);
+    // En el marco original los íconos van sobre el fondo (10) y el marco (11), debajo del adorno (15).
+    const u64 kf = clave_orden(CAPA_UI, 3), ki = clave_orden(CAPA_UI, framed_ui ? 14 : 5), kt = clave_orden(CAPA_UI_TEXTO, 5);
     // Qué hay equipado en cada parte.
     constexpr size_t N = std::size(RECUADROS);
     Slot en[N], anillos[4];
@@ -62,12 +66,23 @@ void dibujar_equipo(App& a, int x0, int y0) {
     }
 
     Slot bajo = SIN_SLOT;
+    int bajo_x = 0, bajo_y = 0;  // esquina superior izquierda de la casilla bajo el puntero (la etiqueta se ubica respecto de ella)
+    bool native = false;
     auto poner = [&](Slot s, int rx, int ry, int rw, int rh) {
-        const int lado = std::min({32, rw, rh});
         const RegionAtlas& ic = g.icono(t.col<I_GFX>()[s]);
-        g.gpu().dibujar_escalado(ic, static_cast<float>(rx + (rw - lado) / 2), static_cast<float>(ry + (rh - lado) / 2),
-                                 static_cast<float>(lado), static_cast<float>(lado), ki);
-        if (ui::sobre(e, rx, ry, rw, rh)) bajo = s;
+        if (native) {
+            // 0x4b3220 -> 0x445fd0 dibuja el ícono a su tamaño desde el origen de la casilla, como el inventario (sin estirar).
+            draw_item_icon(g.gpu(), ic, rx, ry, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        } else {
+            const int lado = std::min({32, rw, rh});
+            draw_item_icon(g.gpu(), ic, rx + (rw - lado) / 2, ry + (rh - lado) / 2, static_cast<float>(lado),
+                           static_cast<float>(lado), ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
+        }
+        if (ui::sobre(e, rx, ry, rw, rh)) {
+            bajo = s;
+            bajo_x = rx;
+            bajo_y = ry;
+        }
     };
     char txt[160];
     const RegionAtlas& fondo = g.img(IMG_EQUIPO);
@@ -103,20 +118,35 @@ void dibujar_equipo(App& a, int x0, int y0) {
         g.texto("Armor Class", static_cast<float>(x + 4), static_cast<float>(y + 6), kt, rotulo);
         g.texto(txt, static_cast<float>(x + ROTULO + 30), static_cast<float>(y + 6), kt, ui::COLOR_TEXTO);
     } else {
-        const int x = x0 + 34, y = y0 + 24;  // la imagen, centrada en la ventana
-        g.gpu().dibujar(fondo, x, y, kf);
+        // En el marco original la imagen es su fondo (lo dibuja el marco, 1440 en (6,9));
+        // en el marco de upstream (la interfaz simple), 981 centrada en la ventana.
+        const bool framed = uses_original_frame(a, IdVentana::ESTADO);
+        const int x = x0 + (framed ? 6 : 34), y = y0 + (framed ? 9 : 24);
+        if (!framed) g.gpu().dibujar(fondo, x, y, kf);
+        // Los íconos se ubican en coordenadas de la ventana (el origen de la imagen es 6,9 dentro del marco original).
+        const int ox = x - 6, oy = y - 9;
+        native = framed;
         for (size_t i = 0; i < N; ++i)
-            if (en[i] != SIN_SLOT) poner(en[i], x + RECUADROS[i].x, y + RECUADROS[i].y, RECUADROS[i].w, RECUADROS[i].h);
-        for (int i = 0; i < nanillos; ++i)
-            poner(anillos[i], x + ANILLOS_X + i % 2 * (LADO_ANILLO + 2), y + ANILLOS_Y + i / 2 * (LADO_ANILLO + 2), LADO_ANILLO, LADO_ANILLO);
-        // La AC en su campo.
+            if (en[i] != SIN_SLOT) poner(en[i], ox + RECUADROS[i].px, oy + RECUADROS[i].py, 32, 32);
+        for (int i = 0; i < std::min(nanillos, 2); ++i)
+            poner(anillos[i], ox + ANILLO_POS[i][0], oy + ANILLO_POS[i][1], LADO_ANILLO, LADO_ANILLO);
+        // CA como 0x4b3740: blanco, centrado entre x 92 y 149 de la ventana a 6 px por carácter, tope del texto en y 231 de la ventana.
         std::snprintf(txt, sizeof txt, "%d", a.mundo.jugador.ca);
-        g.texto(txt, static_cast<float>(x + 112 - ancho_texto(txt, std::strlen(txt)) / 2), static_cast<float>(y + 223), kt,
-                ui::COLOR_TEXTO);
+        const int ac_x = ox + 92 + (149 - 92 - 6 * static_cast<int>(std::strlen(txt)) + 1) / 2;
+        g.texto(txt, static_cast<float>(ac_x), static_cast<float>(oy + 231), kt, rgba(255, 255, 255));
     }
 
-    // Con el puntero encima: el nombre y los atributos del ítem.
-    if (bajo != SIN_SLOT) {
+    // Marco original: la casilla bajo el puntero ([+0xa4], la fija el manejador de movimiento del mouse 0x4b36c8) muestra solo el nombre
+    // del objeto, blanco con contorno negro, en (x de la casilla - 32, y de la casilla + 34) (segundo bucle de 0x4b3220 vía 0x4334f0). El nombre no es
+    // la caja de atributos de la interfaz simple.
+    if (bajo != SIN_SLOT && !(a.cfg.ui_simple || !fondo.valida())) {
+        const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), txt, sizeof txt);
+        std::string_view nom(txt, n);
+        if (const size_t p = nom.rfind(" ("); p != std::string_view::npos && nom.ends_with(")")) nom = nom.substr(0, p);
+        g.texto_contorno(nom, static_cast<float>(bajo_x - 32), static_cast<float>(bajo_y + 34), clave_orden(CAPA_UI_TEXTO, 6),
+                         rgba(255, 255, 255));
+    } else if (bajo != SIN_SLOT) {
+        // Interfaz simple: el nombre del objeto y sus atributos.
         char nombre[256], det[1024];
         const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), nombre, sizeof nombre);
         const size_t nd = describir_atributos(atributos_item(inv, bajo), det, sizeof det);

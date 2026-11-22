@@ -31,13 +31,36 @@ void cargar_sonidos(App& a) {
     a.sonidos.cargar({reinterpret_cast<const char*>(a.texto_music_def.data()), a.texto_music_def.size()},
                      {reinterpret_cast<const char*>(a.texto_envsound_def.data()), a.texto_envsound_def.size()});
     if (a.sonidos.musica.empty()) LIN_LOG("Aviso: no se encontró music.def (música por zona)");
-    if (!a.audio.abrir(a.cfg.carpeta_juego)) LIN_LOG("Aviso: sin audio");
+    if (!a.audio.abrir(a.cfg.carpeta_juego, a.cfg.carpetas_extra)) LIN_LOG("Aviso: sin audio");
     aplicar_volumenes(a);
 }
 
 void aplicar_volumenes(App& a) {
     if (a.mudo) a.audio.volumenes(0, 0);
     else a.audio.volumenes(a.cfg.volumen_musica, a.cfg.volumen_efectos);
+}
+
+namespace {
+constexpr u64 MS_COMBATE = 15000;  // 0x3a98: la música de combate dura esto tras el último evento de pelea
+
+bool combate_activado(const App& a) { return !(a.cfg.opciones_orig & (1 << OPC_COMBATMUSIC)); }  // bit set = off (0x7030f0)
+bool suena_pista_combate(const App& a) {
+    const i32 n = a.audio.musica_actual();
+    return n >= 0 && (n == a.sonidos.musica_caza || n == a.sonidos.musica_pk);
+}
+}  // namespace
+
+// 0x4c53a0: cada evento de pelea (el jugador ataca o lanza a `objetivo`, o algo ataca al jugador)
+// renueva el reloj de combate. Contra un personaje suena la pista de PK ("PlayrtKilling"), si no la
+// de caza; si alguna ya suena no se reinicia nada.
+void combate_musica(App& a, Slot objetivo, u64 ahora) {
+    a.t_combate = ahora;
+    if (!combate_activado(a) || a.pantalla != Pantalla::JUEGO || suena_pista_combate(a)) return;
+    const bool pj = objetivo != SIN_SLOT && tipo_objeto(a, objetivo) == TIPO_PERSONAJE;
+    const i32 pista = pj ? a.sonidos.musica_pk : a.sonidos.musica_caza;
+    if (pista < 0) return;
+    a.pista_combate = pista;
+    a.audio.musica(pista, 0, ahora);
 }
 
 void actualizar_sonido(App& a, u64 ahora) {
@@ -55,8 +78,14 @@ void actualizar_sonido(App& a, u64 ahora) {
             const i32 x = o.col<O_X>()[yo], y = o.col<O_Y>()[yo];
             if (o.col<O_ESTADO>()[yo] == ESTADO_MUERTO && a.sonidos.musica_muerte >= 0) {
                 a.audio.musica(a.sonidos.musica_muerte, 0, ahora);
+            } else if (a.t_combate && ahora < a.t_combate + MS_COMBATE && combate_activado(a) && suena_pista_combate(a)) {
+                // Peleando: la pista de combate sigue hasta 15 s después del último evento (o hasta que se apague la opción).
             } else if (const ZonaMusica* z = a.sonidos.musica_en(mapa, x, y)) {
-                a.audio.musica(z->musica, z->intervalo_s, ahora);
+                // De vuelta a la música de la zona: una pista de combate primero se desvanece (0x479ed0).
+                if (suena_pista_combate(a)) a.audio.musica_fundido(z->musica, z->intervalo_s, ahora);
+                else a.audio.musica(z->musica, z->intervalo_s, ahora);
+            } else if (suena_pista_combate(a)) {
+                a.audio.musica_fundido(-1, 0, ahora);
             } else {
                 a.audio.musica(-1, 0, ahora);
             }
@@ -87,18 +116,35 @@ void actualizar_sonido(App& a, u64 ahora) {
     a.audio.actualizar(ahora);
 }
 
-void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero) {
+void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double y, u64 ahora, bool sonar_primero, u8 dir) {
     const u32 indice = static_cast<u32>(&f - &a.sprites.frame(0)) + 1;
     if (indice == ultimo) return;
     const bool primero = ultimo == 0 && !sonar_primero;
     ultimo = indice;
-    if (primero || f.sonido < 0) return;
+    if (primero) return;
+    // Sufijo "]N" (el topo levanta tierra al avanzar): el gráfico N nace en la celda del objeto. Los
+    // efectos mismos (sonar_primero) no encadenan otros.
+    if (f.efecto && !sonar_primero) {
+        EfectoVisual ef;
+        ef.gfx = f.efecto;
+        ef.dir = dir;
+        ef.x0 = ef.x1 = x;
+        ef.y0 = ef.y1 = y;
+        ef.inicio = ahora;
+        agregar_efecto(a.mundo, ef);
+    }
+    if (f.n_sonidos == 0) return;
+    // Hasta 3 ids por cuadro: se elige uno al azar cada vez que se muestra el cuadro.
+    const u32 k = f.n_sonidos > 1 ? static_cast<u32>(std::rand()) % f.n_sonidos : 0;
+    const i32 id = k == 0 ? f.sonido : f.sonido_mas[k - 1];
+    if (id < 0) return;
+    const u8 modo = f.modo_sonido[k];
     double d = 0;
     const TablaObjetos& o = a.mundo.objetos;
     if (Slot yo = o.buscar(a.mundo.jugador.id); yo != SIN_SLOT)
         d = std::max(std::abs(x - o.col<O_X>()[yo]), std::abs(y - o.col<O_Y>()[yo]));
     const float ganancia = static_cast<float>(1.0 - d / CELDAS_SILENCIO);
-    a.audio.efecto(static_cast<u32>(f.sonido), ganancia, ahora);
+    a.audio.efecto(static_cast<u32>(id), ganancia, ahora, modo == SONIDO_SOLAPA, modo == SONIDO_UNICO);
 }
 
 }  // namespace lin

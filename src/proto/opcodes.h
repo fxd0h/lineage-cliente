@@ -20,7 +20,9 @@ enum class Srv : u8 {
     YES_NO, TRADE, TRADEADDITEM, TRADESTATUS, EMBLEM, SKILLBUY,
     DOOR, PARALYSIS, POISON, CURSEBLIND, INPUTAMOUNT, PETCTRL, SELECTTARGET, TRUETARGET,
     BOOKMARKS, SELECTLIST, IDENTIFYDESC, INVIS, RESURRECTION, STRUP, DEXUP, PINKNAME, LIQUOR, BLESSOFEVA, ABILITY, SOUND, PRIVATESHOPLIST, BOARD, BOARDREAD, MAIL,
-    HOUSELIST, HOUSEMAP, WAR, CASTLEMASTER, TAXRATE, DEPOSIT, DRAWAL,
+    HOUSELIST, HOUSEMAP, WAR, CASTLEMASTER, TAXRATE, DEPOSIT, DRAWAL, USEMAP,
+    REDMESSAGE, CLANNAME, CLANATTENTION, CHANGENAME,
+    WARTIME,
     CANTIDAD
 };
 
@@ -36,6 +38,14 @@ enum class Cli : u8 {
     EXITGHOST, RETURNTOLOGIN, ENTERPORTAL, CHARRESET, EXCLUDE, BUDDYLIST, ADDBUDDY, DELETEBUDDY, CHATPARTY, SHOP, SHOPLIST,
     BOARD, BOARDREAD, BOARDNEXT, BOARDWRITE, BOARDDELETE, MAIL,
     WAR, TAXRATE, DEPOSIT, DRAWAL, CHANGEWARTIME,
+    LOGINTOSERVEROK,  // C_LoginToServerOK (opciones de chat): c tipo, c flag
+    SHIP,             // C_Ship (s3ep1 33): h mapa de destino, h x, h y, lo manda el cliente al terminar un viaje en barco
+    PROPOSE,          // C_Propose: c 0 propose, c 1 divorce
+    FIGHT,            // C_Fight (/duel): no body
+    CHECKPK,          // C_CheckPK (/checkpk): sin cuerpo
+    EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c acción, un gesto que el servidor reenvía como S_DoActionGFX
+    RANK,             // C_Rank: c sub (1 rango, 2 lista de alianza, 3 unirse a la alianza, 4 salir de la alianza), c rango, s nombre
+    FISHCLICK,        // C_FishClick: c flag de picada (el servidor lo ignora y juzga el momento él mismo)
     CANTIDAD
 };
 
@@ -61,16 +71,29 @@ struct PerfilProtocolo {
     // de S_AttackPacket.java del jp363, que conserva ambas formas). Leer el ancho equivocado desalinea
     // la dirección y confunde un fallo con un acierto.
     u8 bytes_golpe_ataque = 2;
+    // Codificación del texto del servidor: Big5 (Taiwán 3.80C) se convierte a UTF-8 al decodificar; false = CP949 tal como llega.
+    bool texto_big5 = false;
+    u8 rango_principe = 4;        // nibble de rango de clan propio del príncipe (10 en 3.80C); 0xb = sin clan
+    u8 marcadores_ranuras = 104;  // bytes de casillas de S_BookmarkLoad (127 en 3.80C)
+    // L1JGO-Whale (tw380) lee la respuesta de C_Attr como [h tipo][c respuesta] aunque S_MessageYN trae la forma
+    // larga: con esto activo, `responder` manda la respuesta corta (la larga hacía que toda respuesta se leyera como "no").
+    bool respuesta_corta = false;
+    // Filas de la lista de S_Mail: l1j-en classic (US 2009) manda `d id, c leída, c aa, c mm, c dd, s remitente, asunto` (toda fila es una
+    // carta recibida); L1J-JP / Whale mandan `d id, c leída, d hora unix, c copia propia, s otro, asunto`.
+    bool correo_ymd = false;
 };
 
 struct TablaOpcodes {
     Srv srv_de_cable[256];                          // número de cable -> interno
     u8 cable_de_cli[static_cast<int>(Cli::CANTIDAD)];  // interno -> número de cable
+    // El comando tiene número en esta versión. No alcanza con cable != 0: el 0 es válido (BOOKMARK de s3ep1).
+    bool cli_definido[static_cast<int>(Cli::CANTIDAD)];
     u8 cable_init;                                  // opcode del paquete inicial (sin cifrar)
     PerfilProtocolo perfil;                         // formato de los cuerpos para esta versión
 
     Srv srv(u8 cable) const { return srv_de_cable[cable]; }
     u8 cli(Cli c) const { return cable_de_cli[static_cast<int>(c)]; }
+    bool tiene(Cli c) const { return cli_definido[static_cast<int>(c)]; }
 };
 
 // Versiones disponibles: "jp363" (L1J-JP 3.63c), "tw380" (3.80C de Taiwán, L1JGO-Whale) y "s3ep1"

@@ -49,15 +49,30 @@ bool decodificar_tbt(Bytes tbt, ImagenRGBA& salida) { return decodificar_transpa
 
 bool JuegoTiles::translucido(u32 i) const {
     Bytes t = tile(i);
-    return !t.empty() && (t[0] & 4);
+    return !t.empty() && (t[0] & TILE_TRANSLUCIDO) && !(t[0] & TILE_ADITIVO);
+}
+
+ModoMezcla JuegoTiles::modo(u32 i) const {
+    Bytes t = tile(i);
+    return t.empty() ? ModoMezcla::NORMAL : modo_de_tile(t[0]);
+}
+
+bool JuegoTiles::aditivo(u32 i) const {
+    Bytes t = tile(i);
+    return !t.empty() && (t[0] & TILE_ADITIVO);
+}
+
+bool JuegoTiles::vacio(u32 i) const {
+    Bytes t = tile(i);
+    return !t.empty() && (t[0] & TILE_VACIO);
 }
 
 bool JuegoTiles::decodificar(u32 i, bool derecha, ImagenRGBA& salida) const {
     Bytes t = tile(i);
-    if (t.empty()) return false;
+    if (t.empty() || (t[0] & TILE_VACIO)) return false;
     if (t[0] & 2) {
         if (!decodificar_transparente(t.subspan(1), salida)) return false;
-        if (t[0] & 4)
+        if ((t[0] & TILE_TRANSLUCIDO) && !(t[0] & TILE_ADITIVO))
             for (u32& p : salida.px)
                 if (p >> 24) p = (p & 0xFFFFFF) | (static_cast<u32>(ALFA_TRANSLUCIDO) << 24);
         return true;

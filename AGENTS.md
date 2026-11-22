@@ -4,15 +4,18 @@ Esta guía es para quien retoma el proyecto sin el contexto de las conversacione
 varios agentes que trabajan **en paralelo** y hacen push al mismo repo. Léela entera antes de tocar
 código. El idioma del proyecto es el **español**: código (identificadores), comentarios, docs y commits.
 
-- **Qué es:** cliente nuevo de Lineage 1 en C++20 + SDL3 (SDL_GPU), con diseño orientado a datos.
+- **Qué es:** cliente nuevo de Lineage 1 en C++23 + SDL3 (SDL_GPU), con diseño orientado a datos.
   Lee los recursos de una instalación original del juego y habla el protocolo L1J (versión JP 3.63c).
 - **Estado:** entregables 1 a 10 terminados. El detalle, con la evidencia y lo pendiente, está en
-  [ENTREGABLES.md](ENTREGABLES.md).
+  [docs/upstream/ENTREGABLES.md](docs/upstream/ENTREGABLES.md).
 - **Plan:** [docs/analisis/PLAN_CLIENTE.md](docs/analisis/PLAN_CLIENTE.md) (11 entregables jugables).
 - **Plan 3D** (modelos animados junto a los sprites): [docs/analisis/PLAN_3D.md](docs/analisis/PLAN_3D.md).
 - **Plan de portado** (Windows y Linux, x64 y arm64): [docs/analisis/PLAN_PORTADO.md](docs/analisis/PLAN_PORTADO.md).
 - **Protocolo:** [docs/analisis/PROTOCOLO_RED.md](docs/analisis/PROTOCOLO_RED.md) y `docs/analisis/opcodes/`.
-- **Uso, flags y controles:** [README.md](README.md).
+- **Uso, flags y controles:** [README.md](README.md) (en inglés, es la portada del fork).
+- **Aportes del fork de fxd0h** (Linux, interfaz original del cliente US 2009, perfiles `tw380` y `s3ep1`):
+  [docs/fork/](docs/fork/README.md); su guía original, en inglés, en [docs/fork/AGENTS.en.md](docs/fork/AGENTS.en.md).
+  Vale esta guía: el código y los comentarios nuevos van en español; solo el README queda en inglés.
 - **Descubrimientos y decisiones** (formatos, tiempos de los sprites, orden de dibujo, transparencias,
   particularidades del servidor, por qué la interfaz es así): [docs/DESCUBRIMIENTOS.md](docs/DESCUBRIMIENTOS.md).
   Leerlo antes de tocar el render, el movimiento o el combate.
@@ -255,7 +258,7 @@ Mantener la lógica en el archivo propio; en los archivos compartidos, solo los 
 
 ## 6. Estilo de código
 
-- C++20, 4 espacios, ~120 columnas. Nombres en español: funciones y variables en `minusculas_con_guion`,
+- C++23, 4 espacios, ~120 columnas. Nombres en español: funciones y variables en `minusculas_con_guion`,
   tipos en `PascalCase`, enums y constantes en `MAYUSCULAS`.
 - **Comentarios:** en español. Explican el *porqué* y el formato de los paquetes (`// S_Trade: s con quién`).
   Seguir la densidad del código que rodea al cambio.

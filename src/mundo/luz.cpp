@@ -87,8 +87,18 @@ int nivel_ambiente(MapId m, int minuto, int dia_anio, bool lluvia) {
     return nivel;
 }
 
-int dia_del_anio(i32 segundos) {
-    int dias = std::max(segundos, 0) / 86400;
+DayPhase day_phase(int minute, int day_of_year) {
+    minute = std::clamp(minute, 0, MINUTOS_DIA - 1);
+    int dawn, dusk;
+    horas_de_luz(std::clamp(day_of_year, 0, 365), dawn, dusk);
+    if (minute >= dawn && minute <= dusk) return {false, minute - dawn, dusk - dawn};
+    // La noche va del anochecer al amanecer siguiente, pasando la medianoche.
+    const int length = MINUTOS_DIA - dusk + dawn;
+    return {true, (minute > dusk ? minute - dusk : minute + MINUTOS_DIA - dusk), length};
+}
+
+int dia_del_anio(i64 segundos) {
+    int dias = static_cast<int>(std::max<i64>(segundos, 0) / 86400);
     for (int anio = 1970;; ++anio) {
         const bool bisiesto = anio % 4 == 0 && (anio % 100 != 0 || anio % 400 == 0);
         const int largo = bisiesto ? 366 : 365;
@@ -126,10 +136,14 @@ bool tinte_mapa(MapId m, u8& r, u8& g, u8& b) {
     return false;
 }
 
-Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera) {
+Vision modo_vision(u8 clase, bool opcion_activa, int nivel, bool submarino, bool ceguera, bool infracon, u8 habilidad4) {
     if (!opcion_activa || submarino || ceguera || nivel >= 15) return Vision::NINGUNA;
-    if (clase == 2) return Vision::ELFO;
-    if (clase == 4) return Vision::ELFO_OSCURO;
+    if (infracon) {
+        if (clase == 2) return Vision::ELFO;
+        if (clase == 4) return Vision::ELFO_OSCURO;
+        return Vision::NINGUNA;
+    }
+    if (habilidad4 == 1) return clase == 4 ? Vision::ELFO_OSCURO : Vision::ELFO;
     return Vision::NINGUNA;
 }
 

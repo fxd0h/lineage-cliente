@@ -41,10 +41,10 @@ struct Cursor {
 
 }  // namespace
 
-// La tabla lista cada acción rotada: su primera entrada es el último frame del archivo y las demás van de 0 a
-// n-2. En un bucle no importa, pero una muerte así empieza tirada, se levanta y vuelve a caer, y termina en la
-// penúltima pose (Ogre 1020: 6, 0..5). Se pasa esa entrada al final: la caída va de 0 a n-1 y queda el
-// cadáver. (Del fork fxd0h/lineage-cliente.)
+// La tabla lista cada acción rotada: su primera entrada es el último cuadro del archivo del sprite y el resto
+// va de 0..n-2. Eso no importa en los bucles, pero una muerte reproducida tal cual empieza acostada, se levanta
+// y vuelve a caer, terminando en la penúltima pose (1556 de 1709 filas de muerte, p. ej. Ogre 1020: 6,0..5).
+// Se mueve esa entrada inicial al final para que la caída vaya de 0..n-1 y se quede en la pose de cadáver.
 void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
     if (r.cantidad < 3) return;
     FrameAccion* f = &frames[r.primer];
@@ -62,6 +62,13 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
     tipo_.clear();
     atributos_.clear();
     siguiente_.clear();
+    zancada_.clear();
+    ropa_.clear();
+    morfo_.limpiar();
+    flash_.limpiar();
+    transp_.limpiar();
+    rects_transp_.clear();
+    gfx_de_tabla_ = 0;
     const char* p = reinterpret_cast<const char*>(texto.data());
     const char* fin = p + texto.size();
     if (p < fin) ++p;  // el primer byte del archivo no es parte del registro 0
@@ -74,6 +81,9 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
         tipo_.push_back(0);
         atributos_.push_back(0);
         siguiente_.push_back(0);
+        zancada_.push_back(false);
+        ropa_.emplace_back();
+        bool con_filas = false;
         u8 velocidad = 24;       // "110 N": vale para las acciones siguientes del registro
         c.numero();              // cantidad de sub-sprites
         if (c.p < c.fin && *c.p == '=') {
@@ -83,24 +93,37 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
         while (c.hay_numero()) {
             int v = c.numero();
             switch (v) {
-            case 100: {  // switches: n × 4 números
+            case 100: {  // see-through rectangles: n × (x1, y1, x2, y2)
                 int n = c.numero();
-                for (int i = 0; i < n * 4 && c.hay_numero(); ++i) c.numero();
+                std::vector<RectTransparencia> rs;
+                for (int i = 0; i < n && c.hay_numero(); ++i) {
+                    RectTransparencia r{};
+                    r.x1 = static_cast<i16>(c.numero());
+                    r.y1 = static_cast<i16>(c.numero());
+                    r.x2 = static_cast<i16>(c.numero());
+                    r.y2 = static_cast<i16>(c.numero());
+                    rs.push_back(r);
+                }
+                poner_transparencia(gfx, std::move(rs));
                 break;
             }
             case 101: sombra_.back() = static_cast<i16>(c.numero()); break;
             case 102: tipo_.back() = static_cast<u8>(c.numero()); break;
             case 104: atributos_.back() = static_cast<u16>(c.numero()); break;
-            case 103: case 108: case 111: case 112: case 113: case 114: c.numero(); break;
-            case 105: {  // ropa: n números
+            case 111: zancada_.back() = c.numero() != 0; break;
+            case 113:  // efecto de transformación: gfx que aparece cuando un objeto se transforma en este
+                if (const int g = c.numero(); g > 0 && g < 0xFFFF) morfo_.poner(gfx, static_cast<u32>(g));
+                break;
+            case 103: case 108: case 112: case 114: c.numero(); break;
+            case 105: {  // ropa: n gfx dibujados sobre el cuerpo
                 int n = c.numero();
-                for (int i = 0; i < n && c.hay_numero(); ++i) c.numero();
+                for (int i = 0; i < n && c.hay_numero(); ++i) ropa_.back().push_back(static_cast<GfxId>(c.numero()));
                 break;
             }
             case 106: break;
             case 107: c.numero(); c.numero(); break;
             case 109: {  // "109 n gfx": al terminar (el proyectil, al llegar) sigue ese gráfico; -1 ninguno
-                c.numero();
+                if (c.numero() == 2) flash_.poner(gfx, 1);
                 int g = c.numero();
                 siguiente_.back() = static_cast<GfxId>(g > 0 && g < 0xFFFF ? g : 0);
                 break;
@@ -131,8 +154,13 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                     while (c.p < c.fin && !std::isspace(static_cast<u8>(*c.p))) {  // sufijos
                         char s = *c.p++;
                         if (s == '!') f.impacto = true;
-                        else if (s == '[' || s == '<') f.sonido = static_cast<i16>(c.numero_pegado());
-                        else if (s == ']' || s == '^' || s == '>' || s == '{') c.numero_pegado();
+                        else if (s == '<' || s == '[' || s == '^') {
+                            const char* antes = c.p;
+                            const int id = c.numero_pegado();
+                            if (c.p != antes)
+                                agregar_sonido(f, s == '<' ? SONIDO_SOLAPA : s == '[' ? SONIDO_UNICO : SONIDO_DISTANCIA, id);
+                        } else if (s == ']') f.efecto = static_cast<u16>(c.numero_pegado());
+                        else if (s == '>' || s == '{' || s == '}') c.numero_pegado();  // flag / newer-client tokens: skipped
                     }
                     frames_.push_back(f);
                     ++r.cantidad;
@@ -141,10 +169,12 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
                 if (v >= 0 && v < 256 && r.cantidad > 0) {
                     indice_.poner((static_cast<u64>(gfx) << 8) | static_cast<u64>(v), static_cast<u32>(rangos_.size()));
                     rangos_.push_back(r);
+                    con_filas = true;
                 }
             }
             }
         }
+        if (con_filas) ++gfx_de_tabla_;
         p = fin_reg + 1;
     }
     copiar_filas_faltantes();
@@ -172,12 +202,16 @@ void TablaSprites::copiar_filas_faltantes() {
             tipo_.resize(n, 0);
             atributos_.resize(n, 0);
             siguiente_.resize(n, 0);
+            zancada_.resize(n, false);
+            ropa_.resize(n);
         }
         alias_[nuevo] = alias_[origen];
         sombra_[nuevo] = sombra_[origen];
         tipo_[nuevo] = tipo_[origen];
         atributos_[nuevo] = atributos_[origen];
         siguiente_[nuevo] = siguiente_[origen];
+        zancada_[nuevo] = zancada_[origen];
+        ropa_[nuevo] = ropa_[origen];
         for (u64 a = 0; a < 256; ++a)
             if (const u32* i = indice_.buscar((static_cast<u64>(origen) << 8) | a)) {
                 const u32 rango = *i;  // poner() puede mover la tabla
@@ -204,13 +238,13 @@ u32 TablaSprites::ticks(const RangoAccion& r) const {
 
 u32 TablaSprites::ms_hasta_impacto(GfxId gfx, u8 acc) const {
     const RangoAccion* r = accion(gfx, acc);
-    if (!r) return 0;
+    if (!r) return SIN_IMPACTO;
     u32 antes = 0;
     for (u32 i = 0; i < r->cantidad; ++i) {
-        if (frames_[r->primer + i].impacto) return antes * 960 / r->velocidad;
+        if (frames_[r->primer + i].impacto) return antes * 1000 / r->velocidad;
         antes += frames_[r->primer + i].duracion;
     }
-    return ticks(*r) * 960 / r->velocidad / 2;
+    return SIN_IMPACTO;
 }
 
 u32 TablaSprites::duracion_ms(GfxId gfx, u8 acc) const {
@@ -221,8 +255,9 @@ u32 TablaSprites::duracion_ms(GfxId gfx, u8 acc) const {
 const FrameAccion& TablaSprites::frame_en(const RangoAccion& r, u64 transcurrido, bool& termino, u64 ciclo_ms,
                                           bool bucle) const {
     u64 total = ticks(r);
-    // Tiempo en ticks (enteros de 1/960 s × velocidad, sin acumular redondeos).
-    u64 t = ciclo_ms > 0 ? transcurrido * total / ciclo_ms : transcurrido * r.velocidad / 960;
+    // Tiempo en ticks: un cuadro de n ticks dura n * 1000 / ritmo ms en el exe (cargador de list.spz 0x440ba8..0x440bb5). Los
+    // límites del servidor (duracion_ms) conservan el 960 de su tabla spr_action.
+    u64 t = ciclo_ms > 0 ? transcurrido * total / ciclo_ms : transcurrido * r.velocidad / 1000;
     termino = t >= total;
     if (termino && !bucle) {
         for (u32 i = r.cantidad; i-- > 0;)  // último frame visible (duración > 0)

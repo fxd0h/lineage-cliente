@@ -106,6 +106,11 @@ TEST_CASE("Luz: infravisión de elfo y elfo oscuro según las condiciones") {
     CHECK(modo_vision(2, true, 7, false, false) == Vision::ELFO);
     CHECK(modo_vision(4, true, 7, false, false) == Vision::ELFO_OSCURO);
     CHECK(modo_vision(1, true, 7, false, false) == Vision::NINGUNA);  // otra clase
+    // "/infracon" apagado: solo S_Ability 4 = 1 lo da (la clase 4 conserva su propio filtro, las demás usan el del elfo)
+    CHECK(modo_vision(2, true, 7, false, false, false, 0) == Vision::NINGUNA);
+    CHECK(modo_vision(1, true, 7, false, false, false, 1) == Vision::ELFO);
+    CHECK(modo_vision(4, true, 7, false, false, false, 1) == Vision::ELFO_OSCURO);
+    CHECK(modo_vision(1, true, 7, false, false, true, 1) == Vision::NINGUNA);
     CHECK(modo_vision(2, false, 7, false, false) == Vision::NINGUNA);  // opción apagada
     CHECK(modo_vision(2, true, 15, false, false) == Vision::NINGUNA);  // de día
     CHECK(modo_vision(2, true, 7, true, false) == Vision::NINGUNA);    // bajo el agua
@@ -227,4 +232,18 @@ TEST_CASE("Agua: 1416.img es azul arriba (B mayor que R)") {
         b += (p >> 16) & 0xFF;
     }
     CHECK(b > r);
+}
+
+TEST_CASE("Luz: day_phase splits the day at dawn and dusk and wraps the night over midnight") {
+    const DayPhase noon = day_phase(hm(12), 1);
+    CHECK_FALSE(noon.night);
+    CHECK(noon.elapsed > 0);
+    CHECK(noon.elapsed < noon.length);
+    const DayPhase midnight = day_phase(0, 1);
+    CHECK(midnight.night);
+    CHECK(midnight.elapsed > 0);
+    CHECK(midnight.elapsed < midnight.length);
+    const DayPhase late = day_phase(hm(23, 59), 1);
+    CHECK(late.night);
+    CHECK(late.elapsed < midnight.elapsed);  // la noche empieza al anochecer, así que las 23:59 están antes en ella que las 00:00
 }

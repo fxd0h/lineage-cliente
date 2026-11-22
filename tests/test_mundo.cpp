@@ -4,6 +4,8 @@
 #include "comun.h"
 #include "plataforma/archivo_mapeado.h"
 #include "mundo/mundo.h"
+#include "mundo/tabla_buffs.h"
+#include "mundo/subida_nivel.h"
 
 using namespace lin;
 
@@ -149,11 +151,11 @@ TEST_CASE("Mundo: el sprite se dibuja desde la celda de origen y el frame aporta
 }
 
 TEST_CASE("Mundo: ataque, daño en el frame de impacto, muerte, cadáver y reinicio") {
-    // gfx 0 (atacante): atacar = 4 frames de 4 ticks, impacto ("!") en el tercero -> 320 ms.
+    // gfx 0 (atacante): atacar = 4 frames de 4 ticks, impacto ("!") en el tercero -> 8 ticks * 1000 / 24 = 333 ms.
     const char reg[] = "?16 1 1 4 24 0 4 24 1 4 24 2 4! 24 3 4";
     TablaSprites sp;
     REQUIRE(sp.cargar(std::vector<u8>(reg, reg + sizeof reg - 1)));
-    CHECK(sp.ms_hasta_impacto(0, ACC_ATACAR) == 320);
+    CHECK(sp.ms_hasta_impacto(0, ACC_ATACAR) == 333);
     Mundo m;
     m.sprites = &sp;
     m.jugador.id = 1;
@@ -173,7 +175,7 @@ TEST_CASE("Mundo: ataque, daño en el frame de impacto, muerte, cadáver y reini
     CHECK(m.objetos.col<O_ACCION>()[yo] == ACC_ATACAR);
     CHECK(m.objetos.col<O_DIR>()[yo] == 2);
     CHECK(m.objetos.col<O_ACCION>()[orco] == ACC_DANADO);
-    CHECK(m.objetos.col<O_TACCION>()[orco] == 1320);  // cuando lo alcanza el golpe
+    CHECK(m.objetos.col<O_TACCION>()[orco] == 1333);  // cuando lo alcanza el golpe
 
     // Fallo: el objetivo no reacciona.
     m.objetos.col<O_ACCION>()[orco] = 0xFF;
@@ -413,6 +415,24 @@ TEST_CASE("Inventario: atributos de un ítem identificado (getStatusBytes) en te
     CHECK(n < 8);
 }
 
+TEST_CASE("Inventario: lineas del tooltip original (nombre a 23 columnas, atributos a 22)") {
+    LineasTip t;
+    armar_tooltip_item("Dagger", "Damage 1 (small) / 1 (large)\nMaterial: iron\nWeight 12", t);
+    CHECK(t.nombre == 1);
+    CHECK(t.n == 5);  // la línea de daño de 28 columnas se parte en dos
+    CHECK(std::string_view(t.texto[0]) == "Dagger");
+    CHECK(std::string_view(t.texto[1]) == "Damage 1 (small) / 1");
+    CHECK(std::string_view(t.texto[2]) == "(large)");
+    CHECK(std::string_view(t.texto[4]) == "Weight 12");
+    armar_tooltip_item("+7 Blessed Sword of Destruction", {}, t);
+    CHECK(t.nombre == 2);
+    CHECK(t.n == 2);
+    CHECK(std::string_view(t.texto[0]) == "+7 Blessed Sword of");
+    CHECK(std::string_view(t.texto[1]) == "Destruction");
+    armar_tooltip_item("Ring", {}, t);
+    CHECK(t.n == 1);
+}
+
 TEST_CASE("Puertas y estructuras de castillo: acciones que se quedan en su último frame") {
     CHECK(accion_fija(TIPO_PUERTA, ACC_ABRIR));
     CHECK(accion_fija(TIPO_ESTRUCTURA, 35));  // torre destruida
@@ -420,4 +440,122 @@ TEST_CASE("Puertas y estructuras de castillo: acciones que se quedan en su últi
     CHECK_FALSE(accion_fija(TIPO_ESTRUCTURA, 0));
     CHECK_FALSE(accion_fija(TIPO_ESTRUCTURA, 38));
     CHECK_FALSE(accion_fija(0, ACC_ABRIR));  // un personaje no se queda quieto al "abrir"
+}
+
+TEST_CASE("Mundo: la subida de nivel propia dispara el efecto 2127 solo si el nivel ya se conocía") {
+    CHECK_FALSE(subida_de_nivel(0, 5));  // first status packet / login
+    CHECK_FALSE(subida_de_nivel(5, 5));
+    CHECK_FALSE(subida_de_nivel(6, 5));  // level lost
+    CHECK(subida_de_nivel(5, 6));
+
+    Mundo m;
+    Evento st{};
+    st.tipo = Ev::ESTADO_PROPIO;
+    st.id = 77;
+    st.v[EP_NIVEL] = 5;
+    Evento exp{};
+    exp.tipo = Ev::EXPERIENCIA;
+    exp.v[0] = 6;
+    exp.v[1] = 100;
+    Evento ev1[] = {st};
+    aplicar_eventos(m, ev1, 1000);
+    CHECK(m.efectos[0].gfx == 0);  // first status: no effect
+    Evento ev2[] = {exp};
+    aplicar_eventos(m, ev2, 2000);
+    CHECK(m.efectos[0].gfx == GFX_SUBIDA_NIVEL);
+    CHECK(m.efectos[0].objeto == 77);
+}
+
+TEST_CASE("orden_inventario: lo equipado primero, el resto en el orden del servidor") {
+    Mundo m;
+    auto item = [](ObjId id, std::string_view nombre) {
+        Evento e{};
+        e.tipo = Ev::ITEM;
+        e.id = id;
+        e.v[IT_USO] = USO_ARMA;
+        e.s[0] = nombre;
+        return e;
+    };
+    Evento vaciar{};
+    vaciar.tipo = Ev::INVENTARIO_VACIAR;
+    Evento l[] = {vaciar, item(1, "$1"), item(2, "$2 ($9)"), item(3, "$3"), item(4, "$4 ($117)"), item(5, "$5")};
+    aplicar_eventos(m, l, 0);
+    const TablaItems& t = m.inventario.items;
+    Slot orden[8];
+    REQUIRE(orden_inventario(m.inventario, orden, 8) == 5);
+    const ObjId esperado[] = {2, 4, 1, 3, 5};
+    for (int i = 0; i < 5; ++i) CHECK(t.ids()[orden[i]] == esperado[i]);
+    CHECK(orden_inventario(m.inventario, orden, 3) == 3);  // capped
+    CHECK(t.ids()[orden[0]] == 2);
+}
+
+TEST_CASE("Zone type from the left-half cell attribute") {
+    CHECK(tipo_zona_de_atributo(0) == TipoZona::NORMAL);
+    CHECK(tipo_zona_de_atributo(1) == TipoZona::NORMAL);   // blocked only
+    CHECK(tipo_zona_de_atributo(65) == TipoZona::NORMAL);
+    CHECK(tipo_zona_de_atributo(4) == TipoZona::SEGURA);
+    CHECK(tipo_zona_de_atributo(5) == TipoZona::SEGURA);
+    CHECK(tipo_zona_de_atributo(8) == TipoZona::COMBATE);
+    CHECK(tipo_zona_de_atributo(12) == TipoZona::SEGURA);  // los dos bits: el servidor dice segura
+    CHECK(std::string_view(rotulo_zona(TipoZona::SEGURA)) == "Safety zone");
+    CHECK(std::string_view(rotulo_zona(TipoZona::COMBATE)) == "Combat zone");
+    CHECK(std::string_view(rotulo_zona(TipoZona::NORMAL)) == "Normal zone");
+}
+
+TEST_CASE("icono_de_caja: S_PacketBox buff icons pick their slot from the sprite and the class") {
+    EstadoJugador j{};
+    const i32 nada[4] = {};
+    auto tiene = [&](int ranura) {
+        for (u32 i = 0; i < j.n_efectos; ++i)
+            if (j.efectos[i].clase == EA_ICONO && j.efectos[i].tipo == EFECTO_RANURA + ranura) return true;
+        return false;
+    };
+    icono_de_caja(j, 35, 600, nada, 0x16de, 0, 1000);  // polymorph a un sprite del rango 0x16dd-0x16e6
+    CHECK(tiene(0x4b));
+    CHECK_FALSE(tiene(0x27));
+    icono_de_caja(j, 35, 600, nada, 0x100, 0, 1000);  // otro sprite: la otra casilla lo reemplaza
+    CHECK(tiene(0x27));
+    CHECK_FALSE(tiene(0x4b));
+    icono_de_caja(j, 35, 0, nada, 0x100, 0, 2000);  // t 0 removes
+    CHECK(j.n_efectos == 0);
+    icono_de_caja(j, 36, 60, nada, 0, 0, 1000);
+    CHECK(tiene(0x29));
+    icono_de_caja(j, 36, 0, nada, 0, 0, 1000);
+    CHECK(j.n_efectos == 0);
+    const i32 espejo[4] = {0, 0, 0, 3};  // class icons: b3 = 3 -> 40 s
+    icono_de_caja(j, 21, 0, espejo, 0, 6, 0);  // illusionist: b3 -> slot 0x74
+    REQUIRE(j.n_efectos == 1);
+    CHECK(tiene(0x74));
+    CHECK(j.efectos[0].fin == 40000);
+    icono_de_caja(j, 21, 0, nada, 0, 6, 0);
+    CHECK(j.n_efectos == 0);
+    icono_de_caja(j, 21, 0, espejo, 0, 4, 0);  // dark elf: b3 -> slot 0x20
+    CHECK(tiene(0x20));
+    const i32 n3[4] = {3, 0, 0, 0};
+    icono_de_caja(j, 75, 0, n3, 0, 0, 0);  // n = 3 > 0: casilla 0x87 hasta que 59 la quite
+    CHECK(tiene(0x87));
+    icono_de_caja(j, 59, 0, nada, 0, 0, 0);
+    CHECK_FALSE(tiene(0x87));
+}
+
+TEST_CASE("S_ChangeName renames the object") {
+    Mundo m;
+    std::vector<Evento> ev{poner(5, 1, 1, "Old")};
+    aplicar_eventos(m, ev, 0);
+    Evento e{};
+    e.tipo = Ev::CAMBIO_NOMBRE;
+    e.id = 5;
+    e.s[0] = "$1234";
+    ev = {e};
+    aplicar_eventos(m, ev, 0);
+    const Slot s = m.objetos.buscar(5);
+    REQUIRE(s != SIN_SLOT);
+    CHECK(texto(m, m.objetos.col<O_NOMBRE>()[s]) == "$1234");
+}
+
+TEST_CASE("buff start lines come from the S_SkillSound tail (RE_ROUND7)") {
+    CHECK(mensaje_inicio_ranura(0x42) == 0x42a);  // gfx 0x16c1: string-e 1066
+    CHECK(mensaje_inicio_ranura(0x38) == 0);      // silent
+    CHECK(mensaje_inicio_ranura(0x40) == 0x413);
+    CHECK(mensaje_inicio_ranura(0x99) == 0x5a5);
 }

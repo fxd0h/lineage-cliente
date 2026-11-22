@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include "mundo/mundo.h"
+#include "mundo/subida_nivel.h"
+#include "mundo/tabla_buffs.h"
 
 namespace lin {
 
@@ -53,6 +55,12 @@ float porcentaje_exp(i32 nivel, i32 exp) {
     return p < 0 ? 0 : (p > 100 ? 100 : p);
 }
 
+i64 exp_escalada(i32 nivel, i32 exp, i64 escala) {
+    if (nivel < 1 || nivel >= NIVELES) return 0;
+    const i64 base = EXP_NIVEL[nivel - 1], sig = EXP_NIVEL[nivel];
+    return exp < base || sig <= base ? 0 : (exp - base) * escala / (sig - base);
+}
+
 double factor_intervalo(const EstadoJugador& j, Intervalo t) {
     double f = 1.0;
     if (j.haste == 1) f *= 0.75;
@@ -78,21 +86,52 @@ void agregar_efecto(Mundo& m, const EfectoVisual& e) {
     m.siguiente_efecto = (m.siguiente_efecto + 1) % MAX_EFECTOS_VISUALES;
 }
 
+// Encola el mensaje de fin de efecto de una casilla (cliente original: tabla +0x10), que se muestra un segundo después (ver eventos_hechizos).
+static void encolar_fin(EstadoJugador& j, const EfectoActivo& ef, u64 ahora) {
+    const int r = ranura_de_efecto_activo(ef.clase, ef.tipo);
+    if (r < 0 || !BUFF_FIN_MSG[r] || j.n_fin_pendientes == MAX_FIN_PENDIENTES) return;
+    j.fin_pendientes[j.n_fin_pendientes++] = {BUFF_FIN_MSG[r], ahora + 1000};
+}
+
 void vencer_efectos(EstadoJugador& j, u64 ahora) {
     for (u32 i = 0; i < j.n_efectos;) {
-        if (j.efectos[i].fin <= ahora) j.efectos[i] = j.efectos[--j.n_efectos];
-        else ++i;
+        if (j.efectos[i].fin <= ahora) {
+            encolar_fin(j, j.efectos[i], ahora);
+            j.efectos[i] = j.efectos[--j.n_efectos];
+        } else {
+            ++i;
+        }
     }
 }
 
 void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 ahora) {
     // Haste, brave, fuerza y destreza son uno de cada clase, sea cual sea el tipo (la poción de
     // fuerza termina con otro tipo que el que empezó); los demás, uno por tipo.
-    bool unico = clase == EA_HASTE || clase == EA_BRAVE || clase == EA_FUERZA || clase == EA_DESTREZA;
+    const bool unico = clase == EA_HASTE || clase == EA_BRAVE || clase == EA_FUERZA || clase == EA_DESTREZA;
+    auto es_este = [&](const EfectoActivo& e) { return e.clase == clase && (unico || e.tipo == tipo); };
+    if (segundos > 0) {
+        // Grupos de exclusión de la tabla de buffs (+8): el efecto nuevo quita las otras casillas activas de su grupo distinto de cero.
+        const int nueva = ranura_de_efecto_activo(clase, tipo);
+        // Fijar una casilla en el original es idempotente: un segundo paquete para la misma casilla reemplaza al primero.
+        for (u32 k = 0; k < j.n_efectos && nueva >= 0;) {
+            if (!es_este(j.efectos[k]) && ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == nueva) j.efectos[k] = j.efectos[--j.n_efectos];
+            else ++k;
+        }
+        if (nueva >= 0 && BUFF_GRUPO[nueva]) {
+            for (u32 k = 0; k < j.n_efectos;) {
+                const int r = ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo);
+                if (r >= 0 && r != nueva && BUFF_GRUPO[r] == BUFF_GRUPO[nueva] && !es_este(j.efectos[k])) j.efectos[k] = j.efectos[--j.n_efectos];
+                else ++k;
+            }
+        }
+    }
     u32 i = 0;
-    while (i < j.n_efectos && !(j.efectos[i].clase == clase && (unico || j.efectos[i].tipo == tipo))) ++i;
+    while (i < j.n_efectos && !es_este(j.efectos[i])) ++i;
     if (segundos <= 0) {
-        if (i < j.n_efectos) j.efectos[i] = j.efectos[--j.n_efectos];
+        if (i < j.n_efectos) {
+            encolar_fin(j, j.efectos[i], ahora);
+            j.efectos[i] = j.efectos[--j.n_efectos];
+        }
         return;
     }
     if (i == j.n_efectos) {
@@ -102,6 +141,85 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
 }
 
+// El exe guarda un byte por casilla de buff, [0x81680c + casilla], activo mientras la casilla corre (0x4647a0 / 0x464760).
+bool ranura_activa(const EstadoJugador& j, int ranura) {
+    for (u32 k = 0; k < j.n_efectos; ++k)
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) return true;
+    return false;
+}
+
+// 0x464760: quita el ícono de una casilla en silencio (sin mensaje de fin de efecto).
+void quitar_ranura(EstadoJugador& j, int ranura) {
+    for (u32 k = 0; k < j.n_efectos;) {
+        if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) j.efectos[k] = j.efectos[--j.n_efectos];
+        else ++k;
+    }
+}
+
+// S_SkillSound propio con el gráfico 870 (Cancellation), exe 0x48bc15..0x48bdb4: el cliente quita los íconos de buff.
+void cancelacion_propia(EstadoJugador& j) {
+    if (ranura_activa(j, 0x4d)) quitar_ranura(j, 0x4d);
+    else if (ranura_activa(j, 0x4e)) quitar_ranura(j, 0x4e);
+    if (!ranura_activa(j, 0x2b)) {  // mientras corre la casilla 0x2b (S_SkillSound 0x8ba), los dos rangos de abajo se mantienen
+        for (int r = 0xc; r < 0x3b; ++r)
+            if (r != 0x2c) quitar_ranura(j, r);
+        for (int r = 0x42; r <= 0x48; ++r)
+            if (r != 0x46 && r != 0x47) quitar_ranura(j, r);
+    }
+    for (int r : {3, 0x65, 0x6b, 0x6c, 0x6f, 0x71, 0x72, 0x74, 0x75, 0x78, 0x7b, 0x7c, 0x7d, 0x80, 0x81, 0x84, 0x99}) quitar_ranura(j, r);
+    for (int r = 0x53; r <= 0x5a; ++r) quitar_ranura(j, r);
+    for (int r = 0x5d; r <= 0x64; ++r) quitar_ranura(j, r);
+    for (int r = 0x88; r <= 0x8f; ++r) quitar_ranura(j, r);
+    for (int r : {0x51, 0x4f, 0x50})  // solo la primera activa de estas tres
+        if (ranura_activa(j, r)) {
+            quitar_ranura(j, r);
+            break;
+        }
+}
+
+void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora) {
+    poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), segundos, ahora);
+}
+
+void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora) {
+    auto poner = [&](int ranura, i32 seg) { poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), seg, ahora); };
+    switch (subtipo) {
+    case 35:  // polymorph: casilla 0x4b para los sprites 0x16dd-0x16e6, si no 0x27; 0 quita todas las casillas de polymorph
+        for (int r : {0x27, 0x4b, 0x6d, 0x70, 0x73}) poner(r, 0);
+        if (segundos > 0) poner(gfx_propio >= 0x16dd && gfx_propio <= 0x16e6 ? 0x4b : 0x27, segundos);
+        break;
+    case 36: poner(0x29, segundos); break;  // chat ban
+    case 56:  // casilla 0x5c cuando el segundo h está en 0xc20-0xc29, si no 0x52; t <= 0 quita las dos
+        poner(0x52, 0);
+        poner(0x5c, 0);
+        if (segundos > 0) poner(extra[0] >= 0xc20 && extra[0] <= 0xc29 ? 0x5c : 0x52, segundos);
+        break;
+    case 59: poner(0x87, 0); break;
+    case 74: poner(0x4a, segundos); break;
+    case 75: poner(0x87, extra[0] > 0 ? 86400 : 0); break;  // hasta el 59 o n = 0 (el paquete no trae duración)
+    case 21: {
+        // Cuatro íconos por clase, cada uno de b*16-8 s: elfo oscuro 0x1f 0x1d 0x1e 0x20, ilusionista b3 -> 0x74, el resto 0xe 0x11 0xf 0x10.
+        static constexpr int OSCURO[4] = {0x1f, 0x1d, 0x1e, 0x20}, OTRAS[4] = {0xe, 0x11, 0xf, 0x10};
+        for (int i = 0; i < 4; ++i) {
+            const int r = clase == 4 ? OSCURO[i] : (clase == 6 && i == 3) ? 0x74 : OTRAS[i];
+            poner(r, extra[i] > 0 ? extra[i] * 16 - 8 : 0);
+        }
+        break;
+    }
+    default: break;
+    }
+}
+
+// Reproduce el efecto de subida de nivel sobre el jugador cuando el nivel informado subió desde `previo`.
+static void efecto_subida_nivel(Mundo& m, i32 previo, u64 ahora) {
+    if (!subida_de_nivel(previo, m.jugador.nivel) || m.jugador.id == 0) return;
+    EfectoVisual ef;
+    ef.gfx = static_cast<GfxId>(GFX_SUBIDA_NIVEL);
+    ef.objeto = m.jugador.id;
+    ef.inicio = ahora;
+    agregar_efecto(m, ef);
+}
+
 void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
     TablaObjetos& o = m.objetos;
     for (const Evento& e : eventos) {
@@ -109,6 +227,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         case Ev::ENTRAR_JUEGO: m.en_juego = true; break;
         case Ev::ESTADO_PROPIO: {
             EstadoJugador& j = m.jugador;
+            const i32 nivel_previo = j.nivel;
             j.id = e.id;
             j.nivel = e.v[EP_NIVEL];
             j.exp = e.v[EP_EXP];
@@ -126,6 +245,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             j.comida = e.v[EP_COMIDA];
             j.peso = e.v[EP_PESO];
             j.legal = e.v[EP_LEGAL];
+            efecto_subida_nivel(m, nivel_previo, ahora);
             break;
         }
         case Ev::MAPA:
@@ -145,7 +265,10 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             m.submarino = e.v[1] != 0;
             break;
         case Ev::PONER_OBJETO: {
+            const bool existia = o.buscar(e.id) != SIN_SLOT;
             Slot s = o.insertar(e.id);
+            const u8 accion_previa = existia ? o.col<O_ACCION>()[s] : u8{0xFF};
+            const u64 t_previa = existia ? o.col<O_TACCION>()[s] : 0;
             o.col<O_X>()[s] = static_cast<u16>(e.v[OB_X]);
             o.col<O_Y>()[s] = static_cast<u16>(e.v[OB_Y]);
             o.col<O_XANT>()[s] = o.col<O_X>()[s];
@@ -154,6 +277,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_VEL>()[s] = static_cast<u8>(e.v[OB_VEL]);
             o.col<O_CANTIDAD>()[s] = static_cast<u32>(e.v[OB_CANTIDAD]);
             o.col<O_CLAN>()[s] = static_cast<u32>(e.v[OB_CLAN]);
+            if (e.id == m.jugador.id) m.jugador.rango_clan = e.v[OB_RANGO];
             o.col<O_LEGAL>()[s] = static_cast<i16>(e.v[OB_LEGAL]);
             o.col<O_DURMOV>()[s] = duracion_paso(m, static_cast<GfxId>(e.v[OB_GFX]), static_cast<u8>(e.v[OB_ESTADO]),
                                                  static_cast<u8>(e.v[OB_VEL]));
@@ -163,6 +287,12 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // Muerto al aparecer (un cadáver en el suelo): directamente el último frame de morir.
             o.col<O_ACCION>()[s] = e.v[OB_ESTADO] == ESTADO_MUERTO ? ACC_MORIR : 0xFF;
             o.col<O_TACCION>()[s] = 0;
+            // El servidor manda S_DoActionGFX (aparecer / ocultarse) justo antes del S_NPCPack con el estado nuevo:
+            // se deja seguir esa acción reciente en vez de cortarla.
+            if (existia && e.v[OB_ESTADO] != ESTADO_MUERTO && accion_previa != 0xFF && ahora - t_previa < 1500) {
+                o.col<O_ACCION>()[s] = accion_previa;
+                o.col<O_TACCION>()[s] = t_previa;
+            }
             if (e.id == m.jugador.id) m.jugador.muerto = e.v[OB_ESTADO] == ESTADO_MUERTO;
             // Tres gfx traen siempre luz 14, mande lo que mande el servidor (4ccf04 del original).
             const i32 gfx_luz = e.v[OB_GFX];
@@ -188,6 +318,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         case Ev::ANILLO: {
             const u8 bit = static_cast<u8>(1u << (e.v[0] & 7));
             m.jugador.anillos = static_cast<u8>(e.v[1] ? m.jugador.anillos | bit : m.jugador.anillos & ~bit);
+            if (e.v[0] >= 0 && e.v[0] < 6) m.jugador.habilidad[e.v[0]] = static_cast<u8>(e.v[1]);
             break;
         }
         case Ev::NOMBRE_ROSA: {
@@ -209,6 +340,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_Y>()[s] = static_cast<u16>(e.v[1]);
             o.col<O_DIR>()[s] = static_cast<u8>(e.v[2]);
             o.col<O_TMOV>()[s] = ahora;
+            o.col<O_ZANCADA>()[s] ^= 1;
             break;
         }
         case Ev::QUITAR_OBJETO: o.quitar(e.id); break;
@@ -222,7 +354,17 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // anti-acelerador, que mide con el sprite de la forma actual).
             Slot s = o.buscar(e.id);
             if (s == SIN_SLOT) break;
+            const GfxId anterior = o.col<O_GFX>()[s];
             o.col<O_GFX>()[s] = static_cast<GfxId>(e.v[CF_GFX]);
+            // Atributo 113: el gfx nuevo nombra un efecto que se reproduce en el objeto cuando se transforma en él.
+            if (m.sprites && anterior != o.col<O_GFX>()[s])
+                if (const GfxId morfo = m.sprites->morfo(o.col<O_GFX>()[s])) {
+                    EfectoVisual ef;
+                    ef.gfx = morfo;
+                    ef.objeto = e.id;
+                    ef.inicio = ahora;
+                    agregar_efecto(m, ef);
+                }
             if (!e.v[CF_ARMA] && o.col<O_ESTADO>()[s] != ESTADO_MUERTO) o.col<O_ESTADO>()[s] = 0;
             if (!moviendose(m, s, ahora))
                 o.col<O_DURMOV>()[s] = duracion_paso(m, o.col<O_GFX>()[s], o.col<O_ESTADO>()[s], o.col<O_VEL>()[s]);
@@ -244,6 +386,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (e.id == m.jugador.id && o.col<O_ACCION>()[s] == e.v[0] && ahora - o.col<O_TACCION>()[s] < 500) break;
             o.col<O_ACCION>()[s] = static_cast<u8>(e.v[0]);
             o.col<O_TACCION>()[s] = ahora;
+            o.col<O_DANO_RAPIDO>()[s] = 0;  // S_DoActionGFX(2) plays the damage at its full length
             // Una puerta queda abierta o cerrada (un portón o una torre, dañados): el estado guarda la
             // última (ver elegir_accion).
             if (m.sprites && accion_fija(m.sprites->tipo(o.col<O_GFX>()[s]), static_cast<u8>(e.v[0]))) {
@@ -264,18 +407,32 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 } else {
                     o.col<O_ACCION>()[sa] = accion;
                     o.col<O_TACCION>()[sa] = ahora;
+                    o.col<O_DANO_RAPIDO>()[sa] = 0;
+                    // El atacante gira hacia su objetivo cuando se lo conoce (0x4c64d0 -> 0x4cc6c0); si no, solo el rumbo
+                    // del paquete (S_AttackPacketForNpc trae el rumbo del objetivo).
                     o.col<O_DIR>()[sa] = static_cast<u8>(e.v[AT_DIR]);
+                    if (const Slot st = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO])); st != SIN_SLOT && st != sa) {
+                        const int dx = (o.col<O_X>()[st] > o.col<O_X>()[sa]) - (o.col<O_X>()[st] < o.col<O_X>()[sa]);
+                        const int dy = (o.col<O_Y>()[st] > o.col<O_Y>()[sa]) - (o.col<O_Y>()[st] < o.col<O_Y>()[sa]);
+                        for (int d = 0; d < 8; ++d)
+                            if ((dx || dy) && DIR_DX[d] == dx && DIR_DY[d] == dy) o.col<O_DIR>()[sa] = static_cast<u8>(d);
+                    }
                 }
             }
             // El golpe sale en el frame "!" del ataque. Un hechizo o una flecha sale ahí y vuela
             // hasta el objetivo.
             u64 impacto = 0;
             if (sa != SIN_SLOT && m.sprites) {
+                // Solo el ataque (1) y el daño (2) suman la postura del arma (SetAction 0x4c96c0); si falta la fila del arma se usa
+                // la acción sola.
                 GfxId g = o.col<O_GFX>()[sa];
-                u8 accion = static_cast<u8>(e.v[AT_ACCION] + o.col<O_ESTADO>()[sa]);
+                const u8 base = static_cast<u8>(e.v[AT_ACCION]);
+                u8 accion = base == ACC_ATACAR || base == ACC_DANADO ? static_cast<u8>(base + o.col<O_ESTADO>()[sa]) : base;
+                if (!m.sprites->accion(g, accion)) accion = base;
                 impacto = m.sprites->ms_hasta_impacto(g, accion);
-                if (impacto == 0) impacto = m.sprites->ms_hasta_impacto(g, static_cast<u8>(e.v[AT_ACCION]));
             }
+            const bool con_impacto = impacto != TablaSprites::SIN_IMPACTO;
+            if (!con_impacto) impacto = 0;
             if (e.v[AT_GFX] > 0) {
                 EfectoVisual ef;
                 ef.gfx = static_cast<GfxId>(e.v[AT_GFX]);
@@ -287,12 +444,15 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 int celdas = std::max(std::abs(e.v[AT_X1] - e.v[AT_X0]), std::abs(e.v[AT_Y1] - e.v[AT_Y0]));
                 ef.vuelo_ms = static_cast<u32>(std::max(1, celdas)) * MS_VUELO_CELDA;
                 ef.inicio = inicio + impacto;
+                if (m.sprites && m.sprites->flash_de_luz(ef.gfx)) ef.flash = 1;
                 agregar_efecto(m, ef);
                 impacto += ef.vuelo_ms;
             }
             // Si acertó, el objetivo muestra el daño cuando lo alcanza el golpe.
             Slot so = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO]));
-            if (e.v[AT_GOLPE] && so != SIN_SLOT && o.col<O_ESTADO>()[so] != ESTADO_MUERTO) {
+            // El estremecimiento ocurre solo en el cuadro "!" del atacante (0x4c8950 -> 0x4cbef0): un ataque sin "!" nunca estremece
+            // (un hechizo o una flecha estremece cuando llega su gráfico).
+            if (e.v[AT_GOLPE] && (con_impacto || e.v[AT_GFX] > 0) && so != SIN_SLOT && o.col<O_ESTADO>()[so] != ESTADO_MUERTO) {
                 // Si el flinch ya se está mostrando (p. ej. predicho por la compensación de ataque, con
                 // su t de impacto todavía en el futuro), no reiniciarlo con el eco del servidor.
                 const u64 t = o.col<O_TACCION>()[so];
@@ -300,6 +460,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 if (!ya) {
                     o.col<O_ACCION>()[so] = ACC_DANADO;
                     o.col<O_TACCION>()[so] = std::max(ahora, inicio + impacto);
+                    o.col<O_DANO_RAPIDO>()[so] = 1;  // [+0x11d]: half length
                 }
             }
             break;
@@ -318,7 +479,35 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             ef.x0 = ef.x1 = e.v[EF_X];
             ef.y0 = ef.y1 = e.v[EF_Y];
             ef.inicio = ahora;
+            if (gfx_con_flash(ef.gfx)) ef.flash = 2;
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
+            if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
+                // S_SkillSound propio: algunos gráficos inician una casilla de buff que dura el tiempo de la tabla (exe 0x48a5c0).
+                if (ef.gfx == 0xbe) {
+                    // Gráfico 0xbe: la casilla depende del sprite propio (exe 0x48a656). La casilla 0x5b reemplaza a 0x26; 0x4f, 0x50, 0x51
+                    // y 0x84 se reemplazan entre sí.
+                    const Slot yo = o.buscar(m.jugador.id);
+                    const u32 sprite = yo == SIN_SLOT ? 0 : o.col<O_GFX>()[yo];
+                    const int r = ranura_de_gfx_be(sprite);
+                    if (r == 0x5b) poner_ranura(m.jugador, 0x26, 0, ahora);
+                    if (r >= 0x4f && r != 0x5b)
+                        for (int otro : {0x4f, 0x50, 0x51, 0x84})
+                            if (otro != r) poner_ranura(m.jugador, otro, 0, ahora);
+                    if (r >= 0) poner_ranura(m.jugador, r, sprite == 0x9d8 ? 300 : segundos_de_ranura(r), ahora);
+                } else {
+                    int r = ranura_de_skillsound(static_cast<u32>(ef.gfx));
+                    if (ef.gfx == 0x1130 && ranura_activa(m.jugador, 0x42)) r = 0x42;
+                    else if (ef.gfx == 0x16c1 && ranura_activa(m.jugador, 0x38)) r = 0x38;
+                    else if (ef.gfx == 0xf47 && ranura_activa(m.jugador, 0x44)) quitar_ranura(m.jugador, 0x44);
+                    else if (ef.gfx == 0x16c5 && ranura_activa(m.jugador, 0x24)) r = -1;
+                    if (ef.gfx == 870) cancelacion_propia(m.jugador);
+                    if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
+                    // Línea de inicio (cola de 0x48b679): el gfx 0x1130 es silencioso en ambas ramas; 0x16c1 al reiniciar la casilla 0x38 no tiene línea.
+                    if (r >= 0 && ef.gfx != 0x1130)
+                        if (const u16 msg = mensaje_inicio_ranura(r); msg && m.jugador.n_fin_pendientes < MAX_FIN_PENDIENTES)
+                            m.jugador.fin_pendientes[m.jugador.n_fin_pendientes++] = {msg, ahora};
+                }
+            }
             break;
         }
         case Ev::VELOCIDAD: {
@@ -326,7 +515,12 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (e.id == m.jugador.id) {
                 EstadoJugador& j = m.jugador;
                 (e.v[VE_CLASE] == VE_HASTE ? j.haste : j.brave) = tipo;
-                poner_efecto_activo(j, e.v[VE_CLASE] == VE_HASTE ? EA_HASTE : EA_BRAVE, tipo, tipo ? e.v[VE_SEG] : 0, ahora);
+                if (e.v[VE_CLASE] == VE_HASTE) poner_efecto_activo(j, EA_HASTE, tipo, tipo ? e.v[VE_SEG] : 0, ahora);
+                else if (tipo == 0) {  // el tipo 0 limpia las casillas de brave 2, 0x25 y 0x6e
+                    poner_efecto_activo(j, EA_BRAVE, 0, 0, ahora);
+                } else {
+                    poner_efecto_activo(j, EA_BRAVE, tipo_brave(tipo, j.clase), e.v[VE_SEG], ahora);
+                }
             }
             // Los pasos de los demás: rápido o lento (los de brave llegan antes y se encadenan solos).
             Slot s = o.buscar(e.id);
@@ -334,6 +528,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             break;
         }
         case Ev::ICONO_EFECTO: {
+            if (e.v[IE_CLASE] == IE_CONTEXTO) break;  // lo resuelve la app (necesita la clase): icono_de_caja
             static constexpr u8 CLASES[] = {EA_ESCUDO, EA_AURA, EA_ICONO, EA_FUERZA, EA_DESTREZA, EA_EVA};
             poner_efecto_activo(m.jugador, CLASES[e.v[IE_CLASE]], static_cast<u8>(e.v[IE_TIPO]), e.v[IE_SEG], ahora);
             break;
@@ -358,7 +553,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_LUZ>()[s] = static_cast<u8>(luz);
             break;
         }
-        case Ev::HORA_JUEGO: m.hora = e.v[0]; break;
+        case Ev::HORA_JUEGO: m.hora = e.v[0]; ++m.hora_n; break;
         case Ev::CLIMA: {
             // S_Weather (489c82 del original): 0xTN, tipo e intensidad. Cada tipo guarda lo suyo: el
             // servidor manda 0x13 y después 0x00, que apaga la nieve y deja la lluvia. Una intensidad
@@ -371,16 +566,32 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         }
         case Ev::HP: m.jugador.hp = e.v[0]; m.jugador.hp_max = e.v[1]; break;
         case Ev::MP: m.jugador.mp = e.v[0]; m.jugador.mp_max = e.v[1]; break;
-        case Ev::EXPERIENCIA: m.jugador.nivel = e.v[0]; m.jugador.exp = e.v[1]; break;
+        case Ev::EXPERIENCIA: {
+            const i32 nivel_previo = m.jugador.nivel;
+            m.jugador.nivel = e.v[0];
+            m.jugador.exp = e.v[1];
+            efecto_subida_nivel(m, nivel_previo, ahora);
+            break;
+        }
         case Ev::LEGAL: {
             if (e.id == m.jugador.id) m.jugador.legal = e.v[0];
             Slot s = o.buscar(e.id);
             if (s != SIN_SLOT) o.col<O_LEGAL>()[s] = static_cast<i16>(e.v[0]);
             break;
         }
+        case Ev::CAMBIO_NOMBRE: {
+            Slot s = o.buscar(e.id);
+            if (s != SIN_SLOT) o.col<O_NOMBRE>()[s] = guardar_texto(m, e.s[0]);
+            break;
+        }
         case Ev::TITULO: {
             Slot s = o.buscar(e.id);
             if (s != SIN_SLOT) o.col<O_TITULO>()[s] = guardar_texto(m, e.s[0]);
+            break;
+        }
+        case Ev::CLAN_EMBLEMA_OBJETO: {  // sincronización de emblemas de 3.80C: cambió el id de clan (emblema) del objeto
+            Slot s = o.buscar(e.id);
+            if (s != SIN_SLOT) o.col<O_CLAN>()[s] = static_cast<u32>(e.v[0]);
             break;
         }
         case Ev::SP_MR: m.jugador.sp = e.v[0]; m.jugador.mr = e.v[1]; break;
@@ -440,10 +651,30 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         }
         case Ev::PARALISIS: {
             const u8 t = static_cast<u8>(e.v[0]);
+            // Aturdimiento (22 / 23) y atadura (24 / 25) también muestran sus casillas de buff (0x3e, 0x3d).
+            if (t == ATURDIDO || t == ATADO) poner_ranura(m.jugador, t == ATURDIDO ? 0x3e : 0x3d, segundos_de_ranura(t == ATURDIDO ? 0x3e : 0x3d), ahora);
+            if (t == ATURDIDO + 1 || t == ATADO + 1) poner_ranura(m.jugador, t == ATURDIDO + 1 ? 0x3e : 0x3d, 0, ahora);
             if (t == PARALISIS || t == PARALISIS_2 || t == SUENO || t == CONGELADO || t == ATURDIDO || t == ATADO)
                 m.jugador.inmovil = t;
             else if (t != 7 && t == m.jugador.inmovil + 1)
                 m.jugador.inmovil = 0;
+            break;
+        }
+        case Ev::MENSAJE_SERVIDOR: {
+            // Mensajes que manejan la casilla 0x3f: 0x11e la fija por atoi(arg) * 20 s, 0x120 la limpia, 0x99 fija el valor por omisión de la tabla.
+            const int id = e.v[MS_ID];
+            if (id == 0x11e) {
+                i32 n = 0;
+                for (char ch : e.s[0]) {
+                    if (ch < '0' || ch > '9') break;
+                    n = std::min(n * 10 + (ch - '0'), 100000);
+                }
+                poner_ranura(m.jugador, 0x3f, n * 20, ahora);
+            } else if (id == 0x120) {
+                poner_ranura(m.jugador, 0x3f, 0, ahora);
+            } else if (id == 0x99) {
+                poner_ranura(m.jugador, 0x3f, segundos_de_ranura(0x3f), ahora);
+            }
             break;
         }
         case Ev::CEGUERA: m.jugador.ceguera = static_cast<u8>(e.v[0]); break;
@@ -479,10 +710,12 @@ static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) 
         ruta += seg;
         if (std::filesystem::exists(ruta)) return ruta;
     }
-    std::string ruta = ruta_real(rec.carpeta() + nombre_segmento(mapa, x, y));
-    // Sin .s32, el formato viejo (.seg): el Chaotic Temple y el norte de Gludio solo están así.
+    const std::string ruta = rec.ruta_archivo(nombre_segmento(mapa, x, y));
+    // Sin el .s32, el formato viejo .seg: Chaotic Temple y el norte de Gludio solo existen así.
     if (!std::filesystem::exists(ruta)) {
-        std::string seg = ruta_real(ruta.substr(0, ruta.size() - 3) + "seg");
+        std::string nombre = nombre_segmento(mapa, x, y);
+        nombre.replace(nombre.size() - 3, 3, "seg");
+        const std::string seg = rec.ruta_archivo(nombre);
         if (std::filesystem::exists(seg)) return seg;
     }
     return ruta;
@@ -535,7 +768,7 @@ const SegmentoMapa* segmento(Mundo& m, const Recursos& rec, int x, int y) {
     SegmentoMapa s;
     const std::string ruta = ruta_segmento(rec, m.mapa, x, y);
     bool ok = leer_archivo(ruta, datos) && decodificar_segmento(ruta, datos, x & ~63, y & ~63, s);
-    // Linux: la carpeta "map" puede venir como "Map"; leer_archivo la busca sin distinguir mayúsculas.
+    // Linux: la carpeta "map" puede venir como "Map"; leer_archivo resuelve con ruta_real.
     if (!ok) {
         m.indice_segmentos.poner(k, SEG_NO_EXISTE);
         return nullptr;
@@ -551,6 +784,12 @@ bool celda_pasable(Mundo& m, const Recursos& rec, int x, int y) {
     int lx = x - s->base_x, ly = y - s->base_y;
     // Bit 0 del atributo = media celda bloqueada (verificado contra los mapas del servidor).
     return !((s->atributo_en(lx, ly, 0) & 1) && (s->atributo_en(lx, ly, 1) & 1));
+}
+
+TipoZona tipo_zona_celda(Mundo& m, const Recursos& rec, int x, int y) {
+    const SegmentoMapa* s = segmento(m, rec, x, y);
+    if (!s) return TipoZona::NORMAL;
+    return tipo_zona_de_atributo(s->atributo_en(x - s->base_x, y - s->base_y, 0));
 }
 
 bool es_portal(Mundo& m, const Recursos& rec, int x, int y) {
@@ -617,8 +856,10 @@ double fraccion_frame(const Mundo& m, Slot s, u64 ahora) {
     const u64 transcurrido = ahora - o.col<O_TMOV>()[s], duracion = o.col<O_DURMOV>()[s];
     const RangoAccion* r = nullptr;
     if (m.sprites) {
-        r = m.sprites->accion(o.col<O_GFX>()[s], static_cast<u8>(ACC_CAMINAR + o.col<O_ESTADO>()[s]));
-        if (!r) r = m.sprites->accion(o.col<O_GFX>()[s], ACC_CAMINAR);
+        const GfxId gfx = o.col<O_GFX>()[s];
+        if (m.sprites->zancada(gfx)) r = m.sprites->accion(gfx, m.sprites->accion_caminar(gfx, o.col<O_ZANCADA>()[s]));
+        if (!r) r = m.sprites->accion(gfx, static_cast<u8>(ACC_CAMINAR + o.col<O_ESTADO>()[s]));
+        if (!r) r = m.sprites->accion(gfx, ACC_CAMINAR);
     }
     u32 total = r ? m.sprites->ticks(*r) : 0;
     if (total == 0) return static_cast<double>(transcurrido * 4 / duracion) / 4.0;

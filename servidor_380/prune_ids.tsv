@@ -1,0 +1,1409 @@
+kind	id	reason
+doll	47110	gfx 7662 in no source
+doll	47111	gfx 7661 in no source
+doll	47112	gfx 7659 in no source
+doll	47113	gfx 7660 in no source
+item	850	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20270	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20271	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20461	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20462	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20463	private: not in the official TW tables or 3.81C desc-c.tbl
+item	20464	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21170	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21224	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21225	private: not in the official TW tables or 3.81C desc-c.tbl
+item	21228	ground gfx 14490 in no source
+item	21229	private: not in the official TW tables or 3.81C desc-c.tbl
+item	28002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	28003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30074	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30075	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30076	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30077	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30078	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30079	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30080	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30081	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30082	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30083	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30211	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30421	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30422	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30423	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30424	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30425	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30426	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30427	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30428	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30429	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30430	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30471	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30472	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30473	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30474	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30475	private: not in the official TW tables or 3.81C desc-c.tbl
+item	30476	private: not in the official TW tables or 3.81C desc-c.tbl
+item	39007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	39008	private: not in the official TW tables or 3.81C desc-c.tbl
+item	39009	private: not in the official TW tables or 3.81C desc-c.tbl
+item	39010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	40418	ground gfx 427 in no source
+item	40731	private: not in the official TW tables or 3.81C desc-c.tbl
+item	40732	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42100	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42101	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42102	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42103	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42104	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42105	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42106	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42107	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42108	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42109	private: not in the official TW tables or 3.81C desc-c.tbl
+item	42110	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47054	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47055	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47056	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47057	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47058	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47059	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47060	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47061	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47062	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47063	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47064	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47065	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47066	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47067	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47068	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47069	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47070	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47071	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47072	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47073	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47074	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47075	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47076	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47077	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47078	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47079	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47080	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47081	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47082	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47083	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47084	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47085	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47086	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47087	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47088	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47089	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47090	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47091	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47092	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47093	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47094	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47095	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47096	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47097	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47098	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47099	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47100	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47101	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47102	private: not in the official TW tables or 3.81C desc-c.tbl
+item	47110	gfx: doll gfx 7662 in no source
+item	47111	gfx: doll gfx 7661 in no source
+item	47112	gfx: doll gfx 7659 in no source
+item	47113	gfx: doll gfx 7660 in no source
+item	49022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	49023	private: not in the official TW tables or 3.81C desc-c.tbl
+item	49024	private: not in the official TW tables or 3.81C desc-c.tbl
+item	49025	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70221	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70222	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70223	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70224	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70225	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70226	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70227	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70228	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70230	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70231	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70232	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70233	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70234	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70235	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70236	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70237	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70239	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70240	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70241	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70242	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70243	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70244	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70245	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70246	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70248	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70249	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70250	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70251	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70252	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70253	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70254	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70255	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70256	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70258	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70259	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70260	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70261	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70262	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70263	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70264	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70265	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70266	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70268	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70269	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70270	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70271	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70272	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70273	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70274	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70275	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70276	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70278	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70279	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70280	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70281	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70282	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70283	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70284	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70285	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70286	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70288	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70289	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70290	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70291	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70292	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70293	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70294	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70295	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70296	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70298	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70299	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70300	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70301	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70302	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70303	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70304	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70305	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70306	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70308	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70309	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70310	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70311	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70312	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70313	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70314	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70315	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70316	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70318	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70319	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70320	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70321	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70322	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70323	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70324	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70325	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70326	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70328	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70329	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70330	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70331	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70332	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70333	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70334	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70335	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70336	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70338	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70339	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70340	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70341	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70342	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70343	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70344	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70345	private: not in the official TW tables or 3.81C desc-c.tbl
+item	70346	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301006	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301008	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301009	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301011	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301012	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301013	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301014	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301015	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301016	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301017	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301018	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301020	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301021	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301023	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301024	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301025	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301026	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301027	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301028	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301029	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301031	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301032	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301033	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301034	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301035	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301036	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301037	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301038	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301039	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301041	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301042	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301043	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301044	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301045	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301046	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301047	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301048	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301049	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301051	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301052	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301053	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301054	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301055	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301056	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301057	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301058	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301059	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301060	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301061	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301062	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301063	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301064	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301065	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301066	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301067	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301068	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301069	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301070	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301071	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301072	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301073	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301074	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301075	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301076	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301077	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301078	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301079	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301080	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301081	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301082	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301083	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301084	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301085	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301086	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301087	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301088	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301089	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301090	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301091	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301092	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301093	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301094	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301095	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301096	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301097	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301098	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301099	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301130	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301140	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301150	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301160	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301211	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301212	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301213	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301214	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301215	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301216	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301217	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301218	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301219	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301221	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301222	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301223	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301224	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301225	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301226	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301227	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301228	private: not in the official TW tables or 3.81C desc-c.tbl
+item	301229	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310127	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310128	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310129	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310134	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310135	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310136	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310137	private: not in the official TW tables or 3.81C desc-c.tbl
+item	310138	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320011	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320012	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320013	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320014	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320015	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320016	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320017	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320018	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320020	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320021	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320023	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320024	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320025	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320026	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320027	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320030	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320031	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320032	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320033	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320034	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320035	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320036	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320037	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320038	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320039	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320040	private: not in the official TW tables or 3.81C desc-c.tbl
+item	320041	private: not in the official TW tables or 3.81C desc-c.tbl
+item	330000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340011	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340012	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340013	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340015	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340016	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340017	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340018	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340020	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340021	private: not in the official TW tables or 3.81C desc-c.tbl
+item	340022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400027	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400028	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400029	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400030	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400031	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400032	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400037	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400040	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400042	private: not in the official TW tables or 3.81C desc-c.tbl
+item	400051	private: not in the official TW tables or 3.81C desc-c.tbl
+item	401028	private: not in the official TW tables or 3.81C desc-c.tbl
+item	401029	private: not in the official TW tables or 3.81C desc-c.tbl
+item	401030	private: not in the official TW tables or 3.81C desc-c.tbl
+item	401031	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402006	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402020	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402021	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402023	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402024	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402025	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402026	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402027	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402028	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402029	private: not in the official TW tables or 3.81C desc-c.tbl
+item	402030	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403006	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403008	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403009	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403011	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403012	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403013	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403014	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403015	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403016	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403017	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403018	private: not in the official TW tables or 3.81C desc-c.tbl
+item	403019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404006	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404008	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404051	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404052	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404053	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404054	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404055	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404057	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404058	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404059	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404060	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404061	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404063	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404064	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404065	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404066	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404067	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404100	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404101	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404102	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404103	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404104	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404105	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404106	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404107	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404108	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404109	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404110	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404111	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404112	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404113	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404114	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404115	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404116	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404117	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404118	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404119	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404120	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404121	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404122	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404123	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404124	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404125	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404126	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404127	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404128	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404129	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404130	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404131	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404132	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404147	ground gfx 14490 in no source
+item	404148	ground gfx 14490 in no source
+item	404149	ground gfx 14490 in no source
+item	404150	ground gfx 14490 in no source
+item	404151	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404152	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404153	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404180	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404181	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404182	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404183	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404184	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404185	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404186	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404187	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404188	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404189	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404190	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404191	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404192	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404193	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404194	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404195	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404196	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404197	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404198	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404199	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404200	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404201	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404202	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404203	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404204	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404205	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404206	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404207	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404208	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404209	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404210	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404211	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404212	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404213	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404214	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404215	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404216	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404217	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404218	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404219	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404220	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404221	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404222	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404223	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404224	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404225	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404226	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404227	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404228	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404229	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404230	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404231	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404232	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404233	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404234	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404235	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404236	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404237	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404238	private: not in the official TW tables or 3.81C desc-c.tbl
+item	404239	private: not in the official TW tables or 3.81C desc-c.tbl
+item	444444	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600000	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600001	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600002	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600003	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600004	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600005	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600006	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600007	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600008	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600009	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600010	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600011	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600012	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600013	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600014	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600015	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600016	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600017	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600018	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600019	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600020	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600021	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600022	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600023	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600024	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600025	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600026	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600027	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600028	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600029	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600030	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600031	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600032	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600033	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600034	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600035	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600036	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600037	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600038	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600039	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600041	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600042	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600043	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600044	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600045	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600046	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600047	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600048	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600049	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600050	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600051	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600052	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600053	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600054	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600055	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600056	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600057	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600058	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600059	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600060	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600061	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600062	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600063	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600064	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600065	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600066	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600067	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600068	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600069	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600070	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600071	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600072	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600073	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600074	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600075	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600076	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600077	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600078	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600079	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600080	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600201	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600202	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600203	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600204	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600205	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600206	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600207	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600208	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600209	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600210	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600211	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600212	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600213	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600214	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600215	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600216	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600217	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600218	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600219	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600220	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600221	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600222	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600223	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600224	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600225	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600226	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600227	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600228	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600229	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600230	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600231	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600232	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600233	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600234	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600235	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600236	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600237	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600238	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600239	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600303	ground gfx 15003 in no source
+item	600308	ground gfx 15003 in no source
+item	600310	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600311	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600312	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600313	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600314	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600315	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600316	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600317	ground gfx 14400 in no source
+item	600318	ground gfx 14398 in no source
+item	600319	ground gfx 14399 in no source
+item	600320	ground gfx 14401 in no source
+item	600321	ground gfx 14394 in no source
+item	600322	ground gfx 14392 in no source
+item	600323	ground gfx 14393 in no source
+item	600324	ground gfx 14395 in no source
+item	600350	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600351	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600352	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600353	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600354	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600355	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600356	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600357	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600358	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600359	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600360	ground gfx 14771 in no source
+item	600361	ground gfx 14771 in no source
+item	600362	ground gfx 14771 in no source
+item	600363	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600364	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600365	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600366	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600367	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600368	ground gfx 14397 in no source
+item	600373	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600374	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600375	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600376	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600377	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600378	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600379	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600380	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600381	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600382	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600383	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600384	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600400	icon 8647 in no source
+item	600416	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600417	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600418	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600419	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600420	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600421	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600422	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600423	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600424	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600425	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600426	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600427	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600428	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600432	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600433	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600434	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600435	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600436	private: not in the official TW tables or 3.81C desc-c.tbl
+item	600437	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999901	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999902	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999903	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999904	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999905	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999906	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999907	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999908	private: not in the official TW tables or 3.81C desc-c.tbl
+item	999909	private: not in the official TW tables or 3.81C desc-c.tbl
+npc	45019	gfx 3860 in no source
+npc	45050	gfx 3860 in no source
+npc	45059	gfx 146 in no source
+npc	45082	gfx 3864 in no source
+npc	45103	gfx 5685 in no source
+npc	45120	gfx 3864 in no source
+npc	45128	gfx 5691 in no source
+npc	45137	gfx 5683 in no source
+npc	45151	gfx 5690 in no source
+npc	45153	gfx 5684 in no source
+npc	45157	gfx 144 in no source
+npc	45165	gfx 4003 in no source
+npc	45179	gfx 3867 in no source
+npc	45183	gfx 5687 in no source
+npc	45184	gfx 146 in no source
+npc	45186	gfx 5688 in no source
+npc	45196	gfx 2354 in no source
+npc	45312	gfx 146 in no source
+npc	45348	gfx 146 in no source
+npc	45355	gfx 2367 in no source
+npc	45358	gfx 2369 in no source
+npc	45362	gfx 2360 in no source
+npc	45364	gfx 2435 in no source
+npc	45371	gfx 2368 in no source
+npc	45377	gfx 2350 in no source
+npc	45378	gfx 2372 in no source
+npc	45387	gfx 2351 in no source
+npc	45389	gfx 2366 in no source
+npc	45390	gfx 2364 in no source
+npc	45392	gfx 2357 in no source
+npc	45397	gfx 2976 in no source
+npc	45401	gfx 2370 in no source
+npc	45445	gfx 2353 in no source
+npc	45449	gfx 2365 in no source
+npc	45452	gfx 2363 in no source
+npc	45454	gfx 144 in no source
+npc	45461	gfx 4786 in no source
+npc	45465	gfx 4787 in no source
+npc	45469	gfx 2355 in no source
+npc	45470	gfx 2373 in no source
+npc	45477	gfx 2371 in no source
+npc	45503	gfx 4003 in no source
+npc	45505	gfx 2356 in no source
+npc	45509	gfx 2358 in no source
+npc	45531	gfx 2359 in no source
+npc	45538	gfx 2361 in no source
+npc	45578	gfx 2362 in no source
+npc	45718	gfx 144 in no source
+npc	45759	gfx 3864 in no source
+npc	45770	gfx 5939 in no source
+npc	45771	gfx 5684 in no source
+npc	45776	gfx 4516 in no source
+npc	45856	gfx 4786 in no source
+npc	45858	gfx 4787 in no source
+npc	45864	gfx 5693 in no source
+npc	45865	gfx 5695 in no source
+npc	45866	gfx 5695 in no source
+npc	45867	gfx 5694 in no source
+npc	45869	gfx 5693 in no source
+npc	45870	gfx 5695 in no source
+npc	45871	gfx 5695 in no source
+npc	45876	gfx 1093 in no source
+npc	45877	gfx 3520 in no source
+npc	45895	gfx 2976 in no source
+npc	45901	gfx 2976 in no source
+npc	45986	gfx 4786 in no source
+npc	45987	gfx 4787 in no source
+npc	46062	gfx 5694 in no source
+npc	46063	gfx 5693 in no source
+npc	46064	gfx 5695 in no source
+npc	50003	gfx 1511 in no source
+npc	50008	gfx 148 in no source
+npc	50009	gfx 703 in no source
+npc	50013	gfx 148 in no source
+npc	50016	gfx 1510 in no source
+npc	50017	gfx 984 in no source
+npc	50018	gfx 992 in no source
+npc	50019	gfx 800 in no source
+npc	50022	gfx 981 in no source
+npc	50025	gfx 148 in no source
+npc	50028	gfx 992 in no source
+npc	50029	gfx 800 in no source
+npc	50030	gfx 792 in no source
+npc	50031	gfx 2712 in no source
+npc	50032	gfx 148 in no source
+npc	50037	gfx 992 in no source
+npc	50038	gfx 800 in no source
+npc	50041	gfx 992 in no source
+npc	50042	gfx 800 in no source
+npc	50048	gfx 148 in no source
+npc	50053	gfx 793 in no source
+npc	50055	gfx 1510 in no source
+npc	50057	gfx 794 in no source
+npc	50058	gfx 148 in no source
+npc	50061	gfx 992 in no source
+npc	50062	gfx 800 in no source
+npc	50064	gfx 1514 in no source
+npc	50081	gfx 4141 in no source
+npc	50084	gfx 148 in no source
+npc	60502	gfx 148 in no source
+npc	60508	gfx 148 in no source
+npc	60510	gfx 148 in no source
+npc	60514	gfx 148 in no source
+npc	60516	gfx 148 in no source
+npc	60523	gfx 148 in no source
+npc	60525	gfx 148 in no source
+npc	60527	gfx 148 in no source
+npc	60529	gfx 148 in no source
+npc	60530	gfx 1997 in no source
+npc	60531	gfx 1997 in no source
+npc	60533	gfx 2650 in no source
+npc	60534	gfx 2649 in no source
+npc	60542	gfx 148 in no source
+npc	60552	gfx 148 in no source
+npc	60554	gfx 148 in no source
+npc	60558	gfx 3447 in no source
+npc	60559	gfx 148 in no source
+npc	60560	gfx 824 in no source
+npc	70001	gfx 1532 in no source
+npc	70003	gfx 700 in no source
+npc	70004	gfx 1513 in no source
+npc	70006	gfx 700 in no source
+npc	70007	gfx 1532 in no source
+npc	70008	gfx 1513 in no source
+npc	70011	gfx 148 in no source
+npc	70012	gfx 695 in no source
+npc	70015	gfx 1530 in no source
+npc	70017	gfx 266 in no source
+npc	70018	gfx 695 in no source
+npc	70019	gfx 700 in no source
+npc	70021	gfx 234 in no source
+npc	70022	gfx 148 in no source
+npc	70031	gfx 1507 in no source
+npc	70035	gfx 990 in no source
+npc	70041	gfx 1515 in no source
+npc	70042	gfx 1505 in no source
+npc	70044	gfx 697 in no source
+npc	70045	gfx 700 in no source
+npc	70046	gfx 1532 in no source
+npc	70050	gfx 991 in no source
+npc	70051	gfx 697 in no source
+npc	70065	gfx 991 in no source
+npc	70067	gfx 989 in no source
+npc	70069	gfx 991 in no source
+npc	70070	gfx 989 in no source
+npc	70072	gfx 234 in no source
+npc	70073	gfx 984 in no source
+npc	70074	gfx 990 in no source
+npc	70075	gfx 991 in no source
+npc	70077	gfx 792 in no source
+npc	70082	gfx 695 in no source
+npc	70083	gfx 695 in no source
+npc	70084	gfx 989 in no source
+npc	70086	gfx 1511 in no source
+npc	70089	gfx 1511 in no source
+npc	70094	gfx 1515 in no source
+npc	70097	gfx 1508 in no source
+npc	70098	gfx 4312 in no source
+npc	70099	gfx 792 in no source
+npc	70100	gfx 704 in no source
+npc	70101	gfx 705 in no source
+npc	70102	gfx 706 in no source
+npc	70507	gfx 985 in no source
+npc	70512	gfx 1512 in no source
+npc	70515	gfx 1511 in no source
+npc	70517	gfx 986 in no source
+npc	70518	gfx 987 in no source
+npc	70519	gfx 703 in no source
+npc	70523	gfx 988 in no source
+npc	70525	gfx 981 in no source
+npc	70529	gfx 234 in no source
+npc	70532	gfx 697 in no source
+npc	70537	gfx 983 in no source
+npc	70544	gfx 1515 in no source
+npc	70545	gfx 148 in no source
+npc	70547	gfx 148 in no source
+npc	70549	gfx 148 in no source
+npc	70550	gfx 148 in no source
+npc	70555	gfx 2436 in no source
+npc	70562	gfx 148 in no source
+npc	70568	gfx 696 in no source
+npc	70599	gfx 148 in no source
+npc	70601	gfx 148 in no source
+npc	70617	gfx 704 in no source
+npc	70632	gfx 792 in no source
+npc	70633	gfx 148 in no source
+npc	70649	gfx 4258 in no source
+npc	70650	gfx 4363 in no source
+npc	70652	gfx 4259 in no source
+npc	70655	gfx 1997 in no source
+npc	70656	gfx 148 in no source
+npc	70657	gfx 1997 in no source
+npc	70660	gfx 1997 in no source
+npc	70661	gfx 1997 in no source
+npc	70664	gfx 697 in no source
+npc	70687	gfx 148 in no source
+npc	70707	gfx 2649 in no source
+npc	70711	gfx 2711 in no source
+npc	70715	gfx 2724 in no source
+npc	70722	gfx 1513 in no source
+npc	70740	gfx 148 in no source
+npc	70773	gfx 697 in no source
+npc	70775	gfx 981 in no source
+npc	70776	gfx 148 in no source
+npc	70777	gfx 148 in no source
+npc	70778	gfx 148 in no source
+npc	70779	gfx 2438 in no source
+npc	70780	gfx 148 in no source
+npc	70782	gfx 2437 in no source
+npc	70789	gfx 148 in no source
+npc	70796	gfx 800 in no source
+npc	70798	gfx 2337 in no source
+npc	70802	gfx 986 in no source
+npc	70804	gfx 696 in no source
+npc	70805	gfx 1509 in no source
+npc	70809	gfx 148 in no source
+npc	70817	gfx 148 in no source
+npc	70831	gfx 5815 in no source
+npc	70836	gfx 982 in no source
+npc	70838	gfx 895 in no source
+npc	70852	gfx 896 in no source
+npc	70853	gfx 896 in no source
+npc	70862	gfx 148 in no source
+npc	70863	gfx 148 in no source
+npc	70873	gfx 704 in no source
+npc	70886	gfx 2963 in no source
+npc	70893	gfx 2964 in no source
+npc	70896	gfx 2977 in no source
+npc	70903	gfx 2978 in no source
+npc	70906	gfx 2977 in no source
+npc	70924	gfx 3800 in no source
+npc	70964	gfx 4308 in no source
+npc	70985	gfx 148 in no source
+npc	70986	gfx 826 in no source
+npc	70987	gfx 148 in no source
+npc	70992	gfx 148 in no source
+npc	70993	gfx 1997 in no source
+npc	70994	gfx 1997 in no source
+npc	70995	gfx 1997 in no source
+npc	71014	gfx 148 in no source
+npc	71015	gfx 148 in no source
+npc	71016	gfx 148 in no source
+npc	71017	gfx 148 in no source
+npc	71020	gfx 702 in no source
+npc	71039	gfx 5815 in no source
+npc	71040	gfx 5816 in no source
+npc	71041	gfx 5817 in no source
+npc	71042	gfx 5817 in no source
+npc	71043	gfx 5815 in no source
+npc	71044	gfx 5815 in no source
+npc	71045	gfx 5815 in no source
+npc	71046	gfx 924 in no source
+npc	71048	gfx 984 in no source
+npc	71051	gfx 4141 in no source
+npc	71052	gfx 1532 in no source
+npc	71053	gfx 704 in no source
+npc	71057	gfx 4137 in no source
+npc	71058	gfx 4368 in no source
+npc	71059	gfx 983 in no source
+npc	71063	gfx 4366 in no source
+npc	71064	gfx 4366 in no source
+npc	71065	gfx 4366 in no source
+npc	71066	gfx 4366 in no source
+npc	71067	gfx 4366 in no source
+npc	71068	gfx 4366 in no source
+npc	71069	gfx 4366 in no source
+npc	71070	gfx 4366 in no source
+npc	71071	gfx 4366 in no source
+npc	71072	gfx 4366 in no source
+npc	71073	gfx 4366 in no source
+npc	71075	gfx 5007 in no source
+npc	71076	gfx 5007 in no source
+npc	71078	gfx 1997 in no source
+npc	71079	gfx 1997 in no source
+npc	71095	gfx 3380 in no source
+npc	71115	gfx 4369 in no source
+npc	71121	gfx 1515 in no source
+npc	71124	gfx 1515 in no source
+npc	71143	gfx 3800 in no source
+npc	71146	gfx 3800 in no source
+npc	71147	gfx 3801 in no source
+npc	71170	gfx 5723 in no source
+npc	71175	gfx 2648 in no source
+npc	71176	gfx 2649 in no source
+npc	71177	gfx 2650 in no source
+npc	71184	gfx 148 in no source
+npc	71185	gfx 148 in no source
+npc	71187	gfx 148 in no source
+npc	71188	gfx 3447 in no source
+npc	71189	gfx 2978 in no source
+npc	71190	gfx 696 in no source
+npc	71191	gfx 991 in no source
+npc	71192	gfx 792 in no source
+npc	71193	gfx 705 in no source
+npc	71194	gfx 1528 in no source
+npc	71196	gfx 984 in no source
+npc	71197	gfx 1513 in no source
+npc	71246	gfx 2510 in no source
+npc	71252	gfx 6685 in no source
+npc	71253	gfx 6685 in no source
+npc	80047	gfx 4873 in no source
+npc	80049	gfx 4873 in no source
+npc	80050	gfx 4873 in no source
+npc	80051	gfx 4880 in no source
+npc	80052	gfx 4873 in no source
+npc	80053	gfx 4873 in no source
+npc	80054	gfx 4873 in no source
+npc	80055	gfx 4873 in no source
+npc	80056	gfx 4873 in no source
+npc	80064	gfx 4261 in no source
+npc	80065	gfx 4261 in no source
+npc	80066	gfx 4261 in no source
+npc	80067	gfx 4261 in no source
+npc	80068	gfx 4262 in no source
+npc	80069	gfx 4261 in no source
+npc	80070	gfx 4261 in no source
+npc	80071	gfx 4261 in no source
+npc	80072	gfx 4261 in no source
+npc	80073	gfx 4261 in no source
+npc	80074	gfx 4261 in no source
+npc	80076	gfx 5676 in no source
+npc	80088	gfx 702 in no source
+npc	80089	gfx 702 in no source
+npc	80092	gfx 6245 in no source
+npc	80093	gfx 703 in no source
+npc	80095	gfx 704 in no source
+npc	80097	gfx 800 in no source
+npc	80098	gfx 701 in no source
+npc	80100	gfx 1532 in no source
+npc	80128	gfx 800 in no source
+npc	80138	gfx 7008 in no source
+npc	80139	gfx 7017 in no source
+npc	80147	gfx 7019 in no source
+npc	80148	gfx 7019 in no source
+npc	81066	gfx 4003 in no source
+npc	81112	gfx 3757 in no source
+npc	81115	gfx 2337 in no source
+npc	81120	gfx 4263 in no source
+npc	81121	gfx 4359 in no source
+npc	81123	gfx 2499 in no source
+npc	81124	gfx 2499 in no source
+npc	81156	gfx 3801 in no source
+npc	81202	gfx 4873 in no source
+npc	81208	gfx 6120 in no source
+npc	81209	gfx 144 in no source
+npc	81245	gfx 5816 in no source
+npc	81256	gfx 7868 in no source
+npc	81257	gfx 7868 in no source
+npc	81280	gfx 1997 in no source
+npc	81281	gfx 1997 in no source
+npc	81288	gfx 7657 in no source
+npc	81289	gfx 7656 in no source
+npc	81290	gfx 7658 in no source
+npc	81291	gfx 7655 in no source
+npc	81292	gfx 7904 in no source
+npc	81297	gfx 5937 in no source
+npc	81311	gfx 7009 in no source
+npc	81322	gfx 7024 in no source
+npc	81334	gfx 6771 in no source
+npc	81335	gfx 6771 in no source
+npc	81349	gfx 4265 in no source
+npc	81367	gfx 8321 in no source
+npc	81373	gfx 2240 in no source
+npc	95021	gfx 6685 in no source
+npc	97003	gfx 3860 in no source
+npc	97005	gfx 3864 in no source
+poly	146	gfx 146 in no source
+poly	2284	gfx 2284 in no source
+poly	2323	gfx 2323 in no source
+poly	2374	gfx 2374 in no source
+poly	2376	gfx 2376 in no source
+poly	2377	gfx 2377 in no source
+poly	2378	gfx 2378 in no source
+poly	2384	gfx 2384 in no source
+poly	2385	gfx 2385 in no source
+poly	2386	gfx 2386 in no source
+poly	2387	gfx 2387 in no source
+poly	2388	gfx 2388 in no source
+poly	2437	gfx 2437 in no source
+poly	2438	gfx 2438 in no source
+poly	2501	gfx 2501 in no source
+poly	3101	gfx 3101 in no source
+poly	3102	gfx 3102 in no source
+poly	3103	gfx 3103 in no source
+poly	3126	gfx 3126 in no source
+poly	3630	gfx 3630 in no source
+poly	3631	gfx 3631 in no source
+poly	3632	gfx 3632 in no source
+poly	3633	gfx 3633 in no source
+poly	3634	gfx 3634 in no source
+poly	3860	gfx 3860 in no source
+poly	3861	gfx 3861 in no source
+poly	3862	gfx 3862 in no source
+poly	3863	gfx 3863 in no source
+poly	3864	gfx 3864 in no source
+poly	3865	gfx 3865 in no source
+poly	3866	gfx 3866 in no source
+poly	3867	gfx 3867 in no source
+poly	3868	gfx 3868 in no source
+poly	3869	gfx 3869 in no source
+poly	3870	gfx 3870 in no source
+poly	3871	gfx 3871 in no source
+poly	3872	gfx 3872 in no source
+poly	3873	gfx 3873 in no source
+poly	3874	gfx 3874 in no source
+poly	3875	gfx 3875 in no source
+poly	3876	gfx 3876 in no source
+poly	3877	gfx 3877 in no source
+poly	3878	gfx 3878 in no source
+poly	3879	gfx 3879 in no source
+poly	3880	gfx 3880 in no source
+poly	3881	gfx 3881 in no source
+poly	3882	gfx 3882 in no source
+poly	3883	gfx 3883 in no source
+poly	3884	gfx 3884 in no source
+poly	3885	gfx 3885 in no source
+poly	3886	gfx 3886 in no source
+poly	3887	gfx 3887 in no source
+poly	3888	gfx 3888 in no source
+poly	3889	gfx 3889 in no source
+poly	3890	gfx 3890 in no source
+poly	3891	gfx 3891 in no source
+poly	3892	gfx 3892 in no source
+poly	3893	gfx 3893 in no source
+poly	3894	gfx 3894 in no source
+poly	3895	gfx 3895 in no source
+poly	3896	gfx 3896 in no source
+poly	3897	gfx 3897 in no source
+poly	3898	gfx 3898 in no source
+poly	3899	gfx 3899 in no source
+poly	3900	gfx 3900 in no source
+poly	3901	gfx 3901 in no source
+poly	3902	gfx 3902 in no source
+poly	3903	gfx 3903 in no source
+poly	3904	gfx 3904 in no source
+poly	3905	gfx 3905 in no source
+poly	3906	gfx 3906 in no source
+poly	3945	gfx 3945 in no source
+poly	3950	gfx 3950 in no source
+poly	3952	gfx 3952 in no source
+poly	4000	gfx 4000 in no source
+poly	4001	gfx 4001 in no source
+poly	4002	gfx 4002 in no source
+poly	4004	gfx 4004 in no source
+poly	4767	gfx 4767 in no source
+poly	4769	gfx 4769 in no source
+poly	4917	gfx 4917 in no source
+poly	4918	gfx 4918 in no source
+poly	4919	gfx 4919 in no source
+poly	4920	gfx 4920 in no source
+poly	4921	gfx 4921 in no source
+poly	4922	gfx 4922 in no source
+poly	4923	gfx 4923 in no source
+poly	4924	gfx 4924 in no source
+poly	4925	gfx 4925 in no source
+poly	4926	gfx 4926 in no source
+poly	4928	gfx 4928 in no source
+poly	4929	gfx 4929 in no source
+poly	4932	gfx 4932 in no source
+poly	5976	gfx 5976 in no source
+poly	6002	gfx 6002 in no source
+poly	6034	gfx 6034 in no source
+poly	6035	gfx 6035 in no source
+poly	6086	gfx 6086 in no source
+poly	6087	gfx 6087 in no source
+poly	6088	gfx 6088 in no source
+poly	6089	gfx 6089 in no source
+poly	6136	gfx 6136 in no source
+poly	6137	gfx 6137 in no source
+poly	6138	gfx 6138 in no source
+poly	6139	gfx 6139 in no source
+poly	6140	gfx 6140 in no source
+poly	6141	gfx 6141 in no source
+poly	6142	gfx 6142 in no source
+poly	6143	gfx 6143 in no source
+poly	6144	gfx 6144 in no source
+poly	6145	gfx 6145 in no source
+poly	6146	gfx 6146 in no source
+poly	6147	gfx 6147 in no source
+poly	6148	gfx 6148 in no source
+poly	6149	gfx 6149 in no source
+poly	6150	gfx 6150 in no source
+poly	6151	gfx 6151 in no source
+poly	6152	gfx 6152 in no source
+poly	6153	gfx 6153 in no source
+poly	6154	gfx 6154 in no source
+poly	6155	gfx 6155 in no source
+poly	6156	gfx 6156 in no source
+poly	6157	gfx 6157 in no source
+poly	6158	gfx 6158 in no source
+poly	6159	gfx 6159 in no source
+poly	6160	gfx 6160 in no source
+poly	6180	gfx 6180 in no source
+poly	6181	gfx 6181 in no source
+poly	6182	gfx 6182 in no source
+poly	6183	gfx 6183 in no source
+poly	6184	gfx 6184 in no source
+poly	6185	gfx 6185 in no source
+poly	6186	gfx 6186 in no source
+poly	6187	gfx 6187 in no source
+poly	6188	gfx 6188 in no source
+poly	6189	gfx 6189 in no source
+poly	6190	gfx 6190 in no source
+poly	6191	gfx 6191 in no source
+poly	6192	gfx 6192 in no source
+poly	6193	gfx 6193 in no source
+poly	6194	gfx 6194 in no source
+poly	6195	gfx 6195 in no source
+poly	6196	gfx 6196 in no source
+poly	6197	gfx 6197 in no source
+poly	6198	gfx 6198 in no source
+poly	6199	gfx 6199 in no source
+poly	6200	gfx 6200 in no source
+poly	6201	gfx 6201 in no source
+poly	6202	gfx 6202 in no source
+poly	6203	gfx 6203 in no source
+poly	6204	gfx 6204 in no source
+poly	6205	gfx 6205 in no source
+poly	6206	gfx 6206 in no source
+poly	6207	gfx 6207 in no source
+poly	6208	gfx 6208 in no source
+poly	6209	gfx 6209 in no source
+poly	6210	gfx 6210 in no source
+poly	6211	gfx 6211 in no source
+poly	6212	gfx 6212 in no source
+poly	6213	gfx 6213 in no source
+poly	6214	gfx 6214 in no source
+poly	6215	gfx 6215 in no source
+poly	6216	gfx 6216 in no source
+poly	6217	gfx 6217 in no source
+poly	6218	gfx 6218 in no source
+poly	6219	gfx 6219 in no source
+poly	6220	gfx 6220 in no source
+poly	6221	gfx 6221 in no source
+poly	6222	gfx 6222 in no source
+poly	6223	gfx 6223 in no source
+poly	6224	gfx 6224 in no source
+poly	6225	gfx 6225 in no source
+poly	6226	gfx 6226 in no source
+poly	6227	gfx 6227 in no source
+poly	6228	gfx 6228 in no source
+poly	6229	gfx 6229 in no source
+poly	6230	gfx 6230 in no source
+poly	6231	gfx 6231 in no source
+poly	6232	gfx 6232 in no source
+poly	6233	gfx 6233 in no source
+poly	6234	gfx 6234 in no source
+poly	6235	gfx 6235 in no source
+poly	6236	gfx 6236 in no source
+poly	6237	gfx 6237 in no source
+poly	6238	gfx 6238 in no source
+poly	6239	gfx 6239 in no source
+poly	6240	gfx 6240 in no source
+poly	6241	gfx 6241 in no source
+poly	6242	gfx 6242 in no source
+poly	6243	gfx 6243 in no source
+poly	6267	gfx 6267 in no source
+poly	6268	gfx 6268 in no source
+poly	6269	gfx 6269 in no source
+poly	6270	gfx 6270 in no source
+poly	6271	gfx 6271 in no source
+poly	6272	gfx 6272 in no source
+poly	6273	gfx 6273 in no source
+poly	6274	gfx 6274 in no source
+poly	6275	gfx 6275 in no source
+poly	6276	gfx 6276 in no source
+poly	6277	gfx 6277 in no source
+poly	6278	gfx 6278 in no source
+poly	6279	gfx 6279 in no source
+poly	6280	gfx 6280 in no source
+poly	6281	gfx 6281 in no source
+poly	6282	gfx 6282 in no source
+poly	6284	gfx 6284 in no source
+poly	6400	gfx 6400 in no source
+poly	7338	gfx 7338 in no source
+poly	7339	gfx 7339 in no source
+poly	7340	gfx 7340 in no source
+poly	7341	gfx 7341 in no source
+poly	8321	gfx 8321 in no source
+poly	8781	gfx 8781 in no source
+poly	8782	gfx 8782 in no source
+poly	8783	gfx 8783 in no source
+poly	8784	gfx 8784 in no source
+poly	8785	gfx 8785 in no source
+poly	8786	gfx 8786 in no source
+poly	8787	gfx 8787 in no source
+poly	8788	gfx 8788 in no source
+poly	8789	gfx 8789 in no source
+poly	8790	gfx 8790 in no source
+poly	8791	gfx 8791 in no source
+poly	8792	gfx 8792 in no source
+poly	8793	gfx 8793 in no source
+poly	8794	gfx 8794 in no source
+poly	8795	gfx 8795 in no source
+poly	8796	gfx 8796 in no source
+poly	8797	gfx 8797 in no source
+poly	8798	gfx 8798 in no source
+poly	8799	gfx 8799 in no source
+poly	8800	gfx 8800 in no source
+poly	8801	gfx 8801 in no source
+poly	8802	gfx 8802 in no source
+poly	8803	gfx 8803 in no source
+poly	8804	gfx 8804 in no source
+poly	8805	gfx 8805 in no source
+poly	8806	gfx 8806 in no source
+poly	8807	gfx 8807 in no source
+poly	8808	gfx 8808 in no source
+poly	8858	gfx 8858 in no source
+poly	8859	gfx 8859 in no source
+poly	8860	gfx 8860 in no source
+poly	8861	gfx 8861 in no source
+poly	8862	gfx 8862 in no source
+poly	8863	gfx 8863 in no source
+poly	8864	gfx 8864 in no source
+poly	8865	gfx 8865 in no source
+poly	8866	gfx 8866 in no source
+poly	8867	gfx 8867 in no source
+poly	8868	gfx 8868 in no source
+poly	9011	gfx 9011 in no source
+poly	9012	gfx 9012 in no source
+poly	9205	gfx 9205 in no source
+poly	9206	gfx 9206 in no source
+poly	9225	gfx 9225 in no source
+poly	9226	gfx 9226 in no source
+poly	12232	gfx 12232 in no source

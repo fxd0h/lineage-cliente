@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include "mundo/chat.h"
+#include <cmath>
+#include "recursos/fuente.h"
 #include "recursos/imagen.h"
 
 namespace lin {
@@ -26,6 +28,15 @@ struct Salida {
 // Cantidad de bytes de `t` que entran en `cap` sin cortar un carácter CP949 de 2 bytes.
 size_t recorte_cp949(std::string_view t, size_t cap) {
     size_t i = 0;
+    if (es_utf8(t.data(), t.size())) {  // el texto Big5 del servidor 3.80C llega como UTF-8: se corta en límites de carácter
+        while (i < t.size()) {
+            u32 cp = 0;
+            const size_t w = largo_utf8(t.data(), t.size(), i, cp);
+            if (i + w > cap) break;
+            i += w;
+        }
+        return i;
+    }
     while (i < t.size()) {
         size_t w = static_cast<u8>(t[i]) >= 0x81 && i + 1 < t.size() ? 2 : 1;
         if (i + w > cap) break;
@@ -52,20 +63,48 @@ u32 color_chat(u8 tipo) {
     }
 }
 
-void Chat::agregar(std::string_view t, u32 c, u8 tipo) {
+u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto) {
+    // Texto después del prefijo "Nombre: " que arma el servidor; S_Say revisa si la línea empieza con '(' (habla tipo susurro).
+    if (normal_path) {
+        if (tipo == CHAT_GRITO) return color(255, 230, 205);
+        if (tipo == 0xf) return color(255, 131, 255);
+        // El servidor antepone "Nombre: "; el original revisa el texto hablado.
+        const size_t p = texto.find(": ");
+        const std::string_view dicho = p == std::string_view::npos ? texto : texto.substr(p + 2);
+        return !dicho.empty() && dicho[0] == '(' ? color(189, 238, 230) : color(255, 255, 255);
+    }
+    switch (tipo) {
+    case 1: return color(255, 205, 205);
+    case CHAT_GLOBAL: return texto.size() > 1 && texto[1] == '*' ? color(255, 0, 0) : color(172, 238, 238);
+    case CHAT_CLAN: return !texto.empty() && texto[0] == '{' ? color(255, 131, 255) : color(197, 238, 180);
+    case CHAT_GRUPO: return color(205, 213, 255);
+    case CHAT_COMERCIO: return color(189, 164, 106);
+    default: return color(255, 246, 180);  // \fH cream
+    }
+}
+
+void Chat::agregar(std::string_view t, u32 c, u8 tipo, i8 dir) {
     LineaChat& l = lineas[total % CAPACIDAD_CHAT];
     size_t n = recorte_cp949(t, LARGO_LINEA_CHAT);
     for (size_t i = 0; i < n; ++i) l.texto[i] = t[i];
     l.largo = static_cast<u8>(n);
     l.color = c;
     l.tipo = tipo;
+    l.dir = dir;
     ++total;
 }
 
-std::string_view Chat::globo(ObjId id, u64 ahora) const {
+GloboChat* Chat::globo_activo(ObjId id, u64 ahora, u64 duracion) {
+    if (id == 0) return nullptr;
+    for (GloboChat& g : globos)
+        if (g.id == id && ahora - g.inicio < duracion && total - g.linea <= CAPACIDAD_CHAT) return &g;
+    return nullptr;
+}
+
+std::string_view Chat::globo(ObjId id, u64 ahora, u64 duracion) const {
     if (id == 0) return {};
     for (const GloboChat& g : globos) {
-        if (g.id != id || ahora - g.inicio >= MS_GLOBO || total - g.linea > CAPACIDAD_CHAT) continue;
+        if (g.id != id || ahora - g.inicio >= duracion || total - g.linea > CAPACIDAD_CHAT) continue;
         const LineaChat& l = lineas[g.linea % CAPACIDAD_CHAT];
         return {l.texto, l.largo};
     }
@@ -85,16 +124,16 @@ u32 color_codigo(char c, u32 normal) {
     return es_codigo_color(c) ? rgb555(PALETA_F[c - 0x30]) : normal;
 }
 
+// Color de nombre original (S3EP1U 0x4cc140, RGB555 guardado en el objeto): caótico (< 0) pasa de blanco a rojo pleno de a
+// -64 por paso, 0..499 queda blanco, legal (>= 500) pasa de blanco a azul pleno de a 256 por paso.
 u32 color_alineamiento(i32 legal) {
-    constexpr int MEDIO = 8000, TOPE = 16000;
-    struct Rgb { int r, g, b; };
-    constexpr Rgb BLANCO_{240, 240, 240}, CELESTE{150, 215, 255}, AZUL{70, 120, 255}, ROSA{255, 170, 195}, ROJO{255, 60, 50};
-    const int d = std::min(std::abs(legal), TOPE);
-    const Rgb a = d < MEDIO ? BLANCO_ : legal > 0 ? CELESTE : ROSA;
-    const Rgb b = d < MEDIO ? (legal > 0 ? CELESTE : ROSA) : legal > 0 ? AZUL : ROJO;
-    const int t = d < MEDIO ? d : d - MEDIO;  // de 0 a MEDIO dentro del tramo
-    auto mezcla = [&](int x, int y) { return static_cast<u8>(x + (y - x) * t / MEDIO); };
-    return color(mezcla(a.r, b.r), mezcla(a.g, b.g), mezcla(a.b, b.b));
+    if (legal < 0) {
+        const int d = 31 - std::min((-legal >> 6) + 1, 31);
+        return rgb555(static_cast<u16>(0x7c00 | (d << 5) | d));
+    }
+    if (legal < 500) return rgb555(0x7fff);
+    const int d = 31 - std::min(((legal - 500) >> 8) + 1, 31);
+    return rgb555(static_cast<u16>((d << 10) | (d << 5) | 0x1f));
 }
 
 const char* con_miles(u64 v, char* buf, size_t n) {
@@ -127,8 +166,9 @@ size_t expandir_desc(const TablaTexto& desc, std::string_view t, char* destino, 
 }
 
 size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, const Evento& e, char* destino,
-                         size_t capacidad, u32& c) {
-    u32 normal = e.v[MS_AZUL] ? COLOR_AZUL : COLOR_MENSAJE;
+                         size_t capacidad, u32& c, bool original) {
+    // Cliente original: el color de texto por omisión es el crema \\fH (255,246,180), que usan 184 llamadas.
+    u32 normal = e.v[MS_AZUL] ? COLOR_AZUL : original ? color(255, 246, 180) : COLOR_MENSAJE;
     c = normal;
     std::string_view plantilla = mensajes.linea(static_cast<size_t>(e.v[MS_ID]));
     Salida s{destino, capacidad};
@@ -154,8 +194,8 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
             int k = plantilla[i + 1] - '0';
             if (k < e.v[MS_NARGS]) s.n += expandir_desc(desc, e.s[k], destino + s.n, capacidad - s.n);
             ++i;
-        } else if (ch == '%' && i + 1 < plantilla.size() && plantilla[i + 1] == 's') {
-            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" = %0
+        } else if (ch == '%' && i + 1 < plantilla.size() && (plantilla[i + 1] == 's' || plantilla[i + 1] == 'd')) {
+            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" y "%d" = %0
             ++i;
         } else {
             s.poner(plantilla.substr(i, 1));
@@ -164,12 +204,21 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
     return s.n;
 }
 
-void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora) {
+int direccion_grito(int dx, int dy) {
+    if (dx == 0 && dy == 0) return -1;
+    // atan(dy / dx) en grados (el exe: fpatan(dy/dx, 1) * 180 / pi), +-90 cuando dx == 0; umbrales de 0x4f2610..0x4f2648.
+    const double deg = dx == 0 ? (dy > 0 ? 90.0 : -90.0) : std::atan(static_cast<double>(dy) / dx) * 180.0 / 3.14159265358979323846;
+    if (dx >= 0) return deg > 70 ? 7 : deg > 15 ? 0 : deg > -20 ? 1 : deg > -65 ? 2 : 3;
+    return deg > 75 ? 3 : deg > 20 ? 4 : deg > -17 ? 5 : deg > -73 ? 6 : 7;
+}
+
+void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora,
+                  int px, int py) {
     char buf[LARGO_LINEA_CHAT * 2];
     for (const Evento& e : eventos) {
         if (e.tipo == Ev::MENSAJE_SERVIDOR) {
             u32 col;
-            size_t n = formatear_mensaje(mensajes, desc, e, buf, sizeof buf, col);
+            size_t n = formatear_mensaje(mensajes, desc, e, buf, sizeof buf, col, c.original_ui);
             c.agregar({buf, n}, col, CHAT_MENSAJE);
         } else if (e.tipo == Ev::CHAT) {
             u8 tipo = static_cast<u8>(e.v[0]);
@@ -178,7 +227,7 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                 // Llega solo el remitente y el texto. Se arma como el eco que recibe quien envía
                 // ("-> (destino) texto", tipo 9) pero en sentido contrario.
                 Salida s{buf, sizeof buf};
-                s.poner("<- (");
+                s.poner(c.original_ui ? "(" : "<- (");  // original format "(%s) %s" (0x483970)
                 s.poner(e.s[1]);
                 s.poner(") ");
                 s.poner(e.s[0]);
@@ -187,15 +236,24 @@ void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, s
                 n = expandir_desc(desc, e.s[0], buf, sizeof buf);  // los NPC hablan como "$1422: ..."
             }
             u32 linea = c.total;
-            c.agregar({buf, n}, color_chat(tipo), tipo);
+            u32 col = color_chat(tipo);
+            if (c.original_ui) {
+                if (tipo == CHAT_SUSURRO) col = color(255, 205, 205);
+                else if (tipo == CHAT_SISTEMA) col = color(255, 230, 205);  // sent-whisper echo (0x48391d)
+                else col = color_chat_original(tipo, e.origen == Srv::NORMALCHAT || e.origen == Srv::NPCSHOUT, {buf, n});
+            }
+            i8 dir = -1;
+            if (c.original_ui && tipo == CHAT_GRITO && e.v[CH_CON_POS] && px >= 0)
+                dir = static_cast<i8>(direccion_grito(e.v[CH_X] - px, e.v[CH_Y] - py));
+            c.agregar({buf, n}, col, tipo, dir);
             // Globo sobre la cabeza: chat normal y grito de quien está a la vista.
-            if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO)) {
+            if (e.id != 0 && (tipo == CHAT_NORMAL || tipo == CHAT_GRITO || (c.globo_comercio && tipo == CHAT_COMERCIO))) {
                 GloboChat* destino = &c.globos[0];
                 for (GloboChat& g : c.globos) {
                     if (g.id == e.id) { destino = &g; break; }
                     if (g.inicio < destino->inicio) destino = &g;  // el más viejo
                 }
-                *destino = {e.id, ahora, linea};
+                *destino = GloboChat{e.id, ahora, linea};
             }
         }
     }

@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 #include <vector>
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -81,32 +80,6 @@ bool decodificar_png(Bytes datos, ImagenRGBA& salida, bool fondo_negro) {
     stbi_image_free(rgba);
     if (fondo_negro) quitar_fondo_negro(salida);
     return true;
-}
-
-void ampliar_glifo_suave(const ImagenRGBA& e, int k, ImagenRGBA& s) {
-    s.preparar(static_cast<u16>(e.ancho * k), static_cast<u16>(e.alto * k));
-    s.ox = static_cast<i16>(e.ox * k);
-    s.oy = static_cast<i16>(e.oy * k);
-    auto alfa = [&](int x, int y) {
-        return x < 0 || y < 0 || x >= e.ancho || y >= e.alto ? 0.0f : (e.px[static_cast<size_t>(y) * e.ancho + x] >> 24) / 255.0f;
-    };
-    for (int y = 0; y < s.alto; ++y) {
-        const float v = (y + 0.5f) / k - 0.5f;
-        const int y0 = static_cast<int>(std::floor(v));
-        const float fy = v - y0;
-        for (int x = 0; x < s.ancho; ++x) {
-            const float u = (x + 0.5f) / k - 0.5f;
-            const int x0 = static_cast<int>(std::floor(u));
-            const float fx = u - x0;
-            const float val = (alfa(x0, y0) * (1 - fx) + alfa(x0 + 1, y0) * fx) * (1 - fy) +
-                              (alfa(x0, y0 + 1) * (1 - fx) + alfa(x0 + 1, y0 + 1) * fx) * fy;
-            // El valor cambia 1/k por píxel de salida a través de un borde: el corte en 0,5 con esa pendiente
-            // deja un píxel de transición (antialias).
-            const float a = std::clamp((val - 0.5f) * k + 0.5f, 0.0f, 1.0f);
-            const u32 b = static_cast<u32>(a * 255.0f + 0.5f);
-            s.px[static_cast<size_t>(y) * s.ancho + x] = b | (b << 8) | (b << 16) | (b << 24);
-        }
-    }
 }
 
 }  // namespace lin

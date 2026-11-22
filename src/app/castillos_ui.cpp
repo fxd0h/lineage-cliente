@@ -115,7 +115,7 @@ bool comando_castillos(App& a, std::string_view orden, std::string_view resto) {
     cmd::TipoGuerra tipo;
     if (orden == "war") tipo = cmd::GUERRA_DECLARAR;
     else if (orden == "surrender") tipo = cmd::GUERRA_RENDIRSE;
-    else if (orden == "ceasefire") tipo = cmd::GUERRA_TERMINAR;
+    else if (orden == "ceasefire" || orden == "cease") tipo = cmd::GUERRA_TERMINAR;
     else return false;
     while (!resto.empty() && resto.front() == ' ') resto.remove_prefix(1);
     while (!resto.empty() && resto.back() == ' ') resto.remove_suffix(1);

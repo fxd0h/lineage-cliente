@@ -1,502 +1,188 @@
-# Lineage Client (C++20 + SDL3)
+# Lineage Client: Linux + macOS, original 2009 look (C++23 + SDL3)
 
-A new client for Lineage 1. It reads the resources of an original game installation (abandonware) and
-speaks the L1J protocol. It implements **deliverables 1 to 10** of the plan
-(`docs/analisis/PLAN_CLIENTE.md`): login, character selection and creation, moving in the world, chat
-and status, combat, inventory and items, spells and polymorph, NPCs and trading, magic, social features
-(party, trade, clan), and the complete world (zone music, sounds, weather and portals). Houses, castles
-and sieges, the bulletin board and mail, and player shops are also in.
+A from-scratch Lineage 1 client in C++23 on SDL3 (SDL_GPU). It reads the resources of an original game
+installation and speaks the L1J protocol. This repository is a **fork** of
+[javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente) (GPL-3.0). The fork's goal is
+to play Lineage 1 natively on **Linux** (and macOS) with a look and feel faithful to the **2009 US client**
+(`S3EP1U`), which was reverse engineered to get windows, layouts, fonts and colours right.
 
-So far it has been tested **only on macOS** (Apple Silicon). What is missing for Windows and Linux is
-marked in the code with `MULTIPLATAFORMA` and listed [below](#missing-for-windows-and-linux).
+No game assets are included: you need your own Lineage installation (the folder with `Sprite*.pak`, `Tile.pak`,
+`Text.pak`, `map/`, `font/`).
 
-![The game, with the simple interface](docs/capturas/readme_game.png)
+![Original 2009 UI with HD text, on the l1j-en classic server](docs/capturas/fork_2026-11-17.png)
 
-| Simple interface (default) | Original interface (F2) |
-|---|---|
-| ![Status and inventory windows](docs/capturas/readme_windows.png) | ![The original panel](docs/capturas/readme_game_original.png) |
-| ![Login, simple interface](docs/capturas/readme_login.png) | ![Login, original interface](docs/capturas/readme_login_original.png) |
+## What the fork does
 
-| Character selection | Character creation |
-|---|---|
-| ![Character selection](docs/capturas/readme_character_select.png) | ![Character creation](docs/capturas/readme_character_create.png) |
+- **Platforms:** Linux (Ubuntu 24.04, Vulkan with SPIR-V shaders compiled from GLSL) and macOS (Metal, hand-written
+  MSL twins of every shader). Verified on Intel Iris Xe (Mesa) and Apple M5 Pro. Windows: HLSL versions of every
+  shader and the DXIL path exist but are untested; the rest of the port is not started.
+- **Original 2009 client UI is the default** (`ui_simple=0`): framed inventory, status, spellbook, options, volume,
+  pet, party/pledge/buddy and private-shop windows, shop list and tooltips, F-key bar with 3 pages, HP/MP floating
+  window, NPC HTML pages in the original GDI-style face, original cursors, buff icons, overhead bars, level-up
+  effect, game-time orb, zone type label. Layers, offsets, colours and fonts are read from the 2009 binary.
+  Upstream's simple text interface is still there (`ui_simple=1`, F2).
+- **Original window behaviour:** windows drag only by the title bar, at most four open at once, Esc closes them all
+  (or opens the Esc/restart menu, which also pops up on death), right double-click closes one; original default
+  positions, status page bars, spellbook tabs and slots per class, trade window and yes/no bar, inventory
+  double-click use, 25 px drag threshold and equipped/sealed marks, sign-post info cards, Ctrl+T chat sizes.
+- **Original sprite rendering:** the blend modes of the sprite attribute table (50% translucency, additive,
+  multiply, fade, pulse), "clothes" overlay layers, alternating half-step walk for large monsters (Valakas,
+  Antharas...), see-through houses and fading roofs taken from the map, poison pulse, the exact invisibility rule,
+  polymorph effect, per-frame sounds and lightning/meteor light flashes.
+- **Original HUD details:** chat and name colours, names on mouse-over, monster level shown by the outline colour,
+  speech bubbles, cursors, buff icons with the original tooltips and end messages (154-slot table from the
+  binary), shout direction icons, original mail compose window, Ctrl+P
+  screenshots to `Capture/`, Alt+1..4 emotes, `/rank`, `/propose`, `/divorce`, `/duel`, `/checkpk`, `/loc`, `/telcon` and the
+  original command aliases.
+- **The view fills the window** (`vista=amplia`, default), or an optional fixed 640x480 view (`vista=fija`), with filters: integer, xBR, FSR (default), CRT,
+  Anime4K (`escalado=`, Shift+F5).
+- **HD text** (`texto_hd=1`, default): UI and world text drawn after the scaling filter at output resolution,
+  sharp at any scale with identical layout ([docs/fork/hd_text.md](docs/fork/hd_text.md)). Optional 4x HD UI
+  image pack (`hd=<dir>`, not distributed).
+- **Protocol profiles:** `jp363` (L1J-JP 3.63c), `tw380` (Taiwan 3.80C, with Big5 server text decoded to UTF-8)
+  and `s3ep1` (US 2009).
+- **Multi-folder game data:** `juego_extra=` fallback folders for sprites, tiles, maps, sounds, HTML pages and
+  sprite lists missing from the main install; `lista_sprites=` / `list.spz` support for newer gfx.
+- **Gameplay and social:** clan emblems (upload, cache, overhead draw), alliances (`C_Rank`), ship arrival
+  (`C_Ship`), combat music, polymorph pages, pets and summons, player shops, mail, bulletin boards, auto-buffs and
+  auto potion, sticky attack.
+- **Three local test servers** with reproducible installers (below).
+- **Test tooling:** live-control socket (debug builds), Python driver and scripted live tests, invisible test
+  instances on Xvfb (`herramientas/lanzar_prueba.sh`).
 
-More documentation, mostly in Spanish, the working language of the project:
+Features inherited from upstream (login, character selection and creation, movement, chat, combat, inventory,
+spells, NPCs and trading, party/trade/clan, houses, castles and sieges, boards and mail, shops, weather, zone
+music, five interface languages, settings editor, resource explorer) work as before; their upstream-era status
+write-up is kept in [docs/upstream/](docs/upstream/README.md).
 
-- **[ENTREGABLES.md](ENTREGABLES.md):** detailed status and evidence for each deliverable.
-- **[docs/DESCUBRIMIENTOS.md](docs/DESCUBRIMIENTOS.md):** what was learned about formats, timing,
-  drawing and the servers, and the design decisions that followed.
-- **[AGENTS.md](AGENTS.md):** how to work on the project, for people and agents, also in parallel.
+## Requirements and build
 
-## Requirements (macOS)
+Common: CMake 3.25+, Ninja, a C++23 compiler (GCC 13 / Apple Clang). SDL3 3.4.18, stb, dr_mp3 and doctest are
+fetched by CMake (pinned).
 
-- Xcode Command Line Tools (Apple Clang with C++20)
-- CMake 3.25 or newer, Ninja, glslang and spirv-cross: `brew install cmake ninja glslang spirv-cross` (the
-  shaders are written in HLSL and turned into Metal Shading Language at build time)
-- The game installation (the folder with `Sprite*.pak`, `Tile.pak`, `Text.pak`, `map/`, `font/`)
+**Linux** (Ubuntu 24.04 tested): `cmake ninja-build`, a Vulkan driver, and the SDL3 build dependencies
+`libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libwayland-dev
+libxkbcommon-dev libasound2-dev libpulse-dev libdecor-0-dev libdrm-dev libgbm-dev libudev-dev`.
+`glslangValidator` is only needed to regenerate shaders (`herramientas/compilar_shaders.sh`; run it after editing
+a GLSL shader, and update the MSL twin in `src/render/gpu.cpp` too).
 
-SDL3 3.4.18, stb (`stb_image`, `stb_truetype`), dr_mp3 and doctest are downloaded on the first configure
-(FetchContent, pinned versions).
-
-**Windows and Linux (in progress, see [PLAN_PORTADO.md](docs/analisis/PLAN_PORTADO.md)):** the shaders are
-compiled from HLSL (`src/render/shaders/`) at build time. Windows: Visual Studio 2022 Build Tools with the C++
-workload (ARM64 tools on arm64) and the Windows SDK, whose `dxc.exe` makes the DXIL; build from the developer
-console. Linux: `glslang-tools` for SPIR-V, plus the SDL3 development packages listed in
-`.github/workflows/compilar.yml`.
-
-**Windows package:** from the developer console (x64 or arm64),
-`powershell -ExecutionPolicy Bypass -File herramientas\empaquetar_windows.ps1 -Version 0.2.0` leaves
-`dist\Lineage-0.2.0-windows-<arch>.zip` with `lineage.exe`, `datos\`, `LICENSE.txt` and `LEEME.txt`.
-The runtime is linked statically (no Visual C++ redistributable needed; the script checks it). CI builds the zip on
-every push (artifact `lineage-windows-<arch>`), and a `v*` tag publishes it in the release next to the macOS `.dmg`.
-
-**Game folder on a WebDAV drive (Windows):** if the console shows `error de Windows 223` for the `.pak` files, the
-drive is mounted over WebDAV, whose client downloads the whole file on open and refuses files over ~50 MB.
-Copy the game to a local disk (recommended: WebDAV would download the ~2 GB `Sprite.pak` on every start), or raise
-the limit as administrator and restart the WebClient service:
-`reg add HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f`.
-
-## Build and test
+**macOS**: Xcode Command Line Tools, `brew install cmake ninja`.
 
 ```sh
-cd cliente
 cmake --preset debug          # or release / debug-asan
 cmake --build --preset debug
-LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, tests that need resources are skipped
+LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, resource tests are skipped
 ```
 
-| Program | What it is |
-|---|---|
-| `build/<preset>/lineage` | The game |
-| `build/<preset>/explorador` | [Resource explorer](#resource-explorer) |
-| `build/<preset>/lin_tests` | Tests |
+Programs: `build/<preset>/lineage` (the game), `settings` (settings editor), `explorador` (resource explorer),
+`lin_tests`. macOS packaging: `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app` and a `.dmg`
+(not notarized: right-click, Open); the `v*` tag workflow in `.github/workflows/release.yml` is upstream's and
+untested in this fork.
 
-### Packaging and releases (macOS)
+## Configuration
 
-- **Locally:** `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app`
-  (universal: arm64 and x86_64, ad-hoc signed, with `datos/` inside) and leaves `dist/Lineage-VERSION-macos.dmg`.
-- **On GitHub:** pushing a `v*` tag (`git tag v0.1.0 && git push origin v0.1.0`) runs
-  `.github/workflows/release.yml`: tests, the `.dmg`, and a GitHub release with it and generated notes. Run the
-  workflow by hand (Actions > Release) to get only the `.dmg` as an artifact.
-- **Not notarized yet:** macOS warns that it cannot verify the developer; the first time, right-click the app and
-  choose Open. Game resources are not included: the game asks for the folder on first start.
+The client takes no command-line parameters. Everything comes from `settings.ini`:
+`~/.local/share/Lineage/LineageCliente/settings.ini` on Linux,
+`~/Library/Application Support/Lineage/LineageCliente/settings.ini` on macOS. Edit it with `build/<preset>/settings`
+(close the game first) or by hand. Debug builds accept `LIN_CONFIG=/path/own.ini` to use another file.
 
-## Local test servers
-
-All development and testing happens against local servers; the real private server is never touched.
-Each server has `instalar.sh` (once), `arrancar.sh` and `detener.sh` in its own folder.
-
-| Folder | Server | Port | Protocol |
-|---|---|---|---|
-| `servidor_local/` | L1J-JP 3.63c (the reference for the tests) | 2000 | `jp363` |
-| `servidor_classic363/` | l1j-en/classic, 3.63 branch ([notes](servidor_classic363/README.md)) | 2001 | `jp363` |
-| `servidor_classic/` | l1j-en/classic (3.0 English / US 2009) | 2000 | `s3ep1` |
-| `servidor_380/` | L1JGO-Whale (3.80C) | 7001 | `tw380` |
-
-```sh
-servidor_local/instalar.sh    # once: downloads the server and creates the database in MariaDB (port 3307)
-servidor_local/arrancar.sh    # starts MariaDB and the server (Ctrl+C to stop)
-servidor_local/detener.sh     # stops MariaDB
+```ini
+juego=/path/to/Lineage-US-2009
+juego_extra=/path/to/newer-client-data
+servidor=Classic|127.0.0.1|2002|s3ep1|fx
+servidor=JP|127.0.0.1|2000|jp363|
+servidor=Whale|127.0.0.1|7001|tw380|
+servidor_elegido=Classic
+ui_simple=0
+texto_hd=1
 ```
-
-`servidor_local/instalar.sh` fixes what that 2013 server needs to work with current Java and MariaDB:
-
-- replaces the MySQL 5.1.25 connector with version 5.1.49;
-- adds JAXB, no longer shipped with Java;
-- uses `zeroDateTimeBehavior=round` for `0000-00-00` dates;
-- starts with English language and the `Asia/Tokyo` time zone;
-- fixes invalid database rows (`corregir_db.sql`).
-
-Accounts are created automatically on first login (user = password).
-
-`herramientas/prueba_login.py` is a minimal Python client: it goes through login, character list,
-creation and entering the game, printing each packet. It helps debugging the server or the protocol.
-
-## Running
-
-```sh
-build/debug/lineage
-```
-
-The client takes **no command-line parameters**: everything comes from `settings.ini`
-(`~/Library/Application Support/Lineage/LineageCliente/settings.ini`) and from the interface.
-
-- **Game folder:** chosen with the native dialog on first launch, then saved (`juego=`).
-- **Servers:** chosen in the login menu. There is one per line in `settings.ini`:
-
-  ```ini
-  servidor=Local test|127.0.0.1|2000|jp363|account
-  servidor=Other|play.example.com|2000|s3ep1|
-  servidor_elegido=Local test
-  ```
-
-  The fields are name, host, port, protocol version (`jp363`, `s3ep1` or `tw380`) and the last account
-  used on that server. The password is not saved. An old `settings.ini` (`host=`, `puerto=`...) is
-  converted automatically.
-
-### Settings window
-
-The **Settings** window edits `settings.ini` in a form with tabs (Game, Interface, Audio, Servers,
-Characters). Open it from the login screen (the Settings button, or Options in the original interface) or in
-the game (the Options button). It is modal: the screen behind keeps running but takes no input. Numeric fields
-are validated before saving. In the Characters tab, you can remove a character's saved shortcuts, bar,
-auto-buffs and inventory order, set its auto potion, and reset window positions.
-
-**Save** applies the changes at once and writes the file. The game folder and the sprite table are read at
-startup: if they change, the window says they apply when the client restarts. **Revert** goes back to what is
-in use; **Close** (or Esc) discards what was not saved.
-
-| Interface tab | Servers tab |
-|---|---|
-| ![Settings window, Interface tab](docs/capturas/readme_settings_editor.png) | ![Settings window, Servers tab](docs/capturas/readme_settings_servers.png) |
-
-### Languages
-
-The interface is available in **Spanish, English, Portuguese, German and French**. Choose it in the
-Settings window (Interface tab) or with `idioma=es|en|pt|de|fr` in `settings.ini`. With no value it follows
-the system language, and falls back to English if that is not one of the five. The window switches as soon as
-you pick it; Save keeps it.
-
-| Español | Português |
-|---|---|
-| ![Login in Spanish](docs/capturas/readme_login_es.png) | ![Login in Portuguese](docs/capturas/readme_login_pt.png) |
-
-| Deutsch | Français |
-|---|---|
-| ![Login in German](docs/capturas/readme_login_de.png) | ![Login in French](docs/capturas/readme_login_fr.png) |
-
-- **What is translated so far:** login, character selection and creation, and the Settings window. The
-  in-game windows are not migrated yet and keep their current text. Text sent by the server is shown as
-  it arrives.
-- **Translations** live in `src/i18n/catalogo.def`, one line per text with its five languages. The tests
-  check that every text has all five and the same `%d` / `%s` in each.
-- **Font:** interface text uses [Departure Mono](https://departuremono.com/) (SIL OFL 1.1, see
-  `licencias/DepartureMono-OFL.txt`), because the game's bitmap font only has ASCII and Korean. It is
-  embedded in the binary and drawn at 11 px, where its pixel grid lands exactly on the screen, without
-  smoothing. Text in CP949 (Korean from the server) still uses the original font.
-  `tools/generar_fuente_ui.py` regenerates the embedded data (needs `fonttools`).
-
-### Settings reference
-
-All of these can be changed from the editor; most can also be changed in the game.
 
 | Key | Meaning |
 |---|---|
-| `juego` | Game folder |
-| `servidor`, `servidor_elegido` | Server list and the selected one |
-| `idioma` | Interface language; empty = the system's |
-| `ventana` | Window size (`WIDTHxHEIGHT`), saved on close |
-| `zoom` | Game scale; 0 = automatic. With the simple interface it scales only the map: the interface keeps its size |
-| `ui_simple` | `1` simple interface, `0` original panel (F2) |
-| `camara_a_saltos` | `1` camera follows the walking frames, like the original (F4) |
-| `sombra_personajes` | Darken characters standing in a tree's shadow (Shift+F4) |
-| `pantalla_completa` | Game in full screen (1) or windowed without border (0, default). Alt+Enter toggles it |
-| `mostrar_fps` | Show frames per second and milliseconds per frame in the top right corner (Shift+F3) |
-| `efecto_luz` | Dark nights and dungeons, with the light of characters, NPCs and items |
-| `efecto_agua_tinte`, `efecto_agua_ola` | Underwater blue tint and wave |
-| `efecto_infravision` | Green elf vision and dim dark elf vision |
-| `opacidad_ventanas` | Window background opacity (0–255) |
-| `volumen_musica`, `volumen_efectos` | Volume (0–100) |
-| `chat_con_enter` | `1` Enter opens the chat line, `0` always typing |
-| `barra_personaje` | HP/MP bar over your own character |
-| `texto_dano` | Floating damage and "Miss" over your character |
-| `lista_sprites` | The game client's own sprite table in plain text (`TW13032701.txt` of the Taiwanese client, or a decrypted `list.spz`). Empty (default): looked up in the game folder. It adds the gfx `datos/sprite_table.txt` lacks (it stops at 8682), checked against the `.pak` files; without it those show still or as a magenta block |
-| `texto_hd` | `1` (default) text smoothed at the screen's real resolution instead of enlarging each font pixel (also in Options: "HD text"), `0` the plain pixel font |
-| `globos_comic` | `1` speech and shouts in a rounded outline over the head (also in Options: "Speech balloons"), `0` plain text |
-| `compensar_ataque` | Show your swing at once, without waiting for the server's echo |
-| `logo` | PNG for the simple login screen, see below |
-| `atajos`, `barra` | F5–F12 spells and shortcut bar, per character (bar pages separated by `/`) |
-| `ventanas` | Saved window positions |
-| `paginas_barra` | Shortcut bar pages, 1–9 (3 by default) |
-| `autobuffs` | Auto-buffs per character: on/off and the six spells (`Name:1\|43,42,0,0,0,0`) |
-| `ms_mantener_tecla` | Hold time before 1–0 casts a heal or buff on yourself, 150–1000 ms (300 by default) |
-| `usar_autobuffs`, `usar_autopocion` | `0` hides and turns off auto-buffs or auto potion completely (both `1` by default) |
-| `autopocion` | Auto potion per character: on/off and HP threshold in % (`Name:1,60`; off with 60 % by default) |
+| `juego` | Main game folder |
+| `juego_extra` | Fallback game folder, repeatable, tried in order |
+| `servidor`, `servidor_elegido` | One line per server: `name\|host\|port\|profile\|last account`; profile is `jp363`, `tw380` or `s3ep1`. The chosen one is `servidor_elegido` |
+| `ui_simple` | `0` (default): original 2009 UI; `1`: upstream's simple text UI (F2 toggles) |
+| `texto_hd` | `1` (default): HD text pass; `0`: pixel text in the 640x480 frame |
+| `fuente_original` | `1` (default): game's `eng.fnt` for ASCII; `0`: Departure Mono |
+| `vista`, `escalado` | `fija`/`amplia`; `entero`/`xbr`/`fsr`/`crt`/`anime4k` |
+| `hd`, `lista_sprites`, `idioma`, `logo` | HD UI pack folder, plaintext `list.spz` path, interface language, simple-login logo |
 
-**Custom login logo (simple interface):** `logo=my_logo.png`, a PNG with transparency of up to 2048×2048,
-as an absolute path or relative to the `settings.ini` folder. It is shrunk to fit 560×190 (best to supply
-it at that size, because it is scaled without smoothing). Without a logo, or if it can't be read, the
-title is shown as text.
+The full list (volume, effects, auto-buffs, shortcut bars...) is in [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
+
+## Local test servers
+
+Development and testing happen only against local servers; never connect the client to a third-party server.
+Each folder has `instalar.sh` (once; downloads a pinned server, applies our patches, creates the database),
+`arrancar.sh` and `detener.sh`. Linux uses apt, macOS Homebrew (`servidor_local/comun.sh`).
+
+| Folder | Server | Port | Profile | Database |
+|---|---|---|---|---|
+| `servidor_classic/` | l1j-en classic, US 2009 (**main one**) | 2002 | `s3ep1` | MariaDB 3309 |
+| `servidor_local/` | L1J-JP 3.63c | 2000 | `jp363` | MariaDB 3307 |
+| `servidor_380/` | L1JGO-Whale, Taiwan 3.80C/3.81C | 7001 | `tw380` | PostgreSQL 5433 |
+| `servidor_classic363/` | l1j-en classic, 3.63 branch ([notes](servidor_classic363/README.md)) | 2001 | `jp363` | MariaDB 3310 |
+
+```sh
+servidor_classic/instalar.sh                      # once
+(cd servidor_classic && nohup setsid ./arrancar.sh > servidor.log 2>&1 < /dev/null &)
+build/debug/lineage
+servidor_classic/detener.sh
+```
+
+Accounts are created on first login with the password typed that time. Server changes are kept reproducible as
+`*.patch` files, idempotent `corregir_db.sql` and migration scripts (e.g. `migrar_fx.py`). Evaluations:
+[l1j-en classic](docs/fork/SERVER_L1JEN_EVALUATION.md), [Whale 3.80C](docs/fork/SERVER_380_EVALUATION.md),
+[3.81C data coverage](docs/fork/DATA_COVERAGE_381.md). The classic server also carries fork patches for alliances,
+the Giran Bugbear Race and several l1j-en issues; the Whale server has Linux support, alliance and English item
+names.
 
 ## Controls
 
-**F1** shows all the keys in the game.
+F1 lists all keys in game. Highlights (original-client hotkeys): Ctrl+I inventory, Ctrl+A status, Ctrl+S magic,
+Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, F5-F12 spells/items, Ctrl+1..8 = F5..F12, Ctrl+R floating
+HP/MP, Ctrl+T chat size, Ctrl+X attack mode, Ctrl+P screenshot. Hold the left button to walk or attack; Ctrl+click
+forces an attack on NPCs/players; F2 toggles the UI mode; Shift+F5 cycles the scaling filter; Alt+Enter toggles
+full screen (on Mac also Cmd+Enter or Ctrl+Cmd+F). Complete list: [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
 
-### Interface and view
+## Reverse engineering notes
 
-- **F2:** switches between the simple interface (default: a text strip with chat, input and ASCII bars,
-  and a text status window) and the original panel with its images. It also applies to login, character
-  selection and creation: with the simple interface they are text boxes (a list of all characters with
-  their data; deleting asks for confirmation).
-- **F3:** fps, CPU per frame (average, worst frame and decoding), allocations of the worst frame,
-  instances, draw calls, objects and position.
-- **F4:** camera, "smooth" (default: follows the continuous position, with the character centered) or
-  "stepped" (like the original: follows the walking frames, a ¼ cell at a time).
-- **Shift+F3:** frames per second and milliseconds per frame in the top right corner, on or off.
-- **Alt+Enter:** full screen or windowed. Windowed has no system border: the bar on top drags the window, and its
-  buttons minimize and close it (on macOS they are on the left, like the system's). Full screen has no bar.
-- **Shift+F4:** darken characters standing in a tree's shadow (default) or not.
-- **Shift+F12:** saves `captura.bmp`.
-- **Shift+click on the world:** turns the character that way without walking (to face someone, e.g. to trade).
-- **Ctrl/⌘ + and Ctrl/⌘ −:** zoom in and out (integer scale; zooming out shows more map). With the simple
-  interface only the map zooms; the panel, windows and the names over characters keep their size.
-- **Ctrl/⌘ 0:** automatic zoom, the largest that fits 640×480.
-- **Game view:** adapts to the window. Enlarging it shows more map, with the panel centered at the
-  bottom. The login and character screens stay at 640×480.
-- **Windows:** drag the title bar to move them (the position is saved). They look for a free spot when
-  opened; if they overlap, a click brings one forward and only that one gets the mouse. They also open with
-  buttons: those of the original panel, or the text ones to the right of the chat (simple interface).
-- **Options** has the interface, camera, shade, FPS counter, full screen, light and water effects, elf vision, window opacity, zoom, music and effects volume, and
-  a "Reset" for window positions.
-- **Welcome text and server news at login:** wrapped to fit; the mouse wheel or Page Up / Page Down scrolls them.
-- **Esc:** at login, quits.
+What the 2009 client does and where (addresses in `S3EP1U.bin`) is written down in [docs/fork/](docs/fork/README.md):
+sprites and rendering (`RE_SPRITES_RENDER.md`), protocol (`RE_PROTOCOL.md`), windows (`RE_WINDOWS.md`), HUD
+(`RE_HUD.md`) and the later rounds (`RE_ROUND3.md`, `RE_ROUND4.md`, ...). The remaining differences from the
+original UI are tracked in [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
 
-### Moving
+## Development and testing
 
-- **Walk:** hold the left button to walk toward the pointer, or use the arrow keys (combine them for diagonals).
-- **Doors:** click a door to open or close it (the character walks to it). Closed doors block the way.
-- **Portals:** to enter a dungeon or climb stairs, walk toward the entrance with the arrows, or click right on it.
-- **Roofs and trees:** when you enter a house or pass behind a tree, whatever covers the character becomes
-  translucent and its silhouette shows.
-- **Change character:** Exit > "Character select".
+Rules, architecture and recipes for people and coding agents are in [AGENTS.md](AGENTS.md). Tests: doctest
+(`lin_tests`). Debug builds open a live-control Unix socket driven by `herramientas/lin_ctl.py` and the scripts in
+`herramientas/pruebas/`; launch test clients only with `herramientas/lanzar_prueba.sh <own.ini>` so they run on an
+invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README.md).
 
-### Combat
+## Known gaps
 
-- **Attack:** click a monster and hold. The character walks to it and attacks at the pace of its attack
-  animation, even if the camera moves and the pointer is no longer over it (the target is fixed when
-  pressing). Releasing stops. The target's name turns yellow.
-- **A** (chat closed): keeps attacking the target, or the monster under the pointer, until it dies, you walk
-  with the arrows, or you click elsewhere.
-- **Force attack:** Ctrl+click (or ⌘+click) attacks an NPC, another player or another player's pet or summon.
-  A plain click only attacks monsters; a polymorphed player still counts as a player.
-- **PK mode:** `/pk` in the chat toggles it (a red "PK" indicator at the top right): clicking another
-  player attacks without Ctrl. This is client-side; the server decides whether the attack counts (it does no
-  damage in safe zones).
-- **Monsters without a sprite:** those missing from this installation show as a magenta block and are
-  attacked like any other. Players with an unknown gfx show the same block but are not attacked by a plain click.
-- **On death:** a notice appears with a **Restart** button, which sends `C_Restart`.
-- **Status effects:** poisoned (green), frozen (gray), blind (black screen except your own character), and a
-  notice at the top if paralyzed, asleep, stunned or bound (you can't move or act).
+- Shop and options windows are partly upstream's; the full list of differences from the 2009 UI is in
+  [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
+- New-monster animations from the encrypted `list.spz` are not decoded.
+- Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
+- Not yet matched to the original: the time-orb sparkle overlays, cursor states 14 / 16 and the selected-spell variant of 8, the cooking
+  progress bar (the l1j-en server never starts it) (see the audit, `RE_ROUND5.md` and `RE_ROUND6.md`).
+- Approximate: the bubble text block position inside its rectangle and the downward flip of a bubble clipped at the top
+  (inferred, RE_ROUND7 section 1).
+- Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.
+- Server text for `tw380` depends on Whale's Big5 output and the data in the game folder; see the evaluations above.
 
-### Items
+## Issues and discussions
 
-- **Alt+I:** opens and closes the inventory.
-  - Shows the original icons (`N.tbt`), the name on hover, equipped items with an "E", and the weight.
-  - Double-click uses an item: equips or removes weapons and armor, drinks potions.
-  - Drag an item out of the window to drop it on the ground.
-  - **Sort** (bottom of the window) orders the items: equipped first, then by type and name. Dragging an item onto
-    another cell moves it there. The server keeps no order: it is saved per character in settings.ini
-    (`inventario_orden`) and comes back on the next login; new items go to the end.
-  - Shift+click marks several items (blue frame); a plain click clears the mark. Dragging a marked item takes all of
-    them: to the ground, the trash (one confirmation, whole stacks), a trade, an NPC or pet (whole stacks), or another cell.
-  - **Item details:** hovering shows the name and, if identified, its attributes (damage or defense,
-    material, weight, enchantment, classes that use it, attribute bonuses, MR, resistances...). Otherwise it
-    says "Unidentified".
-  - **Scrolls used on another item** (identify, enchant weapon or armor): double-click the scroll, then click the
-    item; Esc cancels.
-  - **Trash can** (bottom right of the inventory): drag an item onto it to destroy it, for what can't be dropped
-    or sold. It always asks first: how many from a stack, or to confirm a single one. The server rejects equipped
-    and undeletable items.
-- **Items on the ground:** click one to pick it up; if it is far, the character walks to it. The name shows on hover.
-- **Giving items:** drag an item from the inventory onto an NPC or pet; from a stack, it asks how many.
-- **1..0 (or Alt+1..Alt+0):** shortcut bar (bottom center). Drag a spell (from Alt+S) or an item (from Alt+I) onto
-  a slot. Clicking it, or its number or Alt+number, uses it; right-click empties it; dragging between slots moves
-  it. Middle-click on a slot selects it (gold frame), and the middle button on a character or monster uses the
-  selected spell there; held, it repeats each time the wait ends (for an item, every half second). With nothing under the pointer it works like the slot's key (a targeted spell waits for the click). A dot next to the page number means the selected slot is on another page. Spell slots
-  (bar and F5–F12) show the wait until the next spell: a shrinking shade and the seconds left. Saved per character.
-  The bar has pages (3 by default; "Hotbar pages" in Options): the page selector on its right (up arrow, number, down arrow), or the mouse
-  wheel over the bar, changes the visible one, and keys, clicks and drags act on it. The selected slot keeps
-  working from any page. Holding 1–0 on a targeted spell that is not an attack (heals, buffs) casts it on
-  yourself after a moment (300 ms; "Hold 1-0 to self-cast" in Options) and repeats while held; a tap still waits
-  for the target click.
-- **Auto-buffs:** six green slots right of the bar. Drag a buff there (from Alt+S or from a bar slot; attacks
-  and spells without a duration are refused), reorder by dragging, right-click empties. With "Auto" (above them)
-  on, each one is cast again when its effect ends (or has less than 2 s left), left to right and one at a time,
-  only while you are not walking, attacking or casting something else. Off by default; saved per character.
-  It sends the same packet as casting by hand.
-- **Auto potion:** per character, in Settings (Characters tab). While HP
-  is below the threshold (60 % by default) it drinks a healing potion as soon as the previous one's delay is over:
-  condensed first, then ancient, then normal, and within each the colour that fits what is missing (clear for a
-  big loss, orange for a medium one, red for a small one). "Pot<60%" next to HP shows it is on (red: no potions).
-  The potion button right of the auto-buffs changes it quickly: Off -> 30 -> 60 -> 80 -> 90 % -> Off.
-- **Auto-buffs and auto potion share one turn:** when several are due at once they go one at a time, 200 ms apart
-  (`ESPACIO_AUTO_MS`), healing first and then the Auto slots left to right.
+Bug reports and feature requests go to [Issues](https://github.com/fxd0h/lineage-cliente/issues); questions,
+setup help and ideas to [Discussions](https://github.com/fxd0h/lineage-cliente/discussions). When reporting a
+UI difference from the original client, a screenshot of both helps a lot. Game assets are never accepted.
 
-### Magic
+## Credits and license
 
-- **Alt+S:** spell window (click casts; with the pointer over a spell, F5–F12 assigns it to that key).
-- **F5–F12:** cast the assigned spell (saved per character). A spell with a target waits for a click on the target;
-  right-click cancels.
-- **Learning magic:** at the magic teacher (Gereng on Talking Island...), "Learn magic" opens the list: click
-  chooses and OK buys. Spellbooks are used with a double-click inside a temple.
-
-### NPCs and trading
-
-- **Clicking an NPC:** walks to it and talks (its page appears at the top left; Esc closes it). In a shop or warehouse:
-  click adds 1, Shift+click adds 10, right-click subtracts; OK confirms.
-- **Repairing weapons:** at a blacksmith, the repair link shows damaged weapons with their cost; a click repairs.
-- **Pets and summons:** their list is to the left of the shortcut bar, with their health. Clicking a name opens its
-  orders menu (attack, defend, stay...); "Bag" shows its inventory, where a click uses or equips the item. With
-  "Attack", the next click picks its target.
-- **Player shops** (in the market rooms): clicking a seller (seated, with the title above) shows what they sell and
-  buy; clicking a line asks how many. `/shop Title` sets up your own: click an inventory item to set its price;
-  "Open" opens it and `/shop` again closes it.
-- **Town bulletin boards:** click the board: topics, reading, "Write" posts (300 adena), and authors can delete theirs.
-- **Mail:** `/mail` (Inbox, Clan and Saved; "Write" to a character for 50 adena, or to the whole clan).
-
-### Chat and social
-
-- **Chat:**
-  - **Enter opens the chat line** (the bottom says "Enter: chat"). Type, and Enter sends and closes it; Esc clears
-    and closes it. While closed, keys are actions (1–0 use the bar). In Options, "Chat: Always typing" goes back
-    to always typing, with the bar on Alt+number;
-  - mouse wheel over the panel, or Page Up / Page Down, for older messages;
-  - prefixes: `!` shout, `&` global, `$` trade, `@` clan, `#` party, `%` alliance, `*` chat group, `"name text` whisper.
-- **Alt+C:** opens and closes the status window (left of the inventory if both are open).
-- **Social** (button, or the one on the original panel): party, trade and clan, with buttons and help. Server
-  questions (invitations, trade or clan requests) appear with **Yes/No** (Enter/Esc).
-- **Trade:** stand next to the other player, facing them. Drag an item from the inventory to the window (or double-click
-  with the trade open), and OK when both agree.
-- **Party:** at mid-height on the left, the list of other members with their health; the leader has a "*".
-- **Names:** a player's color follows alignment gradually: white at 0, through light blue to blue (16000 or more),
-  through pink to red (−16000 or less). The title goes above, with its `\fX` colors, and the clan emblem to the left.
-  Pets and summons show their owner above the name ("Andromeda's").
-- **Player shops:** the title goes over the seller with no background, and the cursor is a coin. Shop prices use a dot
-  every three digits (10.000).
-- **Bookmarks:** `/bookmark name` saves the place (if the map allows it) and `/delbookmark name` deletes it. With
-  bookmarks, the teleport scroll and Teleport ask for the destination.
-- **Chat commands:** anything that isn't a command goes to the chat.
-
-| Area | Commands |
-|---|---|
-| Party | `/invite Name`, `/party`, `/leave`, `/kick Name` |
-| Trade | `/trade` |
-| Clan | `/clan Name` (create; prince with 30000 adena), `/join` (facing a prince), `/pledge`, `/leaveclan`, `/banclan Name`, `/emblem` (uploads a sample emblem) |
-| Players | `/title [Name] Title`, `/who [Name]`, `/exclude Name` (block or unblock; no name: the list) |
-| Friends | `/buddy`, `/addbuddy Name`, `/delbuddy Name` |
-| Chat group | `/chatparty`, `/chatoutparty`, `/chatbanish Name` |
-
-### Sound
-
-Zone music, animation effects and ambience. Music and effects volume are in **Options**.
-
-## Live control (tests and screenshots; development only)
-
-The `debug` and `debug-asan` builds (CMake option `LIN_CONTROL`) open a Unix domain socket and take one-line
-commands. The `release` build doesn't include it: a CMake step (`cmake/sin_control.cmake`) fails if it slips in.
-
-- **Socket:** `$LIN_CONTROL`, or `$TMPDIR/lineage-control-<pid>.sock`. The path is printed at startup.
-  `LIN_CONTROL=tcp:<port>` listens on 127.0.0.1 instead (port 0: any free one). On Windows it is the only
-  option and the default (Python has no `AF_UNIX` there); `lin_ctl.py` uses it by itself on Windows.
-- **Responses:** each ends with `ok` or `error <reason>`.
-- **Waits:** commands that wait for something (`login`, `personaje`, `esperar`, `captura`) respond when it
-  happens or the time limit passes, without blocking the game.
-- **Encoding:** text goes in CP949, like the game's.
-- **`LIN_CONFIG=/tmp/x.ini`** (development only): uses another `settings.ini`, so as not to overwrite the user's and
-  to run several clients at once.
-- **`LIN_VSYNC=0`:** presents without waiting for the display refresh, to measure what the GPU gives without the
-  monitor's cap. The log's `GPU:` line names the adapter and driver (on D3D12, "Microsoft Basic Render Driver" is
-  WARP, software rendering).
-
-| Commands | What they do |
-|---|---|
-| `ayuda` | Lists the commands |
-| `estado`, `objetos [radio]`, `inventario`, `html`, `ventanas`, `grupo`, `chat [n]`, `paquetes [n]` | Queries: screen, view and character (and sieges), nearby objects (id, name, gfx, cell, sprite state, file alias, table row, and screen position), items, the NPC page with its links, open windows (and where the movable ones are), the party, the chat, the latest packets |
-| `login <account> <password> [server]`, `personaje <name>`, `crear <name> <class>` | Enter (they wait for the character list or for being in the game) |
-| `decir "text"` | As if typed in the chat (`/` commands and the GM's `.` included) |
-| `hablar <obj>`, `atacar <obj>`, `parar`, `clic-objeto <obj> [der]` | `<obj>`: id, `#gfx` or part of the name (the nearest one) |
-| `accion <link>`, `responder si\|no\|"text"`, `cantidad <n>` | NPC page, server questions, quantity dialog |
-| `usar <item> [sobre <item>]`, `soltar`, `dar <item> <obj>`, `borrar`, `lanzar <spell> [obj]` | Items and spells |
-| `girar <0-7>`, `ofrecer <item>`, `aceptar-intercambio`, `cancelar-intercambio` | Trade between two clients |
-| `abrir\|cerrar inventario\|estado\|hechizos\|opciones\|social\|salida\|teclas` | Windows |
-| `clic <x> <y> [der\|medio]`, `arrastrar x1 y1 x2 y2`, `mantener x y frames`, `tecla <name>` (`ctrl+`, `alt+`, `shift+`), `texto "..."`, `ctrl on\|off`, `shift on\|off` | Raw input (logical coordinates) |
-| `esperar pantalla=\|paquete=\|html=\|ventana=\|dialogo=\|chat=\|frames=\|ms= [plazo=ms]` | Wait for something instead of counting frames (`paquete=` and `chat=` also count what arrived since the previous command) |
-| `captura <path.bmp>`, `mudo on\|off`, `traza on\|off`, `traza-html on\|off`, `perf on\|off`, `depuracion on\|off`, `salir` | Screenshots and debugging |
-| `forzar-hora <seconds 0-86399>\|off` | Fix the time of day for light and ambient sound, for tests |
-| `rueda <x> <y> <steps>`, `barra-pagina [n]` | Mouse wheel; visible shortcut bar page (without `n`, reports it) |
-| `tecla-mantener <1-0> <ms>` | Hold a number key (also `alt+1`...) that long, for the hold-to-self-cast |
-
-`herramientas/lin_ctl.py` uses it from the terminal (`lin_ctl.py <socket> estado`, or interactively) or as a module
-for writing tests.
-
-**Live tests** (`herramientas/pruebas/`):
-
-- one per topic: login, moving, chat and status, combat and spells, inventory, equipment, NPC, bulletin board and
-  mail, auctions, social (two clients);
-- **those that modify and restart the local server:** houses, castles and war. They restore it themselves with
-  `herramientas/pruebas/servidor.py`.
-
-```sh
-herramientas/pruebas/todas.py /tmp/test.ini /tmp/screenshots              # those that leave no changes
-herramientas/pruebas/todas.py /tmp/test.ini /tmp/screenshots --servidor   # all of them
-herramientas/pruebas/npc.py /tmp/test.ini /tmp/screenshots                # just one
-```
-
-The test `settings.ini` needs `juego=`. Each test puts characters back where they were and closes its clients even
-if it fails. For example, the beginning of `subastas.py`:
-
-```python
-c = Control.arrancar(config="/tmp/test.ini")
-c("mudo on"); c("login prueba2 prueba2"); c("personaje Charla")
-c("hablar Auction"); c("esperar ventana=subastas")
-c("captura /tmp/auctions.bmp"); c.cerrar()
-```
-
-## Resource explorer
-
-```sh
-build/debug/explorador --juego="$LINEAGE_DIR" --gfx=0 --accion=3   # ←/→ gfx, ↑/↓ action
-build/debug/explorador --juego="$LINEAGE_DIR" --png=814            # a single image (--img=N)
-```
-
-Shows a gfx in the 8 directions over reference diamonds. It was used to calibrate the sprite anchor.
-
-## Structure (data-oriented design)
-
-Identifiers and comments in the code are in Spanish.
-
-| Module | Contents |
-|---|---|
-| `src/core` | Types, `Arena` (per-frame linear allocation), `MapaHash` (open addressing), `TablaSoa` (columnar table with swap removal), `AnilloBytes` (lock-free SPSC queue), bounded binary reader |
-| `src/plataforma` | Memory-mapped files, TCP socket and configuration. Only this module, `render` and `audio` depend on the system or on SDL |
-| `src/i18n` | Interface languages: the text catalog and `tr()` |
-| `src/proto` | Encryption, opcode tables per protocol version, decoder with a function-pointer table (packet → POD `Evento`), commands and network threads (reader and writer) |
-| `src/recursos` | `.idx/.pak` (lookup by name hash in `SpriteNN.pak`), `Text.pak` DES, `.img`/`.png` (including the obfuscated PNG), `.til`, `.spr` (composite frames), sprite table, `.s32`, `eng.fnt`/`kor.fnt` fonts and the interface font, text tables |
-| `src/mundo` | SoA object table, player state, map segments and batched event application. Interpolated position and animation frame are pure functions of time. `chat.h`: fixed-size ring log, bubbles, server messages with `string-e.tbl`, and channel prefixes |
-| `src/render` | SDL_GPU: atlas in a *texture array*, draw list with radix sort and **a single instanced draw call per frame**; integer scaling |
-| `src/audio` | SDL3 device and streams: MP3 music (dr_mp3), WAV effects, ambience |
-| `src/ui` | Immediate-mode UI: image buttons (N/N+1), text boxes, simple-interface controls |
-| `src/app` | Main loop, screens (login, characters, creation, game) and one `*_ui.cpp` per game feature |
-| `tools/` | `settings.cpp` (settings editor), `explorador.cpp` (resource explorer), `generar_fuente_ui.py` (embedded font), `generar_iconos.py` (icons in `datos/iconos/` and `.icns`) |
-| `tests/` | doctest: core, encryption (vectors from `docs/analisis/scripts/lineage_proto.py`), DES, protocol, real resources, map against the server, world, chat, fonts and texts |
-| `datos/` | `sprite_table.txt` (sprite action table from l1j-client, GPLv3; this installation only has an encrypted `list.enx`) and the interface font |
-
-## Known issues
-
-- **Text overflow after the font change, partly fixed.** Departure Mono is 7 px per letter, against the original's 6.
-  The F1 help window, the Options window, the editor's buttons and labels, and the login labels were adjusted to fit
-  (the editor's labels are checked in `tests/test_textos.cpp`). The other in-game windows have not been reviewed one by one.
-- **Partial translation:** the in-game windows are not translated yet ([Languages](#languages)), and the translations
-  have not been reviewed by native speakers.
-
-| F1 help | French editor |
-|---|---|
-| ![F1 help window, fitted](docs/capturas/readme_fixed_help.png) | ![French settings editor, fitted](docs/capturas/readme_fixed_editor_fr.png) |
-
-## Missing for Windows and Linux
-
-`grep -rn MULTIPLATAFORMA` lists them in the code.
-
-| Where | What's missing |
-|---|---|
-| `src/plataforma/archivo_mapeado.cpp`, `socket.cpp` | Windows: written (`MapViewOfFile`, UTF-16 paths, Winsock2) and checked with MinGW and in CI; not yet tried on a real Windows machine |
-| `std::filesystem` with `std::string` (`ventanas.cpp`, `mundo.cpp`) | Windows: narrow paths use the ANSI code page, not UTF-8; a game folder with non-ASCII characters would not be found |
-| `CMakeLists.txt` | MSVC: equivalent options are in place, untested. `.app` / `.exe` / AppImage packaging (deliverable 11) |
-| `servidor_local/*.sh` | Linux: system packages instead of brew. Windows: the server's own `.bat` files |
-
-## License
-
-The format code was written by reading l1j-client (GPLv3), and `datos/sprite_table.txt` comes from that project, so
-this client must be distributed as **GPLv3** ([LICENSE](LICENSE)). The interface font, Departure Mono, is under the SIL
-Open Font License 1.1 (`licencias/DepartureMono-OFL.txt`). Game resources are not included: they are read from the
-user's installation.
+Upstream client by Javier Correa ([javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente)).
+Its original README and status tracker are kept in [docs/upstream/](docs/upstream/README.md). The format code derives
+from [l1j-client](https://github.com/uglyoldbob/l1j-client) (GPLv3), as does `datos/sprite_table.txt`, so the client
+is distributed under **GPL-3.0** ([LICENSE](LICENSE)). Servers: L1J-JP, l1j-en (classic) and L1JGO-Whale
+(eddy7697 fork), each under its own license. Interface font Departure Mono: SIL OFL 1.1
+(`licencias/DepartureMono-OFL.txt`).

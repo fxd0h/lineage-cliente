@@ -7,7 +7,10 @@
 // & 15, y si no está, en Sprite.pak (getHashIndex de l1j-client). Los SpriteNN tienen las
 // versiones más nuevas (p. ej. 814.png del login está en Sprite00 y no en Sprite.pak).
 #pragma once
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <string_view>
 #include <vector>
 #include "plataforma/archivo_mapeado.h"
@@ -35,26 +38,42 @@ private:
 
 u64 hash_nombre(std::string_view nombre);  // FNV-1a de 64 bits sobre el nombre en minúsculas
 
-// Todos los contenedores del juego.
+// Todos los contenedores del juego. La primera fuente es la instalación principal (juego=); las siguientes son
+// las carpetas de juego_extra=, probadas en orden para lo que les falte a las anteriores (sprites, tiles, archivos sueltos de
+// sprite/ y map/, páginas html). Las tablas de texto (.tbl, .def, hechizos) salen solo de la principal.
 class Recursos {
 public:
-    bool abrir(const std::string& carpeta_juego);
+    bool abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras = {});
     const std::string& carpeta() const { return carpeta_; }
 
-    Bytes sprite(std::string_view nombre) const;  // SpriteNN.pak y luego Sprite.pak
-    Bytes tile(std::string_view nombre) const { return tile_.buscar(nombre); }
+    Bytes sprite(std::string_view nombre) const;  // SpriteNN.pak, Sprite.pak, loose sprite/ per source
+    Bytes tile(std::string_view nombre) const;    // Tile.pak, loose Tile/ per source
     // Text.pak: los archivos también van cifrados con DES; se devuelven ya descifrados.
     bool texto(std::string_view nombre, std::vector<u8>& salida) const;
+    // Primera fuente que tiene `relativa` (p. ej. "map/4/7fff8000.s32", "sound/12.wav"); la ruta de la principal si ninguna.
+    std::string ruta_archivo(const std::string& relativa) const;
+    // No se registra qué fuente (0 = principal) atendió las últimas búsquedas; esto dice dónde se resuelve el nombre de un sprite.
+    // La misma búsqueda pero solo en Sprite.pak (el archivo base): se saltan los parches SpriteNN.pak con hash. El cliente 2009 capturado
+    // todavía muestra el arte base de algunas imágenes de la interfaz (botones de la franja inferior) que los parches reemplazaron.
+    Bytes sprite_base(std::string_view nombre) const;
+    int fuente_de_sprite(std::string_view nombre) const;
+    size_t fuentes() const { return fuentes_.size(); }
+    const std::string& carpeta_de(size_t i) const { return fuentes_[i]->carpeta; }
 
-    const Pak& pak_sprites_base() const { return sprite_base_; }
-    const Pak& pak_textos() const { return texto_; }
+    const Pak& pak_sprites_base() const { return fuentes_[0]->sprite_base; }
+    const Pak& pak_textos() const { return fuentes_[0]->texto; }
 
 private:
+    struct Fuente {
+        std::string carpeta;
+        Pak sprite_base, sprite_hash[16], tile, texto;
+        mutable std::mutex mu;  // caché de archivos sueltos (sprite() se llama desde varios hilos)
+        mutable std::unordered_map<std::string, ArchivoMapeado> sueltos;  // mapeo vacío = se sabe que falta
+    };
+    static Bytes suelto(const Fuente& f, std::string_view dir, std::string_view nombre);
+    static Bytes en_fuente(const Fuente& f, std::string_view nombre);
     std::string carpeta_;
-    Pak sprite_base_;
-    Pak sprite_hash_[16];
-    Pak tile_;
-    Pak texto_;
+    std::vector<std::unique_ptr<Fuente>> fuentes_;
 };
 
 }  // namespace lin

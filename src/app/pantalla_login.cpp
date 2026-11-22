@@ -189,7 +189,7 @@ void frame_login(App& a) {
     } else {
         login |= ui::boton(g, e, 53, X_BOTONES, 0x183);
         ui::boton(g, e, 65, X_BOTONES, 0x195);  // nueva cuenta: L1J las crea solas al primer login
-        if (ui::boton(g, e, 55, X_BOTONES, 0x1a8)) a.ventana_ajustes = true;  // opciones: los ajustes
+        ui::boton(g, e, 55, X_BOTONES, 0x1a8);  // options: no-op like the 2009 login (settings window is simple-UI only)
         if (ui::boton(g, e, 57, X_BOTONES, 0x1c2)) a.salir = true;
     }
     if (e.escape && !a.mostrando_noticias) a.salir = true;

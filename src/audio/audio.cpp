@@ -3,9 +3,11 @@
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <cstdio>
+#include <filesystem>
 #define DR_MP3_IMPLEMENTATION
 #define DR_MP3_NO_STDIO_DEFAULT_ALLOCATOR_WARNING
 #include "dr_mp3.h"
+#include "plataforma/archivo_mapeado.h"
 
 namespace lin {
 
@@ -35,8 +37,20 @@ struct Audio::Wav {
 Audio::Audio() = default;
 Audio::~Audio() { cerrar(); }
 
-bool Audio::abrir(const std::string& carpeta_juego) {
+std::string Audio::ruta_sonido(const std::string& nombre) const {
+    std::error_code ec;
+    for (const std::string& c : carpetas_) {
+        const std::string r = ruta_real(c + nombre);
+        if (std::filesystem::exists(r, ec)) return r;
+    }
+    return ruta_real(carpeta_ + nombre);
+}
+
+bool Audio::abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras) {
     carpeta_ = carpeta_juego + "sound/";
+    carpetas_ = {carpeta_};
+    for (const std::string& e : extras)
+        if (!e.empty()) carpetas_.push_back(e + (e.back() == '/' ? "sound/" : "/sound/"));
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         std::fprintf(stderr, "audio: %s\n", SDL_GetError());
         return false;
@@ -133,8 +147,9 @@ void Audio::bucle_cargador() {
             char nombre[32];
             std::snprintf(nombre, sizeof nombre, "music%d.mp3", tema);
             auto* m = new drmp3;
-            // Algunos archivos empiezan con mayúscula (Music1012.mp3): ruta_real los encuentra en Linux.
-            if (!drmp3_init_file(m, ruta_real(carpeta_ + nombre).c_str(), nullptr)) {
+            // Algunos archivos empiezan con mayúscula (Music1012.mp3): en macOS el sistema de archivos no
+            // las distingue. En Linux, ruta_real las busca sin distinguir mayúsculas.
+            if (!drmp3_init_file(m, ruta_sonido(nombre).c_str(), nullptr)) {
                 delete m;
                 m = nullptr;
             }
@@ -148,7 +163,7 @@ void Audio::bucle_cargador() {
             Wav* w = new Wav;
             char ruta[64];
             std::snprintf(ruta, sizeof ruta, "%u.wav", id);
-            if (!SDL_LoadWAV(ruta_real(carpeta_ + ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
+            if (!SDL_LoadWAV(ruta_sonido(ruta).c_str(), &w->spec, &w->datos, &w->bytes)) w->bytes = 0;
             std::lock_guard<std::mutex> lk(mu_);
             wavs_listos_.emplace_back(id, w);
         }
@@ -229,11 +244,11 @@ void Audio::recoger_cargados(u64 ahora_ms) {
     }
 }
 
-void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms) {
+void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms, bool solapar, bool unico) {
     int libre = -1, viejo = 0;
     for (int i = 0; i < N_EFECTOS; ++i) {
         const bool ocupado = SDL_GetAudioStreamQueued(streams_[i]) > 0;
-        if (ocupado && id_stream_[i] == id && ahora_ms - inicio_stream_[i] < MS_MISMO_EFECTO) return;
+        if (ocupado && id_stream_[i] == id && (unico || (!solapar && ahora_ms - inicio_stream_[i] < MS_MISMO_EFECTO))) return;
         if (!ocupado && libre < 0) libre = i;
         if (inicio_stream_[i] < inicio_stream_[viejo]) viejo = i;
     }
@@ -246,14 +261,14 @@ void Audio::tocar(u32 id, const Wav* w, float ganancia, u64 ahora_ms) {
     id_stream_[i] = id;
 }
 
-void Audio::efecto(u32 id, float ganancia, u64 ahora_ms) {
+void Audio::efecto(u32 id, float ganancia, u64 ahora_ms, bool solapar, bool unico) {
     if (!dispositivo_ || ganancia <= 0.01f || vol_efectos_ <= 0) {
         ++efectos_tocados_;  // cuenta igual: las pruebas corren en silencio
         return;
     }
     ++efectos_tocados_;
     if (const Wav* w = wav(id)) {
-        tocar(id, w, ganancia, ahora_ms);
+        tocar(id, w, ganancia, ahora_ms, solapar, unico);
         return;
     }
     // Todavía cargándose (o no existe: el cargador lo dirá). Se toca al llegar, si llega a tiempo.
@@ -329,6 +344,10 @@ void Audio::abrir_mp3(u64) {
 }
 
 void Audio::musica(i32 n, u32 intervalo_s, u64 ahora_ms) {
+    if (fundido_n_ != SIN_FUNDIDO) {  // un cambio directo cancela el fundido en curso
+        fundido_n_ = SIN_FUNDIDO;
+        if (stream_musica_) SDL_SetAudioStreamGain(stream_musica_, vol_musica_);
+    }
     if (n == musica_n_) return;
     musica_n_ = n;
     intervalo_s_ = intervalo_s;
@@ -338,8 +357,33 @@ void Audio::musica(i32 n, u32 intervalo_s, u64 ahora_ms) {
     abrir_mp3(ahora_ms);
 }
 
+void Audio::musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms) {
+    if (n == musica_n_) {  // lo que suena ya es el destino: se cancela cualquier fundido
+        musica(n, intervalo_s, ahora_ms);
+        return;
+    }
+    if (!dispositivo_ || musica_n_ < 0 || !mp3_) {  // nada suena: el cambio es directo
+        musica(n, intervalo_s, ahora_ms);
+        return;
+    }
+    if (fundido_n_ == n) return;
+    fundido_n_ = n;
+    fundido_intervalo_ = intervalo_s;
+    fundido_ini_ = ahora_ms;
+}
+
 void Audio::actualizar(u64 ahora_ms) {
     if (!dispositivo_) return;
+    if (fundido_n_ != SIN_FUNDIDO) {
+        constexpr u64 MS_FUNDIDO = 800;
+        const u64 dt = ahora_ms - fundido_ini_;
+        if (dt >= MS_FUNDIDO) {
+            const i32 n = fundido_n_;
+            musica(n, fundido_intervalo_, ahora_ms);  // restablece el volumen
+        } else {
+            SDL_SetAudioStreamGain(stream_musica_, vol_musica_ * (1.0f - static_cast<float>(dt) / MS_FUNDIDO));
+        }
+    }
     recoger_cargados(ahora_ms);
     // La música y el ambiente los alimentan sus callbacks; aquí, el fin del tema y su vuelta.
     if (mp3_ && mp3_termino_) {
