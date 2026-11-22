@@ -1032,8 +1032,8 @@ void Gpu::ajustar_vista(bool ampliable, int zoom, int franja, bool solo_mundo) {
         ventana_ph_ = std::max(1, ph);
         const float fit = factor_ajuste(ventana_pw_, ventana_ph_, grid_w_, grid_h_);
         escala_ = escala_interna(fit, entero);
-        // Interfaz simple: el zoom es solo del mapa (como en la vista amplia), hasta la escala interna; la grilla no cambia.
-        escala_mundo_ = ampliable && solo_mundo && zoom > 0 ? std::min(zoom, escala_) : escala_;
+        // El zoom es solo del mapa, hasta la escala interna: la grilla de 640×480 (y la interfaz) no cambia.
+        escala_mundo_ = ampliable && zoom > 0 ? std::min(zoom, escala_) : escala_;
         rect_ = rect_vista(ventana_pw_, ventana_ph_, grid_w_, grid_h_, entero);
         return;
     }

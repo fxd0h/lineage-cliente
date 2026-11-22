@@ -171,8 +171,15 @@ SDL_Cursor* from_original(const PeCursor& c, int scale) {
     return SDL_CreateCursor(data.data(), mask.data(), w, h, c.hot_x * scale, c.hot_y * scale);
 }
 
+// Escala del cursor: los píxeles lógicos del juego en puntos de pantalla. SDL_CreateCursor toma el bitmap en
+// puntos (en Retina, macOS lo muestra al doble), así que la escala interna (en píxeles) se divide por la densidad.
+int escala_cursor(const App& a) {
+    const float densidad = a.ventana ? std::max(1.0f, SDL_GetWindowPixelDensity(a.ventana)) : 1.0f;
+    return std::clamp(static_cast<int>(std::lround(static_cast<float>(a.gpu.escala()) / densidad)), 1, 4);
+}
+
 void build(App& a) {
-    g_scale = std::clamp(a.gpu.escala(), 1, 4);
+    g_scale = escala_cursor(a);
     for (int i = 0; i < static_cast<int>(Cursor::CANTIDAD); ++i)
         if (i < static_cast<int>(g_originals.size()) && g_originals[i].width > 0)
             a.cursores[i] = from_original(g_originals[i], g_scale);
@@ -198,7 +205,7 @@ void crear_cursores(App& a) {
 }
 
 void aplicar_cursor(App& a) {
-    if (!g_originals.empty() && std::clamp(a.gpu.escala(), 1, 4) != g_scale) {
+    if (!g_originals.empty() && escala_cursor(a) != g_scale) {
         SDL_Cursor* old[static_cast<int>(Cursor::CANTIDAD)];
         std::memcpy(old, a.cursores, sizeof old);
         std::memset(a.cursores, 0, sizeof old);

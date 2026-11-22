@@ -143,7 +143,7 @@ F1 lists all keys in game. Highlights (original-client hotkeys): Ctrl+I inventor
 Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, F5-F12 spells/items, Ctrl+1..8 = F5..F12, Ctrl+R floating
 HP/MP, Ctrl+T chat size, Ctrl+X attack mode, Ctrl+P screenshot. Hold the left button to walk or attack; Ctrl+click
 forces an attack on NPCs/players; F2 toggles the UI mode; Shift+F5 cycles the scaling filter; Alt+Enter toggles
-full screen. Complete list: [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
+full screen (on Mac also Cmd+Enter or Ctrl+Cmd+F). Complete list: [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
 
 ## Reverse engineering notes
 

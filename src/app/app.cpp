@@ -193,12 +193,18 @@ void leer_entrada(App& a) {
         case SDL_EVENT_KEY_DOWN:
             switch (ev.key.key) {
             case SDLK_RETURN: case SDLK_KP_ENTER:
-                if (ev.key.mod & SDL_KMOD_ALT) {  // Alt+Enter: pantalla completa o ventana (sin repetir al mantenerla)
+                if (ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_GUI)) {  // Alt+Enter (Cmd+Enter en Mac): pantalla completa o ventana
                     if (!ev.key.repeat) {
                         alternar_pantalla_completa(a);
                         guardar_config(a.cfg);
                     }
                 } else e.enter = true;
+                break;
+            case SDLK_F:  // Ctrl+Cmd+F: el atajo de pantalla completa de macOS
+                if ((ev.key.mod & SDL_KMOD_GUI) && (ev.key.mod & SDL_KMOD_CTRL) && !ev.key.repeat) {
+                    alternar_pantalla_completa(a);
+                    guardar_config(a.cfg);
+                }
                 break;
             case SDLK_TAB: e.tab = true; break;
             case SDLK_ESCAPE: e.escape = true; break;

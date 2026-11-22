@@ -282,11 +282,14 @@ void dibujar_barra(App& a, int y) {
     const EntradaFrame& e = a.entrada;
     // Atajos, selector, auto-buffs y el botón de auto-poción (los que se usan), centrados; en una vista
     // más angosta que todo, pegados a la izquierda.
-    const int ancho = ancho_total(a) + (a.cfg.usar_autobuffs ? SEPARACION_AUTO + ANCHO_AUTO : 0) +
-                      (a.cfg.usar_autopocion ? SEPARACION_AUTO + CELDA_AUTO : 0);
-    a.barra_x = std::max(2, (a.gpu.ancho() - ancho) / 2);
-    a.autobuffs.x = a.barra_x + ancho_total(a) + SEPARACION_AUTO;
-    a.autobuffs.y = a.autopocion.y = y + (CELDA - CELDA_AUTO);
+    // Si no entran en una fila (la vista fija mide 640), los casilleros Auto van arriba de la barra, alineados a su derecha.
+    const int ancho_autos = (a.cfg.usar_autobuffs ? SEPARACION_AUTO + ANCHO_AUTO : 0) +
+                            (a.cfg.usar_autopocion ? SEPARACION_AUTO + CELDA_AUTO : 0);
+    const bool dos_filas = ancho_autos > 0 && ancho_total(a) + ancho_autos > a.gpu.ancho() - 4;
+    a.barra_x = std::max(2, (a.gpu.ancho() - ancho_total(a) - (dos_filas ? 0 : ancho_autos)) / 2);
+    a.autobuffs.x = dos_filas ? a.barra_x + ancho_total(a) - (ancho_autos - SEPARACION_AUTO)
+                              : a.barra_x + ancho_total(a) + SEPARACION_AUTO;
+    a.autobuffs.y = a.autopocion.y = dos_filas ? y - CELDA_AUTO - ALTO_GLIFO - 8 : y + (CELDA - CELDA_AUTO);
     a.autopocion.x = a.cfg.usar_autobuffs ? a.autobuffs.x + ANCHO_AUTO + SEPARACION_AUTO : a.autobuffs.x;
     Atajo* pagina = visible(a);
     a.barra_y = y;
