@@ -329,7 +329,7 @@ bool accion_opciones(App& a, std::string_view accion) {
         if (accion == f.nombre) a.cfg.opciones_orig ^= 1 << f.bit, hecho = true;
     // Chat toggles tell the server: 0 world chat, 6 trade chat, 2 whisper.
     auto avisar = [&](std::string_view nombre, OpcionOrig bit, u8 que) {
-        if (accion == nombre && a.op.cable_de_cli[static_cast<int>(Cli::LOGINTOSERVEROK)] != 0)
+        if (accion == nombre && a.op.tiene(Cli::LOGINTOSERVEROK))
             enviar(a, cmd::opcion_chat(a.op, que, a.cfg.opciones_orig >> bit & 1));
     };
     avisar("dochat", OPC_DOCHAT, 0);

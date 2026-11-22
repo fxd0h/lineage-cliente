@@ -215,8 +215,12 @@ template <size_t NS, size_t NC>
 void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u8 init, PerfilProtocolo perfil) {
     for (Srv& s : t.srv_de_cable) s = Srv::DESCONOCIDO;
     for (u8& c : t.cable_de_cli) c = 0;
+    for (bool& d : t.cli_definido) d = false;
     for (const ParSrv& p : srv) t.srv_de_cable[p.cable] = p.interno;
-    for (const ParCli& p : cli) t.cable_de_cli[static_cast<int>(p.interno)] = p.cable;
+    for (const ParCli& p : cli) {
+        t.cable_de_cli[static_cast<int>(p.interno)] = p.cable;
+        t.cli_definido[static_cast<int>(p.interno)] = true;
+    }
     t.cable_init = init;
     t.perfil = perfil;
 }

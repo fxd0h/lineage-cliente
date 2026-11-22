@@ -86,11 +86,14 @@ struct PerfilProtocolo {
 struct TablaOpcodes {
     Srv srv_de_cable[256];                          // número de cable -> interno
     u8 cable_de_cli[static_cast<int>(Cli::CANTIDAD)];  // interno -> número de cable
+    // El comando tiene número en esta versión. No alcanza con cable != 0: el 0 es válido (BOOKMARK de s3ep1).
+    bool cli_definido[static_cast<int>(Cli::CANTIDAD)];
     u8 cable_init;                                  // opcode del paquete inicial (sin cifrar)
     PerfilProtocolo perfil;                         // formato de los cuerpos para esta versión
 
     Srv srv(u8 cable) const { return srv_de_cable[cable]; }
     u8 cli(Cli c) const { return cable_de_cli[static_cast<int>(c)]; }
+    bool tiene(Cli c) const { return cli_definido[static_cast<int>(c)]; }
 };
 
 // Versiones disponibles: "jp363" (L1J-JP 3.63c), "tw380" (3.80C de Taiwán, L1JGO-Whale) y "s3ep1"

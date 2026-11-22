@@ -1267,3 +1267,13 @@ TEST_CASE("Escritor: en tw380 las cadenas salen en Big5") {
     j.s("abc");
     CHECK(j.cuerpo()[1] == 'a');
 }
+
+TEST_CASE("Escritor: un comando sin número en esta versión del protocolo no se manda") {
+    TablaOpcodes jp, us;
+    REQUIRE(tabla_opcodes("jp363", jp));
+    REQUIRE(tabla_opcodes("s3ep1", us));
+    CHECK_FALSE(cmd::barco(jp, 4, 1, 2).definido());  // C_Ship solo existe en s3ep1
+    CHECK(cmd::barco(us, 4, 1, 2).definido());
+    CHECK(us.tiene(Cli::BOOKMARK));  // su número es 0, pero existe
+    CHECK(us.cli(Cli::BOOKMARK) == 0);
+}

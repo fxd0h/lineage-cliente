@@ -11,7 +11,10 @@ namespace lin {
 
 class Escritor {
 public:
-    Escritor(const TablaOpcodes& t, Cli op) : big5_(t.perfil.texto_big5) { buf_.push_back(t.cli(op)); }
+    Escritor(const TablaOpcodes& t, Cli op) : definido_(t.tiene(op)), big5_(t.perfil.texto_big5) { buf_.push_back(t.cli(op)); }
+    // false si el comando no existe en esta versión del protocolo: enviar() no lo manda (iría con un
+    // número de otro paquete, el 0).
+    bool definido() const { return definido_; }
     Escritor& c(u8 v) { buf_.push_back(v); return *this; }
     Escritor& h(u16 v) { c(static_cast<u8>(v)); return c(static_cast<u8>(v >> 8)); }
     Escritor& d(u32 v) { h(static_cast<u16>(v)); return h(static_cast<u16>(v >> 16)); }
@@ -33,6 +36,7 @@ public:
 
 private:
     std::vector<u8> buf_;
+    bool definido_ = true;
     bool big5_ = false;
 };
 

@@ -428,6 +428,7 @@ void frame_elegir_carpeta(App& a) {
 }  // namespace
 
 void enviar(App& a, Escritor e) {
+    if (!e.definido()) return;  // el comando no existe en esta versión del protocolo (C_Ship fuera de s3ep1...)
     Bytes b = e.cuerpo();
     if (g_traza) {
         char hex[3 * 16 + 1] = {};
