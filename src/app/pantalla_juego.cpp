@@ -662,7 +662,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
-        float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
+        float top = sy - 40, pie = sy;
+        float caja_x0 = ex, caja_x1 = ex + 48;  // sprite frame rect, left / right (exe 0x4cbf70)  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
         RegionAtlas rg;
         bool rg_pendiente = false;
         bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
@@ -774,6 +775,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             else if (a.jugador_tapado && o.ids()[s] == a.mundo.jugador.id)
                 g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, 0xFFFFFFFEu), rgba(255, 255, 255, ALFA_SILUETA));  // bajo la lluvia, sobre el resto
             top = py + rg.oy - desfase_y;
+            caja_x0 = px + rg.ox;
+            caja_x1 = caja_x0 + rg.w;
             pie = top + rg.h;
             const float x0 = px + rg.ox, y0 = py + rg.oy, x1 = x0 + rg.w, y1 = y0 + rg.h;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
@@ -788,6 +791,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (!rg_pendiente && !frame_vacio)
                 g.gpu().rectangulo(static_cast<int>(x0), static_cast<int>(y0), 24, 36, clave_orden(CAPA_MUNDO, prof), rgba(255, 0, 255, 170));
             top = y0;
+            caja_x0 = x0;
+            caja_x1 = x1;
             pie = y0 + 36;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
             if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
@@ -798,6 +803,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (z != 1.0f) {
             sx = (sx + 24) * z - 24;
             ex = (ex + 24) * z - 24;
+            caja_x0 *= z;
+            caja_x1 *= z;
             sy *= z;
             top *= z;
             pie *= z;
@@ -810,16 +817,26 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         const u8 hp = o.col<O_HP>()[s];
         // A corpse has no bar: the exe classes a dead monster as 2 (0x4cdd30), and only class 0xa gets the bar (0x467856).
         if (hp <= 100 && !soy_yo && o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
-            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
-            top -= 8;
+            if (a.cfg.ui_simple) {
+                overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
+                top -= 8;
+            } else {  // exe 0x466c43: centred on the frame rect (x = l + (r - l) / 2 - 21), y = top - 4; the name does not move
+                const int l = static_cast<int>(caja_x0), r = static_cast<int>(caja_x1);
+                overhead_bar(g, l + (r - l) / 2 - 21, static_cast<int>(top) - 4, IMG_OVERHEAD_HP, hp, 100);
+            }
         }
         // Barra de HP/MP propia (opción): dos barras finas sobre el personaje, con los valores reales.
         if (soy_yo && a.cfg.barra_personaje) {
             const EstadoJugador& j = a.mundo.jugador;
             // Como el original: HP arriba y MP justo debajo, compartiendo el borde del marco.
-            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, IMG_OVERHEAD_HP, j.hp, j.hp_max);
-            overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_MP, j.mp, j.mp_max);
-            top -= 12;
+            if (a.cfg.ui_simple) {
+                overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, IMG_OVERHEAD_HP, j.hp, j.hp_max);
+                overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_MP, j.mp, j.mp_max);
+                top -= 12;
+            } else {  // exe 0x466ddb: at the cell's left edge, HP at top - 12 and MP at top - 8; the name does not move
+                overhead_bar(g, static_cast<int>(ex), static_cast<int>(top) - 12, IMG_OVERHEAD_HP, j.hp, j.hp_max);
+                overhead_bar(g, static_cast<int>(ex), static_cast<int>(top) - 8, IMG_OVERHEAD_MP, j.mp, j.mp_max);
+            }
         }
         // Texto de combate flotante (opción): daño recibido / "Miss", sube y se desvanece (DUR_COMBATE).
         if (soy_yo && a.n_textos_combate) {
@@ -873,8 +890,39 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 else contorno_nivel = color_nivel_original(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel);
             }
             if (a.cfg.ui_simple && o.ids()[s] == a.objetivo) color = rgba(255, 230, 90);
-            if (a.cfg.ui_simple) g.texto_sombra(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color);
-            else g.texto_nombre(nombre, ex + 24 - w / 2, top - 14, clave_orden(CAPA_EFECTOS, 0), color, contorno_nivel);
+            // Título encima del nombre: el del NPC ("Merchant^...") o el del personaje (O_TITULO).
+            const std::string_view titulo = !titulo_npc.empty()                  ? titulo_npc
+                                            : personaje || o.col<O_MASCOTA>()[s] ? texto(a.mundo, o.col<O_TITULO>()[s])
+                                                                                 : std::string_view{};
+            const bool con_clan = o.col<O_CLAN>()[s] != 0;
+            float nombre_x = ex + 24 - w / 2, nombre_y = top - 14, emblema_x = nombre_x - 19, emblema_y = top - 14;
+            float titulo_cx = ex + 24, titulo_y = top - 28;
+            if (!a.cfg.ui_simple) {
+                // Label box of the hovered object (exe 0x4cc030): 14 px tall (27 with a title) above the frame rect,
+                // flipped below it when it would leave the top; width max(name, title) + 2, + 18 for the emblem,
+                // centred on the frame rect (own character: on the cell), kept on screen. Name at box top - 3 (+13
+                // under a title), shifted 10 right with an emblem; emblem 20 left of the name, 1 px higher; title at
+                // box top - 3 (0x4676bb..0x46758e). The bars do not push it up.
+                int wt = 0;
+                if (!titulo.empty()) {
+                    const bool doble = !es_utf8(titulo.data(), titulo.size());
+                    recorrer_codigos(titulo, 0, doble, [&](std::string_view t, u32) { wt += ancho_texto(t.data(), t.size()); });
+                }
+                const float alto = titulo.empty() ? 14.0f : 27.0f;
+                float caja_y = top_sprite - alto;
+                if (caja_y <= 0) caja_y = pie + 1;
+                const float ancho = static_cast<float>(std::max(w, wt) + 2 + (con_clan ? 18 : 0));
+                const float centro = soy_yo ? ex + 24 : (caja_x0 + caja_x1) / 2;
+                const float l = std::clamp(centro - ancho / 2, 0.0f, std::max(0.0f, static_cast<float>(a.gpu.ancho()) - ancho));
+                nombre_x = l + (ancho - static_cast<float>(w)) / 2 + (con_clan ? 10.0f : 0.0f);
+                nombre_y = caja_y - 3 + (titulo.empty() ? 0.0f : 13.0f);
+                emblema_x = nombre_x - 20;
+                emblema_y = nombre_y - 1;
+                titulo_cx = l + ancho / 2;
+                titulo_y = caja_y - 3;
+            }
+            if (a.cfg.ui_simple) g.texto_sombra(nombre, nombre_x, nombre_y, clave_orden(CAPA_EFECTOS, 0), color);
+            else g.texto_nombre(nombre, nombre_x, nombre_y, clave_orden(CAPA_EFECTOS, 0), color, contorno_nivel);
             if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {  // título de la tienda
                 dibujar_titulo(g, v->titulo, ex + 24, top - 28, clave_orden(CAPA_EFECTOS, 1), rgba(255, 220, 130));
             }
@@ -888,16 +936,10 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (castillo_de(a, o.ids()[s]))
                 dibujar_corona(g, ex + 24 - w / 2 - (o.col<O_CLAN>()[s] ? 19 : 0) - 16, top - 12, clave_orden(CAPA_EFECTOS, 0));
             // Emblema del clan a la izquierda del nombre (se pide una vez por clan).
-            if (u32 clan = o.col<O_CLAN>()[s]) dibujar_emblema(a, clan, ex + 24 - w / 2 - 19, top - 14);
+            if (con_clan) dibujar_emblema(a, o.col<O_CLAN>()[s], emblema_x, emblema_y);
             top -= 14;
-            // Título encima del nombre: el del NPC ("Merchant^...") o el del personaje (O_TITULO).
-            std::string_view titulo = !titulo_npc.empty()                  ? titulo_npc
-                                      : personaje || o.col<O_MASCOTA>()[s] ? texto(a.mundo, o.col<O_TITULO>()[s])
-                                                          : std::string_view{};
             if (!titulo.empty()) {
-                // Original: the title sits 13 px above the name (0x4676bb..), outlined.
-                dibujar_titulo(g, titulo, ex + 24, top - (a.cfg.ui_simple ? 14 : 13), clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130),
-                               !a.cfg.ui_simple);
+                dibujar_titulo(g, titulo, titulo_cx, titulo_y, clave_orden(CAPA_EFECTOS, 0), rgba(230, 200, 130), !a.cfg.ui_simple);
                 top -= 14;
             }
         }

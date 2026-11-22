@@ -428,3 +428,9 @@ attribute reset (the teleport markers are done, see the "Teleport destination" r
 - **Strip button hints** (ventanas.cpp `hint_panel`): rebuilt from the hint manager 0x4bb8f0 (700 ms delay, string-e 613/1250/614-619, 50% darkened bevelled box above the strip); not visible in the available footage (option off there). RE_ROUND8 section 3.
 
 - **Chat bubbles, text / pointer / flip** (pantalla_juego.cpp `dibujar_globo`, original mode): lines flush left at rect.left (+5 boxed) with a black outline, speech pointer triangles (unboxed), pushed-down bubble starts at the sprite frame bottom, pointer-edge drop rules (RE_ROUND8 section 4). Code-confirmed, no footage to compare.
+
+### Overhead bars and labels (2026-11-22, exe 0x466c00, 0x4cc030, 0x4676bb..0x46758e)
+- Others' HP bar (img 930 frame + 931 fill, 44 px): x = frame-rect left + (right - left) / 2 - 21, y = frame-rect top - 4, always drawn (not only on hover) when the server gives a percentage; not for corpses (class 2, 0x4cdd30).
+- Own bars (showhpmp): at the cell's left edge, HP at top - 12, MP (932) at top - 8.
+- Hover label box: 14 px tall (27 with a title) above the frame rect, flipped below it when it would leave the screen; width max(name, title) + 2 (+18 with an emblem), centred on the frame rect (own character: on the cell), clamped to the screen. Name at box top - 3 (+13 under a title), +10 px with an emblem; emblem 20 px left of the name, 1 px higher; title at box top - 3. Bars do not push the label up.
+- Fork: `pantalla_juego.cpp` object overlay, original UI only. Open: absolute x origin of the exe surface (0x30 margin) calibrated against our cell anchor, title fill colour.
