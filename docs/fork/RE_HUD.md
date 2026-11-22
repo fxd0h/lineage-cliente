@@ -68,3 +68,7 @@ Tags: [C] confirmed from decompile, [I] inferred. In REA pass addresses as `ram:
   Object class (0x4cdd30, jump table 0x46a358): 2/3 -> 8 if attack mode and weapon byte 0x28/0x3c, else 10; 4/14/15 -> 9;
   7/13 -> 14; 8 -> 14 if tile flag bit 2 else 3; 9 -> 3; 5/11 -> Alt 7, attack 15/8, else 6/3; 6/12 -> attack+Ctrl 15, else
   4 if +0x129 == 0, else 3; 10 (monster/NPC) -> Alt 7, attack 15/8, else 6.
+- Modifier flags (2026-11-22): [0x702dd6] = Ctrl and [0x702dd5] = Alt (key handler 0x456bb0, VK 0x11 / 0x12); [0x703105] = Ctrl+X
+  attack mode; [0x6f1dac] = the "pk" option toggle (0x403dbd). Ctrl with or without an object is checked before the object class.
+  Class from 0x4cdd30: sprite type 10 -> 10 (dead 2; pet whose master is the player 6, other pet 5); types 5/6/12 dead -> 3; 0xb doors
+  by action; 4/7/8/9/13/14/15/16/0 as their type; else 1. Fork: `elegir_cursor_original` (NPCs and own pet 4, not the sword).

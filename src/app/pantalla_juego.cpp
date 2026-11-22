@@ -2152,19 +2152,40 @@ void elegir_cursor_original(App& a) {
     const Vista vi = vista(a);
     if (sobre_alguna_ventana(a)) return poner(5);
     if (a.entrada.my >= vi.panel_y || sobre_barra(a)) return poner(1);  // arrow over the HUD
-    const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;
+    const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
+    // Attack mode: the fork's one flag stands for both Ctrl+X ([0x703105]) and the "pk" option ([0x6f1dac]).
+    const bool ataque = a.modo_pk;
     const ObjId id = objeto_bajo_puntero(a);
     const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
-    const u8 tipo = s == SIN_SLOT ? static_cast<u8>(TIPO_ITEM) : tipo_objeto(a, s);
-    const bool ataque = a.modo_pk;
     if (a.arrastrando && s != SIN_SLOT) return poner(13);  // dragging an item over an object
-    if (s == SIN_SLOT || tipo == TIPO_PERSONAJE || tipo == TIPO_MONSTRUO || es_npc(a, s)) {
-        const bool monstruo = s != SIN_SLOT && (tipo == TIPO_MONSTRUO || es_npc(a, s));
-        if (alt && (s != SIN_SLOT || a.entrada.ctrl)) return poner(7);  // no object: Ctrl+Alt
-        if (ataque) return poner(15);
-        if (a.entrada.ctrl || monstruo) return poner(6);
+    // Ctrl held, with or without an object (0x469fb1): Alt 7, attack mode 15, else 6.
+    if (a.entrada.ctrl) return poner(alt ? 7 : ataque ? 15 : 6);
+    if (s == SIN_SLOT) return poner(3);
+    const TablaObjetos& o = a.mundo.objetos;
+    const bool muerto = o.col<O_ESTADO>()[s] == ESTADO_MUERTO;
+    // Object class (0x4cdd30) from the sprite type: a live monster 10 (dead 2, own pet 6, someone else's pet 5);
+    // characters 5, NPCs 6 / 12 (dead 3); doors 8, items 9, others as their type.
+    u8 clase = tipo_objeto(a, s);
+    if (clase == TIPO_MONSTRUO) {
+        if (muerto) clase = 2;
+        else if (mascota_propia(a, s)) clase = 6;
+        else if (o.col<O_MASCOTA>()[s]) clase = 5;
+    } else if ((clase == 5 || clase == 6 || clase == 12) && muerto) {
+        clase = 3;
     }
-    poner(3);
+    const bool yo = id == a.mundo.jugador.id;
+    switch (clase) {  // jump table 0x46a358
+    case 2: case 3: return poner(10);                   // corpse: 10 (8 in attack mode with a spell weapon, not modelled)
+    case 4: case 14: case 15: return poner(9);
+    case 7: case 13: return poner(14);
+    case 6: case 12: return poner(ataque ? 15 : 4);     // NPC / own pet: lips (0x46a1ed)
+    case TIPO_MONSTRUO:                                 // 0x46a09f: Alt 7, attack mode 15, else the sword 6
+        if (yo) return poner(3);
+        return poner(alt ? 7 : ataque ? 15 : 6);
+    case 5: case 11:                                    // character (0x46a27a): attack mode 15, else 3
+        return poner(ataque ? 15 : 3);
+    default: return poner(3);                           // items 9, doors 8 (tile flag case not modelled), the rest
+    }
 }
 
 void elegir_cursor(App& a) {
