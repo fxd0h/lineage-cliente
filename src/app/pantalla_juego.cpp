@@ -124,6 +124,17 @@ u32 profundidad(float fila_pantalla, u32 orden, u32 sub) {
     return (static_cast<u32>(v < 0 ? 0 : v) << 9) | ((orden & 63) << 3) | (sub & 7);
 }
 
+// Original UI draw order (frame renderer 0x465c30, insertion 0x460230): cells are visited by screen row (12 px) top to
+// bottom, then screen column (24 px) left to right; each cell draws its list in layer order. A map piece sits in its own
+// cell with its own layer byte; a character's body is in its cell at layer 18 (the foot part of the .spr). Within a cell
+// and layer the map piece goes after the object (later-added entries draw first). `sx`, `sy`: the cell's screen corner.
+u32 clave_celda(float sx, float sy, u32 capa, u32 sub) {
+    const i32 r = std::clamp(static_cast<i32>(std::floor(sy / 12.0f)) + 512, 0, 1023);
+    const i32 c = std::clamp(static_cast<i32>(std::floor(sx / 24.0f)) + 512, 0, 1023);
+    return static_cast<u32>(r) << 22 | static_cast<u32>(c) << 12 | std::min<u32>(capa, 255) << 4 | (sub & 15);
+}
+constexpr u32 CAPA_CUERPO_ORIGINAL = 18;
+
 // Acción a mostrar y desde cuándo:
 //  - muerto: morir, detenida en el último frame (el cadáver);
 //  - una acción puntual (ataque, daño, morir) ya empezada: esa, una vez;
@@ -415,7 +426,8 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                     // Pie de la pieza (ver COLUMNAS_BASE en mapa.h); dentro de la misma fila de pie, las
                     // piezas más altas primero y los personajes después.
                     float fila_pie = static_cast<float>(mundo_py(x, y) + t.base * 12.0) + 12.0f;
-                    const u32 prof = profundidad(fila_pie, ORDEN_PERSONAJE - 1 - std::min(62, static_cast<int>(t.base)), t.capa);
+                    const u32 prof = original ? clave_celda(sx, sy, t.capa, 12)
+                                              : profundidad(fila_pie, ORDEN_PERSONAJE - 1 - std::min(62, static_cast<int>(t.base)), t.capa);
                     // Del objeto que tapa, solo lo que queda delante (techo, pared del frente): el
                     // interior y la pared de atrás siguen opacos.
                     const bool delante = tapa && prof > yo->profundidad;
@@ -698,6 +710,10 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         // Others' invisible bodies are not drawn at all (no name, bars or click target) without a Ring of Sayha.
         if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
+        if (!a.cfg.ui_simple) {
+            const int cx = static_cast<int>(std::lround(fx)), cy = static_cast<int>(std::lround(fy));
+            prof = clave_celda(static_cast<float>(mundo_px(cx, cy) + ox), static_cast<float>(mundo_py(cx, cy) + oy), CAPA_CUERPO_ORIGINAL, 4);
+        }
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
@@ -1082,7 +1098,9 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
         u32 color_ef = BLANCO;
         Mezcla mezcla_ef = Mezcla::NORMAL;
         if (!preparar_mezcla(a.sprites, ef.gfx, color_ef, mezcla_ef)) continue;
-        g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, profundidad(static_cast<float>(mundo_py(x, y)) + 12.0f, ORDEN_PERSONAJE, 6)),
+        const u32 prof_ef = a.cfg.ui_simple ? profundidad(static_cast<float>(mundo_py(x, y)) + 12.0f, ORDEN_PERSONAJE, 6)
+                                            : clave_celda(px, py, CAPA_CUERPO_ORIGINAL, 6);
+        g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof_ef),
                            color_ef, mezcla_ef);
     }
 }
@@ -2271,7 +2289,21 @@ void elegir_cursor_original(App& a, u64 ahora) {
         if (ui::sobre(a.entrada, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h)) return poner(1);
         return poner(3);
     }
-    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
+    // A map portal on the cell under the pointer (tile flag 2, set from the .s32 portal records at 0x460ddc) with no object
+    // there and nothing pending: 14, before the object chooser (0x469792).
+    const bool pendiente = a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando;
+    auto portal_bajo_puntero = [&] {
+        const TablaObjetos& o = a.mundo.objetos;
+        const Slot me = o.buscar(a.mundo.jugador.id);
+        if (me == SIN_SLOT) return false;
+        const Vista vm = vista_mundo(a);
+        const double rx = (raton_mundo_x(a) - vm.cx) / 24.0, ry = (raton_mundo_y(a) - vm.cy) / 12.0;
+        const int tx = o.col<O_X>()[me] + static_cast<int>(std::lround((rx - ry) / 2));
+        const int ty = o.col<O_Y>()[me] + static_cast<int>(std::lround((rx + ry) / 2));
+        return es_portal(a.mundo, a.rec, tx, ty);
+    };
+    if (!pendiente && !objeto_bajo_puntero(a, false, true) && portal_bajo_puntero()) return poner(14);
+    if (pendiente) {
         // Target in range: the target circle (8), or 15 with Ctrl or the pk option (0x469f85); out of range: 11 (0x46a344).
         if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
         return poner(a.entrada.ctrl || pk ? 15 : 8);
