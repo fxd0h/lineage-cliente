@@ -545,8 +545,8 @@ void bucle_app(App& a) {
             if (a.cursores[static_cast<int>(c)]) a.cursor = c;
         }
         if (a.g) a.g->nuevo_frame();
-        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. With the simple UI the
-        // zoom is for the map only: the interface keeps its size.
+        // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. Con la interfaz simple el
+        // zoom es solo del mapa: la interfaz conserva su tamaño.
         a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
         a.gpu.fijar_texto_hd(a.cfg.texto_hd);
         a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");

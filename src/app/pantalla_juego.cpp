@@ -2196,8 +2196,9 @@ void dibujar_estado(App& a) {
 // desde el frame siguiente (Gpu::ajustar_vista al comienzo del frame).
 void cambiar_zoom(App& a) {
     int z = a.entrada.zoom;
-    if (z == 0 || a.gpu.vista_fija()) return;  // el zoom solo vale en la vista amplia
-    int maxima = a.gpu.escala_maxima();
+    // Con la vista fija solo la interfaz simple tiene zoom (del mapa); la original queda en 640×480 como el cliente 2009.
+    if (z == 0 || (a.gpu.vista_fija() && !a.cfg.ui_simple)) return;
+    int maxima = a.gpu.vista_fija() ? a.gpu.escala() : a.gpu.escala_maxima();
     int actual = a.cfg.zoom > 0 ? std::min(a.cfg.zoom, maxima) : maxima;
     int nuevo = z == 2 ? 0 : std::clamp(actual + z, 1, maxima);
     if (nuevo == maxima) nuevo = 0;  // la máxima es la automática: sigue a la ventana
