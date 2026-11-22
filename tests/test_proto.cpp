@@ -46,7 +46,7 @@ TEST_CASE("Decodificar: S_OwnCharAttrDef lee la CA como el original (byte >= 0x2
     TablaOpcodes t;
     tabla_opcodes("jp363", t);
     auto ca = [&](u8 byte) {
-        const u8 p[] = {15, byte, 1, 2, 3, 4};  // 15 = OWNCHARATTRDEF on the jp363 wire
+        const u8 p[] = {15, byte, 1, 2, 3, 4};  // 15 = OWNCHARATTRDEF en el protocolo jp363
         Arena arena(1024);
         std::vector<Evento> ev;
         REQUIRE(decodificar({p, sizeof p}, t, arena, ev));
@@ -57,7 +57,7 @@ TEST_CASE("Decodificar: S_OwnCharAttrDef lee la CA como el original (byte >= 0x2
     CHECK(ca(0xFA) == -6);
     CHECK(ca(10) == 10);
     CHECK(ca(0x27) == 39);
-    CHECK(ca(0x28) == 40 - 256);  // the original wraps 0x28..0x7f to -216..-129
+    CHECK(ca(0x28) == 40 - 256);  // el original da la vuelta 0x28..0x7f a -216..-129
     CHECK(ca(0x7f) == 127 - 256);
     CHECK(ca(0x80) == -128);
 }
@@ -316,7 +316,7 @@ TEST_CASE("Tablón y correo: S_Board, S_BoardRead, S_Mail y comandos") {
     CHECK(ev[1].id == 9);
     CHECK(ev[1].s[0] == "Ana");
     CHECK(ev[1].s[1] == "Hi");
-    // l1j-en classic (s3ep1) list: d id, c read, c yy, c mm, c dd, s sender, subject; and the bare 0x20 reply (mailbox full).
+    // Lista de l1j-en classic (s3ep1): d id, c leída, c aa, c mm, c dd, s remitente, asunto; y la respuesta sola 0x20 (buzón lleno).
     TablaOpcodes t2;
     tabla_opcodes("s3ep1", t2);
     ev.clear();
@@ -536,7 +536,7 @@ TEST_CASE("Social: preguntas, intercambio, título, emblema, página del clan y 
     CHECK(cmd::aceptar_intercambio(t).cuerpo()[0] == 110);
     CHECK(cmd::cancelar_intercambio(t).cuerpo()[0] == 167);
     CHECK(cmd::invitar_grupo(t, 1).cuerpo()[0] == 166);
-    {  // C_LoginToServerOK: c what, c flag (chat toggles of the Options page); invite type byte
+    {  // C_LoginToServerOK: c qué, c flag (opciones de chat de la página de Opciones); byte de tipo de invitación
         Escritor oc = cmd::opcion_chat(t, 6, true);
         CHECK(oc.cuerpo()[1] == 6);
         CHECK(oc.cuerpo()[2] == 1);
@@ -676,7 +676,7 @@ TEST_CASE("Puertas, estados alterados, cantidad y mascotas: decodificar, aplicar
     igual(cmd::usar_item_sobre(t, 0x33, 0x44), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0});
     // Wand of Polymorph (useType spell_long): d item, d target, h x, h y (C_UseItem.java).
     igual(cmd::usar_item_apuntado(t, 0x33, 0x44, 0x7f55, 0x80a6), {44, 0x33, 0, 0, 0, 0x44, 0, 0, 0, 0x55, 0x7f, 0xa6, 0x80});
-    // Poly scroll or wand with Ring of Polymorph Control: d item, s monster name.
+    // Pergamino de polymorph o varita con Ring of Polymorph Control: d objeto, s nombre del monstruo.
     igual(cmd::usar_item_texto(t, 0x33, "orc"), {44, 0x33, 0, 0, 0, 'o', 'r', 'c', 0});
     igual(Escritor(t, Cli::EXITGHOST), {210});
     igual(Escritor(t, Cli::RETURNTOLOGIN), {218});
@@ -787,7 +787,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
     CHECK(ev[0].id == 0x01020304);
     CHECK(ev[0].v[0] == 16);
     {
-        TablaOpcodes us;  // the 2009 US client: handler 14 of S3EP1U.bin
+        TablaOpcodes us;  // el cliente US 2009: manejador 14 de S3EP1U.bin
         tabla_opcodes("s3ep1", us);
         ev.clear();
         std::vector<u8> usmap = {14, 4, 3, 2, 1, 16, 0, 0, 0};
@@ -799,7 +799,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
             REQUIRE(w.cuerpo().size() >= esperado.size());
             CHECK(std::memcmp(w.cuerpo().data(), esperado.data(), esperado.size()) == 0);
         };
-        // s3ep1 opcode 26 is S_WarTime (not MapID); 73 is S_MapID: "hc" map 4, underwater 1, then padding.
+        // El opcode 26 de s3ep1 es S_WarTime (no MapID); 73 es S_MapID: "hc" mapa 4, bajo el agua 1, después relleno.
         ev.clear();
         std::vector<u8> uswar = {26, 6, 0, 'J', 'S', 'T', 0, 0, 0, 0};
         for (u32 i = 0; i < 6; ++i) {
@@ -815,7 +815,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         REQUIRE(decodificar(usmapid, us, arena, ev));
         CHECK(ev[0].tipo == Ev::MAPA);
         CHECK(ev[0].v[0] == 4);
-        // S_PacketBox (62) message subtypes become server messages; 5 is the duel, 42 the logout.
+        // Los subtipos de mensaje de S_PacketBox (62) pasan a mensajes del servidor; 5 es el duelo, 42 el cierre de sesión.
         auto caja_us = [&](std::vector<u8> b) {
             ev.clear();
             REQUIRE(decodificar(b, us, arena, ev));
@@ -850,7 +850,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         caja_us({62, 5, 4, 3, 2, 1, 8, 7, 6, 5});
         CHECK(ev[0].tipo == Ev::DUELO);
         CHECK(ev[0].id == 0x01020304);
-        caja_us({62, 5, 0, 0, 0, 0, 8, 7, 6, 5});  // id 0: the duel ended, nothing to show
+        caja_us({62, 5, 0, 0, 0, 0, 8, 7, 6, 5});  // id 0: terminó el duelo, nada que mostrar
         CHECK(ev.empty());
         caja_us({62, 42});
         CHECK(ev[0].tipo == Ev::VOLVER_PERSONAJES);
@@ -866,7 +866,7 @@ TEST_CASE("Castillos y casas: S_HouseList, S_HouseMap, S_War, S_CastleMaster, fo
         caja_us({62, 21, 0, 0, 0, 2});  // class icons: b3 = 2
         CHECK(ev[0].v[IE_TIPO] == 21);
         CHECK(ev[0].v[IE_EXTRA + 3] == 2);
-        caja_us({62, 56, 5, 0, 0x21, 0x0c});  // t = 5 with the second h 0xc21
+        caja_us({62, 56, 5, 0, 0x21, 0x0c});  // t = 5 con el segundo h 0xc21
         CHECK(ev[0].v[IE_SEG] == 5);
         CHECK(ev[0].v[IE_EXTRA] == 0xc21);
         caja_us({62, 75, 4});
@@ -1029,7 +1029,7 @@ TEST_CASE("Decodificar y responder S_MessageYN: forma larga (jp363) y corta (s3e
     const u8 esp_corto[] = {s3.cli(Cli::ATTR), 0xb9, 0x03, 1};  // opcode + h tipo + c sí = 4 bytes justos
     REQUIRE(rc.cuerpo().size() == 4);
     CHECK(std::memcmp(rc.cuerpo().data(), esp_corto, sizeof esp_corto) == 0);
-    // tw380 (L1JGO-Whale) decodes the long question but answers short: [h tipo][c sí]
+    // tw380 (L1JGO-Whale) decodifica la pregunta larga pero responde corta: [h tipo][c sí]
     TablaOpcodes tw;
     REQUIRE(tabla_opcodes("tw380", tw));
     Escritor rt = cmd::responder(tw, 1337, 223, true);
@@ -1118,8 +1118,8 @@ TEST_CASE("S_BookmarkLoad (opcode 33, subtipo 42): todos los marcadores al entra
 TEST_CASE("S_AddSkill de .addskill de un caballero: los 8 hechizos generales y las 5 habilidades de clase") {
     TablaOpcodes t;
     tabla_opcodes("jp363", t);
-    // L1AddSkill (knight, max spell level 1): header 32, level 1 = 255, knight rows 10/11 = 192, 7,
-    // the other 16 rows 0, then 2 x writeD(0).
+    // L1AddSkill (caballero, nivel máximo de hechizo 1): cabecera 32, nivel 1 = 255, filas de caballero 10/11 = 192, 7,
+    // las otras 16 filas 0, después 2 x writeD(0).
     std::vector<u8> p = {48, 32, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 7};
     p.insert(p.end(), 16 + 8, 0);
     Arena arena(1024);
@@ -1137,8 +1137,8 @@ TEST_CASE("S_AddSkill de .addskill de un caballero: los 8 hechizos generales y l
     for (u32 id = 87; id <= 91; ++id) CHECK(m.jugador.sabe(id));
     CHECK_FALSE(m.jugador.sabe(92));
     CHECK_FALSE(m.jugador.sabe(113));
-    // C_UseSkill of Counter Barrier: row 11, column 2.
-    Escritor e = cmd::usar_hechizo(t, 91, 0, 0, 0);  // Bytes points into the writer
+    // C_UseSkill de Counter Barrier: fila 11, columna 2.
+    Escritor e = cmd::usar_hechizo(t, 91, 0, 0, 0);  // Bytes apunta dentro del escritor
     Bytes b = e.cuerpo();
     REQUIRE(b.size() == 4);
     CHECK(b[1] == 11);
@@ -1154,9 +1154,9 @@ TEST_CASE("Big5 a UTF-8: ASCII intacto, par Big5 convertido, byte suelto '?'") {
     CHECK(s == "a?");
 }
 
-// Real S_InvList of the l1j-en classic server (s3ep1, cable 8), captured with `traza on`: count 1, then
-// d id, c uso, c 0, h gfx, c bless, d count, c identified, s name, c nattr (no catalyst, no fixed tail).
-// The potion has use type 0 ("normal"); the original UI therefore sorts it in "Miscellaneous", not equipment.
+// S_InvList real del servidor l1j-en classic (s3ep1, cable 8), capturado con `traza on`: cantidad 1, después
+// d id, c uso, c 0, h gfx, c bendición, d cantidad, c identificado, s nombre, c nattr (sin catalizador, sin cola fija).
+// La poción tiene tipo de uso 0 ("normal"); por eso la interfaz original la ordena en "Miscellaneous", no en equipo.
 TEST_CASE("s3ep1: S_InvList (bytes reales de l1j-en) y filtros de pestanas del inventario original") {
     TablaOpcodes t;
     REQUIRE(tabla_opcodes("s3ep1", t));
@@ -1230,7 +1230,7 @@ TEST_CASE("Fishing: S_Fishing, S_PacketBox 55 and C_FishClick") {
     CHECK(ev[0].v[1] == 0x7f55);
     CHECK(ev[0].v[2] == 0x80a6);
     Escritor w = cmd::click_pesca(t, true);
-    REQUIRE(w.cuerpo().size() >= 2);  // padded to the block size
+    REQUIRE(w.cuerpo().size() >= 2);  // rellenado al tamaño de bloque
     CHECK(w.cuerpo()[0] == 26);
     CHECK(w.cuerpo()[1] == 1);
     TablaOpcodes us;

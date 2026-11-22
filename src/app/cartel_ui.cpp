@@ -1,8 +1,8 @@
-// Info card of a sign (original client window class 0x4a6c90, opened from 0x408300): clicking a type-4 world object (a
-// sign) within 2 tiles in x and 1 in y whose second pack string (title) is a `$` desc-e id shows frame 1197, the translucent background 1198 at
-// (8,11), the icon `0x83 + heading` of the icon table at (25,45), the wrapped desc-e text below it and the close button
-// 969 at (182,19). l1j-en sends signs as S_SignboardPack (an S_CharPack with the `$` name) and does nothing on a click,
-// so the card is purely client side.
+// Ficha de un cartel (clase de ventana del cliente original 0x4a6c90, abierta desde 0x408300): un clic en un objeto del mundo de tipo 4 (un
+// cartel) a 2 celdas en x y 1 en y cuyo segundo texto del pack (título) es un id desc-e `$` muestra el marco 1197, el fondo translúcido 1198 en
+// (8,11), el ícono `0x83 + rumbo` de la tabla de íconos en (25,45), el texto desc-e ajustado debajo y el botón de cerrar
+// 969 en (182,19). l1j-en manda los carteles como S_SignboardPack (un S_CharPack con el nombre `$`) y no hace nada ante un clic,
+// así que la ficha es solo del cliente.
 #include <algorithm>
 #include <charconv>
 #include "app/app.h"
@@ -24,7 +24,7 @@ const u64 KEY_BACK = clave_orden(CAPA_UI, 10), KEY_FRAME = clave_orden(CAPA_UI, 
 Rect rect_cartel(const App& a) { return {(a.gpu.ancho() - CARD_W) / 2, a.gpu.alto() / 6, CARD_W, CARD_H}; }
 
 void abrir_cartel(App& a, Slot s) {
-    // l1j-en sends the `$` id in the second string of the pack (the title), the first is empty.
+    // l1j-en manda el id `$` en el segundo texto del pack (el título); el primero va vacío.
     const std::string_view nombre = texto(a.mundo, a.mundo.objetos.col<O_TITULO>()[s]);
     u32 id = 0;
     if (nombre.size() < 2 || nombre[0] != '$') return;
@@ -45,7 +45,7 @@ void dibujar_cartel(App& a) {
     const bool sobre_cierre = ui::sobre(e, r.x + 182, r.y + 19, 14, 14);
     g.gpu().dibujar(g.img(IMG_CLOSE), r.x + 182, r.y + 19, KEY_CTRL, sobre_cierre ? rgba(255, 255, 255) : rgba(200, 200, 200));
     if (sobre_cierre && e.clic) a.cartel.abierto = false;
-    // Word wrap of the desc-e text (lines are cut at spaces; '\n' forces a break).
+    // Ajuste de líneas del texto desc-e (se corta en los espacios; '\n' fuerza un salto).
     const std::string_view t = a.desc.linea(a.cartel.desc);
     int y = r.y + TEXT_Y;
     size_t i = 0;

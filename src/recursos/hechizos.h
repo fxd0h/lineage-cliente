@@ -19,8 +19,8 @@
 namespace lin {
 
 constexpr u32 CANTIDAD_HECHIZOS = 28 * 8;  // 28 filas (niveles) de 8 en S_AddSkill
-// Original spellbook layout (2009 exe, slot tables near 0x4424xx). Class ids: 0 prince, 1 knight, 2 elf, 3 wizard,
-// 4 dark elf, 5 dragon knight, 6 illusionist. A slot is row * 4 + column; skill id = idx + 1. Returns 0 for an empty slot.
+// Diseño original del libro de hechizos (exe 2009, tablas de casillas cerca de 0x4424xx). Ids de clase: 0 príncipe, 1 caballero, 2 elfo, 3 mago,
+// 4 elfo oscuro, 5 caballero dragón, 6 ilusionista. Una casilla es fila * 4 + columna; id de habilidad = idx + 1. Devuelve 0 para una casilla vacía.
 constexpr u32 spellbook_skill_id(int cls, int slot) {
     if (slot < 0) return 0;
     auto in = [&](int lo, int hi) { return slot >= lo && slot <= hi; };
@@ -49,7 +49,7 @@ constexpr u32 spellbook_skill_id(int cls, int slot) {
     case 6:  // illusionist
         if (in(0, 19)) idx = slot + 200;
         break;
-    case 1:  // knight: tab 2 holds the knight skills
+    case 1:  // caballero: la pestaña 2 tiene las habilidades de caballero
         if (in(0, 79)) {
             switch (slot) {
             case 8: idx = 86; break;
@@ -61,12 +61,12 @@ constexpr u32 spellbook_skill_id(int cls, int slot) {
             }
         }
         break;
-    default:  // wizard and unknown
+    default:  // mago y desconocidos
         if (in(0, 79)) idx = slot;
     }
     return idx < 0 ? 0 : static_cast<u32>(idx + 1);
 }
-// Highest first grid row of the scroll bar (0x47e9d0 limits) and tab count of the strip image.
+// Primera fila de grilla más alta de la barra de scroll (límites de 0x47e9d0) y cantidad de pestañas de la imagen de la franja.
 constexpr int spellbook_max_scroll(int cls) { return cls == 0 ? 13 : cls == 2 ? 21 : cls == 4 ? 9 : 19; }
 
 constexpr u8 ACC_HECHIZO_ATAQUE = 18, ACC_HECHIZO = 19;  // ActionCodes.ACTION_SkillAttack / SkillBuff

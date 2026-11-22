@@ -58,7 +58,7 @@ TEST_CASE("Sonidos: music.def y envsound.def de la instalación") {
     DefSonidos d;
     d.cargar({reinterpret_cast<const char*>(m.data()), m.size()}, {reinterpret_cast<const char*>(e.data()), e.size()});
     CHECK(d.musica_login == 0);
-    CHECK(d.musica_caza == 6);  // combat music: "Hunting" and "PlayrtKilling" (sic)
+    CHECK(d.musica_caza == 6);  // música de combate: "Hunting" y "PlayrtKilling" (sic)
     CHECK(d.musica_pk == 7);
     CHECK(d.musica.size() > 100);
     // Pueblo de Gludio antes que el campo de Gludio (mismo mapa 4).

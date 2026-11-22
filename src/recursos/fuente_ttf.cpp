@@ -72,16 +72,16 @@ const Ttf& ttf() {
 }
 
 
-// ---- Face of the HTML pages (original interface) ---------------------------------------------------
-// The 2009 client draws NPC pages with a GDI font, not eng.fnt: 0x4359f0 builds a LOGFONT (height 13, weight 400/700,
-// charset 0, family 0x22, quality 0 = default) and 0x435520 sets the face "Arial" (string at 0x5037a2). lfHeight 13 is
-// a cell height: it resolves to 11 ppem (ascent 10 + descent 3 = 13, which is also the line height 0x43d90c uses).
-// Windows XP draws Arial at that size hinted and without anti-aliasing, so the glyphs are pre-rendered 1-bit hinted
-// bitmaps of Liberation Sans (Arial metrics, OFL) made by tools/generar_fuente_html.py, with hinted integer advances.
+// ---- Letra de las páginas HTML (interfaz original) -------------------------------------------------
+// El cliente 2009 dibuja las páginas de NPC con una fuente GDI, no con eng.fnt: 0x4359f0 arma un LOGFONT (alto 13, peso 400/700,
+// charset 0, familia 0x22, calidad 0 = por omisión) y 0x435520 fija la letra "Arial" (texto en 0x5037a2). lfHeight 13 es
+// un alto de celda: equivale a 11 ppem (ascenso 10 + descenso 3 = 13, que también es el alto de línea que usa 0x43d90c).
+// Windows XP dibuja Arial a ese tamaño con hinting y sin suavizado, así que los glifos son bitmaps de 1 bit con hinting
+// prerrenderizados de Liberation Sans (métricas de Arial, OFL) hechos por tools/generar_fuente_html.py, con avances enteros con hinting.
 constexpr int ALTO_CELDA_HTML = ALTO_LINEA_HTML_ORIGINAL;
 
-// Hinted pixel face of the HTML pages: regular, or bold (<b>: LOGFONT weight 700, 0x4359f0 / tag handler 0x437a2c).
-// Both tables cover the same code points in the same order.
+// Letra de píxeles con hinting de las páginas HTML: normal, o negrita (<b>: peso 700 del LOGFONT, 0x4359f0 / manejador de la etiqueta 0x437a2c).
+// Las dos tablas cubren los mismos puntos de código en el mismo orden.
 struct CaraHtml {
     const unsigned short* cp;
     const unsigned char* ancho;
@@ -158,8 +158,8 @@ bool rasterizar_html(u32 cp, ImagenRGBA& salida, bool negrita) {
     return true;
 }
 
-// HD variant of the HTML face: the real (unhinted) Liberation Sans outlines rasterized at HD_ESCALA times the 11 ppem
-// size, placed on the same pen position and baseline as the pixel glyph, so only the edges differ.
+// Variante HD de la letra HTML: los contornos reales (sin hinting) de Liberation Sans rasterizados a HD_ESCALA veces el tamaño de 11 ppem,
+// ubicados en la misma posición de pluma y línea base que el glifo de píxeles, así que solo cambian los bordes.
 bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida, bool negrita) {
     static const stbtt_fontinfo* infos[2] = {
         [] {
@@ -175,7 +175,7 @@ bool rasterizar_html_hd(u32 cp, ImagenRGBA& salida, bool negrita) {
     const CaraHtml& c = cara(negrita);
     const int fila = indice_html(c, cp);
     const int avance = std::max(1, static_cast<int>(c.ancho[fila]));
-    u32 real = c.cp[fila];  // the code point actually drawn ('?' for unknown ones)
+    u32 real = c.cp[fila];  // el punto de código que realmente se dibuja ('?' para los desconocidos)
     const int idx = stbtt_FindGlyphIndex(info, static_cast<int>(real));
     const float escala = stbtt_ScaleForMappingEmToPixels(info, 11.0f * HD_ESCALA);
     int x0 = 0, y0 = 0, x1 = 0, y1 = 0;

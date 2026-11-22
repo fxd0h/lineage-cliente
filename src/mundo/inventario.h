@@ -37,7 +37,7 @@ void compactar_textos(std::vector<char>& textos, F&& cada) {
 enum ColItem : size_t {
     I_GFX,          // ícono de inventario (N.tbt)
     I_USO,          // tipo de uso (L1J ItemTable: 1 arma, 2 armadura, 59 curación...)
-    I_BENDICION,    // wire value of S_AddItem: 0 blessed, 1 normal, 2 cursed, 3 unidentified, +128 sealed
+    I_BENDICION,    // valor del protocolo de S_AddItem: 0 bendito, 1 normal, 2 maldito, 3 sin identificar, +128 sellado
     I_CANTIDAD,
     I_IDENTIFICADO,
     I_NOMBRE,
@@ -47,8 +47,8 @@ using TablaItems = TablaSoa<u16, u8, u8, u32, u8, TextoRef, TextoRef>;
 
 constexpr u8 USO_ARMA = 1, USO_ARMADURA = 2;
 
-// Bless byte of S_AddItem / S_InvList / S_ItemColor / S_Trade*: L1ItemInstance.getStatusForPacket (the original
-// client reads it the same way, FUN_004458f0 at 0x4458f0 stores it at item+0x6c). 128 is added when sealed.
+// Byte de bendición de S_AddItem / S_InvList / S_ItemColor / S_Trade*: L1ItemInstance.getStatusForPacket (el cliente
+// original lo lee igual, FUN_004458f0 en 0x4458f0 lo guarda en item+0x6c). Se suma 128 si está sellado.
 enum : u8 { BLESS_BLESSED = 0, BLESS_NORMAL = 1, BLESS_CURSED = 2, BLESS_UNIDENTIFIED = 3, BLESS_SEALED_FLAG = 128 };
 constexpr u8 bless_kind(u8 wire) { return static_cast<u8>(wire & ~BLESS_SEALED_FLAG); }
 
@@ -62,16 +62,16 @@ struct Inventario {
     }
 };
 
-// itemquest.tbl entry: item gfx and the desc-e.tbl line holding its name (original UI "Quest" tab).
+// Entrada de itemquest.tbl: gfx del objeto y la línea de desc-e.tbl con su nombre (pestaña "Quest" de la interfaz original).
 struct ItemMision { u16 gfx; u32 desc; };
 std::string_view nombre_item(const Inventario& inv, Slot s);
 std::string_view atributos_item(const Inventario& inv, Slot s);
 // Los atributos de un ítem identificado en texto, una línea por atributo ("Damage 6/8", "AC 3",
 // "STR +1", "Usable by: Knight, Elf"...), separadas por '\n'. Devuelve el largo escrito.
 size_t describir_atributos(std::string_view bytes, char* salida, size_t capacidad);
-// Hover box text of the original inventory (0x446490 / 0x446520 / draw 0x44e45b): the name, wrapped to 23 columns
-// (a second line only when longer), then the attribute text wrapped to 22 columns ('\n' forces a break). The first
-// `nombre` lines are the name's.
+// Texto de la caja de hover del inventario original (0x446490 / 0x446520 / dibujo 0x44e45b): el nombre, ajustado a 23 columnas
+// (una segunda línea solo si es más largo), después el texto de atributos ajustado a 22 columnas ('\n' fuerza un salto). Las primeras
+// `nombre` líneas son las del nombre.
 struct LineasTip {
     static constexpr size_t MAX_LINEAS = 22, ANCHO = 32;
     char texto[MAX_LINEAS][ANCHO]{};
@@ -80,9 +80,9 @@ struct LineasTip {
 void armar_tooltip_item(std::string_view nombre, std::string_view detalles, LineasTip& salida);
 // Equipado según el sufijo que agrega el servidor al nombre.
 bool item_equipado(std::string_view nombre);
-// Display order of the inventory grid (original client): worn items first, the rest keep the server
-// order (stable). Writes the slots of the first `cap` positions into `salida` and returns how many
-// were written; positions past `cap` keep their natural slot.
+// Orden de la grilla del inventario (cliente original): los objetos puestos primero, el resto conserva el orden
+// del servidor (estable). Escribe en `salida` las casillas de las primeras `cap` posiciones y devuelve cuántas
+// escribió; las posiciones después de `cap` conservan su casilla natural.
 size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap);
 // Mueve `mover` (en el orden en que están en la tabla) junto a `destino`: delante si `destino` está
 // antes que el primero de ellos, detrás si no. Así se ordena el inventario a mano.

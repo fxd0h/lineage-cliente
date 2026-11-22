@@ -32,10 +32,10 @@ void SDLCALL al_elegir_carpeta(void*, const char* const* lista, int) {
     }
 }
 
-// Sprite lists (plaintext, user-supplied, never shipped). The primary's: lista_sprites= in settings.ini, else
-// <game folder>/list.spz or <game folder>/spritelist/list.spz. Then each juego_extra= folder, in order:
-// list.spz, spritelist/list.spz and any top-level *.txt that starts with a list header ("12317 0 41211" or
-// "S21972 0 41210"; the TW client's TW13081901.txt). A gfx already known is kept, so earlier sources win.
+// Listas de sprites (texto plano, las pone el usuario, nunca se distribuyen). La principal: lista_sprites= de settings.ini, si no
+// <carpeta del juego>/list.spz o <carpeta del juego>/spritelist/list.spz. Después cada carpeta juego_extra=, en orden:
+// list.spz, spritelist/list.spz y cualquier *.txt de primer nivel que empiece con una cabecera de lista ("12317 0 41211" o
+// "S21972 0 41210"; el TW13081901.txt del cliente TW). Un gfx ya conocido se conserva: ganan las fuentes anteriores.
 static bool tiene_cabecera_lista(const std::filesystem::path& p) {
     std::ifstream f(p, std::ios::binary);
     std::string l;
@@ -88,7 +88,7 @@ static void cargar_lista_sprites(App& a) {
     }
     for (const std::string& e : a.cfg.carpetas_extra)
         for (std::string& r : listas_de_extra(e)) rutas.push_back(std::move(r));
-    // A list may come from a newer client: check every row against the sprite files we actually have.
+    // Una lista puede venir de un cliente más nuevo: se revisa cada fila contra los archivos de sprites que sí tenemos.
     const ContadorFrames contador = [&a](GfxId g, u16 sub) {
         char nombre[32];
         std::snprintf(nombre, sizeof nombre, "%u-%u.spr", g, sub);
@@ -206,8 +206,8 @@ void leer_entrada(App& a) {
             case SDLK_DELETE: e.suprimir = true; break;
             case SDLK_PAGEUP: e.pagina_arriba = true; break;
             case SDLK_PAGEDOWN: e.pagina_abajo = true; break;
-            // The 2009 client opens its windows with Ctrl+letter (WM_CHAR 1..26). Upstream's Alt+I/C/S and A only
-            // apply to the simple UI; the original UI keeps only the original keys.
+            // El cliente 2009 abre sus ventanas con Ctrl+letra (WM_CHAR 1..26). Alt+I/C/S y A del original solo
+            // valen en la interfaz simple; la interfaz original conserva solo las teclas originales.
             case SDLK_C: case SDLK_I: case SDLK_S: case SDLK_A: case SDLK_Q: case SDLK_H: case SDLK_V: case SDLK_P:
             case SDLK_T: case SDLK_O: case SDLK_X: case SDLK_Y: case SDLK_Z: {
                 const SDL_Keymod m = ev.key.mod;
@@ -239,7 +239,7 @@ void leer_entrada(App& a) {
             case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4: case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8:
             case SDLK_9:
                 if ((ev.key.mod & SDL_KMOD_CTRL) && !(ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_SHIFT)) && ev.key.key <= SDLK_8) {
-                    // Original client: Ctrl+1..8 use the same eight boxes as F5..F12.
+                    // Cliente original: Ctrl+1..8 usan las mismas ocho casillas que F5..F12.
                     if (!ev.key.repeat) e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_1);
                 } else if ((ev.key.mod & SDL_KMOD_ALT) && !(ev.key.mod & (SDL_KMOD_CTRL | SDL_KMOD_GUI)))
                     e.alt_numero = 1 + static_cast<int>(ev.key.key - SDLK_1);  // SDLK_1..SDLK_9 son consecutivos
@@ -248,7 +248,7 @@ void leer_entrada(App& a) {
                 texto_antes = e.ntexto;
                 break;
             case SDLK_F1:
-                if (!ev.key.repeat && a.cfg.ui_simple) a.ayuda_teclas = !a.ayuda_teclas;  // original: F1 is not the fork key list
+                if (!ev.key.repeat && a.cfg.ui_simple) a.ayuda_teclas = !a.ayuda_teclas;  // original: F1 no es la lista de teclas
                 break;
             case SDLK_F3:  // con Shift, el contador de fps
                 if (ev.key.repeat) break;  // mantenida, alternaría y escribiría settings.ini en cada repetición
@@ -263,7 +263,7 @@ void leer_entrada(App& a) {
                 guardar_config(a.cfg);
                 break;
             case SDLK_F4:
-                if (!a.cfg.ui_simple && !(ev.key.mod & SDL_KMOD_SHIFT)) {  // original: pick up a nearby item
+                if (!a.cfg.ui_simple && !(ev.key.mod & SDL_KMOD_SHIFT)) {  // original: recoge un objeto cercano
                     if (a.pantalla == Pantalla::JUEGO) pick_up_nearby(a);
                     break;
                 }
@@ -282,12 +282,12 @@ void leer_entrada(App& a) {
                 e.tecla_f = 12;
                 break;
             case SDLK_F5:
-                if (ev.key.mod & SDL_KMOD_SHIFT) {  // Shift+F5: cycle the final-present scaling filter
+                if (ev.key.mod & SDL_KMOD_SHIFT) {  // Shift+F5: rota el filtro de escalado de la presentación final
                     if (ev.key.repeat) break;
                     const int sig = (static_cast<int>(escalado_desde(a.cfg.escalado)) + 1) % N_ESCALADOS;
                     a.cfg.escalado = nombre_escalado(static_cast<Escalado>(sig));
                     guardar_config(a.cfg);
-                    {  // tell the player which filter is now active
+                    {  // avisa al jugador qué filtro quedó activo
                         char t[48];
                         std::snprintf(t, sizeof t, "Upscaling: %s (Shift+F5)", a.cfg.escalado.c_str());
                         a.chat.agregar(t, rgba(255, 200, 120), CHAT_SISTEMA);
@@ -297,7 +297,7 @@ void leer_entrada(App& a) {
                 e.tecla_f = 5;
                 break;
             case SDLK_F6: case SDLK_F7: case SDLK_F8: case SDLK_F9: case SDLK_F10: case SDLK_F11:
-                // Alt+F10 is WM_SYSKEYDOWN in the original and does what F10 does (box 6).
+                // Alt+F10 es WM_SYSKEYDOWN en el original y hace lo mismo que F10 (casilla 6).
                 e.tecla_f = 5 + static_cast<int>(ev.key.key - SDLK_F5);  // los códigos F5..F11 son consecutivos
                 break;
             default: break;
@@ -492,10 +492,10 @@ bool iniciar_app(App& a) {
 }
 
 // Cierra el segundo de medición: promedios y máximos para el overlay F3 y --perf.
-// Ship rides (s3ep1): the original sends C_Ship from its ship scene clock, once per cycle of 180 s of wall-clock time
-// (0x4a6630 -> 0x4a6750..0x4a6bc8): on maps 6 / 83 / 446 at second 90 of the cycle, on maps 5 / 84 / 447 at second 0.
-// The destination map and a cell next to the dock are fixed (the original adds a 0-9 cell random jitter; the server
-// accepts +-20 cells of its own table).
+// Viajes en barco (s3ep1): el original manda C_Ship desde el reloj de su escena del barco, una vez por ciclo de 180 s reales
+// (0x4a6630 -> 0x4a6750..0x4a6bc8): en los mapas 6 / 83 / 446 en el segundo 90 del ciclo, en los mapas 5 / 84 / 447 en el 0.
+// El mapa de destino y una celda junto al muelle son fijos (el original suma un desvío al azar de 0-9 celdas; el servidor
+// acepta +-20 celdas respecto de su propia tabla).
 static void barco_llegada(App& a) {
     if (a.pantalla != Pantalla::JUEGO) return;
     struct Llegada { MapId desde; u16 destino, x, y; u32 segundo; };
@@ -538,8 +538,8 @@ void bucle_app(App& a) {
         u64 t0 = SDL_GetPerformanceCounter();
         u64 asign0 = asignaciones_hilo();
         a.cursor = Cursor::MANO;
-        // Original login / character screens: the arrow (1, 0x474695 / 0x474c00), the wait cursor (2) while a request is
-        // in flight (0x470476..0x472680).
+        // Pantallas originales de login / personajes: la flecha (1, 0x474695 / 0x474c00), el cursor de espera (2) mientras hay
+        // un pedido en curso (0x470476..0x472680).
         if (!a.cfg.ui_simple && a.pantalla != Pantalla::JUEGO) {
             const Cursor c = cursor_estado(a.esperando ? 2 : 1);
             if (a.cursores[static_cast<int>(c)]) a.cursor = c;

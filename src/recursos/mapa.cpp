@@ -43,7 +43,7 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
     s.base_y = static_cast<u16>(base_y);
     s.suelo.resize(CELDAS * 2);
     for (u32& v : s.suelo) v = tile();
-    // Second ground layer: transparent tiles laid over the ground (see mapa.h).
+    // Segunda capa de suelo: tiles transparentes puestos sobre el suelo (ver mapa.h).
     std::vector<TileObjetoMapa> encima;
     const u16 n = l.u16_();
     for (u16 i = 0; i < n && !l.error; ++i) {
@@ -106,7 +106,7 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
     }
     // Lo que sigue también es opcional: un segmento sin portales o cortado no invalida el resto.
     s.portales.clear();
-    // Roof records: u8 x (half tiles), u8 y, u16 gid, u8 kind; those outside the segment are dropped.
+    // Registros de techo: u8 x (medias celdas), u8 y, u16 gid, u8 tipo; se descartan los que caen fuera del segmento.
     s.techos.clear();
     const u32 n_techos = l.u32_();
     for (u32 i = 0; i < n_techos && !l.error; ++i) {

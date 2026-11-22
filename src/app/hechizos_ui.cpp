@@ -27,8 +27,8 @@ int hechizos_sabidos(const App& a, u16* ids, int cap) {
     return n;
 }
 
-// Skills without an entry in the client's spellicon.idx (the knight skills of this resource set):
-// a tile with the first letters of the first two words of the name, one word per line.
+// Habilidades sin entrada en el spellicon.idx del cliente (las habilidades de caballero de este juego de recursos):
+// una casilla con las primeras letras de las dos primeras palabras del nombre, una palabra por línea.
 void dibujar_etiqueta_hechizo(App& a, const Hechizo& h, int x, int y, u64 clave, u32 color) {
     std::string_view n = h.nombre;
     for (int linea = 0; linea < 2 && !n.empty(); ++linea) {
@@ -39,8 +39,8 @@ void dibujar_etiqueta_hechizo(App& a, const Hechizo& h, int x, int y, u64 clave,
     }
 }
 
-// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0,...;Otro:...  A spell is its id; an item is "i<gfx>:<id>". 24 entries: the three
-// pages of eight boxes (the original keeps 3 F-key pages, 0x4b2240); a.atajos / a.items_f hold the page on show.
+// settings.ini: atajos=Nombre:4,3,0,0,0,0,0,0,...;Otro:...  Un hechizo es su id; un objeto es "i<gfx>:<id>". 24 entradas: las tres
+// páginas de ocho casillas (el original guarda 3 páginas de teclas F, 0x4b2240); a.atajos / a.items_f tienen la página visible.
 void cargar_atajos(App& a) {
     a.atajos_de = nombre_personaje(a);
     std::memset(a.atajos_pg, 0, sizeof a.atajos_pg);
@@ -80,8 +80,8 @@ void guardar_atajos(App& a) {
     guardar_config(a.cfg);
 }
 
-// Inventory slot of an F-box item: by id or, if it is gone, another item with the same gfx (the box
-// then follows that id).
+// Casilla del inventario de un objeto de casilla F: por id o, si ya no está, otro objeto con el mismo gfx (la casilla
+// pasa a seguir ese id).
 Slot item_de_tecla_f(App& a, Atajo& b) {
     const TablaItems& t = a.mundo.inventario.items;
     Slot s = t.buscar(b.id);
@@ -107,7 +107,7 @@ void usar_tecla_f(App& a, int k) {
 
 }  // namespace
 
-// F-key page arrows (0x456960): the up arrow (1021) shows the next page, the down one (1023) the previous, of 3.
+// Flechas de página de teclas F (0x456960): la flecha arriba (1021) muestra la página siguiente, la de abajo (1023) la anterior, de 3.
 void cambiar_pagina_f(App& a, int delta) {
     std::memcpy(a.atajos_pg[a.pag_f], a.atajos, sizeof a.atajos);
     std::copy(std::begin(a.items_f), std::end(a.items_f), a.items_pg[a.pag_f]);
@@ -350,7 +350,7 @@ void procesar_hechizos(App& a, u64 ahora) {
     EntradaFrame& e = a.entrada;
     if (a.atajos_de != nombre_personaje(a)) cargar_atajos(a);
     vencer_efectos(a.mundo.jugador, ahora);
-    // End-of-effect messages of the original client's buff table, unless the server already printed the same text.
+    // Mensajes de fin de efecto de la tabla de buffs del cliente original, salvo que el servidor ya haya impreso el mismo texto.
     for (u32 i = 0; i < a.mundo.jugador.n_fin_pendientes;) {
         EstadoJugador& j = a.mundo.jugador;
         if (j.fin_pendientes[i].due > ahora) {
@@ -443,7 +443,7 @@ void dibujar_teclas_f(App& a, int x, int y) {
     a.teclas_f_x = x;
     a.teclas_f_y = y;
     const int bajo = tecla_f_bajo_puntero(a);
-    if (bajo >= 0 && e.pulsado && !a.cfg.ui_simple) a.tecla_f_sel = static_cast<u8>(bajo);  // 0x4b24d0: the last clicked box
+    if (bajo >= 0 && e.pulsado && !a.cfg.ui_simple) a.tecla_f_sel = static_cast<u8>(bajo);  // 0x4b24d0: la última casilla cliqueada
     for (int k = 0; k < 8; ++k) {
         if (a.items_f[k].tipo == TipoAtajo::ITEM) {
             Atajo& b = a.items_f[k];
@@ -468,8 +468,8 @@ void dibujar_teclas_f(App& a, int x, int y) {
         dibujar_espera_hechizo(a, cx, cy, 32, 32);
     }
     if (!a.cfg.ui_simple) {
-        // Original look: the selected box is framed by image 1020 (0x4b24d0..0x4b2549) and a filled box under the pointer
-        // shows its name, white with a black outline, at (-2,+11) of the box and kept inside the screen (0x4b2549..0x4b264a).
+        // Aspecto original: la casilla elegida lleva el marco de la imagen 1020 (0x4b24d0..0x4b2549) y una casilla llena bajo el puntero
+        // muestra su nombre, blanco con contorno negro, en (-2,+11) de la casilla y dentro de la pantalla (0x4b2549..0x4b264a).
         const int sx = x + TECLAS_X + (a.tecla_f_sel % 4) * TECLA, sy = y + TECLAS_Y - 1 + (a.tecla_f_sel / 4) * TECLA;
         g.gpu().dibujar(g.img(1020), sx, sy, clave_orden(CAPA_UI, 8));
         const bool hay = bajo >= 0 && (a.atajos[bajo] || a.items_f[bajo].tipo == TipoAtajo::ITEM);
@@ -486,7 +486,7 @@ void dibujar_teclas_f(App& a, int x, int y) {
             g.texto_contorno(nom, static_cast<float>(tx), static_cast<float>(y + TECLAS_Y + 11 + (bajo / 4) * TECLA), clave_orden(CAPA_UI_TEXTO, 9), rgb555(0x7fff));
         }
     }
-    // Drag from a box: onto another box swaps, outside any window clears; a plain click uses it.
+    // Arrastre desde una casilla: sobre otra casilla las intercambia, fuera de toda ventana la vacía; un clic simple la usa.
     auto lleno = [&](int k) { return a.atajos[k] || a.items_f[k].tipo == TipoAtajo::ITEM; };
     if (bajo >= 0 && lleno(bajo)) {
         if (e.pulsado && !a.arrastrando && !a.arrastrando_hechizo && a.arrastrando_atajo < 0) {
@@ -517,20 +517,20 @@ void dibujar_teclas_f(App& a, int x, int y) {
 }
 
 // Fila de la ventana bajo el puntero -> hechizo (0 si no hay).
-// Original UI spellbook (2009 client, 0x4af3a0): background 933 at (8,10), frame 934, the spell
-// icons in a 4 x 6 grid of 34 px cells, ornaments 935 at (2,10) on top and the S.power / M.resist
-// values in the boxes printed on 935. The tab strip (0x47e860, at (16,38) left of the grid) has one image per
-// selected tab, chosen by class: elf 936 (11 tabs), prince 947 (7), dark elf 954 (5), the rest 959 (10); each tab is
-// a 19 px slot. Spells sit in per-class slot tables (spellbook_skill_id). The grid is at (37,43), the scroll bar at (175,45) (up 974, track 971, down 972, thumb 976).
+// Libro de hechizos de la interfaz original (cliente 2009, 0x4af3a0): fondo 933 en (8,10), marco 934, los íconos
+// de hechizos en una grilla de 4 x 6 celdas de 34 px, adornos 935 en (2,10) encima y los valores S.power / M.resist
+// en las cajas impresas en 935. La franja de pestañas (0x47e860, en (16,38) a la izquierda de la grilla) tiene una imagen por
+// pestaña elegida, según la clase: elfo 936 (11 pestañas), príncipe 947 (7), elfo oscuro 954 (5), el resto 959 (10); cada pestaña es
+// una casilla de 19 px. Los hechizos van en tablas de casillas por clase (spellbook_skill_id). La grilla está en (37,43), la barra de scroll en (175,45) (arriba 974, riel 971, abajo 972, botón 976).
 constexpr u32 IMG_SPELL_BG = 933, IMG_SPELL_FRAME = 934, IMG_SPELL_ORNAMENT = 935;
 constexpr int SPELL_BG_X = 8, SPELL_BG_Y = 10;
 constexpr int GRILLA_X = 37, GRILLA_Y = 43, CELDA = 34, COLUMNAS = 4, FILAS_GRILLA = 6;
 constexpr int ALTO_PESTANA = 19, ANCHO_PESTANA = 19, PESTANAS_X = 16, PESTANAS_Y = 38;
 constexpr int SPELL_CLOSE_X = 181, SPELL_CLOSE_Y = 18;
-constexpr int SPELL_SCROLL_X = 175, SPELL_SCROLL_Y = 45, SPELL_SCROLL_H = 199;  // up 45, track from 53, down at 232 + 12
+constexpr int SPELL_SCROLL_X = 175, SPELL_SCROLL_Y = 45, SPELL_SCROLL_H = 199;  // arriba 45, riel desde 53, abajo en 232 + 12
 
-// Tab strip of a class: first image and number of tabs (0x4aebe0). Classes: 0 prince, 1 knight, 2 elf, 3 wizard,
-// 4 dark elf, 5 dragon knight, 6 illusionist. Spells sit in fixed slots (spellbook_skill_id, 8 per tab as 2 rows of 4).
+// Franja de pestañas de una clase: primera imagen y cantidad de pestañas (0x4aebe0). Clases: 0 príncipe, 1 caballero, 2 elfo, 3 mago,
+// 4 elfo oscuro, 5 caballero dragón, 6 ilusionista. Los hechizos van en casillas fijas (spellbook_skill_id, 8 por pestaña en 2 filas de 4).
 struct TabStrip {
     u32 base;
     int count;
@@ -550,7 +550,7 @@ constexpr int SP_BOX_X = 76, SP_BOX_W = 19, MR_BOX_X = 147, MR_BOX_W = 22, STAT_
 
 static bool ventana_original(const App& a) { return uses_original_frame(a, IdVentana::HECHIZOS); }
 
-// Spell shown in grid cell (row, col) of the book: only spells the character knows.
+// Hechizo que se muestra en la celda (fila, col) del libro: solo los hechizos que el personaje conoce.
 static u32 hechizo_en_celda(const App& a, int row, int col) {
     const u32 id = spellbook_skill_id(spellbook_class(a), row * COLUMNAS + col);
     return id && id < CANTIDAD_HECHIZOS && a.mundo.jugador.sabe(id) && a.hechizos[id].existe() ? id : 0;
@@ -584,7 +584,7 @@ static void dibujar_original(App& a, int x0, int y0) {
     EntradaFrame& e = a.entrada;
     if (draw_original_frame(a, x0, y0, IMG_SPELL_BG, SPELL_BG_X, SPELL_BG_Y, IMG_SPELL_FRAME, SPELL_CLOSE_X, SPELL_CLOSE_Y))
         a.ventana_hechizos = false;
-    // Tabs (0x47e9d0): the highlighted one follows the first visible row / 2; a click scrolls to row 2 * tab.
+    // Pestañas (0x47e9d0): la resaltada sigue a la primera fila visible / 2; un clic desplaza a la fila 2 * pestaña.
     const TabStrip ts = tab_strip(spellbook_class(a));
     const int shown = std::clamp(primera_fila(a) / 2, 0, ts.count - 1);
     g.gpu().dibujar(g.img(ts.base + static_cast<u32>(shown)), x0 + PESTANAS_X, y0 + PESTANAS_Y, clave_orden(CAPA_UI, 16));
@@ -593,7 +593,7 @@ static void dibujar_original(App& a, int x0, int y0) {
             ui::sobre(e, x0 + PESTANAS_X, y0 + PESTANAS_Y + p * ALTO_PESTANA, ANCHO_PESTANA, ALTO_PESTANA))
             a.hechizos_desplazamiento = static_cast<u32>(2 * p);
     {
-        // Scroll bar (0x47cd80 art 974 / 971 / 972 / 976); it also takes the wheel over the window.
+        // Barra de scroll (0x47cd80, arte 974 / 971 / 972 / 976); también toma la rueda sobre la ventana.
         u32 pos = static_cast<u32>(primera_fila(a));
         original_scrollbar(a, a.scroll.hechizos, x0 + SPELL_SCROLL_X, y0 + SPELL_SCROLL_Y, SPELL_SCROLL_H,
                            static_cast<u32>(spellbook_max_scroll(spellbook_class(a)) + FILAS_GRILLA), FILAS_GRILLA, pos,
@@ -610,7 +610,7 @@ static void dibujar_original(App& a, int x0, int y0) {
             const int x = x0 + GRILLA_X + c * CELDA, y = y0 + GRILLA_Y + r * CELDA;
             const Hechizo& h = a.hechizos[id];
             if (id == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, ki - (1ull << 24), rgba(90, 75, 30, 200));
-            // Without enough MP the icon is darkened.
+            // Sin MP suficiente el ícono se oscurece.
             const u32 tinte = a.mundo.jugador.mp >= h.mp ? BLANCO : rgba(110, 110, 110);
             if (h.icono) g.gpu().dibujar(g.icono(h.icono), x, y, ki, tinte);
             else dibujar_etiqueta_hechizo(a, h, x, y, kt, a.mundo.jugador.mp >= h.mp ? rgba(255, 230, 120) : tinte);
@@ -623,7 +623,7 @@ static void dibujar_original(App& a, int x0, int y0) {
                 }
         }
     g.gpu().dibujar(g.img(IMG_SPELL_ORNAMENT), x0 + 2, y0 + 10, clave_orden(CAPA_UI, 15));
-    // Magic power (SP) and magic resistance (MR) in the boxes printed on the ornaments.
+    // Poder mágico (SP) y resistencia mágica (MR) en las cajas impresas en los adornos.
     auto boxed = [&](int value, int bx, int bw) {
         char t[16];
         std::snprintf(t, sizeof t, "%d", value);
@@ -733,8 +733,8 @@ struct EfectoDeItem {
     u16 icono;
     std::string_view nombre;
 };
-// Slots of the original's buff table (0x6e1020) used by the S_PacketBox icons: classic icon id (field 0), the
-// thin-frame N.tbt twin when known (0 = none) and a name for the tooltip.
+// Casillas de la tabla de buffs del original (0x6e1020) que usan los íconos de S_PacketBox: id del ícono clásico (campo 0), el
+// gemelo N.tbt de marco fino cuando se conoce (0 = ninguno) y un nombre para el tooltip.
 struct RanuraBuff {
     u8 ranura;
     u16 clasico, gemelo;
@@ -787,23 +787,23 @@ size_t nombre_efecto_activo(const App& a, const EfectoActivo& ef, char* buf, siz
 // original's screenshot; they are NOT the spellbook icons from spellicon.idx. 0 = no known icon.
 static u32 icono_de_buff_original(u32 hechizo) {
     switch (hechizo) {
-    case 43: return 5240;  // Haste: outlined ">>"
-    case 54: return 5240;  // Greater Haste: same buff slot as Haste in the original (S_SkillHaste type 1)
-    // Inferred: same glyph as the skill's spellbook icon, matched against the original buff row.
-    case 8: return 5248;   // Holy Weapon: double cross
+    case 43: return 5240;  // Haste: ">>" con contorno
+    case 54: return 5240;  // Greater Haste: misma casilla de buff que Haste en el original (S_SkillHaste tipo 1)
+    // Deducido: el mismo glifo que el ícono del libro de la habilidad, comparado con la fila de buff original.
+    case 8: return 5248;   // Holy Weapon: doble cruz
     case 14: return 5291;  // Decrease Weight: bell
     case 26: return 5247;  // Enchant Dexterity: teal pinwheel
-    case 42: return 5246;  // Enchant Strength: wand burst
-    case 52: return 5243;  // Holy Walk: ">>>" (original: S_SkillBrave type 4 -> slot with classic icon 1110)
+    case 42: return 5246;  // Enchant Strength: estallido de varita
+    case 52: return 5243;  // Holy Walk: ">>>" (original: S_SkillBrave tipo 4 -> casilla con el ícono clásico 1110)
     default: return 0;
     }
 }
 
-// Buff-bar icon for an effect the server reports with its own packet, recovered from the original
-// client (S3EP1U.bin): each packet handler calls sub_4647a0(duration, slot) and the row draws
-// classic icon table[slot] (table at 0x6e1020, 20-byte entries, field 0 = classic icon id). The
-// thin-frame N.tbt used here are the re-skins of those classic icons (pixel match >= 0.95).
-// Several handlers share a slot, so potion and spell look the same. 0 = no thin-frame twin known.
+// Ícono de la barra de buffs para un efecto que el servidor informa con su propio paquete, recuperado del cliente
+// original (S3EP1U.bin): cada manejador de paquete llama a sub_4647a0(duración, casilla) y la fila dibuja
+// el ícono clásico table[casilla] (tabla en 0x6e1020, entradas de 20 bytes, campo 0 = id de ícono clásico). Los
+// N.tbt de marco fino que se usan aquí son los rediseños de esos íconos clásicos (coincidencia de píxeles >= 0.95).
+// Varios manejadores comparten casilla, así que poción y hechizo se ven igual. 0 = no se conoce gemelo de marco fino.
 static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
     switch (ef.clase) {
     case EA_HASTE: return ef.tipo == 1 ? 5240 : 0;                      // slot 0 (481); type 2 slow = slot 1 (480): no twin
@@ -824,15 +824,15 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
         case 10: return 5275;                                           // Iron Skin: slot 8 (783)
         default: return 0;
         }
-    case EA_FUERZA: return ef.tipo == 2 ? 5258 : 5246;                  // Dress Mighty: slot 34 (1558); else slot 9 (482), also potions
-    case EA_DESTREZA: return ef.tipo == 2 ? 5259 : 5247;                // Dress Dexterity: slot 35 (1559); else slot 10 (483), also potions
+    case EA_FUERZA: return ef.tipo == 2 ? 5258 : 5246;                  // Dress Mighty: casilla 34 (1558); si no casilla 9 (482), también pociones
+    case EA_DESTREZA: return ef.tipo == 2 ? 5259 : 5247;                // Dress Dexterity: casilla 35 (1559); si no casilla 10 (483), también pociones
     case EA_ICONO:
         if (const RanuraBuff* r = ranura_de_efecto(ef)) return r->gemelo;  // S_PacketBox icons: classic icon when no twin
         if (ef.tipo >= EFECTO_RANURA && ef.tipo - EFECTO_RANURA < RANURAS_BUFF) return BUFF_ICONO[ef.tipo - EFECTO_RANURA];
-        if (ef.tipo == 34) return 5400;                                 // blue potion: slot 38 (1478)
-        if (ef.tipo == 40) return 5286;                                 // Immune to Harm: slot 41 (1562)
+        if (ef.tipo == 34) return 5400;                                 // poción azul: casilla 38 (1478)
+        if (ef.tipo == 40) return 5286;                                 // Immune to Harm: casilla 41 (1562)
         return 0;
-    case EA_AURA:                                                       // PACKETBOX 0x16: tipo = the server's aura id
+    case EA_AURA:                                                       // PACKETBOX 0x16: tipo = el id de aura del servidor
         switch (ef.tipo) {
         case 113: return 5280;                                          // Glowing Aura: slot 25 (880)
         case 114: return 5281;                                          // Shining Aura: slot 26 (1567)
@@ -842,9 +842,9 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
         case 154: return 5250;                                          // Fire Bless: slot 19 (735)
         case 155: return 5253;                                          // Storm Eye: slot 22 (771)
         case 162: return 5251;                                          // Burning Weapon: slot 20 (738)
-        case 165: return 5254;                                          // Storm Shot: slot 23 (827)
-        // No thin-frame twin known: the classic icon of the slot (S3EP1U 0x4903b0 switch, table 0x6e1020).
-        case 119: return 890;                                           // slot 0x1c
+        case 165: return 5254;                                          // Storm Shot: casilla 23 (827)
+        // Sin gemelo de marco fino conocido: el ícono clásico de la casilla (switch S3EP1U 0x4903b0, tabla 0x6e1020).
+        case 119: return 890;                                           // casilla 0x1c
         case 221: return 2433;                                          // extra 2, Yahee curse: slot 0x4d
         case 222: return 2432;                                          // extra 1, Barlog curse: slot 0x4e
         case 223: return 2566;                                          // extra 6: slot 0x84
@@ -858,7 +858,7 @@ static u32 icono_de_buff_efecto(const EfectoActivo& ef) {
 void dibujar_efectos_activos(App& a, u64 ahora) {
     Graficos& g = *a.g;
     const EstadoJugador& j = a.mundo.jugador;
-    // Original panel (0x47df20): n-th icon (n from 1) at x = W-2-35n, y = 5; when x < 0 it wraps to y = 40, x += W-10.
+    // Panel original (0x47df20): ícono n-ésimo (n desde 1) en x = W-2-35n, y = 5; si x < 0 pasa a y = 40, x += W-10.
     const bool original = !a.cfg.ui_simple;
     const int PASO = original ? 35 : 36, Y0 = original ? 5 : 2;
     int Y = Y0;
@@ -888,18 +888,18 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         const u64 resta = ef.fin > ahora ? (ef.fin - ahora + 999) / 1000 : 0;
         u32 icono = item_de_efecto(a, ef).icono;
         if (!icono) icono = a.hechizos[hechizo_de_efecto(ef)].icono;
-        // Original UI: the buff-bar icon (light frame with corner dots, line-art glyph) when known.
+        // Interfaz original: el ícono de la barra de buffs (marco claro con puntos en las esquinas, glifo de líneas) cuando se conoce.
         if (original) {
             if (const u32 hi = icono_de_buff_efecto(ef)) icono = hi;
             else if (const u32 hs = icono_de_buff_original(hechizo_de_efecto(ef))) icono = hs;
         }
         const RegionAtlas& r = icono ? g.icono(icono) : RegionAtlas{};
         // A punto de terminar (menos de 10 s), parpadea.
-        const bool visible = original || resta >= 10 || (ahora / 250) % 2 == 0;  // the original draw does not blink
+        const bool visible = original || resta >= 10 || (ahora / 250) % 2 == 0;  // el dibujo original no parpadea
         if (r.valida() && visible) {
-            // The original client draws buff icons with a screen blend (client 0x47e6f0 -> blit 0x49d420 with
-            // the 5-bit tables built at 0x4a03b0: out = max + min * (31 - max) / 31 per channel): the dark
-            // square background disappears, the light frame glows and the floor shows through.
+            // El cliente original dibuja los íconos de buff con mezcla screen (cliente 0x47e6f0 -> blit 0x49d420 con
+            // las tablas de 5 bits armadas en 0x4a03b0: out = max + min * (31 - max) / 31 por canal): el fondo cuadrado
+            // oscuro desaparece, el marco claro brilla y se ve el suelo a través.
             if (original)
                 g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::PANTALLA);
             else
@@ -911,7 +911,7 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
             g.texto({t, m}, static_cast<float>(x + 3), static_cast<float>(Y + 10), kt, rgba(170, 230, 255));
         }
         if (!original) {
-            char d[24];  // 20 digits of a u64, the unit and the NUL
+            char d[24];  // 20 dígitos de un u64, la unidad y el NUL
             // Minutos redondeados hacia arriba: una poción de 5 minutos recién tomada dice "5m".
             if (resta >= 60) std::snprintf(d, sizeof d, "%llum", static_cast<unsigned long long>((resta + 59) / 60));
             else std::snprintf(d, sizeof d, "%llus", static_cast<unsigned long long>(resta));
@@ -921,12 +921,12 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         if (ui::sobre(a.entrada, x, Y, 32, 32 + ALTO_GLIFO)) {
             char t[96];
             size_t m = nombre_efecto_activo(a, ef, t, 64);
-            if (original) {  // message table text of the buff slot (+0xc) when the slot is known
+            if (original) {  // texto de la tabla de mensajes de la casilla de buff (+0xc) cuando se conoce la casilla
                 const int rs = ranura_de_efecto_activo(ef.clase, ef.tipo);
                 const std::string_view tt = rs >= 0 ? a.mensajes.linea(BUFF_MSG[rs]) : std::string_view();
                 if (!tt.empty()) m = std::min(tt.size(), sizeof t - 1), std::memcpy(t, tt.data(), m), t[m] = 0;
             }
-            if (!original)  // original: the message-table text only, no timer
+            if (!original)  // original: solo el texto de la tabla de mensajes, sin temporizador
                 std::snprintf(t + m, sizeof t - m, "  %llu:%02llu", static_cast<unsigned long long>(resta / 60),
                               static_cast<unsigned long long>(resta % 60));
             int w = ancho_texto(t, std::strlen(t));
@@ -950,9 +950,9 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
 
 namespace lin {
 
-// Mouse wheel over no window (0x45aa70): with the option `shortcutscroll` it moves the selected F-key box, a notch up one box back
-// (0 wraps to 7), down one forward (7 wraps to 0). The middle button (0x45ba6a) fires the selected box, again after 500 ms and then
-// every 180 ms while it is held (timer 0x45ab60). Original UI only.
+// Rueda del mouse sin ventana debajo (0x45aa70): con la opción `shortcutscroll` mueve la casilla F elegida, un paso arriba una casilla atrás
+// (0 pasa a 7), abajo una adelante (7 pasa a 0). El botón del medio (0x45ba6a) dispara la casilla elegida, otra vez a los 500 ms y después
+// cada 180 ms mientras se mantiene (temporizador 0x45ab60). Solo interfaz original.
 void rueda_teclas_f(App& a) {
     EntradaFrame& e = a.entrada;
     if (a.cfg.ui_simple || a.teclas_f_y < 0) return;

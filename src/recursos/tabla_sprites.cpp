@@ -41,10 +41,10 @@ struct Cursor {
 
 }  // namespace
 
-// The table lists every action rotated: its first entry is the sprite file's last frame and the rest
-// run 0..n-2. That is harmless for loops, but a death played as listed starts lying down, stands up
-// and falls again, ending on the next-to-last pose (1556 of 1709 death rows, e.g. Ogre 1020: 6,0..5).
-// Move that leading entry to the end so the fall runs 0..n-1 and holds the corpse pose.
+// La tabla lista cada acción rotada: su primera entrada es el último cuadro del archivo del sprite y el resto
+// va de 0..n-2. Eso no importa en los bucles, pero una muerte reproducida tal cual empieza acostada, se levanta
+// y vuelve a caer, terminando en la penúltima pose (1556 de 1709 filas de muerte, p. ej. Ogre 1020: 6,0..5).
+// Se mueve esa entrada inicial al final para que la caída vaya de 0..n-1 y se quede en la pose de cadáver.
 void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r) {
     if (r.cantidad < 3) return;
     FrameAccion* f = &frames[r.primer];
@@ -111,11 +111,11 @@ bool TablaSprites::cargar(const std::vector<u8>& texto) {
             case 102: tipo_.back() = static_cast<u8>(c.numero()); break;
             case 104: atributos_.back() = static_cast<u16>(c.numero()); break;
             case 111: zancada_.back() = c.numero() != 0; break;
-            case 113:  // morph effect: gfx spawned when an object changes into this one
+            case 113:  // efecto de transformación: gfx que aparece cuando un objeto se transforma en este
                 if (const int g = c.numero(); g > 0 && g < 0xFFFF) morfo_.poner(gfx, static_cast<u32>(g));
                 break;
             case 103: case 108: case 112: case 114: c.numero(); break;
-            case 105: {  // clothes: n gfx drawn over the body
+            case 105: {  // ropa: n gfx dibujados sobre el cuerpo
                 int n = c.numero();
                 for (int i = 0; i < n && c.hay_numero(); ++i) ropa_.back().push_back(static_cast<GfxId>(c.numero()));
                 break;
@@ -255,8 +255,8 @@ u32 TablaSprites::duracion_ms(GfxId gfx, u8 acc) const {
 const FrameAccion& TablaSprites::frame_en(const RangoAccion& r, u64 transcurrido, bool& termino, u64 ciclo_ms,
                                           bool bucle) const {
     u64 total = ticks(r);
-    // Time in ticks: a frame of n ticks lasts n * 1000 / rate ms in the exe (list.spz loader 0x440ba8..0x440bb5). The
-    // server throttles (duracion_ms) keep the 960 of its spr_action table.
+    // Tiempo en ticks: un cuadro de n ticks dura n * 1000 / ritmo ms en el exe (cargador de list.spz 0x440ba8..0x440bb5). Los
+    // límites del servidor (duracion_ms) conservan el 960 de su tabla spr_action.
     u64 t = ciclo_ms > 0 ? transcurrido * total / ciclo_ms : transcurrido * r.velocidad / 1000;
     termino = t >= total;
     if (termino && !bucle) {

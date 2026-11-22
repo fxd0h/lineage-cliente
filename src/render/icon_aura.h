@@ -1,21 +1,21 @@
-// Bless aura of inventory icons, as the original client builds it (S3EP1 FUN_00445ac0 at 0x445ac0).
+// Aura de bendición de los íconos del inventario, como la arma el cliente original (S3EP1 FUN_00445ac0 en 0x445ac0).
 //
-// The original lightens by 1/3 toward white (x' = (2x + 255) / 3) every screen pixel under the icon's opaque
-// silhouette dilated by 2 px, then again under the one dilated by 1 px. Pixels in the 1 px dilation are thus
-// lightened twice, i.e. a white overlay of alpha 1 - (2/3)^2 = 5/9; the 2 px ring only once (alpha 1/3). The
-// aura is that overlay precomputed as one image (white, with those alphas), drawn once with Mezcla::SILUETA.
-// Dilation = the silhouette shifted by (+-d, 0) and (0, +-d), united with itself.
+// El original aclara 1/3 hacia el blanco (x' = (2x + 255) / 3) cada píxel de pantalla bajo la silueta opaca del ícono
+// dilatada 2 px, y otra vez bajo la dilatada 1 px. Los píxeles de la dilatación de 1 px se aclaran así
+// dos veces, o sea una capa blanca de alfa 1 - (2/3)^2 = 5/9; el anillo de 2 px una sola vez (alfa 1/3). El
+// aura es esa capa precalculada como una imagen (blanca, con esos alfas), dibujada una vez con Mezcla::SILUETA.
+// Dilatación = la silueta corrida (+-d, 0) y (0, +-d), unida consigo misma.
 #pragma once
 #include "recursos/imagen.h"
 
 namespace lin {
 
-constexpr int AURA_PAD = 4;  // the aura image is 2 px larger on every side than the icon
+constexpr int AURA_PAD = 4;  // la imagen del aura es 2 px más grande que el ícono por cada lado
 
-// Builds the (w + 4) x (h + 4) aura of `icon` (the icon sits at (2, 2)).
-// `scale` > 1: HD icon (scale texels per logical pixel); padding and dilation radii scale with it.
+// Arma el aura de (w + 4) x (h + 4) de `icon` (el ícono queda en (2, 2)).
+// `scale` > 1: ícono HD (scale texels por píxel lógico); el relleno y los radios de dilatación escalan con él.
 void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura, int scale = 1);
-// Replaces `img` (w x h) by an image of (2w + 4) x (h + 4): the icon at (0, 0) and its aura at (w, 0).
+// Reemplaza `img` (w x h) por una imagen de (2w + 4) x (h + 4): el ícono en (0, 0) y su aura en (w, 0).
 void agregar_aura(ImagenRGBA& img, int scale = 1);
 
 }  // namespace lin

@@ -1,11 +1,11 @@
-// Game cursors, as in the original client. The originals are 32x32 monochrome RT_CURSOR resources
-// (ids 1..17) inside the game binary (S3EP1U.bin, falling back to S3EP1.bin / Lineage.exe), read at
-// runtime with recursos/pe_resources and created with SDL_CreateCursor (data/mask bits, so inverted
-// pixels work), scaled by the integer game zoom and recreated when it changes.
-// Role -> resource id (chosen by visual match with the reference video; the default pointer in
-// the video is the white pointing hand): hand 2, sword 6, target circle 8, talk 7 ("?"), shop 13.
-// If the binary or a resource is missing, the hand-drawn cursors below (16x16 art, as system color
-// cursors) are used instead.
+// Cursores del juego, como en el cliente original. Los originales son recursos RT_CURSOR monocromos de 32x32
+// (ids 1..17) dentro del binario del juego (S3EP1U.bin, si no S3EP1.bin / Lineage.exe), leídos en
+// ejecución con recursos/pe_resources y creados con SDL_CreateCursor (bits de datos/máscara, así funcionan
+// los píxeles invertidos), escalados por el zoom entero del juego y recreados cuando cambia.
+// Rol -> id de recurso (elegidos comparando con el video de referencia; el puntero por omisión en
+// el video es la mano blanca que señala): mano 2, espada 6, círculo de objetivo 8, hablar 7 ("?"), tienda 13.
+// Si falta el binario o un recurso, se usan en su lugar los cursores dibujados a mano de abajo (arte de 16x16, como
+// cursores de color del sistema).
 #include <algorithm>
 #include <cmath>
 #include "app/app.h"
@@ -120,10 +120,10 @@ SDL_Cursor* crear(char (*pixel)(int, int, const char* const*), const char* const
 constexpr u32 ORIGINAL_IDS[] = {2, 6, 8, 7, 13};
 static_assert(std::size(ORIGINAL_IDS) == static_cast<size_t>(Cursor::ESTADO_1), "one id per role, then the 16 states");
 
-// Cursor state -> LoadCursor group resource id (table 0x6e0de8, 0x477c50); the RT_CURSOR image comes from its group.
+// Estado de cursor -> id de recurso de grupo de LoadCursor (tabla 0x6e0de8, 0x477c50); la imagen RT_CURSOR sale de su grupo.
 constexpr u32 STATE_GROUPS[16] = {130, 131, 105, 127, 132, 133, 144, 136, 138, 139, 140, 141, 142, 143, 145, 150};
 
-std::vector<PeCursor> g_originals;  // parsed once, empty if unavailable
+std::vector<PeCursor> g_originals;  // se lee una vez; vacío si no hay
 bool g_originals_tried = false;
 int g_scale = 0;
 
@@ -134,8 +134,8 @@ void load_originals(const std::string& game_dir) {
         if (!f.abrir(ruta_real(game_dir + name))) continue;
         std::vector<PeCursor> all;
         bool any = false;
-        // The 5 fork roles (simple UI) and the 16 original states each load on their own: S3EP1U.bin has the state
-        // cursors (groups at 0x6e0de8) but not the role ids of the older executables, and a missing one leaves only its slot empty.
+        // Los 5 roles del fork (interfaz simple) y los 16 estados originales se cargan cada uno por su cuenta: S3EP1U.bin tiene los
+        // cursores de estado (grupos en 0x6e0de8) pero no los ids de rol de los ejecutables más viejos, y si falta uno solo queda vacía su casilla.
         for (u32 id : ORIGINAL_IDS) {
             PeCursor c;
             if (!pe_load_cursor(f.datos(), id, c) || c.width % 8 != 0) c = {};
@@ -176,7 +176,7 @@ void build(App& a) {
     for (int i = 0; i < static_cast<int>(Cursor::CANTIDAD); ++i)
         if (i < static_cast<int>(g_originals.size()) && g_originals[i].width > 0)
             a.cursores[i] = from_original(g_originals[i], g_scale);
-    // Any role without an original image (see load_originals) keeps the hand-drawn art.
+    // Todo rol sin imagen original (ver load_originals) conserva el dibujo hecho a mano.
     auto art = [&](Cursor role, SDL_Cursor* made) {
         if (!a.cursores[static_cast<int>(role)]) a.cursores[static_cast<int>(role)] = made;
         else if (made) SDL_DestroyCursor(made);

@@ -1,11 +1,11 @@
 #version 450
-// Final-present scaler "fsr": AMD FidelityFX Super Resolution 1.0, EASU pass (edge-adaptive spatial
-// upsampling), re-written from the public algorithm (FsrEasuF, ffx_fsr1.h).
+// Escalador de la presentación final "fsr": AMD FidelityFX Super Resolution 1.0, pasada EASU (escalado espacial
+// adaptado a los bordes), reescrita desde el algoritmo público (FsrEasuF, ffx_fsr1.h).
 // Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved. MIT License:
 // permission is granted, free of charge, to use, copy, modify, merge, publish and distribute this
 // software and derived works, provided this notice is kept; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT
-// WARRANTY OF ANY KIND. RCAS sharpening is not included. Taps are point fetches (no gathers).
-// u.xy = source size, u.zw = output size. MSL twin: fs_escalado_fsr in gpu.cpp.
+// WARRANTY OF ANY KIND. No incluye el afilado RCAS. Las lecturas son de punto (sin gathers).
+// u.xy = tamaño de origen, u.zw = tamaño de salida. Gemelo MSL: fs_escalado_fsr en gpu.cpp.
 layout(set = 2, binding = 0) uniform sampler2D escena;
 layout(std140, set = 3, binding = 0) uniform Params { vec4 u; };
 layout(location = 0) in vec2 i_uv;

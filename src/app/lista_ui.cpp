@@ -1,14 +1,14 @@
-// Original party / pledge / buddy list windows (original UI only), opened by the server's S_ShowHTML pages "party",
-// "pledge" and "buddy" instead of showing them as HTML (windows 0x497240 / 0x4b92f0 / 0x419040 of S3EP1U.bin, all of
-// the same shape; global [0x82468c] for the party one):
-//  - translucent background 978 at (8,11), frame 979 (the 980 art of the audit is its overlay), close 969, scroll bar
-//    with track 971, arrows 974 / 972 and thumb 976 at x = frame width - 31, y 47 (0x47cd80);
-//  - up to 17 rows (0x497184: `edi < first + 0x11`) from (25, 49), one every row height (13 px, the font height), each a
-//    name; a flagged row (the member is online) is tinted by the table blend 0x498d90 over 145 px, colour [0x8f2b3c]
-//    (the fork: a translucent blue).
-// Page data (S_Party, S_Pledge, S_Buddy; fields separated by SEPARATOR_DATOS): party = name, members; pledge = clan, online,
-// all (type 1 sends only the online list in the third field); buddy = list, online list. Names are space separated.
-// Unverified: the exact scroll bar and title positions, which flag the exe tints, the row height.
+// Ventanas originales de lista de grupo / clan / amigos (solo interfaz original), abiertas por las páginas S_ShowHTML del servidor "party",
+// "pledge" y "buddy" en vez de mostrarlas como HTML (ventanas 0x497240 / 0x4b92f0 / 0x419040 de S3EP1U.bin, todas de
+// la misma forma; global [0x82468c] para la del grupo):
+//  - fondo translúcido 978 en (8,11), marco 979 (el arte 980 de la auditoría es su capa superior), cerrar 969, barra de scroll
+//    con riel 971, flechas 974 / 972 y botón 976 en x = ancho del marco - 31, y 47 (0x47cd80);
+//  - hasta 17 filas (0x497184: `edi < first + 0x11`) desde (25, 49), una por alto de fila (13 px, el alto de la fuente), cada una un
+//    nombre; una fila marcada (el miembro está conectado) se tiñe con la mezcla por tabla 0x498d90 sobre 145 px, color [0x8f2b3c]
+//    (el fork: un azul translúcido).
+// Datos de página (S_Party, S_Pledge, S_Buddy; campos separados por SEPARATOR_DATOS): party = nombre, miembros; pledge = clan, conectados,
+// todos (el tipo 1 manda solo la lista de conectados en el tercer campo); buddy = lista, lista de conectados. Los nombres van separados por espacios.
+// Sin verificar: las posiciones exactas de la barra de scroll y del título, qué marca tiñe el exe, el alto de fila.
 #include <algorithm>
 #include <sstream>
 #include "app/app.h"
@@ -50,7 +50,7 @@ void abrir_lista_orig(App& a, std::string_view pagina, std::string_view datos) {
         l.tipo = 1;
         l.titulo = campo.empty() ? "" : campo[0];
         const std::vector<std::string> en_linea = nombres(1), todos = nombres(2);
-        const bool solo_en_linea = en_linea.empty();  // type 1 of S_Pledge: only the online members, in the third field
+        const bool solo_en_linea = en_linea.empty();  // tipo 1 de S_Pledge: solo los miembros conectados, en el tercer campo
         for (const std::string& n : todos)
             l.filas.emplace_back(n, solo_en_linea || std::find(en_linea.begin(), en_linea.end(), n) != en_linea.end());
     } else {

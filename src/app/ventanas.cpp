@@ -29,8 +29,8 @@ constexpr int PASO_LUGAR = 8;  // px entre los lugares que se prueban para una v
 
 int indice(IdVentana v) { return static_cast<int>(v); }
 
-// Original UI windows that live in the client's pop-up list (0x4d0f30: at most 4 open, a 5th closes the oldest) and
-// share the 0x47bcd0 drag handle: inventory, status, spellbook, trade, plus the pet inventory in the list only.
+// Ventanas de la interfaz original que viven en la lista emergente del cliente (0x4d0f30: como mucho 4 abiertas, una 5.ª cierra la más vieja) y
+// comparten la zona de arrastre de 0x47bcd0: inventario, estado, libro de hechizos, intercambio, y el inventario de mascota solo en la lista.
 bool original_listed(const App& a, IdVentana v) {
     if (a.cfg.ui_simple) return false;
     return v == IdVentana::ESTADO || v == IdVentana::INVENTARIO || v == IdVentana::HECHIZOS || v == IdVentana::INTERCAMBIO ||
@@ -38,7 +38,7 @@ bool original_listed(const App& a, IdVentana v) {
 }
 bool original_draggable(const App& a, IdVentana v) { return original_listed(a, v) && v != IdVentana::MASCOTA; }
 constexpr int MAX_LISTED_WINDOWS = 4;
-// Drag handle rect (0x47bcd0), relative to the window: inventory/status (0,5,191,25), trade 199 wide, spellbook (6,9,197,29).
+// Rect de la zona de arrastre (0x47bcd0), relativo a la ventana: inventario/estado (0,5,191,25), intercambio 199 de ancho, libro de hechizos (6,9,197,29).
 Rect original_drag_handle(IdVentana v) {
     if (v == IdVentana::HECHIZOS) return {6, 9, 197, 29};
     return {0, 5, v == IdVentana::INTERCAMBIO ? 199 : 191, 25};
@@ -70,7 +70,7 @@ void guardar_posiciones(App& a) {
 // el suyo).
 Rect por_defecto(const App& a, IdVentana v) {
     const int y = ui::VENTANA_Y;
-    // The original client's framed windows have the size of their frame image.
+    // Las ventanas con marco del cliente original tienen el tamaño de su imagen de marco.
     auto ancho = [&](IdVentana o) {
         if (!uses_original_frame(a, o)) return ui::VENTANA_ANCHO;
         return o == IdVentana::HECHIZOS ? SPELLBOOK_WINDOW_W : ORIGINAL_WINDOW_W;
@@ -80,13 +80,13 @@ Rect por_defecto(const App& a, IdVentana v) {
         const PosVentana& p = a.pos_ventanas[indice(o)];
         return abierta_ && !p.movida && !p.colocada ? ancho(o) + SEPARACION : 0;
     };
-    // Right edges of the stack against the screen's right border.
+    // Bordes derechos de la pila contra el borde derecho de la pantalla.
     const int der_inv = a.gpu.ancho() - MARGEN;
     const int der_estado = der_inv - ocupa(a.ventana_inventario, IdVentana::INVENTARIO);
     const int der_hechizos = der_estado - ocupa(a.ventana_estado, IdVentana::ESTADO);
     if (!a.cfg.ui_simple && (v == IdVentana::INVENTARIO || v == IdVentana::ESTADO || v == IdVentana::HECHIZOS)) {
-        // Original defaults (0x44cf6a, 0x4aefcb): inventory at 640-190, spellbook at 640-207, status at 0; y 0 of the
-        // 640x480 block, which is centred in a wider view (our title strip lies above the view, not inside it).
+        // Valores por omisión originales (0x44cf6a, 0x4aefcb): inventario en 640-190, libro de hechizos en 640-207, estado en 0; y 0 del
+        // bloque de 640x480, que se centra en una vista más ancha (nuestra franja del título queda arriba de la vista, no dentro).
         const int hx = (a.gpu.ancho() - 640) / 2;
         return {hx + (v == IdVentana::INVENTARIO ? 640 - ORIGINAL_WINDOW_W : v == IdVentana::HECHIZOS ? 640 - SPELLBOOK_WINDOW_W : 0),
                 0, w, h};
@@ -167,8 +167,8 @@ void al_frente(App& a, IdVentana v) {
 void colocar(App& a, IdVentana v) {
     PosVentana& p = a.pos_ventanas[indice(v)];
     p.colocada = false;
-    if (original_draggable(a, v)) return;  // the original never moves a window out of the way
-    if (p.movida || v == IdVentana::HPMP) return;  // the floating HP/MP pair always starts at the top centre
+    if (original_draggable(a, v)) return;  // el original nunca aparta una ventana
+    if (p.movida || v == IdVentana::HPMP) return;  // el par flotante de HP/MP siempre empieza arriba al centro
     const Rect r = rect_ventana(a, v);
     auto libre = [&](const Rect& c) {
         for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
@@ -190,7 +190,7 @@ void colocar(App& a, IdVentana v) {
     }
 }
 
-// Closes a listed window the way its own X would (the trade is cancelled on the server).
+// Cierra una ventana de la lista como lo haría su propia X (el intercambio se cancela en el servidor).
 void cerrar_listada(App& a, IdVentana v) {
     switch (v) {
     case IdVentana::ESTADO: a.ventana_estado = false; break;
@@ -203,8 +203,8 @@ void cerrar_listada(App& a, IdVentana v) {
     }
 }
 
-// 0x4d0f30: a window newly opened goes to the front of the 4-slot list; with the list full the oldest (the one furthest
-// back in the stacking order) is closed.
+// 0x4d0f30: una ventana recién abierta va al frente de la lista de 4 casillas; con la lista llena se cierra la más vieja (la que está
+// más atrás en el orden de apilado).
 void limitar_abiertas(App& a, IdVentana nueva) {
     int abiertas = 0;
     for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i) {
@@ -212,7 +212,7 @@ void limitar_abiertas(App& a, IdVentana nueva) {
         abiertas += original_listed(a, o) && abierta(a, o);
     }
     for (int k = 0; k < indice(IdVentana::CANTIDAD) && abiertas > MAX_LISTED_WINDOWS; ++k) {
-        const IdVentana o = static_cast<IdVentana>(a.orden_ventanas[k]);  // back to front
+        const IdVentana o = static_cast<IdVentana>(a.orden_ventanas[k]);  // de atrás hacia adelante
         if (o == nueva || !original_listed(a, o) || !abierta(a, o)) continue;
         cerrar_listada(a, o);
         --abiertas;
@@ -223,13 +223,13 @@ void limitar_abiertas(App& a, IdVentana nueva) {
 
 bool alguna_ventana_abierta(const App& a) {
     for (int i = 0; i < indice(IdVentana::CANTIDAD); ++i)
-        if (static_cast<IdVentana>(i) != IdVentana::HPMP && abierta(a, static_cast<IdVentana>(i))) return true;  // the floating HP/MP bar is always on
+        if (static_cast<IdVentana>(i) != IdVentana::HPMP && abierta(a, static_cast<IdVentana>(i))) return true;  // la barra flotante de HP/MP siempre está
     return false;
 }
 
 void close_listed_windows(App& a) {
     a.ventana_estado = a.ventana_inventario = a.ventana_hechizos = a.ventana_salida = false;
-    if (!a.cfg.ui_simple && a.intercambio.abierto) enviar(a, cmd::cancelar_intercambio(a.op));  // Esc cancels a pending trade
+    if (!a.cfg.ui_simple && a.intercambio.abierto) enviar(a, cmd::cancelar_intercambio(a.op));  // Esc cancela un intercambio pendiente
 }
 
 void guardar_posiciones_ventanas(App& a) { guardar_posiciones(a); }
@@ -249,7 +249,7 @@ void actualizar_ventanas(App& a) {
     }
     a.ventana_arriba = ventana_bajo_puntero(a);
     if (a.entrada.pulsado && a.ventana_arriba >= 0) al_frente(a, static_cast<IdVentana>(a.ventana_arriba));
-    // A right double click inside a window closes it (WM_RBUTTONDBLCLK, inventory 0x44d1b0 -> 0x4d1200).
+    // Un doble clic derecho dentro de una ventana la cierra (WM_RBUTTONDBLCLK, inventario 0x44d1b0 -> 0x4d1200).
     if (a.entrada.doble_derecho && a.ventana_arriba >= 0 && original_draggable(a, static_cast<IdVentana>(a.ventana_arriba))) {
         cerrar_listada(a, static_cast<IdVentana>(a.ventana_arriba));
         a.entrada.doble_derecho = a.entrada.clic_derecho = false;
@@ -261,7 +261,7 @@ Rect rect_ventana(const App& a, IdVentana v) {
     Rect r = por_defecto(a, v);
     const PosVentana& p = a.pos_ventanas[indice(v)];
     if ((p.movida || p.colocada) && original_draggable(a, v)) {
-        // The original keeps a dragged window fully inside the screen (0x47bd90).
+        // El original mantiene una ventana arrastrada entera dentro de la pantalla (0x47bd90).
         r.x = std::clamp(p.x, 0, std::max(0, a.gpu.ancho() - r.w));
         r.y = std::clamp(p.y, 0, std::max(0, a.gpu.alto() - r.h));
     } else if (p.movida || p.colocada) {
@@ -321,7 +321,7 @@ void arrastrar_ventana(App& a, IdVentana v) {
 // La de los ajustes; opaca para la ventana que se está dibujando si tapa a otra (se leería el
 // texto de la de abajo a través de su fondo).
 u8 opacidad_ventanas(const App& a) {
-    if (!a.cfg.ui_simple) {  // original: option [0x6e1008] = 31, 20, 13 or 7 (of 31), set by the Options page "alpha" action
+    if (!a.cfg.ui_simple) {  // original: opción [0x6e1008] = 31, 20, 13 o 7 (de 31), la fija la acción "alpha" de la página de Opciones
         static constexpr u8 PASOS[4] = {255, 165, 107, 58};
         return PASOS[std::clamp(a.cfg.alpha_orig, 0, 3)];
     }
@@ -337,9 +337,9 @@ bool tapa_a_otra(const App& a, IdVentana v) {
     return false;
 }
 
-// Bottom-strip button (ctor 0x47c6d0, draw 0x47c760): the first id `n` at rest, the second (n + 1) while the pointer is over it or
-// pressed (hover sets +0x2d, press +0x2c: both pick id +0x4c / first + 1). The mail button (1585/1586) is plain art and toggles
-// the mail window (correo_ui.cpp). The rest art is the base-archive version (Graficos::img_base).
+// Botón de la franja inferior (ctor 0x47c6d0, dibujo 0x47c760): el primer id `n` en reposo, el segundo (n + 1) mientras el puntero está encima o
+// presionado (el hover fija +0x2d, la presión +0x2c: ambos eligen el id +0x4c / primero + 1). El botón de correo es arte simple y alterna
+// la ventana de correo (correo_ui.cpp). El arte en reposo es la versión del archivo base (Graficos::img_base).
 static bool boton_panel(App& a, u32 n, int x, int y, bool mono = true) {
     Graficos& g = *a.g;
     const RegionAtlas reposo = mono ? g.img_base(n) : g.img(n);
@@ -353,11 +353,11 @@ static bool boton_panel(App& a, u32 n, int x, int y, bool mono = true) {
     return encima && a.entrada.clic;
 }
 
-// Strip hints (hint manager [0x8f0b6c], items built at 0x4bc1ef..: rect {l, t, r, b} (r, b exclusive), anchor x, string-e index).
-// The pointer must stay inside the rect 700 ms (0x2bc, timer 0x4ba8e0 -> 0x4bb830); a click hides it and re-arms the wait (0x4bbb50).
-// Draw 0x4bb8f0: width 142 (22 cells of 6 px + 10) or, for a single line, 6 * length + 21 when that is narrower; height 12 * lines + 10;
-// at (anchor x, 478), moved left to fit 640 and above the strip (460 - h) because it would pass 480; 50% darkened fill
-// (0x49a440), 2 px bevel light 23/31 grey (top, left) and 15/31 grey (bottom, right), white text at (x + 5, y + 5), 12 px pitch.
+// Ayudas de la franja (administrador de ayudas [0x8f0b6c], ítems armados en 0x4bc1ef..: rect {l, t, r, b} (r, b exclusivos), x del ancla, índice de string-e).
+// El puntero debe quedarse dentro del rect 700 ms (0x2bc, temporizador 0x4ba8e0 -> 0x4bb830); un clic la oculta y rearma la espera (0x4bbb50).
+// Dibujo 0x4bb8f0: ancho 142 (22 celdas de 6 px + 10) o, para una sola línea, 6 * largo + 21 si es más angosto; alto 12 * líneas + 10;
+// en (x del ancla, 478), corrida a la izquierda para caber en 640 y arriba de la franja (460 - h) porque pasaría de 480; relleno oscurecido al 50%
+// (0x49a440), bisel de 2 px gris claro 23/31 (arriba, izquierda) y gris 15/31 (abajo, derecha), texto blanco en (x + 5, y + 5), paso de 12 px.
 struct HintBoton { int l, r, ancla_x; u16 texto; };
 constexpr HintBoton HINTS_PANEL[8] = {{491, 506, 495, 613}, {506, 525, 495, 1250}, {526, 543, 516, 614}, {544, 562, 537, 615},
                                       {563, 579, 558, 616}, {580, 600, 579, 617}, {601, 617, 600, 618}, {618, 639, 621, 619}};
@@ -411,8 +411,8 @@ static void hint_panel(App& a, int vx, int vy) {
 }
 
 void dibujar_botones_panel(App& a, int x, int y) {
-    // Original bottom strip (S3EP1U 0x459595..0x45980a): eight buttons at y=460 of the 640x480 screen; x is
-    // 491 help, 507 mail, 527 status, 544 magic, 563 inventory, 580 social, 601 options, 618 quit.
+    // Franja inferior original (S3EP1U 0x459595..0x45980a): ocho botones en y=460 de la pantalla de 640x480; x es
+    // 491 ayuda, 507 correo, 527 estado, 544 magia, 563 inventario, 580 social, 601 opciones, 618 salir.
     constexpr int BY = 460;
     if (boton_panel(a, 1017, x + 491, y + BY)) alternar_ayuda(a);
     if (boton_panel(a, 1585, x + 507, y + BY, false)) {
@@ -557,9 +557,9 @@ void dibujar_salida(App& a) {
     if (!a.cfg.ui_simple) {
         if (draw_original_frame(a, r.x, r.y, 1058, 7, 7, 1059, 108, 11)) a.ventana_salida = false;
         draw_original_overlay(a, r.x, r.y + 6, 1060);
-        // Esc menu (0x4a1180): button 1 = Restart while dead (C_RESTART) / change character while alive (C_CHANGECHAR,
-        // refused within 15 s of combat, string 130); button 2 = quit (refused within 15 s of combat unless dead or
-        // on a safe tile, string 131); button 3 closes. RE_ROUND4 section 5.
+        // Menú de Esc (0x4a1180): botón 1 = Reiniciar estando muerto (C_RESTART) / cambiar de personaje estando vivo (C_CHANGECHAR,
+        // rechazado dentro de los 15 s de un combate, texto 130); botón 2 = salir (rechazado dentro de los 15 s de un combate salvo muerto o
+        // en una celda segura, texto 131); el botón 3 cierra. RE_ROUND4 sección 5.
         const bool muerto = a.mundo.jugador.muerto;
         const bool combate = a.t_combate && a.entrada.ahora_ms < a.t_combate + 15000;
         auto aviso = [&](size_t id) { a.chat.agregar(a.mensajes.linea(id), rgba(255, 255, 255), CHAT_SISTEMA); };

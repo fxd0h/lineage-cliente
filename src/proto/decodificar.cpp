@@ -43,8 +43,8 @@ struct Lector : LectorBinario {
 
 using Decodificador = bool (*)(Lector&, Evento&);
 
-// Own-character AC as the original shows it (0x4b0c16, 0x4b4ce2, 0x4b3b09): the byte [0x8f07df] is sign-extended and then
-// anything >= 0x28 has 0x100 subtracted, so a wire byte 0x28..0x7f reads as -216..-129 instead of +40..+127.
+// CA del personaje propio como la muestra el original (0x4b0c16, 0x4b4ce2, 0x4b3b09): el byte [0x8f07df] se extiende con signo y después
+// a todo lo >= 0x28 se le resta 0x100, así un byte 0x28..0x7f del protocolo se lee como -216..-129 en vez de +40..+127.
 int ca_original(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
 
 bool ignorar(Lector&, Evento& e) { e.tipo = Ev::IGNORADO; return true; }
@@ -75,7 +75,7 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_SAB] = l.c();
     e.v[PJ_CAR] = l.c();
     e.v[PJ_INT] = l.c();
-    e.v[PJ_GM] = l.quedan(1) ? l.c() : 0;  // "is Administrator" byte (S_CharPacks): enables the GM hotkeys
+    e.v[PJ_GM] = l.quedan(1) ? l.c() : 0;  // byte "es Administrador" (S_CharPacks): habilita los atajos de GM
     return true;
 }
 // S_CharCreateStatus: c motivo (2 ok, 6 ya existe, 9 nombre inválido, 21 reparto/cantidad)
@@ -107,7 +107,7 @@ bool estado(Lector& l, Evento& e) {
 // el largo (S_MapID trae 11 bytes). El tiempo: minutos desde 1997-01-01 17:00 (hora local), menos
 // 1200, divididos por 182 (S_WarTime.java); se devuelve en minutos desde 1970-01-01 00:00.
 constexpr i32 MINUTOS_1997 = 9862 * 1440 + 17 * 60;  // 1997-01-01 17:00 desde 1970
-// S_WarTime: h count (max 6), s timezone, c c c, count x (d time, c 0). Own opcode on s3ep1 / tw380.
+// S_WarTime: h cantidad (máx. 6), s zona horaria, c c c, cantidad x (d hora, c 0). Opcode propio en s3ep1 / tw380.
 bool tiempo_guerra(Lector& l, Evento& e) {
     e.tipo = Ev::FECHA_ASEDIO;
     const int n = std::min<int>(l.h(), 6);
@@ -127,7 +127,7 @@ bool tiempo_guerra(Lector& l, Evento& e) {
     return !l.error;
 }
 bool mapa(Lector& l, Evento& e) {
-    if (l.quedan(30)) return tiempo_guerra(l, e);  // jp363 shares the opcode: told apart by length
+    if (l.quedan(30)) return tiempo_guerra(l, e);  // jp363 comparte el opcode: se distinguen por el largo
     e.tipo = Ev::MAPA;
     e.v[0] = l.h();
     e.v[1] = l.c();
@@ -213,7 +213,7 @@ bool chat(Lector& l, Evento& e) {
     e.v[0] = l.c();
     if (e.origen != Srv::GLOBALCHAT) e.id = l.d();
     e.s[0] = l.s();
-    if (e.v[0] == CHAT_GRITO && e.origen != Srv::GLOBALCHAT && l.quedan(4)) {  // the shout carries the speaker's tile
+    if (e.v[0] == CHAT_GRITO && e.origen != Srv::GLOBALCHAT && l.quedan(4)) {  // el grito trae la celda de quien habla
         e.v[CH_X] = l.h();
         e.v[CH_Y] = l.h();
         e.v[CH_CON_POS] = 1;
@@ -248,16 +248,16 @@ bool atributos(Lector& l, Evento& e) {
 //  - asedio (0–4): ver abajo.
 constexpr int AURA_MALDICION = 221;
 constexpr int CAJA_AURA = 0x16, CAJA_POCION_AZUL = 34, CAJA_INMUNE = 40, CAJA_SABIDURIA = 0x39;
-constexpr int CAJA_PESCA = 55;  // FISHING: the bite (exe 0x49184c -> 0x4918fb)
+constexpr int CAJA_PESCA = 55;  // FISHING: la picada (exe 0x49184c -> 0x4918fb)
 constexpr int CAJA_CLASES = 21, CAJA_POLIMORFO = 35, CAJA_SIN_CHAT = 36, CAJA_56 = 56, CAJA_QUITA_87 = 59, CAJA_74 = 74, CAJA_75 = 75;
 constexpr int CAJA_DUELO = 5, CAJA_NIVEL = 12, CAJA_ELFO = 15, CAJA_ALCALDE = 23, CAJA_LOGOUT = 42,
               CAJA_SIN_REINICIO = 43, CAJA_COLISEO = 49, CAJA_COCINA = 52;
-// S_PacketBox subtypes that are just a string-e.tbl message, turned into a MENSAJE_SERVIDOR (ids checked
-// against the string table: 130 "cannot restart while in combat", 672/673 item level limits, 678-683 elf
-// spirit, 764 new mayor, 1045-1047 Battle Coliseum).
-//  - 12: c min, c max (l1j-en sends 0 and the max level): above max -> 673 with the number;
-//  - 15: c n: 1 spirit melted away (678); 2..5 the strength of fire / water / wind / earth (679 + element);
-//  - 23: s name; 43: no body; 49: c id: 1 starting, 2 cancelled, 3 finished.
+// Subtipos de S_PacketBox que son solo un mensaje de string-e.tbl, convertidos en MENSAJE_SERVIDOR (ids revisados
+// contra la tabla de textos: 130 "cannot restart while in combat", 672/673 límites de nivel de objetos, 678-683 espíritu
+// del elfo, 764 alcalde nuevo, 1045-1047 Battle Coliseum).
+//  - 12: c mín, c máx (l1j-en manda 0 y el nivel máximo): sobre el máx -> 673 con el número;
+//  - 15: c n: 1 el espíritu se disolvió (678); 2..5 la fuerza de fuego / agua / viento / tierra (679 + elemento);
+//  - 23: s nombre; 43: sin cuerpo; 49: c id: 1 empieza, 2 cancelado, 3 terminado.
 void caja_mensaje(Lector& l, Evento& e, int sub) {
     static constexpr const char* ELEMENTOS[] = {"fire", "water", "wind", "earth"};  // string-e.tbl 680-683
     e.tipo = Ev::MENSAJE_SERVIDOR;
@@ -269,7 +269,7 @@ void caja_mensaje(Lector& l, Evento& e, int sub) {
         e.s[0] = l.s();
         e.v[MS_NARGS] = 1;
     } else if (sub == CAJA_NIVEL) {
-        l.c();  // minimum level: l1j-en only sends the "above max" case, the min needs the own level
+        l.c();  // nivel mínimo: l1j-en solo manda el caso "sobre el máx", el mín necesita el nivel propio
         const int maximo = l.c();
         char* p = l.arena->reservar_arreglo<char>(4);
         if (maximo == 0 || !p) { e.tipo = Ev::IGNORADO; return; }
@@ -304,8 +304,8 @@ bool caja(Lector& l, Evento& e) {
         e.v[IE_CLASE] = IE_AURA;
         e.v[IE_TIPO] = l.c();
         e.v[IE_SEG] = l.h();
-        // Aura 221 carries a byte that picks the slot (S3EP1U 0x4904b8): 2 Yahee curse, 1 Barlog curse,
-        // 6 a third slot; any other value shows nothing. Folded into the type as 221 / 222 / 223.
+        // El aura 221 trae un byte que elige la casilla (S3EP1U 0x4904b8): 2 maldición de Yahee, 1 maldición de Barlog,
+        // 6 una tercera casilla; cualquier otro valor no muestra nada. Se pliega en el tipo como 221 / 222 / 223.
         if (e.v[IE_TIPO] == AURA_MALDICION) {
             const int extra = l.quedan(1) ? l.c() : 0;
             if (extra == 2) e.v[IE_TIPO] = AURA_MALDICION;
@@ -327,7 +327,7 @@ bool caja(Lector& l, Evento& e) {
         l.c();
         e.v[IE_SEG] = l.h() * 4;
     } else if (sub == CAJA_DUELO) {
-        // d opponent id (0 = the duel ended), d own id
+        // d id del rival (0 = terminó el duelo), d id propio
         const u32 id = l.d();
         e.tipo = id ? Ev::DUELO : Ev::IGNORADO;
         e.id = id;
@@ -335,9 +335,9 @@ bool caja(Lector& l, Evento& e) {
         caja_mensaje(l, e, sub);
     } else if (sub == CAJA_CLASES || sub == CAJA_POLIMORFO || sub == CAJA_SIN_CHAT || sub == CAJA_56 || sub == CAJA_QUITA_87 ||
                sub == CAJA_74 || sub == CAJA_75) {
-        // Buff icons whose slot depends on the own sprite or class: resolved in icono_de_caja (mundo.cpp).
-        //  - 21: c b0..b3 (duration b*16-8 s each); 35 polymorph, 36 chat ban, 74: h seconds;
-        //  - 56: h seconds, [h]; 59: h 0 (removes); 75: c n (0 removes).
+        // Íconos de buff cuya casilla depende del sprite propio o de la clase: se resuelven en icono_de_caja (mundo.cpp).
+        //  - 21: c b0..b3 (duración b*16-8 s cada uno); 35 polymorph, 36 chat ban, 74: h segundos;
+        //  - 56: h segundos, [h]; 59: h 0 (quita); 75: c n (0 quita).
         e.tipo = Ev::ICONO_EFECTO;
         e.v[IE_CLASE] = IE_CONTEXTO;
         e.v[IE_TIPO] = sub;
@@ -350,13 +350,13 @@ bool caja(Lector& l, Evento& e) {
             if (sub == CAJA_56 && l.quedan(2)) e.v[IE_EXTRA] = l.h();
         }
     } else if (sub == CAJA_COCINA) {
-        // COOK_WINDOW (S3EP1U 0x49135f): d constant, c 1 (0: the exe answers with C_ItemUse, never sent), c stage - 1.
+        // COOK_WINDOW (S3EP1U 0x49135f): d constante, c 1 (0: el exe responde con C_ItemUse, nunca se manda), c etapa - 1.
         l.d();
         e.tipo = Ev::COCINA;
         e.v[0] = l.c();
         e.v[1] = l.c();
     } else if (sub == CAJA_LOGOUT) {
-        e.tipo = Ev::VOLVER_PERSONAJES;  // back to character select with the cached list
+        e.tipo = Ev::VOLVER_PERSONAJES;  // vuelta a la selección de personajes con la lista guardada
     } else if (sub <= 4) {
         // Asedio: 0 empieza, 1 termina, 2 sigue (c castillo, h 0); 3 iniciativa y 4 ocupado (nada más).
         e.tipo = Ev::ASEDIO;
@@ -375,7 +375,7 @@ bool accion(Lector& l, Evento& e) {
     e.id = l.d();
     e.v[0] = l.c();
     if (e.v[0] == ACC_TIENDA && l.quedan(1)) e.s[0] = l.s();
-    if (e.v[0] == ACC_PESCA && l.quedan(4)) {  // S_Fishing: h x, h y of the bobber (then d 0, h 0)
+    if (e.v[0] == ACC_PESCA && l.quedan(4)) {  // S_Fishing: h x, h y del corcho (después d 0, h 0)
         e.v[1] = l.h();
         e.v[2] = l.h();
     }
@@ -553,7 +553,7 @@ bool intercambio_fin(Lector& l, Evento& e) {
     return true;
 }
 // S_CharTitle: d personaje, s título
-// S_ChangeName: d object id, s name (may be "$nnnn", resolved at draw time like every object name)
+// S_ChangeName: d id de objeto, s nombre (puede ser "$nnnn", se resuelve al dibujar como todo nombre de objeto)
 bool cambio_nombre(Lector& l, Evento& e) {
     e.tipo = Ev::CAMBIO_NOMBRE;
     e.id = l.d();
@@ -696,8 +696,8 @@ bool marca_objetivo(Lector& l, Evento& e) {
     e.s[0] = l.s();
     return true;
 }
-// S_Bookmarks: s nombre, h mapa, d id (+ h x, h y in L1J-JP; l1j-en/s3ep1 ends after the id).
-// One per bookmark; all of them at login.
+// S_Bookmarks: s nombre, h mapa, d id (+ h x, h y en L1J-JP; en l1j-en/s3ep1 termina después del id).
+// Uno por marcador; todos en el login.
 bool marcador(Lector& l, Evento& e) {
     e.tipo = Ev::MARCADOR;
     e.s[0] = l.s();
@@ -788,7 +788,7 @@ bool correo(Lector& l, Evento& e) {
         e.id = l.d();
         e.s[1] = texto_utf16(l);
     } else if (t == 0x20 || t == 0x21) {
-        e.v[CO_OK] = l.quedan(1) ? l.c() : 0;  // l1j-en sends the bare type, and only when the mailbox is full
+        e.v[CO_OK] = l.quedan(1) ? l.c() : 0;  // l1j-en manda el tipo solo, y solo cuando el buzón está lleno
     } else if ((t >= 0x30 && t <= 0x32) || t == 0x40 || t == 0x41) {
         e.id = l.d();
     } else if (t == 0x50) {
@@ -853,7 +853,7 @@ bool item_bendicion(Lector& l, Evento& e) { e.tipo = Ev::ITEM_BENDICION; e.id = 
 
 // S_HouseMap: d tablón, d casa.
 bool casa_mapa(Lector& l, Evento& e) { e.tipo = Ev::CASA_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
-// S_UseMap: d item objid, d map number (1..18; the original client reads it as one byte).
+// S_UseMap: d objid del objeto, d número de mapa (1..18; el cliente original lo lee como un byte).
 bool usar_mapa(Lector& l, Evento& e) { e.tipo = Ev::USAR_MAPA; e.id = l.d(); e.v[0] = static_cast<i32>(l.d()); return true; }
 // S_War: c tipo, s clan 1, s clan 2.
 bool guerra(Lector& l, Evento& e) {
@@ -1071,7 +1071,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
                 it.v[IT_BENDICION] = 1;  // la tienda no lo manda: normal (0 sería bendito)
                 it.s[0] = l.s();
-                it.s[1] = atributos_item(l);  // the status bytes: the tooltip's property lines
+                it.s[1] = atributos_item(l);  // los bytes de estado: las líneas de propiedades del tooltip
             } else if (e.origen == Srv::SHOWSHOPSELLLIST) {
                 it.v[TI_PRECIO] = static_cast<i32>(l.d());
             } else {
@@ -1207,10 +1207,10 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             c.id = l.d();
             c.v[CO_LEIDA] = l.c();
             if (l.perfil.correo_ymd) {
-                // yy mm dd bytes -> seconds at 12:00 UTC of that day (the list shows only the date)
+                // bytes aa mm dd -> segundos a las 12:00 UTC de ese día (la lista muestra solo la fecha)
                 int y = 2000 + l.c();
                 const int mo = l.c(), d = l.c();
-                if (mo <= 2) --y;  // days_from_civil: the year starts in March
+                if (mo <= 2) --y;  // days_from_civil: el año empieza en marzo
                 const int era = y / 400, yoe = y - era * 400;
                 const int doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1;
                 const int days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;

@@ -1,4 +1,4 @@
-// PE resource reader: a synthetic PE built in the test, plus the real cursors if LINEAGE_DIR is set.
+// Lector de recursos PE: un PE sintético armado en el test, más los cursores reales si está LINEAGE_DIR.
 #include <doctest/doctest.h>
 #include <cstring>
 #include "comun.h"
@@ -12,7 +12,7 @@ namespace {
 void put16(std::vector<u8>& b, size_t o, u32 v) { b[o] = v & 255; b[o + 1] = (v >> 8) & 255; }
 void put32(std::vector<u8>& b, size_t o, u32 v) { put16(b, o, v & 0xFFFF); put16(b, o + 2, v >> 16); }
 
-// One section ".rsrc" (rva 0x1000, raw 0x200) with type 1 / id 5 / lang 0x409 -> a 8x2 1-bpp cursor.
+// Una sección ".rsrc" (rva 0x1000, crudo 0x200) con tipo 1 / id 5 / idioma 0x409 -> un cursor de 8x2 de 1 bpp.
 std::vector<u8> make_pe() {
     std::vector<u8> b(0x200 + 0x200, 0);
     b[0] = 'M'; b[1] = 'Z';
@@ -30,13 +30,13 @@ std::vector<u8> make_pe() {
     put16(b, r + 0x18 + 14, 1); put32(b, r + 0x18 + 16, 5); put32(b, r + 0x18 + 20, 0x80000030);  // id 5
     put16(b, r + 0x30 + 14, 1); put32(b, r + 0x30 + 16, 0x409); put32(b, r + 0x30 + 20, 0x48);    // lang
     put32(b, r + 0x48, 0x1100); put32(b, r + 0x4C, 4 + 40 + 8 + 16);                            // data entry
-    const size_t d = 0x300;  // raw of RVA 0x1100
+    const size_t d = 0x300;  // crudo del RVA 0x1100
     put16(b, d, 1); put16(b, d + 2, 1);  // hotspot
     put32(b, d + 4, 40); put32(b, d + 8, 8); put32(b, d + 12, 2 * 2);  // w=8, h=2*2 (XOR+AND)
     put16(b, d + 16, 1); put16(b, d + 18, 1);
     put32(b, d + 4 + 40 + 4, 0x00FFFFFF);  // palette: black, white
     const size_t xr = d + 4 + 40 + 8, an = xr + 8;
-    // Bottom-up rows: row 0 (bottom) = XOR 0xF0 AND 0x0F; row 1 (top) = XOR 0xFF AND 0xFF.
+    // Filas de abajo hacia arriba: fila 0 (abajo) = XOR 0xF0 AND 0x0F; fila 1 (arriba) = XOR 0xFF AND 0xFF.
     b[xr] = 0xF0;     b[an] = 0x0F;
     b[xr + 4] = 0xFF; b[an + 4] = 0xFF;
     return b;
@@ -52,12 +52,12 @@ TEST_CASE("PE resources: synthetic cursor") {
     CHECK(c.height == 2);
     CHECK(c.hot_x == 1);
     CHECK(c.hot_y == 1);
-    CHECK(c.pixels[0] == PePixel::INVERT);       // top row: xor 1, and 1
-    CHECK(c.pixels[8] == PePixel::WHITE);        // bottom row: xor 1, and 0
+    CHECK(c.pixels[0] == PePixel::INVERT);       // fila de arriba: xor 1, and 1
+    CHECK(c.pixels[8] == PePixel::WHITE);        // fila de abajo: xor 1, and 0
     CHECK(c.pixels[12] == PePixel::TRANSPARENT);  // xor 0, and 1
     CHECK(!pe_load_cursor(pe, 6, c));
     CHECK(pe_find_resource(pe, 2, 5).empty());
-    // Truncated or corrupt inputs fail without crashing.
+    // Las entradas truncadas o corruptas fallan sin colgarse.
     for (size_t n : {size_t{0}, size_t{10}, size_t{0x90}, size_t{0x210}, size_t{0x2A0}, size_t{0x30C}}) {
         std::vector<u8> cut(pe.begin(), pe.begin() + static_cast<long>(n));
         CHECK(!pe_load_cursor(cut, 5, c));

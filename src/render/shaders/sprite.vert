@@ -14,8 +14,8 @@ void main() {
     vec2 e = esquinas[gl_VertexIndex];
     vec2 p = i.destino.xy + e * i.destino.zw;
     gl_Position = vec4(p.x / u.pantalla.x * 2.0 - 1.0, 1.0 - p.y / u.pantalla.y * 2.0, 0.0, 1.0);
-    // relleno.y: 0 = pass of the normal blends, 1 = pass of the screen blend (bit 3 of mezcla), 3 = pass of the multiply blend (bit 7), 2 = HD text layer
-    // (text, plus every non-additive instance as an attenuator of the text under it).
+    // relleno.y: 0 = pasada de las mezclas normales, 1 = pasada de la mezcla screen (bit 3 de mezcla), 3 = pasada de la de multiplicar (bit 7), 2 = capa de texto HD
+    // (texto, más toda instancia no aditiva como atenuador del texto que tiene debajo).
     const uint modo = uint(u.relleno.y + 0.5);
     const bool texto = (i.mezcla & 64u) != 0u;
     bool oculto;

@@ -226,10 +226,10 @@ void cambiar_pagina_barra(App& a, int pagina) {
     a.pagina_barra = (pagina % n + n) % n;
 }
 
-// Emote action (C_ExtraCommand 66 Think, 67 Aggress, 68 Salute, 69 Cheer) of Alt+n for the own sprite, 0 = none.
-// Standard sprites: Alt+1..4 -> 68, 69, 67, 66; the special set: Alt+1..3 -> 67, 68, 69. Others do nothing.
+// Acción de gesto (C_ExtraCommand 66 Think, 67 Aggress, 68 Salute, 69 Cheer) de Alt+n para el sprite propio, 0 = ninguna.
+// Sprites estándar: Alt+1..4 -> 68, 69, 67, 66; el juego especial: Alt+1..3 -> 67, 68, 69. Los demás no hacen nada.
 static int accion_emote(int n, u32 gfx) {
-    // Standard human sprites (exe 0x456b30) and the two sprite ranges the key handler adds.
+    // Sprites humanos estándar (exe 0x456b30) y los dos rangos de sprites que agrega el manejador de teclas.
     static constexpr u32 HUMANOS[] = {0, 1, 0x3d, 0x30, 0x8a, 0x25, 0xae2, 0xaec, 0x2de, 0x4a2, 0x1a02, 0x1a05, 0x1a0f, 0x19fa};
     bool humano = (gfx >= 0x1aa6 && gfx <= 0x1aeb) || (gfx >= 0x1be3 && gfx <= 0x1bfe);
     for (u32 h : HUMANOS) humano = humano || gfx == h;
@@ -250,10 +250,10 @@ void procesar_barra(App& a) {
     a.pagina_barra = std::min(a.pagina_barra, paginas(a) - 1);
     // La rueda sobre la barra o el selector: hacia arriba, la página siguiente (como "^").
     if (a.entrada.rueda && paginas(a) > 1 && sobre_atajos(a)) cambiar_pagina_barra(a, a.pagina_barra + a.entrada.rueda);
-    // Upstream's 1–0 / Alt+1–0 shortcut bar keys: simple UI only (the original UI has no such bar).
+    // Teclas 1–0 / Alt+1–0 de la barra de atajos del original: solo interfaz simple (la interfaz original no tiene esa barra).
     if (!a.cfg.ui_simple) {
-        // Original UI: Alt+1..4 are emotes (key handler, RE_ROUND3.md): C_ExtraCommand 66..69 chosen by the own sprite and
-        // the own sprite plays the action at once (the server only rebroadcasts it to the others).
+        // Interfaz original: Alt+1..4 son gestos (manejador de teclas, RE_ROUND3.md): C_ExtraCommand 66..69 según el sprite propio, y
+        // el sprite propio hace la acción de inmediato (el servidor solo la reenvía a los demás).
         const int n = a.entrada.alt_numero;
         const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
         if (n >= 1 && n <= 4 && yo != SIN_SLOT && a.op.perfil.bytes_numero_pregunta == 0 && !a.mundo.jugador.muerto) {

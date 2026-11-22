@@ -1,10 +1,10 @@
-// Fishing, as the original client (S3EP1U):
-//  - S_Fishing (S_DoActionGFX with action 71 and the bobber cell, handler 0x487140) for the own character puts the bobber
-//    (gfx 6299) on that cell, plays 4535.wav and shows the fishing cursor 16 (0x48721b);
-//  - S_PacketBox 55 turns the bobber into the bite (gfx 6385, 0x4918fb);
-//  - a left click in the world while it is out sends C_FishClick with the bite flag, plays 4536.wav when there was no
-//    bite, and ends it (0x469220);
-//  - S_CharVisualUpdate of the own character (0x487000) and the server messages 1136 / 1138 (0x484bf0) end it too.
+// Pesca, como el cliente original (S3EP1U):
+//  - S_Fishing (S_DoActionGFX con la acción 71 y la celda del corcho, manejador 0x487140) para el personaje propio pone el corcho
+//    (gfx 6299) en esa celda, reproduce 4535.wav y muestra el cursor de pesca 16 (0x48721b);
+//  - S_PacketBox 55 convierte el corcho en la picada (gfx 6385, 0x4918fb);
+//  - un clic izquierdo en el mundo mientras está afuera manda C_FishClick con el flag de picada, reproduce 4536.wav si no hubo
+//    picada, y la termina (0x469220);
+//  - S_CharVisualUpdate del personaje propio (0x487000) y los mensajes del servidor 1136 / 1138 (0x484bf0) también la terminan.
 #include "app/app.h"
 
 namespace lin {

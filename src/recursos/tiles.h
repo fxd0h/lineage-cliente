@@ -25,12 +25,12 @@ struct JuegoTiles {
     // Decodifica la mitad de un tile; si es un tile con transparencia la mitad no importa.
     bool decodificar(u32 i, bool derecha, ImagenRGBA& salida) const;
     bool translucido(u32 i) const;
-    // Light tile (type bit 0x10: candle/brazier flames and their glow): drawn additively, so its dark
-    // backdrop adds nothing instead of showing as an opaque rectangle.
+    // Tile de luz (bit de tipo 0x10: llamas de velas/braseros y su brillo): se dibuja en forma aditiva, así su fondo
+    // oscuro no suma nada en vez de verse como un rectángulo opaco.
     bool aditivo(u32 i) const;
-    // Blend of the tile (type byte 0x10 screen, 0x04 average, 0x20 multiply, in that priority).
+    // Mezcla del tile (byte de tipo 0x10 screen, 0x04 promedio, 0x20 multiplicar, con esa prioridad).
     ModoMezcla modo(u32 i) const;
-    // Placeholder tile for "no ground" (type bit 0x08; only 47.til #199/#202): never drawn, the void is black.
+    // Tile de relleno para "sin suelo" (bit de tipo 0x08; solo 47.til #199/#202): nunca se dibuja, el vacío es negro.
     bool vacio(u32 i) const;
 };
 
@@ -41,8 +41,8 @@ bool decodificar_tbt(Bytes tbt, ImagenRGBA& salida);
 constexpr int ANCHO_MEDIO_TILE = 24;
 constexpr int ALTO_TILE = 24;
 constexpr u8 ALFA_TRANSLUCIDO = 128;
-// Type byte bit that makes a transparent-format tile translucent (50% average): 0x04 (shadows). Bit 0x20 (blood,
-// bones and dust stains on dungeon floors) is a multiply blend, drawn by the GPU, not baked into the alpha.
+// Bit del byte de tipo que hace translúcido (promedio del 50%) un tile de formato transparente: 0x04 (sombras). El bit 0x20 (manchas de
+// sangre, huesos y polvo en los pisos de las mazmorras) es una mezcla de multiplicar, la dibuja la GPU, no va incorporada en el alfa.
 constexpr u8 TILE_TRANSLUCIDO = 0x04;
 constexpr u8 TILE_VACIO = 0x08;
 constexpr u8 TILE_ADITIVO = 0x10;

@@ -79,7 +79,7 @@ bool Recursos::abrir(const std::string& carpeta, const std::vector<std::string>&
             f->sprite_hash[i].abrir(c + nombre, false, false);  // opcionales: instalaciones viejas no los tienen
         }
         if (primaria) ok = bien;
-        fuentes_.push_back(std::move(f));  // an extra without paks still serves its loose files
+        fuentes_.push_back(std::move(f));  // una carpeta extra sin paks igual sirve sus archivos sueltos
     };
     agregar(carpeta, true);
     for (const std::string& e : extras) {
@@ -89,7 +89,7 @@ bool Recursos::abrir(const std::string& carpeta, const std::vector<std::string>&
     return ok;
 }
 
-// Loose file <dir>/<nombre> of a source (case-insensitive on Linux), mapped once and cached.
+// Archivo suelto <dir>/<nombre> de una fuente (sin distinguir mayúsculas en Linux), mapeado una vez y guardado en caché.
 Bytes Recursos::suelto(const Fuente& f, std::string_view dir, std::string_view nombre) {
     std::string clave(dir);
     clave += nombre;
@@ -146,7 +146,7 @@ static bool es_html(std::string_view n) {
 }
 
 bool Recursos::texto(std::string_view nombre, std::vector<u8>& salida) const {
-    const size_t n = es_html(nombre) ? fuentes_.size() : 1;  // text ids only from the primary
+    const size_t n = es_html(nombre) ? fuentes_.size() : 1;  // ids de texto solo de la principal
     for (size_t i = 0; i < n; ++i) {
         Bytes b = fuentes_[i]->texto.buscar(nombre);
         if (b.empty()) continue;

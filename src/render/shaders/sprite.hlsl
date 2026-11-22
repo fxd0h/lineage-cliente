@@ -27,7 +27,7 @@ struct Instancia {
 StructuredBuffer<Instancia> instancias : register(t0, space0);
 [[vk::binding(0, 1)]] cbuffer Uniformes : register(b0, space1) {
     float2 pantalla;
-    float2 base;  // x: first instance of this draw; y: pass mode (0 normal blends, 1 screen blend, 2 HD text layer)
+    float2 base;  // x: primera instancia de este dibujo; y: modo de pasada (0 mezclas normales, 1 mezcla screen, 2 capa de texto HD)
 };
 
 [[vk::binding(0, 2)]] Texture2DArray<float4> atlas : register(t0, space2);
@@ -56,8 +56,8 @@ Salida vs_sprite(uint vid : SV_VertexID, uint iid : SV_InstanceID) {
     float2 p = i.destino.xy + e * i.destino.zw;
     Salida o;
     o.pos = float4(p.x / pantalla.x * 2.0 - 1.0, 1.0 - p.y / pantalla.y * 2.0, 0.0, 1.0);
-    // Pass filter: mode 0 = normal blends, 1 = screen blend (bit 3 of mezcla), 3 = multiply blend (bit 7), 2 = HD text layer (text, plus every
-    // non-additive instance as an attenuator of the text under it). Hidden instances are moved out of the clip volume.
+    // Filtro de pasada: modo 0 = mezclas normales, 1 = mezcla screen (bit 3 de mezcla), 3 = mezcla de multiplicar (bit 7), 2 = capa de texto HD (texto, más toda
+    // instancia no aditiva como atenuador del texto que tiene debajo). Las instancias ocultas se mueven fuera del volumen de recorte.
     const uint modo = uint(base.y + 0.5);
     const bool texto = (i.mezcla & 64u) != 0u;
     bool oculto;
@@ -76,19 +76,19 @@ Salida vs_sprite(uint vid : SV_VertexID, uint iid : SV_InstanceID) {
 float4 fs_sprite(Salida i) : SV_Target0 {
     float4 t;
     if ((i.mezcla & 4u) != 0u) {
-        // Bit 2 = HD pack image: premultiplied texels, bilinear; back to straight alpha for the common path.
+        // Bit 2 = imagen del pack HD: texels premultiplicados, bilineal; de vuelta a alfa directo para el camino común.
         t = atlas_lin.Sample(muestreo_lin, float3(i.uv, float(i.pagina)));
         t.rgb = t.a > 0.0 ? t.rgb / t.a : float3(0.0, 0.0, 0.0);
     } else {
         t = atlas.Sample(muestreo, float3(i.uv, float(i.pagina)));
     }
-    // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
+    // Bit 1 de mezcla = silueta: el color del tinte con el alfa de la textura. Bit 0 = aditiva.
     float4 c = (i.mezcla & 2u) != 0u ? float4(i.color.rgb, t.a * i.color.a) : t * i.color;
-    // Bit 5 = grey: the texture's luminance times the tint (monochrome HUD icons).
+    // Bit 5 = gris: la luminancia de la textura por el tinte (íconos monocromos del HUD).
     if ((i.mezcla & 32u) != 0u) c.rgb = dot(t.rgb, float3(0.299, 0.587, 0.114)) * i.color.rgb;
     if (c.a <= 0.0) discard;
-    // Premultiplied alpha: with alpha 0 the colour is added to the background without covering it (additive blend).
-    // Bit 7 = multiply: the blend is dst * src, so a transparent texel must output white (leaves dst unchanged).
+    // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).
+    // Bit 7 = multiplicar: la mezcla es dst * src, así que un texel transparente debe dar blanco (deja dst sin cambios).
     if ((i.mezcla & 128u) != 0u) return float4(lerp(float3(1.0, 1.0, 1.0), c.rgb, c.a), 0.0);
     return float4(c.rgb * c.a, (i.mezcla & 9u) != 0u ? 0.0 : c.a);
 }

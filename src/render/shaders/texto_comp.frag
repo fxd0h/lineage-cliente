@@ -1,7 +1,7 @@
 #version 450
-// HD text composite: the text layer (binding 0 = premultiplied colour, binding 1 = coverage in R; both the size of the
-// destination) drawn over it with the premultiplied "over" blend: out = colour + dst * (1 - coverage).
-// Vertex stage: mundo.vert (fullscreen quad). MSL twin: fs_texto_comp in gpu.cpp.
+// Composición del texto HD: la capa de texto (binding 0 = color premultiplicado, binding 1 = cobertura en R; ambas del tamaño del
+// destino) dibujada sobre él con la mezcla "over" premultiplicada: out = color + dst * (1 - cobertura).
+// Etapa de vértices: mundo.vert (quad de pantalla completa). Gemelo MSL: fs_texto_comp en gpu.cpp.
 layout(set = 2, binding = 0) uniform sampler2D capa;
 layout(set = 2, binding = 1) uniform sampler2D cob;
 layout(location = 0) in vec2 i_uv;

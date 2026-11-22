@@ -1,25 +1,25 @@
-// HD text: glyph "fields" for the post-filter text pass (see docs/fork/hd_text.md).
+// Texto HD: "campos" de glifos para la pasada de texto posterior al filtro (ver docs/fork/hd_text.md).
 //
-// A field is an HD_ESCALA texels-per-logical-pixel image whose value crosses 0.5 exactly on the glyph outline
-// (inside > 0.5). The GPU samples it bilinearly and thresholds it with a screen-space smoothstep, so the outline is
-// a resolution-independent smooth curve: sharp at any display scale. Bitmap fonts get their field by smoothing the
-// binary mask (an implicit-curve vectorizer); the HTML face is rasterized from its real outlines.
+// Un campo es una imagen de HD_ESCALA texels por píxel lógico cuyo valor cruza 0,5 justo en el contorno del glifo
+// (adentro > 0,5). La GPU lo muestrea en forma bilineal y lo umbraliza con un smoothstep en espacio de pantalla, así el contorno es
+// una curva suave independiente de la resolución: nítida a cualquier escala de pantalla. Las fuentes de bitmap obtienen su campo suavizando la
+// máscara binaria (un vectorizador de curva implícita); la letra HTML se rasteriza desde sus contornos reales.
 #pragma once
 #include "core/tipos.h"
 #include "recursos/imagen.h"
 
 namespace lin {
 
-constexpr int HD_ESCALA = 8;  // field texels per logical pixel
-constexpr int HD_BORDE = 1;   // logical pixels of empty margin around the glyph cell (the outline may bulge)
+constexpr int HD_ESCALA = 8;  // texels del campo por píxel lógico
+constexpr int HD_BORDE = 1;   // píxeles lógicos de margen vacío alrededor de la celda del glifo (el contorno puede abultarse)
 
-// Field of a 1-bit mask. `mascara` is w*h RGBA pixels (alpha != 0 = ink; the bitmap font cells). `salida` becomes
-// (w + 2 HD_BORDE) * HD_ESCALA wide, with ox = oy = -HD_BORDE (logical), the field in R, G, B and A (premultiplied
-// white, so the atlas upload needs no special case). false if the glyph has no ink.
+// Campo de una máscara de 1 bit. `mascara` son w*h píxeles RGBA (alfa != 0 = tinta; las celdas de la fuente de bitmap). `salida` queda
+// de (w + 2 HD_BORDE) * HD_ESCALA de ancho, con ox = oy = -HD_BORDE (lógicos), el campo en R, G, B y A (blanco
+// premultiplicado, así la subida al atlas no necesita caso especial). false si el glifo no tiene tinta.
 bool campo_de_mascara(const ImagenRGBA& mascara, ImagenRGBA& salida);
 
-// Field from an 8-bit coverage image of `w` x `h` texels placed at texel (x0, y0) of a cell of `cw` x `ch` logical
-// pixels (HD_ESCALA texels each). Used for outline-rendered faces. false if empty.
+// Campo desde una imagen de cobertura de 8 bits de `w` x `h` texels ubicada en el texel (x0, y0) de una celda de `cw` x `ch` píxeles
+// lógicos (de HD_ESCALA texels cada uno). Se usa para letras rasterizadas desde contornos. false si está vacía.
 bool campo_de_cobertura(const u8* cobertura, int w, int h, int x0, int y0, int cw, int ch, ImagenRGBA& salida);
 
 }  // namespace lin

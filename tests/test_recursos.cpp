@@ -269,9 +269,9 @@ TEST_CASE("PNG: el fondo negro se va y el resplandor unido a él queda translúc
 }
 
 TEST_CASE("Mapa 4: la segunda capa de suelo cubre los rombos de tierra del bosque de Gludio" * doctest::skip(carpeta_juego().empty())) {
-    // Segment 7ffd8003 (32639,32985): the first ground layer has a regular lattice of dirt half-tiles
-    // (sets 25/26) inside the grass; the n x 6 byte table after it holds the transparent grass tiles
-    // that cover them, e.g. 89.til #190 at half cell (90, 11) over the dirt half 0x19fd.
+    // Segmento 7ffd8003 (32639,32985): la primera capa de suelo tiene una retícula regular de medias celdas de tierra
+    // (juegos 25/26) dentro del pasto; la tabla de n x 6 bytes que le sigue tiene los tiles de pasto transparentes
+    // que las tapan, p. ej. 89.til #190 en la media celda (90, 11) sobre la mitad de tierra 0x19fd.
     std::vector<u8> d;
     REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(4, 32639, 32985), d));
     SegmentoMapa s;
@@ -293,7 +293,7 @@ TEST_CASE("Mapa 4: la segunda capa de suelo cubre los rombos de tierra del bosqu
     for (const TileObjetoMapa& t : s.tiles_objetos) hay |= t.capa == 0 && t.x == 90 && t.y == 11 && t.tile == 0x59BEu;
     CHECK(hay);
     CHECK(tierra > 300);
-    CHECK(cubiertas * 10 > tierra * 3);  // the lattice dirt is covered (the rest is a real path)
+    CHECK(cubiertas * 10 > tierra * 3);  // la tierra de la retícula está tapada (el resto es un camino real)
 }
 
 TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)" * doctest::skip(carpeta_juego().empty())) {
@@ -315,8 +315,8 @@ TEST_CASE("Mapa 4: portales al final del .s32 (los de DungeonTable del servidor)
 }
 
 TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) se multiplican" * doctest::skip(carpeta_juego().empty())) {
-    // Tower of Insolence 100F, segment (32640, 32896): sets 989/990 hold pale blood/bone stains with the
-    // 0x20 type bit; drawn opaque they showed as large white grainy splotches on the floor.
+    // Tower of Insolence 100F, segmento (32640, 32896): los juegos 989/990 tienen manchas pálidas de sangre/huesos con el
+    // bit de tipo 0x20; dibujadas opacas se veían como grandes manchones blancos granulosos en el piso.
     Recursos r;
     REQUIRE(r.abrir(carpeta_juego()));
     std::vector<u8> d;
@@ -329,7 +329,7 @@ TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) se m
     for (const TileObjetoMapa& t : s.tiles_objetos) {
         if ((t.tile >> 8) != 990) continue;
         ++manchas;
-        // Multiply blend (type 0x20, exe 0x461ff0): done on the GPU, so the decoded pixels stay opaque.
+        // Mezcla de multiplicar (tipo 0x20, exe 0x461ff0): la hace la GPU, así que los píxeles decodificados quedan opacos.
         CHECK(til.modo(t.tile & 0xFF) == ModoMezcla::MULTIPLICAR);
         ImagenRGBA img;
         REQUIRE(til.decodificar(t.tile & 0xFF, false, img));
@@ -340,9 +340,9 @@ TEST_CASE("Mapa 200: los tiles de tipo 0x20 (manchas del suelo de la Torre) se m
 }
 
 TEST_CASE("Map 200: void cells (47.til #199/#202, type bit 3) are not drawn" * doctest::skip(carpeta_juego().empty())) {
-    // Tower of Insolence 100F: outside the playable room the ground is filled with 47.til tiles 199
-    // (left half) and 202 (right half), the only two tiles in all of Tile.pak whose type byte has
-    // bit 0x08. They hold the "00" placeholder art; the original leaves them black.
+    // Tower of Insolence 100F: fuera de la sala jugable el suelo se rellena con los tiles 199 de 47.til
+    // (mitad izquierda) y 202 (mitad derecha), los dos únicos tiles de todo Tile.pak cuyo byte de tipo tiene
+    // el bit 0x08. Tienen el arte de relleno "00"; el original los deja en negro.
     Recursos r;
     REQUIRE(r.abrir(carpeta_juego()));
     JuegoTiles til;
@@ -380,8 +380,8 @@ TEST_CASE("Tabla de sprites: gfx sin fila se dibujan por dirección") {
     CHECK(TablaSprites::sub_sin_fila(255) == 0);
 }
 
-// Drake of Hell (npcs 45529, gfx 10573) is newer than the table (ends at 8682): no row, but the
-// files keep 8 headings per group, so the draw code must pick "10573-<dir>.spr".
+// Drake of Hell (npcs 45529, gfx 10573) es más nuevo que la tabla (termina en 8682): no tiene fila, pero los
+// archivos conservan 8 rumbos por grupo, así que el código de dibujo debe elegir "10573-<dir>.spr".
 TEST_CASE("Gfx 10573 (Drake) no tiene fila pero sí un archivo por dirección" * doctest::skip(carpeta_juego().empty())) {
     TablaSprites t;
     if (!t.cargar_archivo("datos/sprite_table.txt") && !t.cargar_archivo("../../datos/sprite_table.txt")) return;
@@ -397,8 +397,8 @@ TEST_CASE("Gfx 10573 (Drake) no tiene fila pero sí un archivo por dirección" *
 }
 
 TEST_CASE("Map 666: candelabrum flame tiles (type bit 0x10) are additive light tiles" * doctest::skip(carpeta_juego().empty())) {
-    // Hell, segment (32704, 32832): the candelabrum at ~(32720,32834) is set 3971 tiles 219-238 (types
-    // 0x12/0x13) with a dark glow backdrop; drawn opaque it showed as a black rectangle behind the flames.
+    // Hell, segmento (32704, 32832): el candelabro en ~(32720,32834) es el juego 3971 tiles 219-238 (tipos
+    // 0x12/0x13) con un fondo de brillo oscuro; dibujado opaco se veía como un rectángulo negro detrás de las llamas.
     Recursos r;
     REQUIRE(r.abrir(carpeta_juego()));
     JuegoTiles til;
@@ -419,7 +419,7 @@ TEST_CASE("Map 666: candelabrum flame tiles (type bit 0x10) are additive light t
     CHECK(luces > 10);
 }
 
-// Fallback order of juego= / juego_extra=: runs without the game (loose files only).
+// Orden de respaldo de juego= / juego_extra=: corre sin el juego (solo archivos sueltos).
 TEST_CASE("Recursos: juego_extra falls back in order, primary wins") {
     namespace fs = std::filesystem;
     const fs::path raiz = fs::temp_directory_path() / "lin_test_extra";
@@ -439,12 +439,12 @@ TEST_CASE("Recursos: juego_extra falls back in order, primary wins") {
     poner("c/Tile/5.til", "Ctile");
     const std::string a = (raiz / "a").string() + "/", b = (raiz / "b").string() + "/", c = (raiz / "c").string() + "/";
     Recursos r;
-    r.abrir(a, {b, c});  // no paks: abrir reports failure but the loose files still resolve
+    r.abrir(a, {b, c});  // sin paks: abrir informa el fallo pero los archivos sueltos igual se resuelven
     REQUIRE(r.fuentes() == 3);
     auto txt = [](Bytes v) { return std::string(v.begin(), v.end()); };
-    CHECK(txt(r.sprite("1-0.spr")) == "A1");      // primary first
-    CHECK(txt(r.sprite("2-0.spr")) == "B2");      // first extra before the second
-    CHECK(txt(r.sprite("3-0.spr")) == "C3");      // only in the last
+    CHECK(txt(r.sprite("1-0.spr")) == "A1");      // la principal primero
+    CHECK(txt(r.sprite("2-0.spr")) == "B2");      // la primera extra antes que la segunda
+    CHECK(txt(r.sprite("3-0.spr")) == "C3");      // solo en la última
     CHECK(r.sprite("4-0.spr").empty());
     CHECK(r.fuente_de_sprite("1-0.spr") == 0);
     CHECK(r.fuente_de_sprite("2-0.spr") == 1);
@@ -452,7 +452,7 @@ TEST_CASE("Recursos: juego_extra falls back in order, primary wins") {
     CHECK(r.fuente_de_sprite("4-0.spr") == -1);
     CHECK(r.ruta_archivo("map/9/aaaa.s32") == b + "map/9/aaaa.s32");
     CHECK(r.ruta_archivo("map/9/bbbb.s32") == c + "map/9/bbbb.s32");
-    CHECK(r.ruta_archivo("map/9/cccc.s32") == a + "map/9/cccc.s32");  // nowhere: the primary's path
+    CHECK(r.ruta_archivo("map/9/cccc.s32") == a + "map/9/cccc.s32");  // en ninguna: la ruta de la principal
     CHECK(txt(r.tile("5.til")) == "Ctile");
     CHECK(r.tile("6.til").empty());
     fs::remove_all(raiz);

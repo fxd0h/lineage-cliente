@@ -115,7 +115,7 @@ void eventos_tienda(App& a, const Evento& e) {
 
 void abrir_tienda_de(App& a, ObjId v) {
     enviar(a, cmd::ver_tienda(a.op, 0, v));
-    if (!a.cfg.ui_simple) enviar(a, cmd::ver_tienda(a.op, 1, v));  // the original window shows both lists at once
+    if (!a.cfg.ui_simple) enviar(a, cmd::ver_tienda(a.op, 1, v));  // la ventana original muestra las dos listas a la vez
 }
 
 bool comando_tienda(App& a, std::string_view orden, std::string_view arg) {
@@ -136,7 +136,7 @@ bool comando_tienda(App& a, std::string_view orden, std::string_view arg) {
 bool clic_item_tienda(App& a, ObjId item) {
     TiendaJugadores& t = a.tienda_pj;
     if (!t.armando || t.abierta) return false;
-    if (a.cfg.ui_simple) t.rejilla = 0;  // the simple window has only the selling list
+    if (a.cfg.ui_simple) t.rejilla = 0;  // la ventana simple solo tiene la lista de venta
     const Slot s = a.mundo.inventario.items.buscar(item);
     if (s == SIN_SLOT || item_equipado(nombre_item(a.mundo.inventario, s))) return true;
     char nombre[256];
@@ -157,7 +157,7 @@ void aceptar_cantidad_tienda(App& a) {
         const auto it = std::find_if(t.lineas.begin(), t.lineas.end(), [&](const LineaTiendaVista& x) { return x.mi_item == d.item; });
         if (it != t.lineas.end()) enviar(a, cmd::vender_a_tienda(a.op, d.objeto, d.item, valor, it->orden));
         enviar(a, cmd::ver_tienda(a.op, t.tipo, d.objeto));
-    } else if (d.tienda == 3 || d.tienda == 4) {  // price: the whole stack (4 = the "Buying item" grid; max 8 per grid)
+    } else if (d.tienda == 3 || d.tienda == 4) {  // precio: la pila entera (4 = la grilla "Buying item"; máximo 8 por grilla)
         const Slot s = a.mundo.inventario.items.buscar(d.item);
         if (s == SIN_SLOT) return;
         auto& lista = d.tienda == 3 ? t.venta : t.compra;
@@ -180,7 +180,7 @@ bool sobre_tienda(const App& a) {
 void dibujar_tienda(App& a) {
     TiendaJugadores& t = a.tienda_pj;
     if (!t.vista && !t.armando) return;
-    if (!a.cfg.ui_simple) return;  // dibujar_tienda_original, from the window stack
+    if (!a.cfg.ui_simple) return;  // dibujar_tienda_original, desde la pila de ventanas
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const int x = x_ventana(a), y = y_ventana(), alto = alto_ventana(a);
@@ -264,16 +264,16 @@ void dibujar_tienda(App& a) {
 }
 
 
-// ---- Original window (ctor 0x42dc30, draw 0x42dfd0 / grids 0x42eec0, OK callback 0x42d8f0; S3EP1U.bin) ----
-//  - translucent background 1283 at (7,7), frame 1284, ornament 1285 at (-2,11) (the "Selling item" / "Buying item" captions are
-//    part of the art), close 1061 at (174,18), drag handle (1,5,198,20);
-//  - two grids of 4 x 2 cells, pitch 34, at x 43, y 51 (sell) and 145 (buy); an occupied cell shows the mark 696 at (-1,-1)
-//    and its item icon; the hovered cell shows a box with the item name and the price (0x42f0a0..0x42f698);
-//  - two 150 x 12 edit boxes at (34,224) and (34,241): the shop title, up to 40 characters each (0x42da5f); OK 1289 (hover
-//    1291) at (46,258) opens the shop (C_Shop, buy list after the sell list), Cancel 1286 (hover 1288) at (109,258) closes.
-// The buyer's side of the same window shows what the shop sells and buys (S_PrivateShop type 0 and 1); a click on a
-// cell asks how many. Unverified: how the exe picks the grid for a new item (the fork: the grid last clicked, default sell),
-// removal of a line (the fork: click on its cell while the shop is not open), and the joining of the two title lines.
+// ---- Ventana original (ctor 0x42dc30, dibujo 0x42dfd0 / grillas 0x42eec0, callback de OK 0x42d8f0; S3EP1U.bin) ----
+//  - fondo translúcido 1283 en (7,7), marco 1284, adorno 1285 en (-2,11) (los rótulos "Selling item" / "Buying item" son
+//    parte del arte), cerrar 1061 en (174,18), zona de arrastre (1,5,198,20);
+//  - dos grillas de 4 x 2 celdas, paso 34, en x 43, y 51 (venta) y 145 (compra); una celda ocupada muestra la marca 696 en (-1,-1)
+//    y el ícono de su objeto; la celda bajo el puntero muestra una caja con el nombre del objeto y el precio (0x42f0a0..0x42f698);
+//  - dos cajas de edición de 150 x 12 en (34,224) y (34,241): el título de la tienda, hasta 40 caracteres cada una (0x42da5f); OK 1289 (hover
+//    1291) en (46,258) abre la tienda (C_Shop, lista de compra después de la de venta), Cancelar 1286 (hover 1288) en (109,258) cierra.
+// El lado del comprador de la misma ventana muestra lo que la tienda vende y compra (S_PrivateShop tipo 0 y 1); un clic en una
+// celda pregunta cuántos. Sin verificar: cómo elige el exe la grilla para un objeto nuevo (el fork: la última grilla cliqueada, venta por omisión),
+// quitar una línea (el fork: clic en su celda mientras la tienda no está abierta) y la unión de las dos líneas del título.
 namespace {
 
 constexpr u32 IMG_BG = 1283, IMG_FRAME = 1284, IMG_ORN = 1285, IMG_MARK = 696, IMG_X = 1061, IMG_OK = 1289, IMG_CANCEL = 1286;
@@ -306,7 +306,7 @@ void dibujar_tienda_original(App& a) {
     g.gpu().dibujar(g.img(IMG_X), r.x + 174, r.y + 18, kc, sobre_x ? rgba(255, 255, 255) : rgba(200, 200, 200));
     bool cerrar = (sobre_x && e.clic) || e.escape;
 
-    // Cell contents of both grids: name, price and icon of the line in each cell.
+    // Contenido de las celdas de las dos grillas: nombre, precio e ícono de la línea en cada celda.
     struct Celda {
         bool ocupada = false;
         u16 gfx = 0;
@@ -357,16 +357,16 @@ void dibujar_tienda_original(App& a) {
                     auto& v = gr ? t.compra : t.venta;
                     v.erase(v.begin() + c.linea);
                 }
-            } else if (c.ocupada) {  // the buyer: how many of this line (sell grid = it sells, buy grid = it buys)
+            } else if (c.ocupada) {  // el comprador: cuántos de esta línea (grilla de venta = la vende, grilla de compra = la compra)
                 const LineaTiendaVista& l = t.grilla[gr][static_cast<size_t>(c.linea)];
                 if (gr == 0) preguntar(a, 1, t.vista, l.orden, static_cast<i32>(l.cantidad), c.nombre, "Buy how many?");
                 else preguntar(a, 2, t.vista, l.mi_item, static_cast<i32>(l.cantidad), c.nombre, "Sell how many?");
             }
         }
-        if (propia && t.rejilla == gr)  // the grid that takes the next inventory item
+        if (propia && t.rejilla == gr)  // la grilla que recibe el próximo objeto del inventario
             g.gpu().rectangulo(r.x + GRID_X - 3, r.y + GRID_Y[gr] - 3, COLS * CELL + 4, 2, kicon - 2, rgba(255, 220, 130, 160));
     }
-    // Titles: edit boxes for the own shop, the vendor's title text for the buyer.
+    // Títulos: cajas de edición para la tienda propia, el texto del título del vendedor para el comprador.
     if (propia) {
         std::string* campos[2] = {&t.titulo, &t.titulo2};
         for (int i = 0; i < 2; ++i) {
@@ -376,7 +376,7 @@ void dibujar_tienda_original(App& a) {
     } else if (const Vendedor* v = vendedor(a, t.vista)) {
         g.texto_sombra(v->titulo, static_cast<float>(r.x + TITLE_X + 2), static_cast<float>(r.y + TITLE_Y[0] + 1), kt, rgba(255, 255, 254));
     }
-    // Hover box: name and price (0x42f0a0..).
+    // Caja de hover: nombre y precio (0x42f0a0..).
     if (sobre) {
         char mil[32], precio[64];
         std::snprintf(precio, sizeof precio, "%s adena", con_miles(sobre->precio, mil, sizeof mil));
@@ -386,7 +386,7 @@ void dibujar_tienda_original(App& a) {
         g.texto_sombra(sobre->nombre, static_cast<float>(bx + 5), static_cast<float>(by + 3), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
         g.texto_sombra(precio, static_cast<float>(bx + 5), static_cast<float>(by + 5 + ALTO_GLIFO), clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 220, 130));
     }
-    // OK opens the shop (the buyer's window has no OK: clicking a cell buys); Cancel closes.
+    // OK abre la tienda (la ventana del comprador no tiene OK: cliquear una celda compra); Cancelar cierra.
     if (propia) {
         const bool puede = !t.abierta && (!t.venta.empty() || !t.compra.empty());
         if (puede && draw_original_button(a, r.x + BTN_OK_X, r.y + BTN_Y, IMG_OK, IMG_OK + 2)) {

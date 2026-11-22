@@ -25,22 +25,22 @@ namespace {
 constexpr int MARGEN = 14, ARRIBA = 30;
 constexpr int ANCHO_PAGINA = ui::VENTANA_ANCHO - 2 * MARGEN;
 constexpr int ALTO_PAGINA = ui::VENTANA_ALTO - ARRIBA - 12;
-// Original NPC dialog (client class at 0x43f130, draw 0x43f7f0): background 1355 at (8,11), frame 1356, ornaments
-// 1101 at (2,11), close button at (226,15); scroll bar on x 226 with arrows at y 47 and 293 over the track 1354.
+// Diálogo de NPC original (clase del cliente en 0x43f130, dibujo 0x43f7f0): fondo 1355 en (8,11), marco 1356, adornos
+// 1101 en (2,11), botón de cerrar en (226,15); barra de scroll en x 226 con flechas en y 47 y 293 sobre el riel 1354.
 constexpr u32 IMG_NPC_BG = 1355, IMG_NPC_FRAME = 1356, IMG_NPC_ORNAMENT = 1101, IMG_NPC_TRACK = 1354;
 constexpr int NPC_CLOSE_X = 226, NPC_CLOSE_Y = 15, NPC_TEXT_Y = 48, NPC_TEXT_H = 251;
-constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 13;  // scroll step = text line height (0x43c080 / 0x43c0b0 use 0x435370 = 13)
+constexpr int NPC_SCROLL_X = 226, NPC_SCROLL_Y = 47, NPC_SCROLL_H = 258, NPC_LINE = 13;  // paso de scroll = alto de línea de texto (0x43c080 / 0x43c0b0 usan 0x435370 = 13)
 
-// Original-client text style in the HTML page: Arial-like face, no outline (see recursos/html.h and fuente_ttf.cpp).
+// Estilo de texto del cliente original en la página HTML: letra tipo Arial, sin contorno (ver recursos/html.h y fuente_ttf.cpp).
 bool original_text(const App& a) { return !a.cfg.ui_simple && a.cfg.fuente_original; }
-// The page widget (ctor 0x43e170) gets the rect (10,48)-(207,299) at 0x4589b0; its layout (0x43b3e0, SetRect at 0x43b4ea)
-// uses the text rect (left+3, top+3, right-7, bottom-3) = (13,51)-(200,296) as coordinates that already include the widget
-// origin, and the draw (0x436680 -> 0x43cf90) then adds the widget's left edge (pane x + 10) again to every run x
-// (RECT(left + run.x, ...), 0x43d0a4). So the first glyph column sits at window x 10 + 13 = 23 and a line wraps at 10 + 200 = 210
-// (the clip region is widened by 9 on the right, 0x4366c8..0x4366db, so that overhang is visible). The vertical origin
-// is the layout line y (51 = widget top 48 + inset 3) plus the widget top again (48) minus the OffsetRect dy of
-// -43 - scroll at 0x4367cc / 0x436804 = window y + 56 for the first line (NPC_TEXT_ORIGIN_DY below, 5 more than the
-// clip top). The clip rect itself is unchanged.
+// El widget de página (ctor 0x43e170) recibe el rect (10,48)-(207,299) en 0x4589b0; su diagramación (0x43b3e0, SetRect en 0x43b4ea)
+// usa el rect de texto (left+3, top+3, right-7, bottom-3) = (13,51)-(200,296) como coordenadas que ya incluyen el origen
+// del widget, y el dibujo (0x436680 -> 0x43cf90) suma otra vez el borde izquierdo del widget (x del panel + 10) a la x de cada tramo
+// (RECT(left + run.x, ...), 0x43d0a4). Así la primera columna de glifos queda en x 10 + 13 = 23 de la ventana y una línea se corta en 10 + 200 = 210
+// (la región de recorte se ensancha 9 a la derecha, 0x4366c8..0x4366db, para que ese sobrante se vea). El origen vertical
+// es la y de la línea diagramada (51 = tope del widget 48 + margen 3) más otra vez el tope del widget (48) menos el dy de OffsetRect de
+// -43 - scroll en 0x4367cc / 0x436804 = y de la ventana + 56 para la primera línea (NPC_TEXT_ORIGIN_DY abajo, 5 más que el
+// tope del recorte). El rect de recorte en sí no cambia.
 constexpr int HTML_INSET_L = 3, HTML_INSET_T = 3, HTML_INSET_R = 7, HTML_INSET_B = 3;
 constexpr int NPC_WIDGET_L = 10, NPC_WIDGET_R = 207;
 constexpr int NPC_TEXT_ORIGIN_DY = 51 + 48 - 43 - (48 + HTML_INSET_T);  // 5: first line y 56 vs clip top 51
@@ -50,7 +50,7 @@ int page_width(const App& a) {
     if (a.cfg.ui_simple) return ANCHO_PAGINA;
     return NPC_TEXT_W;
 }
-constexpr ObjId LOCAL_NPC = 0xFFFFFFFFu;  // owner of the client-side pages
+constexpr ObjId LOCAL_NPC = 0xFFFFFFFFu;  // dueño de las páginas del cliente
 constexpr int FILA_TIENDA = 34, FILAS_TIENDA = 6;
 constexpr int DISTANCIA_CIERRE = 6;  // al alejarse más, el diálogo se cierra
 constexpr u32 PRECIO_RETIRO = 30;    // adena por ítem retirado (C_Result del servidor)
@@ -69,8 +69,8 @@ void abrir_pagina(App& a, ObjId npc, std::string_view id, std::string_view datos
     if (!a.rec.texto(nombre, html)) {
         nombre = std::string(id) + ".html";
         if (!a.rec.texto(nombre, html)) {
-            // The original (0x437440) builds "%s-%c.html" and, when the page is missing, returns without
-            // opening any window (0x43a9ca): the NPC stays silent. Only the invented text-mode UI keeps a notice.
+            // El original (0x437440) arma "%s-%c.html" y, si falta la página, vuelve sin
+            // abrir ninguna ventana (0x43a9ca): el NPC se queda callado. Solo la interfaz de modo texto inventada conserva un aviso.
             if (!a.cfg.ui_simple) return;
             std::string aviso = "(page \"" + std::string(id) + "\" not found)";
             html.assign(aviso.begin(), aviso.end());
@@ -123,7 +123,7 @@ u32 adena_inventario(const App& a) {
 
 namespace {
 
-// `window_type` is the type of the original list window (0x4d1000); 0 picks the one of `tipo`.
+// `window_type` es el tipo de la ventana de lista original (0x4d1000); 0 elige la de `tipo`.
 void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
     static constexpr u8 TYPES[] = {0, 0, 1, 3, 2, 0xf, 0x0b, 0xd};  // by TipoTienda
     a.tienda = tipo;
@@ -153,14 +153,14 @@ void abrir_tienda(App& a, ObjId npc, TipoTienda tipo, u8 window_type = 0) {
 
 // Un vínculo de la página: otra página local, el almacén o una acción para el servidor.
 void abrir_pagina_local(App& a, std::string_view id) {
-    const std::string pagina(id);  // `id` may point into a.npc_pagina
+    const std::string pagina(id);  // `id` puede apuntar dentro de a.npc_pagina
     abrir_pagina(a, LOCAL_NPC, pagina, datos_opciones(a));
     a.npc_local = true;
     a.npc_casa = 0;
 }
 
 namespace {
-// Original Options / Help button (0x4569a0 / 0x458360): the page, toggled when it is already open (0xee closes it).
+// Botón original Opciones / Ayuda (0x4569a0 / 0x458360): la página, alterna si ya está abierta (0xee la cierra).
 void alternar_pagina(App& a, std::string_view pagina) {
     if (a.npc_local && a.npc_pagina == pagina) cerrar(a);
     else abrir_pagina_local(a, pagina);
@@ -177,8 +177,8 @@ void alternar_ayuda(App& a) {
     else alternar_pagina(a, "help");
 }
 
-// Ctrl+C / hands button (0x456a30): the page is option2p when the character is a prince (class 0), else option2; with
-// that page already open it closes the window.
+// Ctrl+C / botón de las manos (0x456a30): la página es option2p si el personaje es príncipe (clase 0), si no option2; con
+// esa página ya abierta cierra la ventana.
 void alternar_comunidad(App& a) {
     if (a.cfg.ui_simple) {
         a.ventana_social = !a.ventana_social;
@@ -190,10 +190,10 @@ void alternar_comunidad(App& a) {
     else abrir_pagina_local(a, pagina);
 }
 
-// Polymorph page "monlist" (Text.pak; links monlist0..9 are sub-pages): an action is the monster name. The original default
-// action handler (0x40c855..0x40c97b) sends it, and closes the window, as C_NPCAction with the own id (Shape Change,
-// state 1) or as the item-use reply (scroll, state 2). "none" is the Release button; the original sends an empty name for it,
-// this server wants the word.
+// Página de polymorph "monlist" (Text.pak; los enlaces monlist0..9 son subpáginas): una acción es el nombre del monstruo. El
+// manejador de acciones por omisión del original (0x40c855..0x40c97b) la manda, y cierra la ventana, como C_NPCAction con el id propio (Shape Change,
+// estado 1) o como respuesta al uso del objeto (pergamino, estado 2). "none" es el botón Release; el original manda un nombre vacío para él,
+// este servidor quiere la palabra.
 void accion_polimorfia(App& a, std::string_view accion) {
     const std::string nombre(accion);
     if (a.npc_poly == 2) enviar(a, cmd::usar_item_texto(a.op, a.forma_item, nombre));
@@ -213,14 +213,14 @@ void activar(App& a, std::string_view vinculo, bool es_enlace) {
         accion_polimorfia(a, vinculo);
         return;
     }
-    if (a.npc_local) {  // client-side pages: links open pages, actions are the client's own commands
+    if (a.npc_local) {  // páginas del cliente: los enlaces abren páginas, las acciones son órdenes propias del cliente
         if (es_enlace) abrir_pagina_local(a, vinculo);
         else accion_comunidad(a, vinculo);
         return;
     }
     if (es_enlace) {
         abrir_pagina(a, a.npc, vinculo, a.npc_datos);
-    } else if (vinculo == "create") {  // bpledge2: the client asks for the name (string 83) and sends C_CreateClan itself
+    } else if (vinculo == "create") {  // bpledge2: el cliente pide el nombre (texto 83) y manda él mismo C_CreateClan
         accion_comunidad(a, vinculo);
         cerrar(a);
     } else if (vinculo == "buyspell") {
@@ -275,7 +275,7 @@ void confirmar(App& a) {
     size_t n = 0;
     for (const FilaTienda& f : a.tienda_filas)
         if (f.elegido && n < 255) lineas[n++] = {f.id, f.elegido};
-    // The window type is the C_Result type (0 buy, 1 sell, 2 / 4 / 8 deposits, 3 / 5 / 9 retrievals).
+    // El tipo de ventana es el tipo de C_Result (0 compra, 1 venta, 2 / 4 / 8 depósitos, 3 / 5 / 9 retiros).
     if (n) enviar(a, cmd::resultado(a.op, a.tienda_npc, static_cast<TipoResultado>(a.tienda_tipo), {lineas, n}));
     cerrar(a);
 }
@@ -300,11 +300,11 @@ void dibujar_pagina(App& a, int x0, int y0) {
     const int left = simple ? MARGEN : NPC_TEXT_X;
     const int top = simple ? ARRIBA : NPC_TEXT_Y + (orig_text ? HTML_INSET_T : 0);
     const int view_h = simple ? ALTO_PAGINA : NPC_TEXT_H - (orig_text ? HTML_INSET_T + HTML_INSET_B : 0);
-    // Original page object (0x43c080 / 0x43c0b0): line up/down move the pixel offset [+0x74] by one text line, and the
-    // offset stops at content height [+0x78] minus one line, so the range is alto - 13 (not alto - view). The bar only
-    // exists here when the content overflows the view.
+    // Objeto de página original (0x43c080 / 0x43c0b0): línea arriba/abajo mueven el desplazamiento en píxeles [+0x74] una línea de texto, y el
+    // desplazamiento se detiene en el alto del contenido [+0x78] menos una línea, así que el rango es alto - 13 (no alto - vista). Aquí la barra
+    // solo existe cuando el contenido desborda la vista.
     const int max_desp = simple ? std::max(0, p.alto - view_h) : (p.alto > view_h ? p.alto - NPC_LINE : 0);
-    if (!simple) {  // the scroll bar works in text lines
+    if (!simple) {  // la barra de scroll trabaja en líneas de texto
         if (draw_original_frame(a, x0, y0, IMG_NPC_BG, 8, 11, IMG_NPC_FRAME, NPC_CLOSE_X, NPC_CLOSE_Y)) {
             cerrar(a);
             return;
@@ -317,15 +317,15 @@ void dibujar_pagina(App& a, int x0, int y0) {
                            IMG_NPC_TRACK, -2);
         if (line != prev) a.npc_desplazamiento = static_cast<int>(line) * NPC_LINE;
     }
-    // The original page has no wheel handler (the 0x20a handlers belong to other controls); the fork lets the wheel
-    // do one line step per notch.
+    // La página original no tiene manejador de rueda (los manejadores de 0x20a son de otros controles); el fork deja que la rueda
+    // avance una línea por paso.
     if (sobre_npc(a) && e.rueda) a.npc_desplazamiento = std::clamp(a.npc_desplazamiento - e.rueda * NPC_LINE, 0, max_desp);
     a.npc_desplazamiento = std::clamp(a.npc_desplazamiento, 0, max_desp);
     const int ox = x0 + left, oy = y0 + top + (orig_text ? NPC_TEXT_ORIGIN_DY : 0) - a.npc_desplazamiento;
     const u64 kt = clave_orden(CAPA_UI_TEXTO, 12), ki = clave_orden(CAPA_UI, 13);
     const ElementoHtml* bajo = nullptr;
-    // Original client: every word of the link under the pointer turns green, not only the one pointed at (0x43d2a2
-    // compares the link index of each run with the hovered one).
+    // Cliente original: todas las palabras del enlace bajo el puntero se ponen verdes, no solo la apuntada (0x43d2a2
+    // compara el índice de enlace de cada tramo con el del hover).
     int sobre_vinculo = -1;
     if (orig_text) {
         for (const ElementoHtml& el : p.elementos)
@@ -333,30 +333,30 @@ void dibujar_pagina(App& a, int x0, int y0) {
     }
     for (const ElementoHtml& el : p.elementos) {
         const int x = ox + el.x, y = oy + el.y;
-        // Clip to the page rect: in the original UI an element must fit whole (0x4367e5..0x436816, images 0x4360f0).
+        // Recorte al rect de la página: en la interfaz original un elemento debe caber entero (0x4367e5..0x436816, imágenes 0x4360f0).
         const int view_top = y0 + top, view_bottom = view_top + view_h;
         const int text_h = orig_text ? ALTO_LINEA_HTML_ORIGINAL : ALTO_GLIFO;
         const int el_h = el.tipo == ElementoHtml::Tipo::IMAGEN ? el.h : text_h;
-        if (simple) {  // fork window: first-line test, a taller button is not lost
+        if (simple) {  // ventana del fork: prueba de la primera línea, un botón más alto no se pierde
             if (y < view_top - 2 || y + text_h > view_bottom + 2) continue;
         } else if (y < view_top || y + el_h > view_bottom) {
-            // Original: text runs and <img> pictures (the back button 331 is one) are drawn only when they fit whole
-            // inside the page rect; an image straddling an edge is skipped, not cropped (0x4361b9..0x436240).
+            // Original: los tramos de texto y las imágenes <img> (el botón de volver 331 es una) se dibujan solo si caben enteros
+            // dentro del rect de la página; una imagen que cruza un borde se salta, no se recorta (0x4361b9..0x436240).
             continue;
         }
         const bool encima = el.vinculo_len && ui::sobre(e, x, y - 1, el.w, el.h + 2) && (simple || (e.my >= view_top && e.my < view_bottom));
         if (encima) bajo = &el;
         if (el.tipo == ElementoHtml::Tipo::IMAGEN) {
-            // Buttons: N.img, and with the pointer over it N+1 only when it is the same size. N+1 is
-            // not always the highlighted variant (for "back" it is an unrelated elf sprite).
-            const RegionAtlas base = g.img(el.imagen);  // copy: loading N+1 may move the cache
-            // Original UI: the exe draws the <img> src picture only, hovered or not (0x4360f0 -> blit 0x4991e0 with
-            // [img + 0x18]; no N+1, no highlight). The same-size N+1 guess belongs to the simple UI.
+            // Botones: N.img, y con el puntero encima N+1 solo si es del mismo tamaño. N+1 no
+            // siempre es la variante resaltada (para "back" es un sprite de elfo sin relación).
+            const RegionAtlas base = g.img(el.imagen);  // copia: cargar N+1 puede mover la caché
+            // Interfaz original: el exe dibuja solo la imagen del src de <img>, con o sin hover (0x4360f0 -> blit 0x4991e0 con
+            // [img + 0x18]; sin N+1, sin resaltado). La suposición de N+1 del mismo tamaño es de la interfaz simple.
             const RegionAtlas hover = (encima && simple) ? g.img(el.imagen + 1) : base;
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
             RegionAtlas r = use_hover ? hover : base;
-            const int cut_top = simple ? std::max(0, view_top - y) : 0;  // simple UI only: the original never crops
-            if (cut_top) {  // crop the region (texel rect; w/h/oy are logical)
+            const int cut_top = simple ? std::max(0, view_top - y) : 0;  // solo interfaz simple: el original nunca recorta
+            if (cut_top) {  // recorta la región (rect en texels; w/h/oy son lógicos)
                 const int sc = static_cast<int>(r.escala_texel());
                 r.y = static_cast<u16>(r.y + cut_top * sc);
                 r.h = static_cast<u16>(std::max(0, r.h - cut_top));
@@ -364,7 +364,7 @@ void dibujar_pagina(App& a, int x0, int y0) {
             }
             g.gpu().dibujar(r, x, y, ki);
         } else {
-            if (orig_text) {  // no underline: the client never sets the underline flag of the run style
+            if (orig_text) {  // sin subrayado: el cliente nunca activa el flag de subrayado del estilo del tramo
                 const bool verde = el.vinculo_len && static_cast<int>(el.vinculo_ofs) == sobre_vinculo;
                 g.texto_html(p.texto(el), static_cast<float>(x), static_cast<float>(y), kt, verde ? COLOR_SOBRE_HTML_ORIGINAL : el.color, el.negrita);
             } else {
@@ -373,14 +373,14 @@ void dibujar_pagina(App& a, int x0, int y0) {
             }
         }
     }
-    // Original cursor over the page (HTML view 0x436d60, hit test 0x436fd0): 3 over a link / button / embedded control, else 1.
+    // Cursor original sobre la página (vista HTML 0x436d60, prueba de acierto 0x436fd0): 3 sobre un enlace / botón / control embebido, si no 1.
     if (!simple && ui::sobre(e, x0 + left, y0 + top, NPC_TEXT_W, view_h)) a.cursor_html = bajo ? 3 : 1;
     if (simple && max_desp > 0) {  // barra de desplazamiento
         int h = ALTO_PAGINA * ALTO_PAGINA / p.alto, yb = y0 + ARRIBA + (ALTO_PAGINA - h) * a.npc_desplazamiento / max_desp;
         g.gpu().rectangulo(x0 + ui::VENTANA_ANCHO - 8, yb, 3, h, ki, rgba(160, 130, 80, 200));
     }
     if (bajo) {
-        // S3EP1U's page tags have no `tooltip` attribute (tag table 0x503604: action, link, src, bg, fg, ...); the original shows none.
+        // Las etiquetas de página de S3EP1U no tienen atributo `tooltip` (tabla de etiquetas 0x503604: action, link, src, bg, fg, ...); el original no muestra ninguno.
         std::string_view ayuda = simple ? p.ayuda(*bajo) : std::string_view{};
         if (!ayuda.empty()) {
             int w = ancho_texto(ayuda.data(), ayuda.size());
@@ -391,8 +391,8 @@ void dibujar_pagina(App& a, int x0, int y0) {
     }
 }
 
-// Click handling of a shop row, shared by the simple list and the original grid: repair, pet bag, the amount
-// dialog for stacks, and plain +1 / -1 selection. `hover` is whether the pointer is over the row.
+// Manejo del clic en una fila de tienda, común a la lista simple y a la grilla original: reparar, bolsa de mascota, el diálogo
+// de cantidad para pilas y la selección simple +1 / -1. `hover` indica si el puntero está sobre la fila.
 void row_click(App& a, int i, bool hover, std::string_view name) {
     const EntradaFrame& e = a.entrada;
     FilaTienda& f = a.tienda_filas[static_cast<size_t>(i)];
@@ -432,17 +432,17 @@ void row_click(App& a, int i, bool hover, std::string_view name) {
 }
 
 
-// Original list window of the 2009 US client (S3EP1U): the NPC shop (buy and sell), the warehouses, the pet bag, the
-// spell list and the weapon repair list are all one window class (0x4f55d8, ctor 0x4bef40, draw 0x4bf690) whose
-// type (0x4d1000) only changes the button art and the texts. The earlier 4x2-grid window (frame 1284, ctor 0x42dc30)
-// is the private shop ("Selling item" / "Buying item"), not the NPC shop.
-//  - background 1099 at (8,11), frame 1100, ornaments 1101 at (2,11), close (225,15), label "Adena:" 1106 at (29,31),
-//    its number at (80,31);
-//  - pane (24,44)-(225,304): 7 rows of 36 px from (25,51) (0x4be220); scroll bar 1354 (up 974 at (225,47), track at y 55,
-//    down 972 at (226,293), thumb 976);
-//  - row (0x4bd250): icon at the row origin, name at (+38,+3), amount chosen right-aligned to +176 at y +19 between the
-//    arrows 556 (left) and 554 (right, at +180), the price left of the left arrow with the adena coin 325;
-//  - buttons at y 306: Buy 1109 / Sell 1107 / OK 1114 at x 79, Cancel 1111 at x 131 (pressed art = id + 1).
+// Ventana de lista original del cliente US 2009 (S3EP1U): la tienda del NPC (compra y venta), los depósitos, la bolsa de mascota, la
+// lista de hechizos y la lista de reparación de armas son todas una clase de ventana (0x4f55d8, ctor 0x4bef40, dibujo 0x4bf690) cuyo
+// tipo (0x4d1000) solo cambia el arte de los botones y los textos. La ventana anterior con grilla de 4x2 (marco 1284, ctor 0x42dc30)
+// es la tienda privada ("Selling item" / "Buying item"), no la tienda del NPC.
+//  - fondo 1099 en (8,11), marco 1100, adornos 1101 en (2,11), cerrar (225,15), etiqueta "Adena:" 1106 en (29,31),
+//    su número en (80,31);
+//  - panel (24,44)-(225,304): 7 filas de 36 px desde (25,51) (0x4be220); barra de scroll 1354 (arriba 974 en (225,47), riel en y 55,
+//    abajo 972 en (226,293), botón 976);
+//  - fila (0x4bd250): ícono en el origen de la fila, nombre en (+38,+3), cantidad elegida alineada a la derecha hasta +176 en y +19 entre las
+//    flechas 556 (izquierda) y 554 (derecha, en +180), el precio a la izquierda de la flecha izquierda con la moneda de adena 325;
+//  - botones en y 306: Comprar 1109 / Vender 1107 / OK 1114 en x 79, Cancelar 1111 en x 131 (arte presionado = id + 1).
 constexpr u32 IMG_LIST_BG = 1099, IMG_LIST_FRAME = 1100, IMG_LIST_ORNAMENT = 1101, IMG_LIST_LABEL = 1106, IMG_LIST_TRACK = 1354;
 constexpr u32 IMG_BUY = 1109, IMG_SELL = 1107, IMG_OK = 1114, IMG_CANCEL = 1111, IMG_COIN = 325, IMG_ROW_MARK = 536;
 constexpr u32 IMG_ARROW_RIGHT = 554, IMG_ARROW_LEFT = 556;  // +1: pressed
@@ -450,7 +450,7 @@ constexpr int LIST_CLOSE_X = 225, LIST_CLOSE_Y = 15, LIST_ROWS = 7, LIST_ROW_H =
 constexpr int LIST_PANE_X = 24, LIST_PANE_Y = 44, LIST_PANE_W = 201, LIST_PANE_H = 260;
 constexpr int LIST_SCROLL_X = 225, LIST_SCROLL_Y = 47, LIST_SCROLL_H = 258;
 constexpr int LIST_BTN_Y = 306, LIST_BTN_X = 79, LIST_CANCEL_X = 131;
-constexpr int ARROW_SIDE = 12;  // clickable side of a quantity arrow (0x4be0..: rect of 12 x 12)
+constexpr int ARROW_SIDE = 12;  // lado cliqueable de una flecha de cantidad (0x4be0..: rect de 12 x 12)
 
 // Text colours 0x8f0f34[]: 0 blessed (255,246,180), 1 normal white, 2 cursed red, 3 unidentified grey; set at 0x4d16bc.
 u32 state_color(u8 state) {
@@ -458,12 +458,12 @@ u32 state_color(u8 state) {
     return rgb555(PALETTE[state & 3]);
 }
 
-// Original text of a number: thousands separated (0x44f4f0).
+// Texto original de un número: miles separados (0x44f4f0).
 const char* digits(u64 v, char* buf, size_t n) { return con_miles(v, buf, n); }
 
-// Quantity arrows, as 0x4bd840 (left) and 0x4bd8a0 (right): the amount wraps between 0 and the stack size (a row
-// of a shop has no stack limit but 1000 per click series, the type 0 cap pushed at 0x4bddd1), and a price of
-// 10 000 000 or more allows one only.
+// Flechas de cantidad, como 0x4bd840 (izquierda) y 0x4bd8a0 (derecha): la cantidad da la vuelta entre 0 y el tamaño de la pila (una fila
+// de tienda no tiene límite de pila sino 1000 por serie de clics, el tope del tipo 0 que se empuja en 0x4bddd1), y un precio de
+// 10 000 000 o más permite solo uno.
 void step_amount(const App& a, FilaTienda& f, bool increase) {
     const bool buying = a.tienda == TipoTienda::COMPRA;
     const u32 stack = buying ? 0u : f.maximo, cap = buying ? 1000u : 0u;
@@ -483,11 +483,11 @@ void step_amount(const App& a, FilaTienda& f, bool increase) {
     f.elegido = n;
 }
 
-// The two-tone frame and the 50 % darkening of the list tooltip (0x4be41e..0x4be576): 142 px wide at the pane
-// x + 10 (the y thresholds are screen coordinates), name lines at +5 / +5 + 12 k.
-// The hover box of the lists (0x49a440 halves the pixels under it, then eight 0x498720 lines: a light 2 px bevel (colour
-// [0x50050c] = 189) along the top and left, a dark one ([0x500514] = 123) along the bottom and right, each starting one pixel
-// further in than the previous). `details`: the property lines of the item (S_ShopSellList status bytes).
+// El marco de dos tonos y el oscurecido del 50 % del tooltip de la lista (0x4be41e..0x4be576): 142 px de ancho en la x del panel
+// + 10 (los umbrales de y son coordenadas de pantalla), líneas del nombre en +5 / +5 + 12 k.
+// La caja de hover de las listas (0x49a440 oscurece a la mitad los píxeles debajo, después ocho líneas de 0x498720: un bisel claro de 2 px (color
+// [0x50050c] = 189) arriba y a la izquierda, uno oscuro ([0x500514] = 123) abajo y a la derecha, cada uno empezando un píxel
+// más adentro que el anterior). `details`: las líneas de propiedades del objeto (bytes de estado de S_ShopSellList).
 void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char* line2, u32 color, std::string_view details = {}) {
     Graficos& g = *a.g;
     char det[1024];
@@ -511,7 +511,7 @@ void draw_list_tooltip(App& a, int x0, int row_y, const char* line1, const char*
     }
 }
 
-// A name as one or two lines: the second one starts at the last space that keeps the first within `width`.
+// Un nombre en una o dos líneas: la segunda empieza en el último espacio que deja la primera dentro de `width`.
 void split_name(std::string_view name, int width, char* l1, char* l2, size_t cap) {
     size_t cut = name.size();
     while (cut > 0 && ancho_texto(name.data(), cut) > width) {
@@ -543,7 +543,7 @@ void draw_list_original(App& a, int x0, int y0) {
     original_scrollbar(a, a.scroll.tienda, x0 + LIST_SCROLL_X, y0 + LIST_SCROLL_Y, LIST_SCROLL_H, static_cast<u32>(n), LIST_ROWS,
                        a.tienda_desplazamiento, pane_hover, IMG_LIST_TRACK, -2);
     char b1[40], b2[40], b3[40];
-    // Totals (0x4be800 sums price x amount, 0x4be830 counts the rows with an amount).
+    // Totales (0x4be800 suma precio x cantidad, 0x4be830 cuenta las filas con cantidad).
     u64 total_price = 0;
     u32 chosen_rows = 0;
     for (const FilaTienda& f : a.tienda_filas) {
@@ -553,8 +553,8 @@ void draw_list_original(App& a, int x0, int y0) {
     const u64 adena = adena_inventario(a);
     const bool fee = a.tienda == TipoTienda::RETIRO;
     const u64 amount = fee ? static_cast<u64>(chosen_rows) * PRECIO_RETIRO : total_price;
-    // Rows.
-    const bool show_price = true;  // 0x4bd250 flag [+0x95]: set by the list constructor (0x4bd980), cleared only for type 0x10
+    // Filas.
+    const bool show_price = true;  // flag [+0x95] de 0x4bd250: lo fija el constructor de la lista (0x4bd980), se apaga solo para el tipo 0x10
     int hover_row = -1;
     bool hover_arrow = false;
     char tip1[160] = "", tip2[160] = "";
@@ -562,8 +562,8 @@ void draw_list_original(App& a, int x0, int y0) {
     int tip_y = 0;
     std::string tip_details;
     const int first = static_cast<int>(a.tienda_desplazamiento);
-    // Hover row (mouse move handler 0x4be19e): the exe divides the pointer's y from the first row by 34 while drawing the rows 36
-    // apart, so the tooltip row drifts from the drawn one (kept); it needs the icon column (x 13..48 of the row).
+    // Fila bajo el puntero (manejador de movimiento 0x4be19e): el exe divide la y del puntero desde la primera fila por 34 mientras dibuja las filas
+    // a 36 de distancia, así que la fila del tooltip se corre de la dibujada (se conserva); necesita la columna del ícono (x 13..48 de la fila).
     int hover_idx = -1;
     if (free_pointer && e.mx >= x0 + LIST_ROW_X && e.mx < x0 + LIST_ROW_X + 36 && e.my >= y0 + LIST_ROW_Y) {
         const int k = (e.my - (y0 + LIST_ROW_Y)) / 34;
@@ -582,8 +582,8 @@ void draw_list_original(App& a, int x0, int y0) {
         const bool over_row = ui::sobre(e, x0 + LIST_PANE_X, ry - 2, LIST_PANE_W, LIST_ROW_H) && free_pointer;
         const bool over_left = ui::sobre(e, left_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
         const bool over_right = ui::sobre(e, right_x, ay, ARROW_SIDE, ARROW_SIDE) && free_pointer;
-        // 0x498d90 with table 0x8f133c (built at 0x4d1649: blue -> (2 * blue + 31) / 3 per pixel, red and green untouched): a screen
-        // blend of (0,0,85) gives exactly that on the 8-bit channels.
+        // 0x498d90 con la tabla 0x8f133c (armada en 0x4d1649: azul -> (2 * azul + 31) / 3 por píxel, rojo y verde intactos): una mezcla
+        // screen de (0,0,85) da exactamente eso en los canales de 8 bits.
         if (f.elegido) g.gpu().rectangulo(x0 + 24, ry - 2, 192, 34, km, rgba(0, 0, 85), Mezcla::PANTALLA);
         if (idx == a.tienda_marcada) g.gpu().dibujar(g.img(IMG_ROW_MARK), rx - 2, ry - 2, km);
         draw_item_icon(g.gpu(), g.icono(f.gfx), rx, ry, ki, f.bendicion);
@@ -592,13 +592,13 @@ void draw_list_original(App& a, int x0, int y0) {
         char l1[160], l2[160];
         split_name({name, m}, 140, l1, l2, sizeof l1);
         g.texto_sombra(l1, static_cast<float>(rx + 38), static_cast<float>(ry + 3), kt, color);
-        // The second line shares its height with the price: it stops before the coin (16 characters at most, 0x4bd808).
+        // La segunda línea comparte su altura con el precio: se detiene antes de la moneda (16 caracteres como mucho, 0x4bd808).
         size_t n2 = std::strlen(l2);
         const int limit = (show_price ? left_x - 4 - ancho_texto(digits(f.precio, b2, sizeof b2), std::strlen(b2)) - 4 - 13 : left_x) - (rx + 38);
         while (n2 > 0 && ancho_texto(l2, n2) > limit) --n2;
         l2[n2] = 0;
         if (l2[0]) g.texto_sombra(l2, static_cast<float>(rx + 38), static_cast<float>(ry + 17), kt, color);
-        // Amount and arrows.
+        // Cantidad y flechas.
         g.texto_sombra(b1, static_cast<float>(num_x), static_cast<float>(ay), kt, color);
         const bool held_left = a.tienda_flecha == idx * 2 && e.presionado && over_left;
         const bool held_right = a.tienda_flecha == idx * 2 + 1 && e.presionado && over_right;
@@ -610,7 +610,7 @@ void draw_list_original(App& a, int x0, int y0) {
             const int price_w = ancho_texto(b2, std::strlen(b2));
             const int price_x = left_x - price_w - 4;
             u32 price_color = color;
-            if (a.tienda == TipoTienda::REPARAR) {  // types 0xd / 0xe colour the price by magnitude (0x4bd637)
+            if (a.tienda == TipoTienda::REPARAR) {  // los tipos 0xd / 0xe colorean el precio según su magnitud (0x4bd637)
                 static constexpr u16 STEPS[] = {0x7fd6, 0x63b6, 0x5a36, 0x5fbc, 0x509e, 0x5e8d};
                 static constexpr u64 LIMITS[] = {10000, 100000, 1000000, 10000000, 100000000};
                 int s = 0;
@@ -620,12 +620,12 @@ void draw_list_original(App& a, int x0, int y0) {
             g.texto_sombra(b2, static_cast<float>(price_x), static_cast<float>(ay), kt, price_color);
             g.gpu().dibujar(g.img(IMG_COIN), price_x - 13, ay, kc);
         }
-        // Pointer: the icon column shows the tooltip; an arrow press starts a held arrow; the row press marks it.
-        if (over_row && (e.pulsado || e.clic)) a.tienda_digitos = 0;  // a mouse event in the pane clears the typed amount (0x4be177)
+        // Puntero: la columna del ícono muestra el tooltip; presionar una flecha empieza una flecha mantenida; presionar la fila la marca.
+        if (over_row && (e.pulsado || e.clic)) a.tienda_digitos = 0;  // un evento del mouse en el panel borra la cantidad escrita (0x4be177)
         if (over_row && e.pulsado) a.tienda_marcada = idx;
         if (e.pulsado && over_left) a.tienda_flecha = idx * 2;
         if (e.pulsado && over_right) a.tienda_flecha = idx * 2 + 1;
-        // The release over the arrow acts (0x4bdd9d); a click injected as release only (no press seen) counts too.
+        // Actúa el soltar sobre la flecha (0x4bdd9d); un clic inyectado solo como soltar (sin presión vista) también cuenta.
         if (e.clic && (a.tienda_flecha == idx * 2 || a.tienda_flecha < 0) && over_left) step_amount(a, f, false);
         if (e.clic && (a.tienda_flecha == idx * 2 + 1 || a.tienda_flecha < 0) && over_right) step_amount(a, f, true);
         if (over_left || over_right) hover_arrow = true;
@@ -637,12 +637,12 @@ void draw_list_original(App& a, int x0, int y0) {
             tip_color = color;
             tip_y = ry;
         }
-        // The pet bag and the repair list act on a plain click of the row (fork flow: the arrows do not apply to them).
+        // La bolsa de mascota y la lista de reparación actúan con un clic simple en la fila (flujo del fork: las flechas no les aplican).
         if (over_row && !over_left && !over_right && e.clic && (a.tienda == TipoTienda::MASCOTA || a.tienda == TipoTienda::REPARAR))
             row_click(a, idx, true, {name, m});
     }
     if (e.clic || !e.presionado) a.tienda_flecha = -1;
-    // Adena label and the amount (0x4bf8e0..0x4bfc5d): "total/adena", red when the adena does not cover it.
+    // Etiqueta de adena y el monto (0x4bf8e0..0x4bfc5d): "total/adena", en rojo si la adena no alcanza.
     {
         g.gpu().dibujar(g.img(IMG_LIST_LABEL), x0 + 29, y0 + 31, kc);
         digits(amount, b1, sizeof b1);
@@ -657,7 +657,7 @@ void draw_list_original(App& a, int x0, int y0) {
         g.texto_sombra(b3, static_cast<float>(x0 + 193), static_cast<float>(y0 + 309), kt, state_color(0));
     }
     if (hover_row >= 0 && !hover_arrow && tip1[0]) draw_list_tooltip(a, x0, tip_y, tip1, tip2, tip_color, tip_details);
-    // Buttons: pressed art while the button is held (0x47c2d0 buttons have no hover art).
+    // Botones: arte presionado mientras se mantiene el botón (los botones de 0x47c2d0 no tienen arte de hover).
     auto button = [&](int x, u32 image) {
         const RegionAtlas base = g.img(image);
         const bool over = ui::sobre(e, x0 + x, y0 + LIST_BTN_Y, base.w, base.h) && free_pointer;
@@ -673,10 +673,10 @@ void draw_list_original(App& a, int x0, int y0) {
 
 }  // namespace
 
-// Keys of the list pane (0x4be860, reached through the window's slot 10 at 0x4bf630): with a marked row, digits build the
-// amount (acc * 10 + d) and Backspace drops the last one (acc / 10); Enter is swallowed. The amount saturates at the row
-// limit: the stack size, else the list cap (1000 when buying), the smaller of both, and 10 for a buy row priced 1 000 000
-// or more (0x4be8cb..0x4be937). The digits do not reach the hotbar nor the chat line.
+// Teclas del panel de lista (0x4be860, se llega por la casilla 10 de la ventana en 0x4bf630): con una fila marcada, los dígitos arman la
+// cantidad (acc * 10 + d) y Backspace quita el último (acc / 10); Enter se descarta. La cantidad se satura en el límite de la
+// fila: el tamaño de la pila, si no el tope de la lista (1000 al comprar), el menor de ambos, y 10 para una fila de compra de 1 000 000
+// o más (0x4be8cb..0x4be937). Los dígitos no llegan a la barra de atajos ni a la línea de chat.
 void teclas_lista_tienda(App& a) {
     if (a.cfg.ui_simple || a.tienda == TipoTienda::NINGUNA || a.tienda_marcada < 0 ||
         a.tienda_marcada >= static_cast<int>(a.tienda_filas.size()) || a.cantidad.abierto)
@@ -810,7 +810,7 @@ bool es_npc(const App& a, Slot s) {
 void eventos_npc(App& a, const Evento& e) {
     switch (e.tipo) {
     case Ev::HTML:
-        if (!a.cfg.ui_simple && es_pagina_lista(e.s[0])) {  // party / pledge / buddy: their own windows (0x497240, 0x4b92f0, 0x419040)
+        if (!a.cfg.ui_simple && es_pagina_lista(e.s[0])) {  // party / pledge / buddy: sus propias ventanas (0x497240, 0x4b92f0, 0x419040)
             abrir_lista_orig(a, e.s[0], e.s[1]);
             break;
         }
@@ -821,7 +821,7 @@ void eventos_npc(App& a, const Evento& e) {
         }
         abrir_pagina(a, e.id, e.s[0], e.s[1]);
         a.npc_casa = static_cast<u32>(e.v[HT_CASA]);
-        if (e.s[0] == "monlist" && e.id == a.mundo.jugador.id) {  // Shape Change: the reply is C_NPCAction with the own id
+        if (e.s[0] == "monlist" && e.id == a.mundo.jugador.id) {  // Shape Change: la respuesta es C_NPCAction con el id propio
             a.npc_poly = 1;
             a.forma_item = 0;
         }
@@ -918,7 +918,7 @@ void dibujar_npc(App& a) {
         cerrar(a);
         return;
     }
-    // The original shop draws its own frame; the other windows still use the generic one.
+    // La tienda original dibuja su propio marco; las otras ventanas todavía usan el genérico.
     if (!a.cfg.ui_simple) {
     } else if (ui::ventana(g, a.entrada, a.cfg.ui_simple, rv.x, rv.y, titulo, opacidad_ventanas(a))) {
         cerrar(a);
@@ -931,7 +931,7 @@ void dibujar_npc(App& a) {
 void draw_original_hover_box(App& a, int x, int top, int w, int h) {
     Graficos& g = *a.g;
     const u64 kb = clave_orden(CAPA_UI_TEXTO, 28), kl = clave_orden(CAPA_UI_TEXTO, 29);
-    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 200));  // over the row texts below (the exe halves the pixels, text included)
+    g.gpu().rectangulo(x, top, w, h, kb, rgba(0, 0, 0, 200));  // sobre los textos de las filas de abajo (el exe oscurece a la mitad los píxeles, texto incluido)
     const u32 light = rgba(189, 189, 189), dark = rgba(123, 123, 123);
     g.gpu().rectangulo(x, top, w - 1, 1, kl, light);
     g.gpu().rectangulo(x + 1, top + 1, w - 2, 1, kl, light);

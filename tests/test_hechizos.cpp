@@ -97,7 +97,7 @@ TEST_CASE("Hechizos: S_UseAttackSkill lleva el proyectil y el daño llega con é
     CHECK(m.objetos.col<O_TACCION>()[so] == ef.inicio + ef.vuelo_ms);
 }
 
-// Test helper: is a buff slot running (the exe's [0x81680c + slot] byte).
+// Ayuda de test: ¿corre una casilla de buff? (el byte [0x81680c + casilla] del exe).
 static bool ranura_activa_para_prueba(const EstadoJugador& j, int r) {
     for (u32 k = 0; k < j.n_efectos; ++k)
         if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == r) return true;
@@ -338,7 +338,7 @@ TEST_CASE("Flechas: alcance por arma y la flecha vuela hasta el objetivo") {
 
 TEST_CASE("sprite table: the ']N' frame suffix is parsed as a spawned effect, not swallowed") {
     TablaSprites sprites;
-    // Action 0: three frames, the second one raises effect 3586 (the mole digging), the third a sound.
+    // Acción 0: tres cuadros, el segundo lanza el efecto 3586 (el topo cavando), el tercero un sonido.
     std::string tabla = std::string("x") + "1 0 1 3 56 12 2 56 12 2]3586 56 12 2[1209" + '\0';
     REQUIRE(sprites.cargar(std::vector<u8>(tabla.begin(), tabla.end())));
     const RangoAccion* r = sprites.accion(0, 0);
@@ -354,7 +354,7 @@ TEST_CASE("Hechizos: spellbook slot tables of the original client") {
     CHECK(spellbook_skill_id(3, 0) == 1);
     CHECK(spellbook_skill_id(3, 79) == 80);
     CHECK(spellbook_skill_id(3, 80) == 0);
-    CHECK(spellbook_skill_id(1, 8) == 87);   // knight override of tab 2
+    CHECK(spellbook_skill_id(1, 8) == 87);   // el caballero reemplaza la pestaña 2
     CHECK(spellbook_skill_id(1, 10) == 88);
     CHECK(spellbook_skill_id(1, 11) == 12);
     CHECK(spellbook_skill_id(0, 48) == 113);
@@ -375,7 +375,7 @@ TEST_CASE("Hechizos: buff exclusion groups and end messages") {
     CHECK(j.efectos[0].tipo == 6);
     poner_efecto_activo(j, EA_AURA, 147, 100, 0);   // slot 18, group 1: unrelated
     CHECK(j.n_efectos == 2);
-    poner_efecto_activo(j, EA_AURA, 147, 0, 1000);  // removal queues its end message (slot 18 -> idx 723)
+    poner_efecto_activo(j, EA_AURA, 147, 0, 1000);  // quitarlo encola su mensaje de fin (casilla 18 -> idx 723)
     CHECK(j.n_fin_pendientes == 1);
     CHECK(j.fin_pendientes[0].msg == 723);
 }
@@ -425,7 +425,7 @@ TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage")
     CHECK(m.jugador.n_efectos == 1);
     CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x10);
 
-    // Graphic 0xbe picks the slot by the own sprite; Bless of Eva (opcode 0x11) is slot 0xb.
+    // El gráfico 0xbe elige la casilla según el sprite propio; Bless of Eva (opcode 0x11) es la casilla 0xb.
     m.jugador.n_efectos = 0;
     const Slot yo = m.objetos.insertar(7);
     m.objetos.col<O_GFX>()[yo] = 0x9aa;
@@ -435,7 +435,7 @@ TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage")
     CHECK(ranura_de_efecto_activo(m.jugador.efectos[0].clase, m.jugador.efectos[0].tipo) == 0x50);
     CHECK(ranura_de_efecto_activo(EA_EVA, 0) == 0xb);
 
-    // 0x1130 / 0x16c1 start slot 0x38 / 0x42 and swap to the other one while it runs (flag bytes at 0x48acd4 / 0x48ad4f).
+    // 0x1130 / 0x16c1 inician la casilla 0x38 / 0x42 y pasan a la otra mientras corre (bytes de flag en 0x48acd4 / 0x48ad4f).
     m.jugador.n_efectos = 0;
     auto activa = [&](int r) { return ranura_activa_para_prueba(m.jugador, r); };
     snd.v[EF_GFX] = 0x16c1;
@@ -445,7 +445,7 @@ TEST_CASE("Buff slots from SkillBrave, SkillSound, Paralysis and ServerMessage")
     aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);
     CHECK(activa(0x42));
     CHECK(!activa(0x38));
-    // Cancellation (graphic 870) drops the listed slots silently, but keeps the 0x46 / 0x47 range members and the rest.
+    // Cancellation (gráfico 870) quita las casillas listadas en silencio, pero conserva los miembros del rango 0x46 / 0x47 y el resto.
     m.jugador.n_efectos = 0;
     snd.v[EF_GFX] = 0x8e8;  // slot 0x1c
     aplicar_eventos(m, std::span<const Evento>(&snd, 1), 0);

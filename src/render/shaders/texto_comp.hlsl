@@ -1,7 +1,7 @@
-// HD text composite: the text layer (texture 0 = premultiplied colour, texture 1 = coverage in R; both the size of the
-// destination) drawn over it with the premultiplied "over" blend: out = colour + dst * (1 - coverage).
-// Vertex stage: vs_mundo (mundo.hlsl, fullscreen quad). HLSL twin of texto_comp.frag (Windows/D3D12).
-// Resource convention: see sprite.hlsl.
+// Composición del texto HD: la capa de texto (textura 0 = color premultiplicado, textura 1 = cobertura en R; ambas del tamaño del
+// destino) dibujada sobre él con la mezcla "over" premultiplicada: out = color + dst * (1 - cobertura).
+// Etapa de vértices: vs_mundo (mundo.hlsl, quad de pantalla completa). Gemelo HLSL de texto_comp.frag (Windows/D3D12).
+// Convención de recursos: ver sprite.hlsl.
 
 [[vk::binding(0, 2)]] Texture2D<float4> capa : register(t0, space2);
 [[vk::binding(0, 2)]] SamplerState muestreo_capa : register(s0, space2);

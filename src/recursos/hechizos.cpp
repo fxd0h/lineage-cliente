@@ -164,8 +164,8 @@ bool TablaHechizos::cargar(const Recursos& r) {
     Bytes iconos = r.sprite("spellicon.idx");
     for (size_t i = 0; i + 1 < iconos.size() && i / 2 < CANTIDAD_HECHIZOS; i += 2)
         hechizos_[i / 2].icono = static_cast<u16>(iconos[i] | (iconos[i + 1] << 8));
-    // The JP resource set leaves the knight skills (87..91) without an icon. The 2009 US client has them in
-    // its hard-coded spell icon table (client 0x503c00, entries 86..90): Shock Stun, Reduction Armor,
+    // El juego de recursos JP deja sin ícono las habilidades de caballero (87..91). El cliente US 2009 las tiene en
+    // su tabla fija de íconos de hechizos (cliente 0x503c00, entradas 86..90): Shock Stun, Reduction Armor,
     // Bounce Attack, Solid Carriage, Counter Barrier.
     constexpr u16 ICONOS_CABALLERO[] = {1624, 1887, 1881, 2349, 2343};
     for (u32 k = 0; k < 5; ++k)

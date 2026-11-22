@@ -19,9 +19,9 @@ struct Servidor {
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
 constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;
 
-// Option flags of the original client's Options pages (option11/12/13, dispatcher 0x40b1de..0x40c660), one bit each.
-// Default mask = the initial bytes of the original's data: getall 0x4ff200, dochat 0x4ff202, dotradechat 0x4ff203,
-// dowhisper 0x4ff204, showMargetMsg 0x6da619, shortcutscroll 0x6da618, tooltip 0x6e50b8, accepttrade 0x6da629 are 1.
+// Flags de las páginas de Opciones del cliente original (option11/12/13, despachador 0x40b1de..0x40c660), un bit cada una.
+// Máscara por omisión = los bytes iniciales de los datos del original: getall 0x4ff200, dochat 0x4ff202, dotradechat 0x4ff203,
+// dowhisper 0x4ff204, showMargetMsg 0x6da619, shortcutscroll 0x6da618, tooltip 0x6e50b8, accepttrade 0x6da629 valen 1.
 enum OpcionOrig : unsigned {
     OPC_GETALL, OPC_BUBBLE, OPC_DOCHAT, OPC_DOTRADECHAT, OPC_DOWHISPER, OPC_MARKETMSG, OPC_RANDOMPARTY, OPC_PARTYREJECT,
     OPC_COMBATMUSIC, OPC_SHORTCUTSCROLL, OPC_TOOLTIP, OPC_ACCEPTTRADE, OPC_TELCON, OPC_INFRACON, OPC_FLOATHPMP
@@ -33,13 +33,13 @@ constexpr int OPCIONES_ORIG_DEFECTO = (1 << OPC_GETALL) | (1 << OPC_DOCHAT) | (1
 struct Config {
     int opciones_orig = OPCIONES_ORIG_DEFECTO;  // "opciones_orig=": OpcionOrig bit mask
     int alpha_orig = 0;                         // "alpha_orig=": window transparency step 0..3 (0x7030e0; opaque, 20/31, 13/31, 7/31)
-    std::string carpeta_hd;        // "hd=": HD UI pack directory (img_<id>.png, tbt_<id>.png); empty = off
-    std::vector<std::string> carpetas_extra;  // "juego_extra=" (repeatable, ordered): fallback game folders for what juego= lacks
+    std::string carpeta_hd;        // "hd=": carpeta del pack HD de la interfaz (img_<id>.png, tbt_<id>.png); vacío = apagado
+    std::vector<std::string> carpetas_extra;  // "juego_extra=" (repetible, en orden): carpetas del juego de respaldo para lo que le falta a juego=
     std::string carpeta_juego;     // donde están Sprite*.pak, Tile.pak, map/, font/...
     std::vector<Servidor> servidores;  // al menos uno (ver leer_config)
     size_t servidor = 0;           // el elegido ("servidor_elegido=Nombre")
     int ventana_ancho = 1280, ventana_alto = 960;  // "ventana=AxB": en puntos, el de la última vez
-    std::string vista = "fija";    // "fija": fixed 640x480 view scaled to the window; "amplia": the view grows with it
+    std::string vista = "fija";    // "fija": vista fija de 640x480 escalada a la ventana; "amplia": la vista crece con ella
     int zoom = 0;                  // escala en el juego (píxeles reales por píxel lógico); 0 = automática
     std::string escalado = "fsr";  // final-present filter: entero | xbr | fsr | crt | anime4k (Shift+F5)
     bool camara_a_saltos = false;  // la cámara sigue los frames de caminar, como el original (F4)
@@ -90,7 +90,7 @@ struct Config {
     // Compensación de ataque: al atacar, mostrar el golpe (swing propio y flinch del objetivo) ya,
     // sin esperar el eco del servidor, para que con latencia alta el combate se sienta instantáneo.
     bool compensar_ataque = true;
-    std::string lista_sprites;     // "lista_sprites=": plaintext list.spz that adds to / overrides sprite_table.txt; empty = look in the game folder
+    std::string lista_sprites;     // "lista_sprites=": list.spz en texto plano que agrega a / reemplaza sprite_table.txt; vacío = buscar en la carpeta del juego
 };
 
 // Valores por personaje dentro de una opción ("Nombre:valor;Otro:valor").

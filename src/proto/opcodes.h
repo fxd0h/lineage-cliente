@@ -38,14 +38,14 @@ enum class Cli : u8 {
     EXITGHOST, RETURNTOLOGIN, ENTERPORTAL, CHARRESET, EXCLUDE, BUDDYLIST, ADDBUDDY, DELETEBUDDY, CHATPARTY, SHOP, SHOPLIST,
     BOARD, BOARDREAD, BOARDNEXT, BOARDWRITE, BOARDDELETE, MAIL,
     WAR, TAXRATE, DEPOSIT, DRAWAL, CHANGEWARTIME,
-    LOGINTOSERVEROK,  // C_LoginToServerOK (chat options): c type, c flag
-    SHIP,             // C_Ship (s3ep1 33): h destination map, h x, h y, sent by the client when a ship ride ends
+    LOGINTOSERVEROK,  // C_LoginToServerOK (opciones de chat): c tipo, c flag
+    SHIP,             // C_Ship (s3ep1 33): h mapa de destino, h x, h y, lo manda el cliente al terminar un viaje en barco
     PROPOSE,          // C_Propose: c 0 propose, c 1 divorce
     FIGHT,            // C_Fight (/duel): no body
-    CHECKPK,          // C_CheckPK (/checkpk): no body
-    EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c action, an emote the server rebroadcasts as S_DoActionGFX
-    RANK,             // C_Rank: c sub (1 rank, 2 alliance list, 3 alliance join, 4 alliance leave), c rank, s name
-    FISHCLICK,        // C_FishClick: c bite flag (the server ignores it and judges the timing itself)
+    CHECKPK,          // C_CheckPK (/checkpk): sin cuerpo
+    EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c acción, un gesto que el servidor reenvía como S_DoActionGFX
+    RANK,             // C_Rank: c sub (1 rango, 2 lista de alianza, 3 unirse a la alianza, 4 salir de la alianza), c rango, s nombre
+    FISHCLICK,        // C_FishClick: c flag de picada (el servidor lo ignora y juzga el momento él mismo)
     CANTIDAD
 };
 
@@ -71,15 +71,15 @@ struct PerfilProtocolo {
     // de S_AttackPacket.java del jp363, que conserva ambas formas). Leer el ancho equivocado desalinea
     // la dirección y confunde un fallo con un acierto.
     u8 bytes_golpe_ataque = 2;
-    // Server text encoding: Big5 (Taiwan 3.80C) is converted to UTF-8 on decode; false = CP949 as sent.
+    // Codificación del texto del servidor: Big5 (Taiwán 3.80C) se convierte a UTF-8 al decodificar; false = CP949 tal como llega.
     bool texto_big5 = false;
-    u8 rango_principe = 4;        // own clan rank nibble of the prince (10 in 3.80C); 0xb = no pledge
-    u8 marcadores_ranuras = 104;  // slot bytes of S_BookmarkLoad (127 in 3.80C)
-    // L1JGO-Whale (tw380) reads the C_Attr answer as [h type][c answer] even though S_MessageYN carries the long
-    // form: with this set, `responder` sends the short reply (the long one made every answer read as "no").
+    u8 rango_principe = 4;        // nibble de rango de clan propio del príncipe (10 en 3.80C); 0xb = sin clan
+    u8 marcadores_ranuras = 104;  // bytes de casillas de S_BookmarkLoad (127 en 3.80C)
+    // L1JGO-Whale (tw380) lee la respuesta de C_Attr como [h tipo][c respuesta] aunque S_MessageYN trae la forma
+    // larga: con esto activo, `responder` manda la respuesta corta (la larga hacía que toda respuesta se leyera como "no").
     bool respuesta_corta = false;
-    // S_Mail list rows: l1j-en classic (US 2009) sends `d id, c read, c yy, c mm, c dd, s sender, subject` (every row is a
-    // received letter); L1J-JP / Whale send `d id, c read, d unix time, c own copy, s other, subject`.
+    // Filas de la lista de S_Mail: l1j-en classic (US 2009) manda `d id, c leída, c aa, c mm, c dd, s remitente, asunto` (toda fila es una
+    // carta recibida); L1J-JP / Whale mandan `d id, c leída, d hora unix, c copia propia, s otro, asunto`.
     bool correo_ymd = false;
 };
 

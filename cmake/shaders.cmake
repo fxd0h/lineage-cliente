@@ -1,10 +1,10 @@
-# Windows only (included from CMakeLists.txt under if(WIN32)): the HLSL sources in src/render/shaders/*.hlsl are
-# compiled to DXIL with dxc.exe (Windows SDK, ships with Visual Studio; it signs the DXIL) and embedded in
-# ${CMAKE_BINARY_DIR}/generado/shaders.h as SHADER_<ENTRY> byte arrays, which Gpu::crear_pipeline picks when
-# SDL_GetGPUShaderFormats() reports SDL_GPU_SHADERFORMAT_DXIL.
-# Linux/Vulkan uses the GLSL twins (*.vert/*.frag -> SPIR-V via herramientas/compilar_shaders.sh) and macOS/Metal the
-# hand-written MSL in gpu.cpp and shaders_msl_anime4k.h. A shader change must be made in all three; see docs/fork/README.md.
-# One entry point per output; files whose entries bind different textures at the same register are split
+# Solo Windows (se incluye desde CMakeLists.txt dentro de if(WIN32)): los fuentes HLSL de src/render/shaders/*.hlsl se
+# compilan a DXIL con dxc.exe (Windows SDK, viene con Visual Studio; firma el DXIL) y se embeben en
+# ${CMAKE_BINARY_DIR}/generado/shaders.h como arreglos de bytes SHADER_<ENTRADA>, que Gpu::crear_pipeline elige cuando
+# SDL_GetGPUShaderFormats() informa SDL_GPU_SHADERFORMAT_DXIL.
+# Linux/Vulkan usa los gemelos GLSL (*.vert/*.frag -> SPIR-V con herramientas/compilar_shaders.sh) y macOS/Metal el
+# MSL escrito a mano en gpu.cpp y shaders_msl_anime4k.h. Un cambio de shader se hace en los tres; ver docs/fork/README.md.
+# Un punto de entrada por salida; los archivos cuyas entradas enlazan texturas distintas en el mismo registro se separan
 # (texto / texto_comp, anime4k_c1..c4 / d2s / resample).
 
 set(LIN_SHADERS_FUENTE ${CMAKE_SOURCE_DIR}/src/render/shaders)
@@ -22,7 +22,7 @@ set(LIN_SHADERS_DIR ${CMAKE_BINARY_DIR}/generado)
 set(LIN_SHADERS_H ${LIN_SHADERS_DIR}/shaders.h)
 file(MAKE_DIRECTORY ${LIN_SHADERS_DIR})
 
-# With the developer console, WindowsSdkVerBinPath points to ...\Windows Kits\10\bin\<version>\.
+# Con la consola de desarrollador, WindowsSdkVerBinPath apunta a ...\Windows Kits\10\bin\<versión>\.
 find_program(LIN_DXC dxc
     HINTS "$ENV{WindowsSdkVerBinPath}/x64" "$ENV{WindowsSdkVerBinPath}/arm64"
     DOC "dxc.exe from the Windows SDK (DXIL)")

@@ -54,7 +54,7 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
     CHECK(r.nuevos == 2);
     CHECK(r.atributos == 1);  // #9: solo el tipo, porque la tabla vacía no lo tenía
     CHECK(t.tipo(9) == 0);
-    // Attribute 100: x in half tiles (0..4 -> cells 0..2), y in tiles (-2..0), relative to the object.
+    // Atributo 100: x en medias celdas (0..4 -> celdas 0..2), y en celdas (-2..0), relativo al objeto.
     CHECK(t.dentro_transparencia(9, 0, -2));
     CHECK(t.dentro_transparencia(9, 2, 0));
     CHECK_FALSE(t.dentro_transparencia(9, 3, 0));
@@ -68,7 +68,7 @@ TEST_CASE("tabla del cliente: acciones, atributos, sufijos pegados y entradas en
     const RangoAccion* w = t.accion(7, ACC_CAMINAR);
     REQUIRE(w);
     CHECK(w->cantidad == 2);
-    CHECK(t.frame(w->primer + 1).n_sonidos == 2);  // "<478<479": both kept, one picked at random per show
+    CHECK(t.frame(w->primer + 1).n_sonidos == 2);  // "<478<479": se conservan los dos, se elige uno al azar en cada muestra
     CHECK(t.frame(w->primer + 1).sonido == 478);
     CHECK(t.frame(w->primer + 1).sonido_mas[0] == 479);
     CHECK(t.frame(w->primer + 1).modo_sonido[0] == SONIDO_SOLAPA);

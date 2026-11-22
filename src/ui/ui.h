@@ -18,13 +18,13 @@ struct EntradaFrame {
     bool ctrl = false;            // Ctrl (o Cmd) mantenido
     bool shift = false;           // Shift mantenido
     bool clic_derecho = false;
-    bool doble_izquierdo = false; // left button double click this frame (WM_LBUTTONDBLCLK)
-    bool doble_derecho = false;   // right button double click this frame (WM_RBUTTONDBLCLK)
+    bool doble_izquierdo = false; // doble clic del botón izquierdo en este cuadro (WM_LBUTTONDBLCLK)
+    bool doble_derecho = false;   // doble clic del botón derecho en este cuadro (WM_RBUTTONDBLCLK)
     bool derecho_presionado = false;
     bool clic_medio = false;      // botón del medio (rueda) soltado este frame
     bool medio_presionado = false;  // botón del medio mantenido
     bool enter = false, tab = false, escape = false, retroceso = false;
-    bool suprimir = false;        // Delete this frame
+    bool suprimir = false;        // Supr en este cuadro
     bool arriba = false, abajo = false, izquierda = false, derecha = false;  // mantenidas
     bool pagina_arriba = false, pagina_abajo = false;  // Re Pág / Av Pág este frame
     bool alt_c = false;           // Alt+C este frame (ventana de estado)
@@ -122,8 +122,8 @@ struct Barra {
 bool barra_evento(Gpu& gpu, SDL_Window* ventana, Barra& b, const SDL_Event& ev, bool activa);
 // Cada frame: sigue el arrastre (lo suelta si el botón ya no está) y devuelve la acción pedida.
 AccionBarra barra_frame(SDL_Window* ventana, Barra& b);
-// Lets the window manager move/resize the borderless window (title bar and edges) like a normal
-// window; on macOS only sets the minimum size.
+// Deja que el administrador de ventanas mueva/redimensione la ventana sin borde (barra de título y bordes) como una
+// ventana normal; en macOS solo fija el tamaño mínimo.
 void activar_hit_test(SDL_Window* ventana, Gpu& gpu, Barra& b);
 
 // Ícono de la ventana (y del Dock en macOS): datos/iconos/<archivo> junto al ejecutable o en el directorio

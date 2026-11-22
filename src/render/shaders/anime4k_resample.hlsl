@@ -1,6 +1,6 @@
-// Final resample of the Anime4K 2x image to the window-sized target (linear sampler).
-// Skipped when the integer scale is already 2. HLSL twin of anime4k_resample.frag (Windows/D3D12).
-// Vertex stage: vs_mundo (mundo.hlsl). Resource convention: see sprite.hlsl.
+// Remuestreo final de la imagen de 2x de Anime4K al destino del tamaño de la ventana (sampler lineal).
+// Se salta cuando la escala entera ya es 2. Gemelo HLSL de anime4k_resample.frag (Windows/D3D12).
+// Etapa de vértices: vs_mundo (mundo.hlsl). Convención de recursos: ver sprite.hlsl.
 
 [[vk::binding(0, 2)]] Texture2D<float4> x2 : register(t0, space2);
 [[vk::binding(0, 2)]] SamplerState muestreo : register(s0, space2);

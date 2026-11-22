@@ -19,11 +19,11 @@ namespace lin {
 
 namespace {
 
-// Item grid inside the window: the simple UI's 6 × 7 cells of 36 px, or the original frame's 4 × 6 of 34
-// (the lines of image 997), with the trash can, tabs and scroll bar where the 2009 client puts them.
+// Grilla de objetos dentro de la ventana: las 6 × 7 celdas de 36 px de la interfaz simple, o las 4 × 6 de 34 del marco original
+// (las líneas de la imagen 997), con el tacho, las pestañas y la barra de scroll donde las pone el cliente 2009.
 struct Grid {
-    int cols, rows, cell, x, y;    // cells and the grid's corner
-    int trash_x, trash_y;          // trash can
+    int cols, rows, cell, x, y;    // celdas y la esquina de la grilla
+    int trash_x, trash_y;          // tacho de basura
     int scroll_x;                  // scroll bar
 };
 constexpr Grid SIMPLE_GRID = {6, 7, 36, 14, 30, 14 + 6 * 36 - 22, 30 + 7 * 36 + 2, 14 + 6 * 36 + 2};
@@ -32,14 +32,14 @@ constexpr int BASURA_W = 20, BASURA_H = 18;
 constexpr u64 MS_DOBLE_CLIC = 400;
 constexpr u32 ICON_ARMED_A = 2700, ICON_ARMED_B = 2701, ICON_SEALED = 2702;  // icon-table overlays (0x44e131..0x44e39a)
 constexpr u32 IMG_EQUIPPED_MARK = 536;  // behind an equipped icon at (x-1, y-1) (0x44e010)
-constexpr int DRAG_START_PX = 25;       // the original starts a drag after the pointer moved 25 px (0x44f240)
+constexpr int DRAG_START_PX = 25;       // el original empieza a arrastrar cuando el puntero se movió 25 px (0x44f240)
 constexpr u32 IMG_INV_BACKGROUND = 996, IMG_INV_FRAME = 997, IMG_INV_ORNAMENT = 998, IMG_INV_TABS = 999;
 constexpr int TABS_X = 17, TABS_HIT_X = 19, TABS_Y = 249, TAB_W = 35, TAB_H = 17, N_TABS = 4;
 constexpr const char* TAB_NAMES[N_TABS] = {"All", "Equipment", "Quest", "Miscellaneous"};
 
-// Original UI tab filters (0x44de10 all, 0x44dd90 equipment, 0x44de40 quest, 0x44df00 misc). Equipment is the
-// use type (byte at item+0x68, S_AddItem "uso") in {1,2,10,18..25,37,40}; quest items are the (gfx, desc-e.tbl
-// entry) pairs of itemquest.tbl whose name matches; misc is everything that is neither.
+// Filtros de pestaña de la interfaz original (0x44de10 todo, 0x44dd90 equipo, 0x44de40 misión, 0x44df00 varios). Equipo es el
+// tipo de uso (byte en item+0x68, "uso" de S_AddItem) en {1,2,10,18..25,37,40}; los objetos de misión son los pares (gfx, entrada de
+// desc-e.tbl) de itemquest.tbl cuyo nombre coincide; varios es todo lo que no es ninguno de los dos.
 bool es_equipo(u8 use) {
     return use == 1 || use == 2 || use == 10 || (use >= 18 && use <= 25) || use == 37 || use == 40;
 }
@@ -67,7 +67,7 @@ void dibujar_basurero(Graficos& g, int x, int y, bool encima) {
 
 constexpr size_t MAX_ORDEN = 256;
 
-// Position (already scrolled) of the cell under the pointer among the `shown` items, or -1.
+// Posición (ya desplazada) de la celda bajo el puntero entre los objetos `shown`, o -1.
 int celda_bajo_puntero(const App& a, const Grid& gr, int x0, int y0, size_t shown) {
     const EntradaFrame& e = a.entrada;
     int cx = e.mx - (x0 + gr.x), cy = e.my - (y0 + gr.y);
@@ -156,7 +156,7 @@ void procesar_item_apuntado(App& a) {
     EntradaFrame& e = a.entrada;
     if (a.mundo.inventario.items.buscar(a.item_apuntando) == SIN_SLOT || e.clic_derecho || e.escape) {
         a.item_apuntando = 0;
-        e.escape = false;  // Esc cancels only this
+        e.escape = false;  // Esc cancela solo esto
         return;
     }
     if (e.pulsado && !sobre_alguna_ventana(a) && !sobre_barra(a)) {
@@ -165,7 +165,7 @@ void procesar_item_apuntado(App& a) {
         const Slot s = obj ? a.mundo.objetos.buscar(obj) : SIN_SLOT;
         if (s != SIN_SLOT)
             enviar(a, cmd::usar_item_apuntado(a.op, a.item_apuntando, obj, a.mundo.objetos.col<O_X>()[s], a.mundo.objetos.col<O_Y>()[s]));
-        a.item_apuntando = 0;  // a click on the ground cancels
+        a.item_apuntando = 0;  // un clic en el suelo cancela
     }
 }
 
@@ -183,7 +183,7 @@ void usar_item(App& a, ObjId item) {
         return;
     }
     if (s != SIN_SLOT && se_usa_apuntando(a.mundo.inventario.items.col<I_USO>()[s])) {
-        a.item_apuntando = item;  // the next click in the world picks the target (yourself included)
+        a.item_apuntando = item;  // el próximo clic en el mundo elige el objetivo (uno mismo incluido)
         return;
     }
     if (s != SIN_SLOT && a.mundo.inventario.items.col<I_USO>()[s] == USO_POLYMORPH) {
@@ -229,7 +229,7 @@ void dibujar_inventario(App& a) {
     if (original) {
         if (draw_original_frame(a, x0, y0, IMG_INV_BACKGROUND, 6, 8, IMG_INV_FRAME, 168, 18)) a.ventana_inventario = false;
         draw_original_ornament(a, x0, y0, IMG_INV_ORNAMENT);
-        // Category tabs: one image per selected tab.
+        // Pestañas de categoría: una imagen por pestaña elegida.
         g.gpu().dibujar(g.img(IMG_INV_TABS + a.inventory_tab), x0 + TABS_X, y0 + TABS_Y, clave_orden(CAPA_UI, 12));
         for (int i = 0; i < N_TABS; ++i) {
             const int tx = x0 + TABS_HIT_X + i * TAB_W, ty = y0 + TABS_Y;
@@ -248,8 +248,8 @@ void dibujar_inventario(App& a) {
         a.ventana_inventario = false;
     }
 
-    // What the grid shows: in the original UI, the selected tab with worn items first; in the simple
-    // UI, everything in the server's order.
+    // Qué muestra la grilla: en la interfaz original, la pestaña elegida con los objetos puestos primero; en la interfaz
+    // simple, todo en el orden del servidor.
     Slot orden[MAX_ORDEN];
     size_t n_orden = 0;
     if (original) {
@@ -281,9 +281,9 @@ void dibujar_inventario(App& a) {
         const Slot s = hay ? orden[i] : SIN_SLOT;
         bool equipado = hay && item_equipado(nombre_item(inv, s));
         if (original) {
-            ++x;  // inside the image's grid lines
+            ++x;  // dentro de las líneas de la grilla de la imagen
             ++y;
-            // 2700 is an opaque RLE backing drawn first (below the hover tint, the equipped marker and the icon).
+            // 2700 es un fondo RLE opaco que se dibuja primero (debajo del tinte de hover, la marca de equipado y el ícono).
             if (equipado && t.col<I_GFX>()[s] != 0x1d1 && t.col<I_GFX>()[s] != 0x1d2) g.gpu().dibujar(g.icono(ICON_ARMED_A), x, y, kf - 1);
             if (static_cast<int>(i) == bajo) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(90, 80, 50, 120));
             else if (equipado && !g.img(IMG_EQUIPPED_MARK).valida()) g.gpu().rectangulo(x, y, CELDA - 1, CELDA - 1, kf, rgba(74, 70, 26, 150));
@@ -293,7 +293,7 @@ void dibujar_inventario(App& a) {
             g.gpu().rectangulo(x, y, CELDA - 2, CELDA - 2, kf, equipado ? rgba(74, 70, 26, 240) : fondo);
         }
         if (!hay) continue;
-        if (!original && seleccionado(a, t.ids()[s])) {  // light-blue frame (simple UI only)
+        if (!original && seleccionado(a, t.ids()[s])) {  // marco celeste (solo interfaz simple)
             const u32 celeste = rgba(120, 190, 255);
             g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, celeste);
             g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, celeste);
@@ -303,8 +303,8 @@ void dibujar_inventario(App& a) {
         if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         if (original) {
-            // Overlays of the 2009 inventory: worn / armed items get 2700 under the icon (above) then 2701 at (+1,+1) (not icons 0x1d1 / 0x1d2);
-            // a sealed item (status bit 0x80) gets 2702 at (+24,+24).
+            // Capas del inventario 2009: los objetos puestos / armados llevan 2700 bajo el ícono (arriba) y luego 2701 en (+1,+1) (no los íconos 0x1d1 / 0x1d2);
+            // un objeto sellado (bit de estado 0x80) lleva 2702 en (+24,+24).
             const u32 gfx = t.col<I_GFX>()[s];
             if (equipado && gfx != 0x1d1 && gfx != 0x1d2) {
                 g.gpu().dibujar(g.icono(ICON_ARMED_B), x + 1, y + 1, ki + 5);
@@ -320,7 +320,7 @@ void dibujar_inventario(App& a) {
         }
     }
     if (original) {
-        // No footer in the original frame: the target prompt goes above the window.
+        // Sin pie en el marco original: la pregunta del objetivo va arriba de la ventana.
         if (a.usar_sobre) g.texto_sombra("Click the target item (Esc cancels)", x0 + 8, y0 - ALTO_GLIFO - 2, kt, rgba(255, 230, 120));
     } else {
         char pie[48];
@@ -329,7 +329,7 @@ void dibujar_inventario(App& a) {
         if (a.usar_sobre) g.texto("Click the target item (Esc cancels)", x0 + gr.x, pie_y, kt, rgba(255, 230, 120));
         else g.texto(pie, x0 + gr.x, pie_y, kt, rgba(214, 190, 140));
     }
-    // Sorting is a fork feature: the 2009 inventory has no Sort button (see docs/fork/AUDIT_ORIGINAL_UI.md section 8).
+    // Ordenar es una función del fork: el inventario 2009 no tiene botón Ordenar (ver docs/fork/AUDIT_ORIGINAL_UI.md sección 8).
     if (!original && !a.usar_sobre && !a.arrastrando &&
         ui::boton_texto(g, e, "Sort", x0 + gr.trash_x - 44, y0 + gr.trash_y, 40, BASURA_H))
         ordenar_inventario(a);
@@ -343,9 +343,9 @@ void dibujar_inventario(App& a) {
         g.texto(AYUDA, tx, ty, clave_orden(CAPA_UI_TEXTO, 30), rgba(255, 255, 254));
     }
 
-    // Hover text of the original inventory (draw 0x44e45b). Only an equipped item that has attribute lines gets the
-    // bevelled box (name wrapped to 23 columns, attributes to 22, all in the item's colour); any other item shows just
-    // its name, with a shadow, under the cell. The fork's simple UI keeps its plain box.
+    // Texto de hover del inventario original (dibujo 0x44e45b). Solo un objeto equipado con líneas de atributos recibe la
+    // caja biselada (nombre ajustado a 23 columnas, atributos a 22, todo en el color del objeto); cualquier otro muestra solo
+    // su nombre, con sombra, bajo la celda. La interfaz simple del fork conserva su caja lisa.
     if (bajo >= 0 && !a.arrastrando) {
         const Slot s = slot_bajo;
         char buf[256], det[1024];
@@ -360,7 +360,7 @@ void dibujar_inventario(App& a) {
             const int celda_x = x0 + gr.x + 1 + col * CELDA, celda_y = y0 + gr.y + 1 + fila * CELDA;
             const u64 kb = clave_orden(CAPA_UI_TEXTO, 30);
             if (tip.n == tip.nombre) {
-                // Name only: under the cell, kept inside the screen (0x44e3c6..0x44e407).
+                // Solo el nombre: bajo la celda, dentro de la pantalla (0x44e3c6..0x44e407).
                 const int w = ancho_texto(tip.texto[0], std::strlen(tip.texto[0]));
                 const int tx = std::min(celda_x, a.gpu.ancho() - 4 - w);
                 const int ty = celda_y + 32 + 12 > a.gpu.alto() ? celda_y - 12 : celda_y + 32;
@@ -409,8 +409,8 @@ void dibujar_inventario(App& a) {
         } else if (e.pulsado) {
             a.usar_sobre_armado = true;
         }
-        // Only a click that started after the scroll was used picks the target: the release of the double click that
-        // used it would otherwise pick the scroll itself.
+        // Solo un clic que empezó después de usar el pergamino elige el objetivo: si no, el soltar del doble clic que
+        // lo usó elegiría el pergamino mismo.
         if (a.usar_sobre && e.clic && a.usar_sobre_armado) {
             if (bajo >= 0) enviar(a, cmd::usar_item_sobre(a.op, a.usar_sobre, t.ids()[slot_bajo]));
             a.usar_sobre = 0;
@@ -421,12 +421,12 @@ void dibujar_inventario(App& a) {
     }
     if (e.clic && bajo >= 0 && clic_item_tienda(a, t.ids()[slot_bajo])) return;  // armando la tienda
     if (original) {
-        // Original mouse handling (0x44f240): a left double click uses the item; a press only arms a drag that starts
-        // once the pointer is 25 px away; there are no right-click actions in the grid.
+        // Manejo original del mouse (0x44f240): un doble clic izquierdo usa el objeto; una presión solo arma un arrastre que empieza
+        // cuando el puntero se aleja 25 px; no hay acciones con clic derecho en la grilla.
         if (e.pulsado && bajo >= 0) {
             const ObjId id = t.ids()[slot_bajo];
             if (e.doble_izquierdo) {
-                if (a.intercambio.abierto) ofrecer_en_intercambio(a, id);  // in a trade it is offered
+                if (a.intercambio.abierto) ofrecer_en_intercambio(a, id);  // en un intercambio se ofrece
                 else usar_item(a, id);
                 a.inv_press = 0;
             } else {
@@ -464,7 +464,7 @@ void dibujar_inventario(App& a) {
             Slot s = t.buscar(a.arrastrando);
             if (s != SIN_SLOT) poner_atajo(a, casillero_bajo_puntero(a), {TipoAtajo::ITEM, a.arrastrando, t.col<I_GFX>()[s]});
         } else if (a.arrastrando && tecla_f_bajo_puntero(a) >= 0) {
-            // To an F5–F12 box of the original panel.
+            // A una casilla F5–F12 del panel original.
             Slot s = t.buscar(a.arrastrando);
             if (s != SIN_SLOT) poner_tecla_f(a, tecla_f_bajo_puntero(a), {TipoAtajo::ITEM, a.arrastrando, t.col<I_GFX>()[s]});
         } else if (a.arrastrando && autobuff_bajo_puntero(a) >= 0) {

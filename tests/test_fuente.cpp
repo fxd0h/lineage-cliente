@@ -121,5 +121,5 @@ TEST_CASE("cara HTML en negrita (<b>): avances propios, glifos aparte y misma ce
     REQUIRE(rasterizar_html('a', img, true));
     REQUIRE(rasterizar_html('a', reg));
     CHECK(img.alto == ALTO_LINEA_HTML_ORIGINAL);
-    CHECK((img.ancho != reg.ancho || img.px != reg.px));  // its own bitmap
+    CHECK((img.ancho != reg.ancho || img.px != reg.px));  // su propio bitmap
 }

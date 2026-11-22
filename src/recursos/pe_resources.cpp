@@ -10,7 +10,7 @@ bool in_range(Bytes b, size_t off, size_t n) { return off <= b.size() && n <= b.
 u32 le16(Bytes b, size_t o) { return static_cast<u32>(b[o] | (b[o + 1] << 8)); }
 u32 le32(Bytes b, size_t o) { return le16(b, o) | (le16(b, o + 2) << 16); }
 
-// RVA -> file offset through the section table; SIZE_MAX if no section contains it.
+// RVA -> desplazamiento en el archivo a través de la tabla de secciones; SIZE_MAX si ninguna sección lo contiene.
 size_t rva_to_offset(Bytes pe, size_t sections, u32 count, u32 rva) {
     for (u32 i = 0; i < count; ++i) {
         const size_t s = sections + size_t{i} * 40;
@@ -23,7 +23,7 @@ size_t rva_to_offset(Bytes pe, size_t sections, u32 count, u32 rva) {
     return SIZE_MAX;
 }
 
-// Entry of a resource directory with a numeric id: returns the raw offset field (high bit = subdir).
+// Entrada de un directorio de recursos con id numérico: devuelve el campo de desplazamiento crudo (bit alto = subdirectorio).
 bool dir_entry(Bytes pe, size_t dir, u32 id, u32& target) {
     if (!in_range(pe, dir, 16)) return false;
     const u32 named = le16(pe, dir + 12), ids = le16(pe, dir + 14);
@@ -38,7 +38,7 @@ bool dir_entry(Bytes pe, size_t dir, u32 id, u32& target) {
     return false;
 }
 
-// First entry of any kind (used for the language level).
+// Primera entrada de cualquier tipo (se usa para el nivel de idioma).
 bool first_entry(Bytes pe, size_t dir, u32& target) {
     if (!in_range(pe, dir, 24)) return false;
     if (le16(pe, dir + 12) + le16(pe, dir + 14) == 0) return false;
@@ -83,14 +83,14 @@ bool pe_load_cursor(Bytes pe, u32 res_id, PeCursor& out) {
     const int hot_x = static_cast<int>(le16(r, 0)), hot_y = static_cast<int>(le16(r, 2));
     const Bytes d = r.subspan(4);
     const u32 header = le32(d, 0);
-    const int w = static_cast<int>(le32(d, 4)), h2 = static_cast<int>(le32(d, 8));  // height covers XOR + AND
+    const int w = static_cast<int>(le32(d, 4)), h2 = static_cast<int>(le32(d, 8));  // el alto cubre XOR + AND
     if (header != 40 || le16(d, 12) != 1 || le16(d, 14) != 1 || le32(d, 16) != 0) return false;  // 1 bpp, BI_RGB
     if (w <= 0 || w > 256 || h2 <= 0 || h2 > 512 || (h2 & 1)) return false;
     const int h = h2 / 2;
     const size_t stride = ((static_cast<size_t>(w) + 31) / 32) * 4;
     const size_t palette = 8, xor_at = header + palette, and_at = xor_at + stride * h;
     if (!in_range(d, 0, and_at + stride * h)) return false;
-    // Palette entries are B,G,R,0; index -> black or white by brightness.
+    // Las entradas de la paleta son B,G,R,0; índice -> negro o blanco según el brillo.
     PePixel color[2];
     for (int i = 0; i < 2; ++i) {
         const size_t p = header + size_t{static_cast<u32>(i)} * 4;
@@ -116,7 +116,7 @@ bool pe_load_cursor(Bytes pe, u32 res_id, PeCursor& out) {
 }
 
 u32 pe_cursor_group_image(Bytes pe, u32 group_id) {
-    // GRPCURSORDIR: u16 reserved, u16 type, u16 count; entries of 14 bytes whose last u16 is the RT_CURSOR id.
+    // GRPCURSORDIR: u16 reservado, u16 tipo, u16 cantidad; entradas de 14 bytes cuyo último u16 es el id de RT_CURSOR.
     const Bytes g = pe_find_resource(pe, RT_GROUP_CURSOR, group_id);
     if (g.size() < 6 + 14 || le16(g, 4) == 0) return 0;
     return le16(g, 6 + 12);

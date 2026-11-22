@@ -58,7 +58,7 @@ std::string_view atributos_item(const Inventario& inv, Slot s) {
 }
 
 namespace {
-// Greedy wrap at spaces to `ancho` columns (a longer word is cut). Returns false when the output is full.
+// Ajuste voraz en los espacios a `ancho` columnas (una palabra más larga se corta). Devuelve false cuando la salida está llena.
 void envolver(std::string_view t, size_t ancho, LineasTip& o, size_t max_lineas) {
     while (!t.empty() && o.n < max_lineas) {
         while (t.starts_with(' ')) t.remove_prefix(1);
@@ -83,7 +83,7 @@ void armar_tooltip_item(std::string_view nombre, std::string_view detalles, Line
         salida.texto[0][nombre.size()] = 0;
         salida.n = 1;
     } else {
-        envolver(nombre, 23, salida, 2);  // the exe splits once; the rest of a very long name is cut
+        envolver(nombre, 23, salida, 2);  // el exe corta una sola vez; el resto de un nombre muy largo se pierde
     }
     salida.nombre = salida.n;
     while (!detalles.empty() && salida.n < LineasTip::MAX_LINEAS) {
@@ -197,7 +197,7 @@ size_t orden_inventario(const Inventario& inv, Slot* salida, size_t cap) {
     size_t k = 0;
     for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
         if (item_equipado(nombre_item(inv, s))) salida[k++] = s;
-    // Worn items beyond `cap` (absurd inventory sizes) are not reordered: they stay in natural order below.
+    // Los objetos puestos más allá de `cap` (tamaños de inventario absurdos) no se reordenan: quedan en orden natural abajo.
     for (Slot s = 0; s < inv.items.tamano() && k < n; ++s)
         if (!item_equipado(nombre_item(inv, s))) salida[k++] = s;
     return k;
@@ -282,7 +282,7 @@ void aplicar_inventario(Inventario& inv, std::span<const Evento> eventos) {
 }
 
 void cargar_item_quest(const TablaTexto& tabla, std::vector<ItemMision>& salida) {
-    // "<gfx> <desc entry>" per line, with an optional ";comment" (the exe reads the same two numbers).
+    // "<gfx> <entrada de desc>" por línea, con un ";comentario" opcional (el exe lee los mismos dos números).
     salida.clear();
     for (size_t i = 0; i < tabla.cantidad(); ++i) {
         const std::string l(tabla.linea(i));
@@ -292,7 +292,7 @@ void cargar_item_quest(const TablaTexto& tabla, std::vector<ItemMision>& salida)
 }
 
 bool item_de_mision(const std::vector<ItemMision>& quest, const TablaTexto& desc, u16 gfx, std::string_view name) {
-    // The server's name carries the count, enchantment and worn suffixes: "$N" or the plain name, then " (..)".
+    // El nombre del servidor lleva la cantidad, el encantamiento y los sufijos de puesto: "$N" o el nombre llano, después " (..)".
     if (const size_t p = name.find(" ("); p != std::string_view::npos) name = name.substr(0, p);
     while (!name.empty() && (name[0] == '+' || name[0] == '-')) {
         const size_t sp = name.find(' ');

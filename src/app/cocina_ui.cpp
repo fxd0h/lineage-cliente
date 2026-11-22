@@ -1,17 +1,17 @@
-// Original cooking window (S3EP1U.bin: ctor 0x4d43f0, global [0x8f2fd4]; recipe grid 0x4d3840 / draw 0x4d3d10, global [0x8f2fd0]).
-//  - Opened by S_PacketBox 52 (COOK_WINDOW, handler 0x49135f) after a cook book (item gfx 2498..2502 = 0x9c2..0x9c6, 0x449a70) is used:
-//    the same stage again toggles it closed. The book's object id is remembered ([0x8f2fb8], set where the item is used).
-//  - Frame 1480 (190 x 292) at the window origin, translucent background 1481 at (6,8), ornaments 998 at (0,11) over the grid,
-//    stage picture 1482 + stage at (112,265), close 969 at (165,18), drag handle (0,5,191,25), scroll bar at x 161 (up arrow y 48, track 56, down arrow 235; 0x47cd80).
-//  - Recipe grid: rect (21,42)-(155,244), 4 columns x 6 rows of 34 x 34 cells, first cell at the rect corner. A cell is the dish icon (item
-//    icon table, 32 x 32, normal state) from the static 24-row table at 0x6e52e8; stage n shows the first 8 * n rows (stage 3+ = all 24).
-//    The scroll step is one row (4 recipes) up to the last row ([0x4d4d00]: `offset + 4 < count`).
-//  - One click selects a cell (marker 536 at -1,-1); the hover box is the inventory's (0x4d3d10 = 0x44e45b): a selected cell with a text
-//    gets the 142 px bevel box with the dish name (23 columns) and the effect line of string-e (22 columns), any other cell just its name.
-//  - A double click (vtable slot 0x58, 0x4d39c0) on the selected cell cooks (0x4d3900): no cook book used -> string 1167; otherwise
-//    C_UseItem `d book, c 1, c recipe` (l1j-en C_ItemUSe reads cookStatus, cookNo).
-// Not modelled: the progress bar (0x4d4c40, set by a server message the l1j-en server never sends; string 1100 while it runs), the second
-// recipe vector (cookNo >= 0x30), dragging a recipe to the shortcut bar (0x4d3ac0), the exe's name digit grouping.
+// Ventana original de cocina (S3EP1U.bin: ctor 0x4d43f0, global [0x8f2fd4]; grilla de recetas 0x4d3840 / dibujo 0x4d3d10, global [0x8f2fd0]).
+//  - La abre S_PacketBox 52 (COOK_WINDOW, manejador 0x49135f) tras usar un libro de cocina (gfx de objeto 2498..2502 = 0x9c2..0x9c6, 0x449a70):
+//    la misma etapa otra vez la cierra. Se recuerda el id de objeto del libro ([0x8f2fb8], se fija donde se usa el objeto).
+//  - Marco 1480 (190 x 292) en el origen de la ventana, fondo translúcido 1481 en (6,8), adornos 998 en (0,11) sobre la grilla,
+//    imagen de etapa 1482 + etapa en (112,265), cerrar 969 en (165,18), zona de arrastre (0,5,191,25), barra de scroll en x 161 (flecha arriba y 48, riel 56, flecha abajo 235; 0x47cd80).
+//  - Grilla de recetas: rect (21,42)-(155,244), 4 columnas x 6 filas de celdas de 34 x 34, la primera en la esquina del rect. Una celda es el ícono del plato (tabla
+//    de íconos de objetos, 32 x 32, estado normal) de la tabla estática de 24 filas en 0x6e52e8; la etapa n muestra las primeras 8 * n filas (etapa 3+ = las 24).
+//    El paso de scroll es una fila (4 recetas) hasta la última fila ([0x4d4d00]: `offset + 4 < count`).
+//  - Un clic elige una celda (marcador 536 en -1,-1); la caja de hover es la del inventario (0x4d3d10 = 0x44e45b): una celda elegida con texto
+//    recibe la caja biselada de 142 px con el nombre del plato (23 columnas) y la línea de efecto de string-e (22 columnas); cualquier otra, solo su nombre.
+//  - Un doble clic (slot de vtable 0x58, 0x4d39c0) en la celda elegida cocina (0x4d3900): sin libro usado -> texto 1167; si no
+//    C_UseItem `d libro, c 1, c receta` (C_ItemUSe de l1j-en lee cookStatus, cookNo).
+// Sin modelar: la barra de progreso (0x4d4c40, la fija un mensaje del servidor que l1j-en nunca manda; texto 1100 mientras corre), el segundo
+// vector de recetas (cookNo >= 0x30), arrastrar una receta a la barra de atajos (0x4d3ac0), la agrupación de dígitos del nombre del exe.
 #include <algorithm>
 #include <charconv>
 #include <cstdio>
@@ -33,7 +33,7 @@ constexpr int MSG_NO_COOK_BOOK = 1167;  // 0x48f: no cook book has been used
 
 struct Row {
     u16 gfx;
-    u16 effect;  // string-e line of the effect text
+    u16 effect;  // línea de string-e del texto de efecto
 };
 // Static table at 0x6e52e8 (24 x 12 bytes: u16 gfx, u16 0, u32 string-e index, u32 tier).
 constexpr Row TABLE[RECIPES] = {
@@ -44,7 +44,7 @@ constexpr Row TABLE[RECIPES] = {
 const u64 KEY_BACK = clave_orden(CAPA_UI, 10), KEY_FRAME = clave_orden(CAPA_UI, 11), KEY_MARK = clave_orden(CAPA_UI, 12),
           KEY_ICON = clave_orden(CAPA_UI, 14), KEY_CTRL = clave_orden(CAPA_UI, 16), KEY_TIP = clave_orden(CAPA_UI_TEXTO, 30);
 
-// recipe.tbl: `"name" "title" cookNo type n ("ingredient" qty)*`; only cookNo < 0x30 goes to the window (0x4d3130), in file order.
+// recipe.tbl: `"nombre" "título" cookNo tipo n ("ingrediente" cant)*`; solo cookNo < 0x30 va a la ventana (0x4d3130), en el orden del archivo.
 void load_recipes(App& a) {
     a.cocina.nombres.clear();
     TablaTexto t;
@@ -73,14 +73,14 @@ int visible_recipes(const App& a) {
 
 bool cocina_abierta(const App& a) { return !a.cfg.ui_simple && a.cocina.abierta; }
 
-// Default place (0x4d43f0): right-aligned in the 640 x 480 block, y 0 (the base object starts at 0 and the ctor adds 640 - frame width).
+// Lugar por omisión (0x4d43f0): alineada a la derecha en el bloque de 640 x 480, y 0 (el objeto base empieza en 0 y el ctor suma 640 - ancho del marco).
 Rect rect_cocina(const App& a) { return {(a.gpu.ancho() - 640) / 2 + 640 - WINDOW_W, 0, WINDOW_W, WINDOW_H}; }
 
 void eventos_cocina(App& a, const Evento& e) {
-    if (e.tipo != Ev::COCINA || e.v[0] != 1) return;  // sub 0 makes the exe answer with C_ItemUse; l1j-en never sends it
+    if (e.tipo != Ev::COCINA || e.v[0] != 1) return;  // el sub 0 hace que el exe responda con C_ItemUse; l1j-en nunca lo manda
     const u8 mode = static_cast<u8>(e.v[1] + 1);
     if (a.cocina.abierta && a.cocina.modo == mode) {
-        a.cocina.abierta = false;  // the same book again closes it
+        a.cocina.abierta = false;  // el mismo libro otra vez la cierra
         return;
     }
     a.cocina.abierta = true;
@@ -108,12 +108,12 @@ void dibujar_cocina(App& a) {
     }
     const bool over_window = sobre_ventana(a, IdVentana::COCINA);
     const int count = visible_recipes(a);
-    // Scroll in rows of 4: the exe allows `offset + 4 < count` over all 24 recipes (5 steps).
+    // Scroll en filas de 4: el exe permite `offset + 4 < count` sobre las 24 recetas (5 pasos).
     original_scrollbar(a, a.cocina.barra, r.x + SCROLL_X, r.y + SCROLL_Y, SCROLL_H, (RECIPES - 1) / COLS + 1, 1, a.cocina.desplaza,
                        over_window, 0, -2);
     const int first = static_cast<int>(a.cocina.desplaza) * COLS;
 
-    // Pointer over the grid -> hovered recipe (0x44f240: index = offset + row * 4 + column).
+    // Puntero sobre la grilla -> receta bajo el puntero (0x44f240: índice = offset + fila * 4 + columna).
     const int gx = r.x + GRID_X, gy = r.y + GRID_Y;
     int hover = -1;
     if (over_window && ui::sobre(e, gx, gy, GRID_W, GRID_H)) {
@@ -129,7 +129,7 @@ void dibujar_cocina(App& a) {
         }
     }
 
-    // Cells: up to 24 from the offset, packed (hidden recipes are skipped without taking a cell, and they come last anyway).
+    // Celdas: hasta 24 desde el offset, juntas (las recetas ocultas se saltan sin ocupar celda, y de todos modos van al final).
     for (int k = 0; k < RECIPES && first + k < count; ++k) {
         const int i = first + k;
         const int x = gx + k % COLS * CELL, y = gy + k / COLS * CELL;
@@ -149,7 +149,7 @@ void dibujar_cocina(App& a) {
         const u32 color = original_item_color(1);
         const int k = hover - first, cell_x = gx + k % COLS * CELL, cell_y = gy + k / COLS * CELL;
         if (tip.n == tip.nombre) {
-            // Name only, under the cell and kept inside the screen (0x4d3d10).
+            // Solo el nombre, bajo la celda y dentro de la pantalla (0x4d3d10).
             const int w = ancho_texto(tip.texto[0], std::strlen(tip.texto[0]));
             const int tx = std::min(cell_x, a.gpu.ancho() - 4 - w);
             const int ty = cell_y + 32 + 12 > a.gpu.alto() ? cell_y - 12 : cell_y + 32;

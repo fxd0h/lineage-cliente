@@ -21,8 +21,8 @@ TEST_CASE("HD field of a bitmap mask: size, margin, outline level") {
     const int y = f.alto / 2;
     CHECK(campo(f, 0, y) < 32);  // empty margin
     CHECK(campo(f, f.ancho - 1, y) < 32);
-    CHECK(campo(f, f.ancho / 2, y) > 200);  // inside the bar
-    // The outline (level 128) sits within a texel of the pixel edge at x = 1 (+ margin).
+    CHECK(campo(f, f.ancho / 2, y) > 200);  // dentro de la barra
+    // El contorno (nivel 128) queda a menos de un texel del borde del píxel en x = 1 (+ margen).
     const int borde = (1 + HD_BORDE) * HD_ESCALA;
     CHECK(campo(f, borde - 2, y) < 128);
     CHECK(campo(f, borde + 2, y) > 128);

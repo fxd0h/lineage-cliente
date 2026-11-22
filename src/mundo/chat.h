@@ -25,7 +25,7 @@ struct LineaChat {
     u32 color;
     u8 tipo;  // TipoChat o CHAT_MENSAJE
     u8 largo;
-    i8 dir = -1;  // original UI shouts: direction icon 0..7 drawn before the text (S3EP1U "\\d<n>" code, image 605 + n), -1 none
+    i8 dir = -1;  // gritos de la interfaz original: ícono de dirección 0..7 dibujado antes del texto (código "\\d<n>" de S3EP1U, imagen 605 + n), -1 ninguno
     char texto[LARGO_LINEA_CHAT];
 };
 
@@ -33,16 +33,16 @@ struct GloboChat {
     ObjId id;
     u64 inicio;
     u32 linea;  // número absoluto de línea en el registro
-    // Original UI overlap rule (S3EP1U 0x41a8e3): when a new bubble first shows, every older bubble whose rectangle
-    // overlaps it turns grey (RGB555 0x4a52) for the rest of its life. `rect` = last drawn screen rectangle.
+    // Regla de superposición de la interfaz original (S3EP1U 0x41a8e3): cuando un globo nuevo aparece, todo globo anterior cuyo rectángulo
+    // se le superpone pasa a gris (RGB555 0x4a52) por el resto de su vida. `rect` = último rectángulo dibujado en pantalla.
     i32 x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     bool con_rect = false, revisado = false, gris = false;
 };
 
 struct Chat {
     LineaChat lineas[CAPACIDAD_CHAT];
-    bool original_ui = false;     // original UI: colours and bubble rules of the 2009 client (docs/fork/RE_HUD.md)
-    bool globo_comercio = false;  // option showMargetMsg: trade chat also shows over the speaker's head
+    bool original_ui = false;     // interfaz original: colores y reglas de globos del cliente 2009 (docs/fork/RE_HUD.md)
+    bool globo_comercio = false;  // opción showMargetMsg: el chat de comercio también se muestra sobre la cabeza de quien habla
     u32 total = 0;  // líneas agregadas desde el inicio (el anillo guarda las últimas CAPACIDAD_CHAT)
     GloboChat globos[CANTIDAD_GLOBOS] = {};
 
@@ -57,17 +57,17 @@ struct Chat {
     void limpiar() { total = 0; for (GloboChat& g : globos) g = {}; }
 };
 
-// `px`, `py`: own tile (-1 when unknown), for the direction icon of shouts (original UI).
+// `px`, `py`: celda propia (-1 si no se conoce), para el ícono de dirección de los gritos (interfaz original).
 void aplicar_chat(Chat& c, const TablaTexto& mensajes, const TablaTexto& desc, std::span<const Evento> eventos, u64 ahora,
                   int px = -1, int py = -1);
-// Shout direction digit of S3EP1U 0x483500..0x483697: sector 0..7 of the speaker's offset (dx, dy) from the listener,
-// -1 when both are zero.
+// Dígito de dirección del grito de S3EP1U 0x483500..0x483697: sector 0..7 del desplazamiento (dx, dy) de quien habla respecto de quien escucha,
+// -1 cuando ambos son cero.
 int direccion_grito(int dx, int dy);
 
 // Color de cada tipo de chat (0xAABBGGRR).
 u32 color_chat(u8 tipo);
-// Original client colour of a chat line (S3EP1U 0x484800 / S_Say 0x483500). `normal_path`: S_Say packet (types 0 and
-// 2) instead of the typed global packet; `texto` is the line as shown.
+// Color del cliente original de una línea de chat (S3EP1U 0x484800 / S_Say 0x483500). `normal_path`: paquete S_Say (tipos 0 y
+// 2) en vez del paquete global tipado; `texto` es la línea tal como se muestra.
 u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto);
 
 // Reemplaza los "$N" del texto por la entrada N de desc-e.tbl. Devuelve los bytes escritos.

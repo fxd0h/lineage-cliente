@@ -24,10 +24,10 @@ namespace {
 constexpr int ANCHO = 238, ALTO = 350, FILA = 26;
 constexpr u32 IMG_PAPEL = 656, IMG_LEIDA = 657, IMG_CERRAR = 658, IMG_WRITE = 662,
               IMG_DELETE = 664, IMG_CANCEL = 578, IMG_SEND_OLD = 582;
-// Original layout (S3EP1U.bin, mail list window ctor 0x417a90, draw 0x417d50; compose ctor 0x455800): the list
-// is paper 656 (238x350), 8 rows of 30 px from y=50, buttons placed in window coordinates.
+// Diseño original (S3EP1U.bin, ctor de la ventana de lista de correo 0x417a90, dibujo 0x417d50; ctor de redactar 0x455800): la lista
+// es el papel 656 (238x350), 8 filas de 30 px desde y=50, botones en coordenadas de la ventana.
 constexpr u32 IMG_READ = 660, IMG_PAGE_UP = 666, IMG_PAGE_DOWN = 668;
-// Compose window (ctor 0x453120): paper, tabs (rest; the hover frame is +1), mode buttons (+ their selected frame), buttons.
+// Ventana de redactar (ctor 0x453120): papel, pestañas (reposo; el cuadro de hover es +1), botones de modo (+ su cuadro elegido), botones.
 constexpr u32 IMG_PAPER_COMPOSE = 1545, IMG_TAB_INBOX = 1564, IMG_TAB_KEEP = 1561, IMG_TAB_WRITE_SEL = 1573,
               IMG_MODE_PRIVATE = 1549, IMG_MODE_PRIVATE_SEL = 1551, IMG_MODE_CLAN = 1552, IMG_MODE_CLAN_SEL = 1554,
               IMG_SEND = 1580, IMG_CANCEL_COMPOSE = 1546, IMG_CLOSE_COMPOSE = 1583,
@@ -38,7 +38,7 @@ int selected_row = -1, page = 0;  // list state of the original window (reset on
 u32 TINTA, TINTA_SUAVE, TINTA_VIVA;
 constexpr const char* BANDEJAS[3] = {"Inbox", "Clan", "Saved"};
 
-// The original list / letter / compose windows open at the origin of the 640x480 block (0x417d50); the simple UI centres them.
+// Las ventanas originales de lista / carta / redactar abren en el origen del bloque de 640x480 (0x417d50); la interfaz simple las centra.
 int x0(const App& a) { return a.cfg.ui_simple ? (a.gpu.ancho() - ANCHO) / 2 : (a.gpu.ancho() - 640) / 2; }
 int y0(const App& a) { return a.cfg.ui_simple ? 50 : 0; }
 
@@ -66,7 +66,7 @@ void abrir_bandeja(App& a, u8 b) {
     enviar(a, cmd::correo(a.op, b));
 }
 
-// Copy of s clipped to a pixel width (no allocation: the caller gives the buffer).
+// Copia de s recortada a un ancho en píxeles (sin asignar memoria: el que llama da el buffer).
 std::string_view clip(std::string_view s, int w, char* buf, size_t cap) {
     size_t n = std::min(s.size(), cap - 1);
     while (n > 0 && ancho_texto(s.data(), n) > w) --n;
@@ -75,7 +75,7 @@ std::string_view clip(std::string_view s, int w, char* buf, size_t cap) {
     return {buf, n};
 }
 
-// The original mail window (ui_simple == 0): paper 656 list with 8 rows, paper 671 reading, paper 577 writing.
+// La ventana original de correo (ui_simple == 0): papel 656 lista con 8 filas, papel 671 lectura, papel 577 escritura.
 void draw_original_mail(App& a) {
     Correo& c = a.correo;
     Graficos& g = *a.g;
@@ -90,17 +90,17 @@ void draw_original_mail(App& a) {
     };
 
     if (c.escribiendo) {
-        // Compose window (S3EP1U ctor 0x453120, draw 0x453750, send 0x453c60): paper 1545 (252x370) with the tabs
-        // Inbox (55,31) / Write (118,31, selected) / Keep (174,31), edits To (100,70) 116x16, Subject (100,90) 116x16 and
-        // body (50,112) 170x192, mode buttons private (24,340) / clan (53,340), fee text at (50,310), Send (127,308),
-        // Cancel (163,308) and close (230,5). The edit at (100,55) (From) shows the own character name (RE_ROUND7).
+        // Ventana de redactar (S3EP1U ctor 0x453120, dibujo 0x453750, envío 0x453c60): papel 1545 (252x370) con las pestañas
+        // Bandeja (55,31) / Escribir (118,31, elegida) / Guardar (174,31), campos Para (100,70) 116x16, Asunto (100,90) 116x16 y
+        // cuerpo (50,112) 170x192, botones de modo privado (24,340) / clan (53,340), texto de la tarifa en (50,310), Enviar (127,308),
+        // Cancelar (163,308) y cerrar (230,5). El campo en (100,55) (De) muestra el nombre del personaje propio (RE_ROUND7).
         g.gpu().dibujar(g.img(IMG_PAPER_COMPOSE), x, y, kf);
         const std::string_view propio = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
                                             ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].nombre) : std::string_view{};
         const std::string_view clan = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
                                           ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].clan) : std::string_view{};
         auto aviso = [&](size_t idx) { a.chat.agregar(a.mensajes.linea(idx), rgba(255, 255, 255), CHAT_SISTEMA); };
-        // Tabs: Inbox / Keep close this window and open that mailbox (0x454060 / 0x454090); Write is the current one.
+        // Pestañas: Bandeja / Guardar cierran esta ventana y abren ese buzón (0x454060 / 0x454090); Escribir es la actual.
         if (ui::boton(g, e, IMG_TAB_INBOX, x + 55, y + 31)) {
             c.escribiendo = false;
             abrir_bandeja(a, c.al_clan ? 1 : 0);
@@ -112,7 +112,7 @@ void draw_original_mail(App& a) {
             abrir_bandeja(a, 2);
             return;
         }
-        // Mode buttons (0x4540c0 private, 0x454100 clan: needs a clan, string 1262; the clan name fills the locked To).
+        // Botones de modo (0x4540c0 privado, 0x454100 clan: necesita clan, texto 1262; el nombre del clan llena el Para bloqueado).
         if (ui::boton(g, e, IMG_MODE_PRIVATE, x + 24, y + 340) && c.al_clan) {
             c.al_clan = false;
             c.destino.clear();
@@ -128,11 +128,11 @@ void draw_original_mail(App& a) {
         char fee[64];
         std::snprintf(fee, sizeof fee, "%d %.*s", c.al_clan ? 1000 : 50, static_cast<int>(a.desc.linea(4).size()), a.desc.linea(4).data());
         g.texto(fee, static_cast<float>(x + 50), static_cast<float>(y + 310), kt, rgba(0, 0, 0));
-        // From edit (100,55): the open handler 0x453a00 sets it to the own character name on every open (RE_ROUND7 section 2);
-        // in clan mode To holds the clan name, locked (flag 2).
+        // Campo De (100,55): el manejador de apertura 0x453a00 le pone el nombre del personaje propio en cada apertura (RE_ROUND7 sección 2);
+        // en modo clan Para tiene el nombre del clan, bloqueado (flag 2).
         text(clip(propio, 116, buf, sizeof buf), 100, 55, TINTA);
         if (c.al_clan && !clan.empty()) c.destino.assign(clan);
-        // Edits: To (locked while the clan name is in it), Subject (20), body (256).
+        // Campos: Para (bloqueado mientras tiene el nombre del clan), Asunto (20), cuerpo (256).
         std::string* campos[3] = {&c.destino, &c.asunto, &c.cuerpo};
         const size_t maximos[3] = {16, 20, 256};
         const int fy[3] = {70, 90, 112}, fx[3] = {100, 100, 50}, fw[3] = {116, 116, 170}, fh[3] = {16, 16, 192};
@@ -145,7 +145,7 @@ void draw_original_mail(App& a) {
             for (int i = 0; i < e.ntexto; ++i)
                 if (e.texto[i] >= 0x20 && e.texto[i] < 0x7F && v.size() < maximos[c.foco]) v.push_back(e.texto[i]);
             if (e.retroceso && !v.empty()) v.pop_back();
-        } else if (c.foco == 2) {  // the body is a multi-line area: ASCII and Backspace
+        } else if (c.foco == 2) {  // el cuerpo es un área de varias líneas: ASCII y Backspace
             for (int i = 0; i < e.ntexto; ++i)
                 if (e.texto[i] >= 0x20 && e.texto[i] < 0x7F && c.cuerpo.size() < maximos[2]) c.cuerpo.push_back(e.texto[i]);
             if (e.retroceso && !c.cuerpo.empty()) c.cuerpo.pop_back();
@@ -182,11 +182,11 @@ void draw_original_mail(App& a) {
     }
 
     if (c.leyendo) {
-        // Reading window (S3EP1U class 0x4541b0, global [0x7026f8], filled by the S_Mail handler at 0x492bb4): the compose paper 1545
-        // with four read-only edits, From = the letter's name column (100,55), To = the own name (100,70), Subject (100,90) 116 px
-        // and the body (50,112) 170x192; the same tabs and mode buttons as the compose window (they close this window and open the
-        // inbox / compose / storage / private / clan list), close X (230,5) and four buttons at y 308: Reply (56) 1574, Delete (96)
-        // 1558, Keep (138) 1577 and Back to the list (174) 1568 (callbacks 0x4555b0, 0x455610, 0x455660, 0x455680).
+        // Ventana de lectura (clase S3EP1U 0x4541b0, global [0x7026f8], la llena el manejador de S_Mail en 0x492bb4): el papel 1545 de redactar
+        // con cuatro campos de solo lectura, De = la columna de nombre de la carta (100,55), Para = el nombre propio (100,70), Asunto (100,90) 116 px
+        // y el cuerpo (50,112) 170x192; las mismas pestañas y botones de modo que la ventana de redactar (cierran esta ventana y abren la
+        // bandeja / redactar / guardadas / lista privada / de clan), la X de cerrar (230,5) y cuatro botones en y 308: Responder (56) 1574, Borrar (96)
+        // 1558, Guardar (138) 1577 y Volver a la lista (174) 1568 (callbacks 0x4555b0, 0x455610, 0x455660, 0x455680).
         g.gpu().dibujar(g.img(IMG_PAPER_COMPOSE), x, y, kf);
         const std::string_view propio = a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())
                                             ? std::string_view(a.pjs[static_cast<size_t>(a.pj_sel)].nombre) : std::string_view{};
@@ -197,7 +197,7 @@ void draw_original_mail(App& a) {
             text(clip(it->asunto, 116, buf, sizeof buf), 100, 90, TINTA);
         }
         texto_ajustado(g, c.texto, x + 50, y + 112, 170, kt, TINTA, 15);
-        // Tabs and mode buttons: 0x455450 inbox, 0x455480 compose, 0x4554b0 storage, 0x4554e0 private list, 0x455510 clan list.
+        // Pestañas y botones de modo: 0x455450 bandeja, 0x455480 redactar, 0x4554b0 guardadas, 0x4554e0 lista privada, 0x455510 lista de clan.
         if (ui::boton(g, e, IMG_TAB_INBOX, x + 55, y + 31) || ui::boton(g, e, IMG_MODE_PRIVATE, x + 24, y + 340)) {
             abrir_bandeja(a, 0);
             return;
@@ -218,7 +218,7 @@ void draw_original_mail(App& a) {
             abrir_bandeja(a, 1);
             return;
         }
-        // Reply (0x4555b0): the compose window in private mode with To = the letter's name column.
+        // Responder (0x4555b0): la ventana de redactar en modo privado con Para = la columna de nombre de la carta.
         if (ui::boton(g, e, IMG_READ_REPLY, x + 56, y + 308) && it != c.cartas.end()) {
             c.escribiendo = true;
             c.al_clan = false;
@@ -232,10 +232,10 @@ void draw_original_mail(App& a) {
         if (ui::boton(g, e, IMG_READ_DELETE, x + 96, y + 308)) enviar(a, cmd::correo(a.op, static_cast<u8>(0x30 + c.bandeja), c.leyendo));
         if (ui::boton(g, e, IMG_READ_KEEP, x + 138, y + 308)) enviar(a, cmd::correo(a.op, 0x40, c.leyendo));
         if (ui::boton(g, e, IMG_READ_BACK, x + 174, y + 308)) {
-            c.leyendo = 0;  // back to the list, which keeps its page and row (0x455680 reopens it)
+            c.leyendo = 0;  // vuelve a la lista, que conserva su página y fila (0x455680 la reabre)
             return;
         }
-        if (ui::boton(g, e, IMG_CLOSE_COMPOSE, x + 230, y + 5) || e.escape) {  // 0x455270: only this window closes
+        if (ui::boton(g, e, IMG_CLOSE_COMPOSE, x + 230, y + 5) || e.escape) {  // 0x455270: solo se cierra esta ventana
             c.leyendo = 0;
             c.abierto = false;
             e.escape = false;
@@ -244,7 +244,7 @@ void draw_original_mail(App& a) {
     }
 
     g.gpu().dibujar(g.img(IMG_PAPEL), x, y, kf);
-    // The original has one mailbox per window: the title (y 15) shows it, a click switches to the next.
+    // El original tiene un buzón por ventana: el título (y 15) lo muestra, un clic pasa al siguiente.
     const int pages = std::max(1, (static_cast<int>(c.cartas.size()) + ROWS - 1) / ROWS);
     page = std::clamp(page, 0, pages - 1);
     std::snprintf(txt, sizeof txt, "%s  %d/%d", BANDEJAS[c.bandeja], page + 1, pages);
@@ -265,11 +265,11 @@ void draw_original_mail(App& a) {
         const std::time_t f = static_cast<std::time_t>(m.fecha);
         char fecha[32] = "";
         if (const std::tm* tm = std::localtime(&f)) std::strftime(fecha, sizeof fecha, "%y/%m/%d", tm);
-        text(clip(fecha, 48, buf, sizeof buf), 135, fy, TINTA_SUAVE);  // the original keeps an 8-character yy/mm/dd string here
+        text(clip(fecha, 48, buf, sizeof buf), 135, fy, TINTA_SUAVE);  // el original guarda aquí un texto aa/mm/dd de 8 caracteres
         text(clip(m.asunto, 160, buf, sizeof buf), 30, fy + 12, col);
     }
     if (ui::sobre(e, x, y, ANCHO, ALTO) && e.rueda) page = std::clamp(page - (e.rueda > 0 ? 1 : -1), 0, pages - 1);
-    // Buttons (window coordinates from the constructor): close, Read, Write, Delete, page up / down.
+    // Botones (coordenadas de la ventana, del constructor): cerrar, Leer, Escribir, Borrar, página arriba / abajo.
     if (ui::boton(g, e, IMG_CERRAR, x + 209, y + 305) || e.escape) {
         c.abierto = false;
         e.escape = false;
@@ -280,7 +280,7 @@ void draw_original_mail(App& a) {
         enviar(a, cmd::correo(a.op, static_cast<u8>(0x10 + c.bandeja), c.cartas[static_cast<size_t>(selected_row)].id));
     if (ui::boton(g, e, IMG_WRITE, x + 139, y + 304)) {
         c.escribiendo = true;
-        c.al_clan = c.bandeja == 1;  // the clan list opens the clan mode (0x480e0b), the others private (0x480e14)
+        c.al_clan = c.bandeja == 1;  // la lista de clan abre el modo clan (0x480e0b), las demás el privado (0x480e14)
         c.destino.clear();
         if (c.al_clan && a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size())) c.destino = a.pjs[static_cast<size_t>(a.pj_sel)].clan;
         c.foco = c.al_clan ? 1 : 0;

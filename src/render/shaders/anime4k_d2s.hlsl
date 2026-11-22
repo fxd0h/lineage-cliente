@@ -1,9 +1,9 @@
 // Anime4K v3.2 Upscale CNN x2 (S), https://github.com/bloc97/Anime4K (MIT License, Copyright (c) 2019-2021
-// bloc97; full notice in anime4k_c1.hlsl). Pass 5: depth-to-space of the last conv (4 channels = the 2x2
-// sub-pixels) added to a bilinear sample of the original, producing the 2x image. Hand port of the
-// "Depth-to-Space" hook. u.xy = logical grid size, u.z = integer scale of the scene texture.
-// HLSL twin of anime4k_d2s.frag (Windows/D3D12). Vertex stage: vs_mundo (mundo.hlsl).
-// Both textures are only read with Load, so no samplers are declared. Resource convention: see sprite.hlsl.
+// bloc97; aviso completo en anime4k_c1.hlsl). Pasada 5: depth-to-space de la última convolución (4 canales = los 2x2
+// subpíxeles) sumado a una muestra bilineal del original, que da la imagen de 2x. Portado a mano del hook
+// "Depth-to-Space". u.xy = tamaño de la grilla lógica, u.z = escala entera de la textura de la escena.
+// Gemelo HLSL de anime4k_d2s.frag (Windows/D3D12). Etapa de vértices: vs_mundo (mundo.hlsl).
+// Las dos texturas solo se leen con Load, así que no se declaran samplers. Convención de recursos: ver sprite.hlsl.
 
 [[vk::binding(0, 2)]] Texture2D<float4> conv : register(t0, space2);
 [[vk::binding(1, 2)]] Texture2D<float4> scene : register(t1, space2);

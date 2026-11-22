@@ -42,10 +42,10 @@ const RegionAtlas& Graficos::guardar(u64 k, bool ok) {
         aura_w_ = 0;
         return pendiente_;
     }
-    if (aura_w_) {  // icon + aura were uploaded as one image: the region covers the icon only
+    if (aura_w_) {  // ícono + aura se subieron como una sola imagen: la región cubre solo el ícono
         r.aura_dx = aura_w_;  // texels
         r.w = static_cast<u16>(aura_w_ / escala);
-        r.h = static_cast<u16>(r.h - AURA_PAD);  // logical: subir divided the (h + pad * scale) texels by scale
+        r.h = static_cast<u16>(r.h - AURA_PAD);  // lógico: subir dividió los (h + pad * escala) texels por la escala
         aura_w_ = 0;
     }
     if (int p = gpu_.tomar_pagina_reemplazada(); p >= 0) olvidar_pagina(static_cast<u16>(p));
@@ -94,9 +94,9 @@ const RegionAtlas& Graficos::img(u32 n) {
     });
 }
 
-// UI image n from the base Sprite.pak only. The bottom-strip buttons' rest art (odd ids 1005..1017) exists twice: the base
-// archive has the brown monochrome icon the 2009 captures show at rest, a SpriteNN.pak patch replaces it with a dark tile
-// version. The exe draws the first id at rest (0x47c760), so this is that image as the captured client had it.
+// Imagen n de la interfaz solo desde el Sprite.pak base. El arte en reposo de los botones de la franja inferior (ids impares 1005..1017) existe dos veces: el archivo
+// base tiene el ícono marrón monocromo que muestran en reposo las capturas de 2009, un parche SpriteNN.pak lo reemplaza con una versión
+// de tile oscuro. El exe dibuja el primer id en reposo (0x47c760), así que esta es esa imagen como la tenía el cliente capturado.
 const RegionAtlas& Graficos::img_base(u32 n) {
     return cargar(clave(T_IMG, n | 0x40000000u), [&] {
         char nombre[32];
@@ -113,7 +113,7 @@ const RegionAtlas& Graficos::img_base(u32 n) {
 
 const RegionAtlas& Graficos::img_mascara(u32 n, int px, int py, const u8* alfa, int mw, int mh) {
     const u64 k = clave(T_MAPA, static_cast<u64>(n) | static_cast<u64>(px & 0xFFFF) << 16 | static_cast<u64>(py & 0xFFFF) << 32);
-    if (k != mapa_clave_) {  // the view moved or another picture: drop the previous crop
+    if (k != mapa_clave_) {  // la vista se movió u otra imagen: se descarta el recorte anterior
         if (const u32* i = indice_.buscar(mapa_clave_)) olvidar(*i);
         mapa_clave_ = k;
     }
@@ -145,7 +145,7 @@ const RegionAtlas& Graficos::img_mascara(u32 n, int px, int py, const u8* alfa, 
 
 const RegionAtlas& Graficos::icono(u32 n) {
     return cargar(clave(T_ICONO, n), [&] {
-        // The aura sits next to the icon in the same upload: leave room for it (2 icon widths + padding).
+        // El aura va junto al ícono en la misma subida: se le deja lugar (2 anchos de ícono + relleno).
         if (hd_abierto_ && hd_.cargar(HdPack::Tipo::TBT, n, tmp_, (TAM_PAGINA - 1 - AURA_PAD * HD_SCALE) / 2, TAM_PAGINA - 1 - AURA_PAD * HD_SCALE)) {
             escala_tmp_ = HD_SCALE;
             aura_w_ = tmp_.ancho;
@@ -378,7 +378,7 @@ const RegionAtlas& Graficos::glifo(u32 g) {
 }
 
 const RegionAtlas& Graficos::glifo_hd(u32 g) {
-    constexpr u32 VARIANTE_HD = 1u << 28;  // apart from the pixel glyphs in the cache key
+    constexpr u32 VARIANTE_HD = 1u << 28;  // separada de los glifos de píxeles en la clave de la caché
     return cargar(clave(T_GLIFO, g | VARIANTE_HD), [&] {
         if (!fuente_.rasterizar_hd(g, tmp_)) return Carga::FALLO;
         escala_tmp_ = HD_ESCALA;
@@ -399,7 +399,7 @@ const RegionAtlas& Graficos::glifo_hd_mascara(u32 id, int ancho, int filas, cons
     });
 }
 
-// Layers below the UI are drawn before the scaling filter, so only UI text can go through the HD pass.
+// Las capas debajo de la interfaz se dibujan antes del filtro de escalado, así que solo el texto de la interfaz puede pasar por la pasada HD.
 bool Graficos::texto_hd_para(u64 clave_orden) const { return (clave_orden >> 56) >= CAPA_UI && gpu_.texto_hd(); }
 
 int Graficos::texto(std::string_view t, float x, float y, u64 clave_orden, u32 color) {

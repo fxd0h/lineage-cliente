@@ -23,12 +23,12 @@ namespace lin {
 
 constexpr int CELDAS_SEGMENTO = 64;
 
-// Second ground layer (the n x 6 byte table after the ground): transparent tiles (the 89.til
-// grass-edge tiles 134, 156, 178, 182, 187, 190...) laid over the ground at a half cell. The ground
-// layer alone leaves a regular lattice of brown dirt half-tiles in forests (map 4, around
-// 32639,32985) because these tiles are what covers them. decodificar_s32 appends them as one
-// pseudo-object of layer 0 pieces (the lowest ground-hugging layer), so they draw above the ground
-// and below shadows.
+// Segunda capa de suelo (la tabla de n x 6 bytes después del suelo): tiles transparentes (los tiles de borde de
+// pasto de 89.til 134, 156, 178, 182, 187, 190...) puestos sobre el suelo a media celda. La capa de suelo
+// sola deja en los bosques una retícula regular de medias celdas de tierra marrón (mapa 4, alrededor de
+// 32639,32985) porque son estos tiles los que las tapan. decodificar_s32 los agrega como un
+// pseudoobjeto de piezas de capa 0 (la capa más baja, pegada al suelo), así se dibujan sobre el suelo
+// y debajo de las sombras.
 
 struct TileObjetoMapa {
     u8 x, y;     // x en medias celdas, y en celdas (relativas al segmento)
@@ -43,11 +43,11 @@ struct TileObjetoMapa {
 struct ObjetoMapa {
     u32 primera, cantidad;
     u8 x0, y0, x1, y1;
-    u16 gid = 0xFFFF;  // object group id of the file (roof records refer to it); 0xFFFF = none
+    u16 gid = 0xFFFF;  // id de grupo de objetos del archivo (los registros de techo lo referencian); 0xFFFF = ninguno
 };
 
-// Roof record of the .s32 (block after the tile objects): the object group `gid` fades while the local player stands
-// in the cell. tipo 0 fades to 50%, tipo 1 to hidden. x is the cell column (half tiles / 2), relative to the segment.
+// Registro de techo del .s32 (bloque después de los objetos de tiles): el grupo de objetos `gid` se desvanece mientras el jugador local está
+// en la celda. tipo 0 se desvanece al 50%, tipo 1 hasta ocultarse. x es la columna de la celda (medias celdas / 2), relativa al segmento.
 struct TechoMapa {
     u8 x, y;
     u16 gid;
@@ -92,21 +92,21 @@ struct SegmentoMapa {
     u16 atributo_en(int x, int y, int mitad) const { return atributos[(y * CELDAS_SEGMENTO + x) * 2 + mitad]; }
 };
 
-// Zone type of a cell, from the attribute of its LEFT half (verified against the server's maps on
-// map 4: server tile & 0x30 == 0x10 <-> attribute bit 2, == 0x20 <-> bit 3; with both bits set the
-// server always says safety).
+// Tipo de zona de una celda, según el atributo de su mitad IZQUIERDA (verificado contra los mapas del servidor en
+// el mapa 4: tile del servidor & 0x30 == 0x10 <-> bit 2 del atributo, == 0x20 <-> bit 3; con ambos bits el
+// servidor siempre dice segura).
 enum class TipoZona : u8 { NORMAL, SEGURA, COMBATE };
 constexpr TipoZona tipo_zona_de_atributo(u16 atributo_izq) {
     if (atributo_izq & 4) return TipoZona::SEGURA;
     if (atributo_izq & 8) return TipoZona::COMBATE;
     return TipoZona::NORMAL;
 }
-// Label the original shows bottom-right of the screen ("Normal zone" / "Safety zone" / "Combat zone").
+// Etiqueta que el original muestra abajo a la derecha de la pantalla ("Normal zone" / "Safety zone" / "Combat zone").
 constexpr const char* rotulo_zona(TipoZona t) {
     return t == TipoZona::SEGURA ? "Safety zone" : t == TipoZona::COMBATE ? "Combat zone" : "Normal zone";
 }
 
-// Roof records registered on the absolute cell (x, y) of the segment (empty when outside it).
+// Registros de techo registrados en la celda absoluta (x, y) del segmento (vacío si está fuera).
 std::span<const TechoMapa> techos_en(const SegmentoMapa& s, int x, int y);
 
 // Nombre del archivo del segmento que contiene la celda (x, y).

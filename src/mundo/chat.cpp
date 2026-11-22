@@ -28,7 +28,7 @@ struct Salida {
 // Cantidad de bytes de `t` que entran en `cap` sin cortar un carácter CP949 de 2 bytes.
 size_t recorte_cp949(std::string_view t, size_t cap) {
     size_t i = 0;
-    if (es_utf8(t.data(), t.size())) {  // Big5 text of the 3.80C server arrives as UTF-8: cut on character boundaries
+    if (es_utf8(t.data(), t.size())) {  // el texto Big5 del servidor 3.80C llega como UTF-8: se corta en límites de carácter
         while (i < t.size()) {
             u32 cp = 0;
             const size_t w = largo_utf8(t.data(), t.size(), i, cp);
@@ -64,11 +64,11 @@ u32 color_chat(u8 tipo) {
 }
 
 u32 color_chat_original(u8 tipo, bool normal_path, std::string_view texto) {
-    // Text after the "Name: " prefix the server builds; S_Say tests the line start for '(' (whisper-like talk).
+    // Texto después del prefijo "Nombre: " que arma el servidor; S_Say revisa si la línea empieza con '(' (habla tipo susurro).
     if (normal_path) {
         if (tipo == CHAT_GRITO) return color(255, 230, 205);
         if (tipo == 0xf) return color(255, 131, 255);
-        // The server prefixes "Name: "; the original tests the spoken text.
+        // El servidor antepone "Nombre: "; el original revisa el texto hablado.
         const size_t p = texto.find(": ");
         const std::string_view dicho = p == std::string_view::npos ? texto : texto.substr(p + 2);
         return !dicho.empty() && dicho[0] == '(' ? color(189, 238, 230) : color(255, 255, 255);
@@ -124,8 +124,8 @@ u32 color_codigo(char c, u32 normal) {
     return es_codigo_color(c) ? rgb555(PALETA_F[c - 0x30]) : normal;
 }
 
-// Original name colour (S3EP1U 0x4cc140, RGB555 stored in the object): chaotic (< 0) fades from white to full red over
-// -64 per step, 0..499 stays white, lawful (>= 500) fades from white to full blue over 256 per step.
+// Color de nombre original (S3EP1U 0x4cc140, RGB555 guardado en el objeto): caótico (< 0) pasa de blanco a rojo pleno de a
+// -64 por paso, 0..499 queda blanco, legal (>= 500) pasa de blanco a azul pleno de a 256 por paso.
 u32 color_alineamiento(i32 legal) {
     if (legal < 0) {
         const int d = 31 - std::min((-legal >> 6) + 1, 31);
@@ -167,7 +167,7 @@ size_t expandir_desc(const TablaTexto& desc, std::string_view t, char* destino, 
 
 size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, const Evento& e, char* destino,
                          size_t capacidad, u32& c, bool original) {
-    // Original client: the default text colour is \\fH cream (255,246,180), used by 184 call sites.
+    // Cliente original: el color de texto por omisión es el crema \\fH (255,246,180), que usan 184 llamadas.
     u32 normal = e.v[MS_AZUL] ? COLOR_AZUL : original ? color(255, 246, 180) : COLOR_MENSAJE;
     c = normal;
     std::string_view plantilla = mensajes.linea(static_cast<size_t>(e.v[MS_ID]));
@@ -195,7 +195,7 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
             if (k < e.v[MS_NARGS]) s.n += expandir_desc(desc, e.s[k], destino + s.n, capacidad - s.n);
             ++i;
         } else if (ch == '%' && i + 1 < plantilla.size() && (plantilla[i + 1] == 's' || plantilla[i + 1] == 'd')) {
-            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" and "%d" = %0
+            if (e.v[MS_NARGS] > 0) s.n += expandir_desc(desc, e.s[0], destino + s.n, capacidad - s.n);  // "%s" y "%d" = %0
             ++i;
         } else {
             s.poner(plantilla.substr(i, 1));
@@ -206,7 +206,7 @@ size_t formatear_mensaje(const TablaTexto& mensajes, const TablaTexto& desc, con
 
 int direccion_grito(int dx, int dy) {
     if (dx == 0 && dy == 0) return -1;
-    // atan(dy / dx) in degrees (the exe: fpatan(dy/dx, 1) * 180 / pi), +-90 when dx == 0; thresholds from 0x4f2610..0x4f2648.
+    // atan(dy / dx) en grados (el exe: fpatan(dy/dx, 1) * 180 / pi), +-90 cuando dx == 0; umbrales de 0x4f2610..0x4f2648.
     const double deg = dx == 0 ? (dy > 0 ? 90.0 : -90.0) : std::atan(static_cast<double>(dy) / dx) * 180.0 / 3.14159265358979323846;
     if (dx >= 0) return deg > 70 ? 7 : deg > 15 ? 0 : deg > -20 ? 1 : deg > -65 ? 2 : 3;
     return deg > 75 ? 3 : deg > 20 ? 4 : deg > -17 ? 5 : deg > -73 ? 6 : 7;

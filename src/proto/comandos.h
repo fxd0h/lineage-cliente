@@ -103,7 +103,7 @@ inline Escritor usar_item(const TablaOpcodes& t, u32 item) {
     e.d(item).c(0);
     return e;
 }
-// C_UseItem of a cook book with a chosen recipe (S3EP1U 0x4d3900, "cdcc"): d item, c 1 (cookStatus), c recipe.
+// C_UseItem de un libro de cocina con una receta elegida (S3EP1U 0x4d3900, "cdcc"): d objeto, c 1 (cookStatus), c receta.
 inline Escritor cocinar(const TablaOpcodes& t, u32 item, u8 receta) {
     Escritor e(t, Cli::USEITEM);
     e.d(item).c(1).c(receta);
@@ -137,7 +137,7 @@ inline Escritor usar_item_sobre(const TablaOpcodes& t, u32 item, u32 objetivo) {
     e.d(item).d(objetivo);
     return e;
 }
-// C_UseItem of an item aimed at an object or cell (useType 5, 17, 39: wands, spell scrolls): d item, d target, h x, h y.
+// C_UseItem de un objeto apuntado a un objeto o una celda (useType 5, 17, 39: varitas, pergaminos de hechizo): d objeto, d objetivo, h x, h y.
 inline Escritor usar_item_apuntado(const TablaOpcodes& t, u32 item, u32 objetivo, u16 x, u16 y) {
     Escritor e(t, Cli::USEITEM);
     e.d(item).d(objetivo).h(x).h(y);
@@ -204,17 +204,17 @@ inline Escritor guerra(const TablaOpcodes& t, TipoGuerra tipo, std::string_view 
     e.c(tipo).s(clan);
     return e;
 }
-// C_Ship (s3ep1): h destination map, h x, h y. The original (0x4a6750..0x4a6bc8) sends it from the ship scene clock.
+// C_Ship (s3ep1): h mapa de destino, h x, h y. El original (0x4a6750..0x4a6bc8) lo manda desde el reloj de la escena del barco.
 inline Escritor barco(const TablaOpcodes& t, u16 mapa, u16 x, u16 y) {
     Escritor e(t, Cli::SHIP);
     e.h(mapa).h(x).h(y);
     return e;
 }
-// C_Rank sub 2 / 3 / 4: alliance list / join / leave (Whale reads c sub, c rank, s name; s3ep1 only c sub).
+// C_Rank sub 2 / 3 / 4: lista de alianza / unirse / salir (Whale lee c sub, c rango, s nombre; s3ep1 solo c sub).
 inline Escritor alianza(const TablaOpcodes& t, u8 sub, std::string_view clan = {}) {
     Escritor e(t, Cli::RANK);
     e.c(sub);
-    if (t.perfil.bytes_numero_pregunta) e.c(0).s(clan);  // the US 2009 client sends only `cc` (join = face to face)
+    if (t.perfil.bytes_numero_pregunta) e.c(0).s(clan);  // el cliente US 2009 manda solo `cc` (unirse = cara a cara)
     return e;
 }
 // C_Rank sub 1 (/rank): c 1, c rank, s name.
@@ -229,16 +229,16 @@ inline Escritor emote(const TablaOpcodes& t, u8 accion) {
     e.c(accion);
     return e;
 }
-// C_Propose: c 0 proposes to the character you face, c 1 divorces.
+// C_Propose: c 0 le propone al personaje que uno tiene enfrente, c 1 se divorcia.
 inline Escritor proponer(const TablaOpcodes& t, bool divorcio) {
     Escritor e(t, Cli::PROPOSE);
     e.c(divorcio ? 1 : 0);
     return e;
 }
-// C_Fight (/duel, the character you face) and C_CheckPK (/checkpk): opcode only.
+// C_Fight (/duel, el personaje que uno tiene enfrente) y C_CheckPK (/checkpk): solo el opcode.
 inline Escritor duelo(const TablaOpcodes& t) { return Escritor(t, Cli::FIGHT); }
 inline Escritor ver_pk(const TablaOpcodes& t) { return Escritor(t, Cli::CHECKPK); }
-// C_CreateParty type 2 (/chatinvite): s name (invites to the chat party).
+// C_CreateParty tipo 2 (/chatinvite): s nombre (invita al grupo de chat).
 inline Escritor invitar_chat(const TablaOpcodes& t, std::string_view nombre) {
     Escritor e(t, Cli::CREATEPARTY);
     e.c(2).s(nombre);
@@ -264,7 +264,7 @@ inline Escritor invitar_grupo(const TablaOpcodes& t, u32 personaje, u8 tipo = 0)
     e.c(tipo).d(personaje);
     return e;
 }
-// C_LoginToServerOK: c what (0 world chat, 2 whisper, 6 trade chat), c 1 receive / 0 refuse (the chat toggles of the Options page).
+// C_LoginToServerOK: c qué (0 chat del mundo, 2 susurro, 6 chat de comercio), c 1 recibir / 0 rechazar (las opciones de chat de la página de Opciones).
 inline Escritor opcion_chat(const TablaOpcodes& t, u8 que, bool recibir) {
     Escritor e(t, Cli::LOGINTOSERVEROK);
     e.c(que).c(recibir ? 1 : 0);

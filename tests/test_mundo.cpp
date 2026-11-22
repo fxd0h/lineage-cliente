@@ -419,7 +419,7 @@ TEST_CASE("Inventario: lineas del tooltip original (nombre a 23 columnas, atribu
     LineasTip t;
     armar_tooltip_item("Dagger", "Damage 1 (small) / 1 (large)\nMaterial: iron\nWeight 12", t);
     CHECK(t.nombre == 1);
-    CHECK(t.n == 5);  // the 28-column damage line wraps in two
+    CHECK(t.n == 5);  // la línea de daño de 28 columnas se parte en dos
     CHECK(std::string_view(t.texto[0]) == "Dagger");
     CHECK(std::string_view(t.texto[1]) == "Damage 1 (small) / 1");
     CHECK(std::string_view(t.texto[2]) == "(large)");
@@ -496,7 +496,7 @@ TEST_CASE("Zone type from the left-half cell attribute") {
     CHECK(tipo_zona_de_atributo(4) == TipoZona::SEGURA);
     CHECK(tipo_zona_de_atributo(5) == TipoZona::SEGURA);
     CHECK(tipo_zona_de_atributo(8) == TipoZona::COMBATE);
-    CHECK(tipo_zona_de_atributo(12) == TipoZona::SEGURA);  // both bits: the server says safety
+    CHECK(tipo_zona_de_atributo(12) == TipoZona::SEGURA);  // los dos bits: el servidor dice segura
     CHECK(std::string_view(rotulo_zona(TipoZona::SEGURA)) == "Safety zone");
     CHECK(std::string_view(rotulo_zona(TipoZona::COMBATE)) == "Combat zone");
     CHECK(std::string_view(rotulo_zona(TipoZona::NORMAL)) == "Normal zone");
@@ -510,10 +510,10 @@ TEST_CASE("icono_de_caja: S_PacketBox buff icons pick their slot from the sprite
             if (j.efectos[i].clase == EA_ICONO && j.efectos[i].tipo == EFECTO_RANURA + ranura) return true;
         return false;
     };
-    icono_de_caja(j, 35, 600, nada, 0x16de, 0, 1000);  // polymorph into a sprite of the 0x16dd-0x16e6 range
+    icono_de_caja(j, 35, 600, nada, 0x16de, 0, 1000);  // polymorph a un sprite del rango 0x16dd-0x16e6
     CHECK(tiene(0x4b));
     CHECK_FALSE(tiene(0x27));
-    icono_de_caja(j, 35, 600, nada, 0x100, 0, 1000);  // another sprite: the other slot replaces it
+    icono_de_caja(j, 35, 600, nada, 0x100, 0, 1000);  // otro sprite: la otra casilla lo reemplaza
     CHECK(tiene(0x27));
     CHECK_FALSE(tiene(0x4b));
     icono_de_caja(j, 35, 0, nada, 0x100, 0, 2000);  // t 0 removes
@@ -532,7 +532,7 @@ TEST_CASE("icono_de_caja: S_PacketBox buff icons pick their slot from the sprite
     icono_de_caja(j, 21, 0, espejo, 0, 4, 0);  // dark elf: b3 -> slot 0x20
     CHECK(tiene(0x20));
     const i32 n3[4] = {3, 0, 0, 0};
-    icono_de_caja(j, 75, 0, n3, 0, 0, 0);  // n = 3 > 0: slot 0x87 until 59 removes it
+    icono_de_caja(j, 75, 0, n3, 0, 0, 0);  // n = 3 > 0: casilla 0x87 hasta que 59 la quite
     CHECK(tiene(0x87));
     icono_de_caja(j, 59, 0, nada, 0, 0, 0);
     CHECK_FALSE(tiene(0x87));

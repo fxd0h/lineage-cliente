@@ -6,8 +6,8 @@ namespace {
 constexpr u32 ALPHA_OUTER = 85;   // 255 / 3
 constexpr u32 ALPHA_INNER = 142;  // 255 * 5 / 9
 
-// Is an icon pixel opaque at distance d (left, right, up or down, not the centre) from (x, y)? This is the
-// exe's plus-shaped mask shift (0x446099..0x4461fa: masks shifted by +/-d px, no centre).
+// ¿Hay un píxel opaco del ícono a distancia d (izquierda, derecha, arriba o abajo, no el centro) de (x, y)? Es el
+// corrimiento de máscara en forma de cruz del exe (0x446099..0x4461fa: máscaras corridas +/-d px, sin centro).
 bool hit_at(const ImagenRGBA& icon, int x, int y, int d) {
     auto opaque = [&](int ix, int iy) {
         return ix >= 0 && iy >= 0 && ix < icon.ancho && iy < icon.alto &&
@@ -23,7 +23,7 @@ void build_bless_aura(const ImagenRGBA& icon, ImagenRGBA& aura, int scale) {
     for (int y = 0; y < h + pad; ++y)
         for (int x = 0; x < w + pad; ++x) {
             const int ix = x - pad / 2, iy = y - pad / 2;
-            // Two passes each lighten 1/3 toward white (LUT 0x8f173c): the +/-2 px mask, then the +/-1 px one.
+            // Dos pasadas aclaran cada una 1/3 hacia el blanco (LUT 0x8f173c): la máscara de +/-2 px, después la de +/-1 px.
             const int passes = (hit_at(icon, ix, iy, 2 * scale) ? 1 : 0) + (hit_at(icon, ix, iy, scale) ? 1 : 0);
             const u32 a = passes == 2 ? ALPHA_INNER : passes == 1 ? ALPHA_OUTER : 0;
             aura.px[static_cast<size_t>(y) * aura.ancho + x] = 0x00FFFFFFu | (a << 24);

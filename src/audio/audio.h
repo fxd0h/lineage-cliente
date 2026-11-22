@@ -42,11 +42,11 @@ public:
     // entre repeticiones.
     void musica(i32 n, u32 intervalo_s, u64 ahora_ms);
     i32 musica_actual() const { return musica_n_; }
-    // Same, but a track that is playing fades out first (the original's 0x479ed0 + timer 0x479dd0: volume -8/127
-    // every 50 ms, about 0.8 s) and the new one then starts at full volume. Repeating the call is harmless.
+    // Lo mismo, pero una pista que está sonando primero se desvanece (0x479ed0 + temporizador 0x479dd0 del original: volumen -8/127
+    // cada 50 ms, unos 0,8 s) y después la nueva empieza a volumen completo. Repetir la llamada no hace daño.
     void musica_fundido(i32 n, u32 intervalo_s, u64 ahora_ms);
     // Un efecto, con `ganancia` de 0 a 1 (además del volumen de efectos).
-    // `solapar`: may start while the same sound still plays; `unico`: only starts if it is not playing at all.
+    // `solapar`: puede empezar mientras el mismo sonido todavía suena; `unico`: solo empieza si no está sonando para nada.
     void efecto(u32 id, float ganancia, u64 ahora_ms, bool solapar = false, bool unico = false);
     // Sonido de ambiente en bucle (-1 = ninguno).
     void ambiente(i32 id);
@@ -72,7 +72,7 @@ private:
     static void alimentar_ambiente(void* yo, SDL_AudioStream* s, int falta, int total);
 
     std::string carpeta_;
-    std::vector<std::string> carpetas_;  // <game>/sound/ then the juego_extra= ones, in lookup order
+    std::vector<std::string> carpetas_;  // <juego>/sound/ y después las de juego_extra=, en orden de búsqueda
     std::string ruta_sonido(const std::string& nombre) const;
     u32 dispositivo_ = 0;
     SDL_AudioStream* stream_musica_ = nullptr;

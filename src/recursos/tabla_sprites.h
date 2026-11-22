@@ -28,15 +28,15 @@ struct FrameAccion {
     u16 frame;     // frame dentro del .spr
     u8 duracion;   // en ticks
     bool impacto;  // sufijo "!": el golpe alcanza al objetivo en este frame
-    i16 sonido;    // first sound id, -1 if none (suffixes "<N", "[N", "^N"; up to 3 per frame, see agregar_sonido)
-    i16 sonido_mas[2];  // second and third sound ids (one of the up to 3 is picked at random each time the frame shows)
+    i16 sonido;    // primer id de sonido, -1 si no hay (sufijos "<N", "[N", "^N"; hasta 3 por cuadro, ver agregar_sonido)
+    i16 sonido_mas[2];  // segundo y tercer id de sonido (de los hasta 3 se elige uno al azar cada vez que se muestra el cuadro)
     u8 modo_sonido[3];  // per id: ModoSonido
     u8 n_sonidos;
     u16 efecto;    // sufijo "]N": al mostrarse este frame nace el gráfico N (polvo, chispas...); 0 = ninguno
 };
 
-// Frame sound suffixes (S3EP1U): "<N" may overlap itself, "[N" only starts if not already playing, "^N" is
-// scaled by the distance to the listener.
+// Sufijos de sonido de los cuadros (S3EP1U): "<N" puede superponerse consigo mismo, "[N" solo empieza si no está sonando, "^N" se
+// escala según la distancia a quien escucha.
 enum ModoSonido : u8 { SONIDO_SOLAPA = 0, SONIDO_UNICO = 1, SONIDO_DISTANCIA = 2 };
 
 inline void agregar_sonido(FrameAccion& f, ModoSonido modo, int id) {
@@ -61,73 +61,73 @@ enum TipoGfx : u8 { TIPO_CARTEL = 4, TIPO_PERSONAJE = 5, TIPO_ITEM = 9, TIPO_MON
 // variante por arma: acción + código de arma (4 espada, 11 hacha, 20 arco...); morir no.
 enum Accion : u8 { ACC_CAMINAR = 0, ACC_ATACAR = 1, ACC_DANADO = 2, ACC_QUIETO = 3, ACC_MORIR = 8 };
 
-// Moves a death row's leading entry (the sprite file's last frame) to the end; see tabla_sprites.cpp.
+// Mueve al final la entrada inicial de una fila de muerte (el último cuadro del archivo del sprite); ver tabla_sprites.cpp.
 void poner_cadaver_al_final(std::vector<FrameAccion>& frames, const RangoAccion& r);
 
-// Result of merging list.spz into the table.
+// Resultado de fusionar list.spz en la tabla.
 struct ResumenLista {
-    u32 nuevos = 0;        // gfx with actions that had no row in sprite_table.txt
-    u32 reemplazados = 0;  // gfx already in sprite_table.txt: kept, the list.spz rows are ignored
-    u32 omitidos = 0;      // entries already without actions, or without any file, left alone
-    u32 atributos = 0;     // new gfx without actions (ground items, objects): only type, shadow, alias...
-    u32 sin_archivo = 0;   // new gfx whose sprite file (alias) is missing from our paks: redirected or left out
-    u32 recortados = 0;    // new gfx with frames (or whole actions) dropped because our paks lack those images
+    u32 nuevos = 0;        // gfx con acciones que no tenían fila en sprite_table.txt
+    u32 reemplazados = 0;  // gfx que ya estaban en sprite_table.txt: se conservan, las filas de list.spz se ignoran
+    u32 omitidos = 0;      // entradas ya sin acciones, o sin ningún archivo, que se dejan como están
+    u32 atributos = 0;     // gfx nuevos sin acciones (objetos del suelo, objetos): solo tipo, sombra, alias...
+    u32 sin_archivo = 0;   // gfx nuevos cuyo archivo de sprite (alias) falta en nuestros paks: redirigidos o descartados
+    u32 recortados = 0;    // gfx nuevos con cuadros (o acciones enteras) descartados porque a nuestros paks les faltan esas imágenes
 };
 
-// Attribute 100 rectangle: x in half tiles (the exe steps it by 2), y in tiles, relative to the object's cell.
+// Rectángulo del atributo 100: x en medias celdas (el exe avanza de a 2), y en celdas, relativo a la celda del objeto.
 struct RectTransparencia {
     i16 x1, y1, x2, y2;
 };
 
-// Number of images in sprite file "<gfx>-<sub>.spr" of the loaded paks; 0 when the file is absent.
+// Cantidad de imágenes del archivo de sprite "<gfx>-<sub>.spr" de los paks cargados; 0 si el archivo no está.
 using ContadorFrames = std::function<u32(GfxId gfx, u16 sub)>;
 
 class TablaSprites {
 public:
     bool cargar(const std::vector<u8>& texto);
     bool cargar_archivo(const std::string& ruta);
-    // Merges a plaintext list.spz (see lista_sprites.cpp): its gfx replace or add to the loaded ones.
-    // Call after cargar(). Returns false when the text has no usable entry.
-    // With `contador`, rows are checked against our sprite paks (list.spz comes from a newer client): frames
-    // pointing at images we lack are dropped, an alias without files falls back to the gfx's own file, and
-    // entries with no drawable file are left out (the gfx keeps the no-row behaviour).
+    // Fusiona un list.spz en texto plano (ver lista_sprites.cpp): sus gfx reemplazan o se suman a los cargados.
+    // Llamar después de cargar(). Devuelve false si el texto no tiene ninguna entrada usable.
+    // Con `contador`, las filas se revisan contra nuestros paks de sprites (list.spz viene de un cliente más nuevo): los cuadros
+    // que apuntan a imágenes que no tenemos se descartan, un alias sin archivos vuelve al archivo propio del gfx, y
+    // las entradas sin ningún archivo dibujable se dejan fuera (el gfx conserva el comportamiento sin fila).
     bool fusionar_lista(std::string_view texto, ResumenLista& resumen, const ContadorFrames* contador = nullptr);
     bool fusionar_lista_archivo(const std::string& ruta, ResumenLista& resumen,
                                 const ContadorFrames* contador = nullptr);
-    // gfx with at least one action row in sprite_table.txt (before any merge).
+    // gfx con al menos una fila de acción en sprite_table.txt (antes de cualquier fusión).
     u32 gfx_de_tabla() const { return gfx_de_tabla_; }
 
     const RangoAccion* accion(GfxId gfx, u8 accion) const;
     const FrameAccion& frame(u32 i) const { return frames_[i]; }
-    // Sub-sprite for a gfx without table rows: the files are laid out 8 headings per group, group 0
-    // first; a heading outside 0-7 falls back to sub 0.
+    // Subsprite para un gfx sin filas en la tabla: los archivos van de a 8 rumbos por grupo, el grupo 0
+    // primero; un rumbo fuera de 0-7 vuelve al sub 0.
     static u16 sub_sin_fila(u8 dir) { return dir < 8 ? dir : 0; }
     GfxId gfx_archivos(GfxId gfx) const { return gfx < alias_.size() ? alias_[gfx] : gfx; }
     i16 sombra(GfxId gfx) const { return gfx < sombra_.size() ? sombra_[gfx] : -1; }
     // Tipo de gfx (atributo 102): TIPO_ITEM para los ítems del suelo, TIPO_MONSTRUO... 0 si no tiene.
     u8 tipo(GfxId gfx) const { return gfx < tipo_.size() ? tipo_[gfx] : 0; }
-    // Attribute 104 -> blend mode (screen for the spell effects and flames, multiply for the torch discs...).
+    // Atributo 104 -> modo de mezcla (screen para los efectos de hechizos y las llamas, multiplicar para los discos de las antorchas...).
     ModoMezcla modo(GfxId gfx) const { return gfx < atributos_.size() ? modo_de_atributo(atributos_[gfx]) : ModoMezcla::NORMAL; }
-    // Attribute 111 (stride): the walk is two half-strides, action 0 and action 4 (each starts on the
-    // other's pose), played on alternate steps. Valakas, Antharas, the race bugbears, the dogs...
+    // Atributo 111 (zancada): la caminata son dos medias zancadas, la acción 0 y la acción 4 (cada una empieza en la
+    // pose de la otra), reproducidas en pasos alternados. Valakas, Antharas, los bugbears de carrera, los perros...
     bool zancada(GfxId gfx) const { return gfx < zancada_.size() && zancada_[gfx]; }
-    // Walk action for a step of a stride sprite (S3EP1U 0x4c6ff0: a per-object step counter picks from
-    // {0, 4}, whatever the weapon status): 0 on even steps, 4 on odd ones if the sprite has it.
+    // Acción de caminata para un paso de un sprite con zancada (S3EP1U 0x4c6ff0: un contador de pasos por objeto elige entre
+    // {0, 4}, sea cual sea el estado del arma): 0 en los pasos pares, 4 en los impares si el sprite la tiene.
     u8 accion_caminar(GfxId gfx, u8 paso) const { return paso & 1 && accion(gfx, 4) ? 4 : 0; }
-    // Attribute 105 (clothes): gfx drawn over the body, after it and in list order, with the body's
-    // sub-sprite and frame and their own attribute 104 (S3EP1U 0x4cbc50 / 0x4cbdb0). Valakas -> 2003.
+    // Atributo 105 (ropa): gfx dibujados sobre el cuerpo, después de él y en el orden de la lista, con el subsprite y el
+    // cuadro del cuerpo y su propio atributo 104 (S3EP1U 0x4cbc50 / 0x4cbdb0). Valakas -> 2003.
     std::span<const GfxId> ropa(GfxId gfx) const {
         return gfx < ropa_.size() ? std::span<const GfxId>(ropa_[gfx]) : std::span<const GfxId>{};
     }
-    // Attribute 109 type 2 ("109.effect(2 x)"): an effect spawned by S_UseAttackSkill that holds full light from its 3rd frame.
+    // Atributo 109 tipo 2 ("109.effect(2 x)"): un efecto creado por S_UseAttackSkill que mantiene la luz al máximo desde su 3.er cuadro.
     bool flash_de_luz(GfxId gfx) const { return flash_.buscar(gfx) != nullptr; }
-    // Attribute 113 (morph effect, S3EP1U 0x488f60): effect gfx spawned at an object that changes into this gfx; 0 if none.
+    // Atributo 113 (efecto de transformación, S3EP1U 0x488f60): gfx del efecto que aparece en un objeto que se transforma en este gfx; 0 si no hay.
     GfxId morfo(GfxId gfx) const {
         const u32* i = morfo_.buscar(gfx);
         return i ? static_cast<GfxId>(*i) : 0;
     }
-    // Attribute 100 (see-through trigger, S3EP1U): while the local player stands inside any rectangle of the object
-    // (dx, dy = player cell minus object cell) the object is drawn at 50%. True when the gfx has none registered.
+    // Atributo 100 (disparador de transparencia, S3EP1U): mientras el jugador local está dentro de cualquier rectángulo del objeto
+    // (dx, dy = celda del jugador menos celda del objeto) el objeto se dibuja al 50%. True si el gfx no tiene ninguno registrado.
     bool dentro_transparencia(GfxId gfx, int dx, int dy) const {
         const u32* i = transp_.buscar(gfx);
         if (!i) return false;
@@ -168,15 +168,15 @@ private:
     std::vector<u8> tipo_;
     std::vector<u16> atributos_;
     std::vector<GfxId> siguiente_;
-    MapaHash transp_;  // gfx -> index into rects_transp_ (attribute 100), only the gfx that have rectangles
+    MapaHash transp_;  // gfx -> índice en rects_transp_ (atributo 100), solo los gfx que tienen rectángulos
     std::vector<std::vector<RectTransparencia>> rects_transp_;
     void poner_transparencia(GfxId gfx, std::vector<RectTransparencia> r) {
         if (r.empty()) return;
         transp_.poner(gfx, static_cast<u32>(rects_transp_.size()));
         rects_transp_.push_back(std::move(r));
     }
-    MapaHash flash_;  // gfx -> 1 for sprites whose attribute 109 type is 2 (light-flash effects, RE_ROUND4 section 4)
-    MapaHash morfo_;  // gfx -> morph effect gfx (attribute 113), only the gfx that have one
+    MapaHash flash_;  // gfx -> 1 para los sprites cuyo atributo 109 es de tipo 2 (efectos de destello, RE_ROUND4 sección 4)
+    MapaHash morfo_;  // gfx -> gfx del efecto de transformación (atributo 113), solo los gfx que tienen uno
 };
 
 }  // namespace lin

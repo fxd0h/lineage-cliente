@@ -38,9 +38,9 @@ private:
 
 u64 hash_nombre(std::string_view nombre);  // FNV-1a de 64 bits sobre el nombre en minúsculas
 
-// Todos los contenedores del juego. The first source is the primary install (juego=); the following ones are
-// the juego_extra= folders, tried in order for anything the previous ones lack (sprites, tiles, loose
-// sprite/ and map/ files, html pages). Text tables (.tbl, .def, spells) come from the primary only.
+// Todos los contenedores del juego. La primera fuente es la instalación principal (juego=); las siguientes son
+// las carpetas de juego_extra=, probadas en orden para lo que les falte a las anteriores (sprites, tiles, archivos sueltos de
+// sprite/ y map/, páginas html). Las tablas de texto (.tbl, .def, hechizos) salen solo de la principal.
 class Recursos {
 public:
     bool abrir(const std::string& carpeta_juego, const std::vector<std::string>& extras = {});
@@ -50,11 +50,11 @@ public:
     Bytes tile(std::string_view nombre) const;    // Tile.pak, loose Tile/ per source
     // Text.pak: los archivos también van cifrados con DES; se devuelven ya descifrados.
     bool texto(std::string_view nombre, std::vector<u8>& salida) const;
-    // First source that has `relativa` (e.g. "map/4/7fff8000.s32", "sound/12.wav"); the primary's path if none.
+    // Primera fuente que tiene `relativa` (p. ej. "map/4/7fff8000.s32", "sound/12.wav"); la ruta de la principal si ninguna.
     std::string ruta_archivo(const std::string& relativa) const;
-    // Which source (0 = primary) served the last lookups is not tracked; this tells where a sprite name resolves.
-    // Same lookup but only in Sprite.pak (the base archive): the hashed SpriteNN.pak patches are skipped. The captured 2009 client
-    // still shows the base art of some UI images (bottom-strip buttons) that the patches replaced.
+    // No se registra qué fuente (0 = principal) atendió las últimas búsquedas; esto dice dónde se resuelve el nombre de un sprite.
+    // La misma búsqueda pero solo en Sprite.pak (el archivo base): se saltan los parches SpriteNN.pak con hash. El cliente 2009 capturado
+    // todavía muestra el arte base de algunas imágenes de la interfaz (botones de la franja inferior) que los parches reemplazaron.
     Bytes sprite_base(std::string_view nombre) const;
     int fuente_de_sprite(std::string_view nombre) const;
     size_t fuentes() const { return fuentes_.size(); }
@@ -67,8 +67,8 @@ private:
     struct Fuente {
         std::string carpeta;
         Pak sprite_base, sprite_hash[16], tile, texto;
-        mutable std::mutex mu;  // loose-file cache (sprite() is called from several threads)
-        mutable std::unordered_map<std::string, ArchivoMapeado> sueltos;  // empty mapping = known missing
+        mutable std::mutex mu;  // caché de archivos sueltos (sprite() se llama desde varios hilos)
+        mutable std::unordered_map<std::string, ArchivoMapeado> sueltos;  // mapeo vacío = se sabe que falta
     };
     static Bytes suelto(const Fuente& f, std::string_view dir, std::string_view nombre);
     static Bytes en_fuente(const Fuente& f, std::string_view nombre);

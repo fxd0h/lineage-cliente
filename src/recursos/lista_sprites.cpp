@@ -91,7 +91,7 @@ void leer_accion(Lector c, std::vector<FrameAccion>& frames, RangoAccion& r) {
                 const int n = c.numero();
                 if (hay && (s == '<' || s == '[' || s == '^'))
                     agregar_sonido(f, s == '<' ? SONIDO_SOLAPA : s == '[' ? SONIDO_UNICO : SONIDO_DISTANCIA, n);
-                else if (hay && s == ']') f.efecto = static_cast<u16>(n);  // "{" and "}" (newer clients) are skipped
+                else if (hay && s == ']') f.efecto = static_cast<u16>(n);  // "{" y "}" (clientes más nuevos) se saltan
             }
         }
         frames.push_back(f);

@@ -15,9 +15,9 @@ namespace lin {
 
 namespace {
 
-// Overhead HP/MP bar, drawn with the original client's images (Sprite pak): 930.img is the empty
-// bar, 931.img / 932.img the red / blue fill, all 44x5 with a golden frame. The fill is clipped to
-// the current fraction, like the panel bars. (x, y) is the top-left corner.
+// Barra de HP/MP sobre la cabeza, dibujada con las imágenes del cliente original (pak de Sprite): 930.img es la barra
+// vacía, 931.img / 932.img el relleno rojo / azul, todas de 44x5 con marco dorado. El relleno se recorta a
+// la fracción actual, como las barras del panel. (x, y) es la esquina superior izquierda.
 constexpr u32 IMG_OVERHEAD_EMPTY = 930, IMG_OVERHEAD_HP = 931, IMG_OVERHEAD_MP = 932;
 
 void overhead_bar(Graficos& g, int x, int y, u32 fill_img, i32 value, i32 max) {
@@ -45,8 +45,8 @@ constexpr u64 MS_ENCADENAR_PASO = 10;
 constexpr int HUD_Y = 366;  // desde esta fila hacia abajo está el panel: el clic no camina
 constexpr u32 IMG_PANEL_IZQ = 1028, IMG_PANEL_DER = 1019, IMG_CHAT = 1042, IMG_ENTRADA_CHAT = 1039,
               IMG_CHAT_ADORNO = 1043, IMG_CHAT_ALAS = 1044;
-// Game-time orb (S3EP1U 0x416160, group table 0x500228, UI image table [0x8f0b1c]): 12 groups of two game hours,
-// {first image, frame count, sparkle x, sparkle y}; the resting image is the group's last frame, drawn at (295, 359).
+// Orbe de la hora del juego (S3EP1U 0x416160, tabla de grupos 0x500228, tabla de imágenes de la interfaz [0x8f0b1c]): 12 grupos de dos horas del juego,
+// {primera imagen, cantidad de cuadros, x del destello, y del destello}; la imagen en reposo es el último cuadro del grupo, dibujado en (295, 359).
 struct GrupoOrbe { u16 primera, frames, x, y; };
 constexpr GrupoOrbe ORBE_GRUPOS[12] = {{1237, 2, 305, 381}, {1239, 2, 298, 379}, {1241, 3, 293, 374}, {1244, 2, 292, 367},
                                        {1316, 2, 293, 360}, {1318, 2, 298, 354}, {1213, 2, 305, 352}, {1215, 2, 313, 354},
@@ -124,10 +124,10 @@ u32 profundidad(float fila_pantalla, u32 orden, u32 sub) {
     return (static_cast<u32>(v < 0 ? 0 : v) << 9) | ((orden & 63) << 3) | (sub & 7);
 }
 
-// Original UI draw order (frame renderer 0x465c30, insertion 0x460230): cells are visited by screen row (12 px) top to
-// bottom, then screen column (24 px) left to right; each cell draws its list in layer order. A map piece sits in its own
-// cell with its own layer byte; a character's body is in its cell at layer 18 (the foot part of the .spr). Within a cell
-// and layer the map piece goes after the object (later-added entries draw first). `sx`, `sy`: the cell's screen corner.
+// Orden de dibujo de la interfaz original (renderizador de cuadro 0x465c30, inserción 0x460230): las celdas se recorren por fila de pantalla (12 px) de arriba
+// abajo, después por columna de pantalla (24 px) de izquierda a derecha; cada celda dibuja su lista en orden de capa. Una pieza del mapa está en su propia
+// celda con su propio byte de capa; el cuerpo de un personaje está en su celda en la capa 18 (la parte de los pies del .spr). Dentro de una celda
+// y capa la pieza del mapa va después del objeto (las entradas agregadas después se dibujan primero). `sx`, `sy`: la esquina de la celda en pantalla.
 u32 clave_celda(float sx, float sy, u32 capa, u32 sub) {
     const i32 r = std::clamp(static_cast<i32>(std::floor(sy / 12.0f)) + 512, 0, 1023);
     const i32 c = std::clamp(static_cast<i32>(std::floor(sx / 24.0f)) + 512, 0, 1023);
@@ -145,7 +145,7 @@ struct AccionVisible {
     u64 inicio = 0;
     bool puntual = false;  // al terminar se vuelve a caminar/quieto
     bool bucle = true;
-    u32 ritmo_num = 1, ritmo_den = 1;  // elapsed time scale (frame lengths divided by num / den)
+    u32 ritmo_num = 1, ritmo_den = 1;  // escala del tiempo transcurrido (los largos de cuadro se dividen por num / den)
 };
 AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     const TablaObjetos& o = a.mundo.objetos;
@@ -178,15 +178,15 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         base = accion;
         v.inicio = o.col<O_TACCION>()[s];
         v.puntual = true;
-        // Only attack and damage add the weapon stance; every other action id is absolute (SetAction 0x4c96c0): a spell
-        // (18, 19) or an emote must not become another weapon's row.
+        // Solo el ataque y el daño suman la postura del arma; todo otro id de acción es absoluto (SetAction 0x4c96c0): un hechizo
+        // (18, 19) o un gesto no debe volverse la fila de otra arma.
         if (base != ACC_ATACAR && base != ACC_DANADO) arma = 0;
-        // A damage from an attack packet's hit plays at half length ([+0x11d], 0x4cda90).
+        // Un daño por el golpe de un paquete de ataque se reproduce a la mitad de largo ([+0x11d], 0x4cda90).
         if (base == ACC_DANADO && o.col<O_DANO_RAPIDO>()[s]) v.ritmo_num *= 2;
     } else if (caminando(a.mundo, s, ahora)) {
         base = ACC_CAMINAR;
         v.inicio = o.col<O_TMOV>()[s];
-        // Stride sprites (list.spz 111): steps alternate the half-strides 0 and 4, whatever the weapon.
+        // Sprites de zancada (list.spz 111): los pasos alternan las medias zancadas 0 y 4, sea cual sea el arma.
         if (a.sprites.zancada(gfx)) {
             base = a.sprites.accion_caminar(gfx, o.col<O_ZANCADA>()[s]);
             arma = 0;
@@ -195,9 +195,9 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         base = ACC_QUIETO;
     }
     v.rango = a.sprites.accion(gfx, static_cast<u8>(base + arma));
-    // A monster's status byte (S_NPCPack) is the action it rests in: the exe stores it as the current action
-    // and, when status + 3 (idle) has no table, keeps showing that action's first entry (the hidden pose, e.g.
-    // Antharas 20, sunk undead 13). Without this a sunk monster drew the standing idle.
+    // El byte de estado de un monstruo (S_NPCPack) es la acción en la que reposa: el exe la guarda como acción actual
+    // y, cuando estado + 3 (quieto) no tiene tabla, sigue mostrando la primera entrada de esa acción (la pose oculta, p. ej.
+    // Antharas 20, no muerto hundido 13). Sin esto un monstruo hundido dibujaba la pose quieta de pie.
     if (!v.rango && base == ACC_QUIETO && arma > ACC_QUIETO && !muerto && tipo_objeto(a, s) != TIPO_PERSONAJE) {
         if (const RangoAccion* r = a.sprites.accion(gfx, arma)) {
             v.rango = r;
@@ -297,7 +297,7 @@ constexpr u8 ALFA_SILUETA = 120;
 // personaje encima. Con Floating Eye se ve algo a través.
 constexpr u32 PROF_CEGUERA = 0xF00000;
 
-// Blend of a sprite / tile attribute. PROMEDIO (50%) and OCULTO are handled by the caller (alpha / skip).
+// Mezcla de un atributo de sprite / tile. PROMEDIO (50%) y OCULTO los maneja quien llama (alfa / saltar).
 Mezcla mezcla_de(ModoMezcla m) {
     switch (m) {
     case ModoMezcla::PANTALLA: return Mezcla::PANTALLA;
@@ -307,13 +307,13 @@ Mezcla mezcla_de(ModoMezcla m) {
     }
 }
 
-// Light tiles (flames, glows) are screened over the background, stains multiply (tile type byte).
+// Los tiles de luz (llamas, brillos) van en screen sobre el fondo, las manchas multiplican (byte de tipo del tile).
 Mezcla mezcla_tile(Graficos& g, u32 tile) {
     bool pendiente = false;
     return mezcla_de(g.tile_modo(tile, pendiente));
 }
 
-// Same for sprites: attribute 104 of the gfx. 50% average halves the tint alpha; hidden returns false.
+// Lo mismo para sprites: atributo 104 del gfx. El promedio del 50% reduce a la mitad el alfa del tinte; oculto devuelve false.
 bool preparar_mezcla(const TablaSprites& t, GfxId gfx, u32& color, Mezcla& mezcla) {
     const ModoMezcla m = t.modo(gfx);
     if (m == ModoMezcla::OCULTO) return false;
@@ -322,8 +322,8 @@ bool preparar_mezcla(const TablaSprites& t, GfxId gfx, u32& color, Mezcla& mezcl
     return true;
 }
 
-// Roof fade of the original client (0xc00 / FUN_00468240): the groups registered on the local player's cell go towards
-// 50% (kind 0, level 16 of 0..31) or hidden (kind 1, level 31); the others return to 0. The level steps by 4 every 50 ms.
+// Desvanecido de techos del cliente original (0xc00 / FUN_00468240): los grupos registrados en la celda del jugador local van hacia
+// 50% (tipo 0, nivel 16 de 0..31) u ocultos (tipo 1, nivel 31); los demás vuelven a 0. El nivel avanza de a 4 cada 50 ms.
 void actualizar_techos(App& a, int cx, int cy, u64 ahora) {
     const Slot sy = a.mundo.objetos.buscar(a.mundo.jugador.id);
     if (sy != SIN_SLOT) {
@@ -386,7 +386,7 @@ void dibujar_objetos_mapa(App& a, double cam_x, double cam_y, double ox, double 
                 const int ox0 = s->base_x + obj.x0, ox1 = s->base_x + obj.x1, oy0 = s->base_y + obj.y0, oy1 = s->base_y + obj.y1;
                 if (ox1 < cx - radio || ox0 > cx + radio || oy1 < cy - radio || oy0 > cy + radio) continue;
                 const TileObjetoMapa* piezas = s->tiles_objetos.data() + obj.primera;
-                // Roof group fading: alpha of the whole object (original UI), 0 = hidden.
+                // Desvanecido del grupo de techo: alfa del objeto entero (interfaz original), 0 = oculto.
                 u8 alfa_techo = 255;
                 if (a.n_techos_fade && obj.gid != 0xFFFF) {
                     const u32 clave = static_cast<u32>(s->base_x) << 16 | s->base_y;
@@ -470,8 +470,8 @@ void lineas_cartel_tienda(std::string_view t, std::string_view (&lineas)[2]) {
     lineas[1] = resto.substr(0, std::min(resto.find('\xff'), std::min<size_t>(resto.size(), 40)));
 }
 
-// Bubble text filter of the original (0x41a9f0, called once by 0x41a600): \f and \b with '0'..'d' and \i with '0'..'5' are
-// dropped (3 bytes); any other backslash is copied as is, so "\\f0f2..." keeps "\f2..." for the code-aware draw.
+// Filtro del texto de globos del original (0x41a9f0, lo llama una vez 0x41a600): \f y \b con '0'..'d' y \i con '0'..'5' se
+// quitan (3 bytes); cualquier otra barra invertida se copia tal cual, así "\\f0f2..." conserva "\f2..." para el dibujo que entiende los códigos.
 std::string_view filtrar_globo(std::string_view t, char* buf, size_t cap) {
     size_t n = 0;
     for (size_t i = 0; i < t.size() && n < cap; ++i) {
@@ -494,7 +494,7 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
     if (original) t = filtrar_globo(t, filtrado, sizeof filtrado);
     size_t corte = std::min(t.find(": "), t.find("> "));
     if (quitar_nombre && corte != std::string_view::npos && corte < 40) t.remove_prefix(corte + 2);
-    // Original client (S_Say -> 0x41a600): plain 20 chars (6 px each) per line, boxed 16; 12 px pitch.
+    // Cliente original (S_Say -> 0x41a600): sin recuadro 20 caracteres (de 6 px) por línea, con recuadro 16; paso de 12 px.
     const bool caja = a.cfg.globos_comic || (a.cfg.opciones_orig >> OPC_BUBBLE & 1);
     const int ANCHO = original ? (caja ? 96 : 120) : 160;
     constexpr int FILAS = 3;
@@ -506,8 +506,8 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         t.remove_prefix(c);
         while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
     }
-    // Original rectangle (S3EP1U 0x419e70 / 0x41a040, docs/fork/RE_ROUND7.md section 1): w = widest wrapped line in 6 px cells,
-    // L lines; anchor (ax, ay) = (screen x + 24, sprite frame top - 2); bottom edge on the anchor.
+    // Rectángulo original (S3EP1U 0x419e70 / 0x41a040, docs/fork/RE_ROUND7.md sección 1): w = línea ajustada más ancha en celdas de 6 px,
+    // L líneas; ancla (ax, ay) = (x en pantalla + 24, tope del cuadro del sprite - 2); el borde inferior en el ancla.
     int rx0 = 0, ry0 = 0, desp = 0, volteado = 0;
     if (original) {
         int cells = 0;
@@ -515,19 +515,19 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         const int ax = static_cast<int>(centro_x), ay = static_cast<int>(base_y);
         const int half = 3 * cells + (caja ? 5 : 0);
         int left = ax - half, right = ax + half, top = ay - 12 * n - (caja ? 14 : 6), bottom = ay;
-        int desp_x = half;  // [+0x394]: where the pointer sits inside the rect (tracks the anchor through the clamps)
-        if (left < 0x30) {  // horizontal clamps of 0x419e70 (shift by 2 - left, as disassembled)
+        int desp_x = half;  // [+0x394]: dónde queda el puntero dentro del rect (sigue al ancla a través de los límites)
+        if (left < 0x30) {  // límites horizontales de 0x419e70 (corrimiento de 2 - left, como en el desensamblado)
             const int d = 2 - left;
             left += d, right += d;
             desp_x -= d;
-            if (desp_x < 8) return;  // pointer too close to the left edge: dropped
+            if (desp_x < 8) return;  // puntero demasiado cerca del borde izquierdo: se descarta
         } else if (right > 0x2b0) {
             const int d = right - 0x2b0;
             desp_x += d;
             if (desp_x > (right - left) - 9) return;
             left -= d, right -= d;
         }
-        if (top < 0x30) {  // pushed under the sprite (0x419f5e): top = the frame's bottom (frame + 0x1c), flag +0x36a = 4
+        if (top < 0x30) {  // empujado bajo el sprite (0x419f5e): top = el borde inferior del cuadro (cuadro + 0x1c), flag +0x36a = 4
             const int h = bottom - top;
             top = static_cast<int>(foot_y), bottom = top + h;
             volteado = 1;
@@ -536,7 +536,7 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         if (top < 0x30 || bottom >= 0x1c9) return;  // dropped, never shown
         if (gl) {
             gl->x0 = left, gl->x1 = right, gl->y0 = top, gl->y1 = bottom;
-            if (!gl->revisado) {  // new bubble: older bubbles whose rect strictly overlaps turn grey for good
+            if (!gl->revisado) {  // globo nuevo: los globos anteriores cuyo rect se superpone estrictamente quedan grises para siempre
                 gl->revisado = true;
                 for (GloboChat& o : a.chat.globos)
                     if (&o != gl && o.id != 0 && o.con_rect && o.inicio < gl->inicio && o.x0 < gl->x1 && o.y0 < gl->y1 &&
@@ -547,8 +547,8 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
         }
         centro_x = static_cast<float>(left + right) / 2;
         rx0 = left, ry0 = top;
-        // Text start 0x419d3e..: x = left (+ 5 boxed), y = top (+ 5 boxed); pushed down 6 (4 boxed) by the pointer when flipped.
-        base_y = static_cast<float>(top + 12 * n);  // text rows start at the rect top (+5 when boxed)
+        // Inicio del texto 0x419d3e..: x = left (+ 5 con recuadro), y = top (+ 5 con recuadro); el puntero lo baja 6 (4 con recuadro) si está invertido.
+        base_y = static_cast<float>(top + 12 * n);  // las filas de texto empiezan en el tope del rect (+5 con recuadro)
     }
     const int paso = original ? 12 : 14;
     if (caja) {  // option bubbleon (0x41a6c7): balloon frame; sin relleno: contorno redondeado y cola; el texto queda con sombra
@@ -576,10 +576,10 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
     }
     const u32 color_txt = gl && gl->gris ? rgba(148, 148, 148) : rgba(255, 255, 254);
     if (original) {
-        // 0x4334f0 per line: every line starts at the same x (flush left in the rect), 12 px pitch, 1 px black outline, the bubble colour.
+        // 0x4334f0 por línea: todas las líneas empiezan en la misma x (alineadas a la izquierda en el rect), paso de 12 px, contorno negro de 1 px, el color del globo.
         const float tx = static_cast<float>(rx0 + (caja ? 5 : 0));
         const float ty = static_cast<float>(ry0 + (caja ? 5 : 0) + (volteado ? (caja ? 4 : 6) : 0));
-        // Code-aware like 0x4334f0: a \fX that survived the filter colours the rest of the bubble.
+        // Entiende los códigos como 0x4334f0: un \fX que sobrevivió al filtro colorea el resto del globo.
         const bool doble = !es_utf8(t.data(), t.size());
         u32 color_fila = color_txt;
         for (int i = 0; i < n; ++i) {
@@ -590,14 +590,14 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
             });
         }
         if (!caja) {
-            // Speech pointer (0x419aeb / 0x419b7f): a black 9 x 5 triangle with the 7 x 4 bubble-coloured one on it, under the text
-            // (pointing down), or above it (pointing up) when the bubble was pushed under the sprite. 1 bit per pixel, MSB first.
+            // Puntero del habla (0x419aeb / 0x419b7f): un triángulo negro de 9 x 5 con el de 7 x 4 del color del globo encima, bajo el texto
+            // (apuntando abajo), o arriba de él (apuntando arriba) cuando el globo se empujó bajo el sprite. 1 bit por píxel, MSB primero.
             const int px = rx0 + desp - 3, h = 12 * n + 6;
             static constexpr u8 FUERA_ABAJO[5][2] = {{0xff, 0x80}, {0x7f, 0x00}, {0x3e, 0x00}, {0x1c, 0x00}, {0x08, 0x00}};
             static constexpr u8 DENTRO_ABAJO[4] = {0xfe, 0x7c, 0x38, 0x10};
             const u64 kp = clave_orden(CAPA_EFECTOS, 1);
             Gpu& gpu = a.g->gpu();
-            const int py = ry0;  // rect top; the pointer sits at the bottom (normal) or the top (flipped)
+            const int py = ry0;  // tope del rect; el puntero va abajo (normal) o arriba (invertido)
             for (int f = 0; f < 5; ++f)
                 for (int c = 0; c < 9; ++c) {
                     const int fila = volteado ? 4 - f : f;
@@ -617,8 +617,8 @@ void dibujar_globo(App& a, std::string_view t, float centro_x, float base_y, boo
     }
 }
 
-// A clan emblem (16 x 12) at (x, y); the first time a clan is seen it is requested from the server (C_Clan)
-// unless the emblem cache (Emblem.dat) already has it.
+// Un emblema de clan (16 x 12) en (x, y); la primera vez que se ve un clan se le pide al servidor (C_Clan)
+// salvo que la caché de emblemas (Emblem.dat) ya lo tenga.
 void dibujar_emblema(App& a, u32 clan, float x, float y) {
     Graficos& g = *a.g;
     const RegionAtlas& em = g.emblema(clan);
@@ -630,10 +630,10 @@ void dibujar_emblema(App& a, u32 clan, float x, float y) {
     }
 }
 
-// True when the inventory holds "Ring of Sayha" ($431): the exe lets its wearer see other players' invisible bodies
-// at 50% (0x40 flag, FUN_004cc980). The exe's gate: S_Ability index 3 in 1..3, no pending teleport (the chosen
-// destination was sent and the teleport has not happened yet) and the ring in the inventory. l1j-en never sends
-// ability index 3, so there it stays off, as in the exe.
+// True cuando el inventario tiene "Ring of Sayha" ($431): el exe deja que quien lo usa vea los cuerpos invisibles de otros jugadores
+// al 50% (flag 0x40, FUN_004cc980). La condición del exe: índice 3 de S_Ability en 1..3, ningún teleport pendiente (el destino
+// elegido se mandó y el teleport todavía no ocurrió) y el anillo en el inventario. l1j-en nunca manda el
+// índice de habilidad 3, así que ahí queda apagado, como en el exe.
 bool tiene_anillo_sayha(const Inventario& inv) {
     for (Slot s = 0; s < inv.items.tamano(); ++s) {
         const std::string_view n = nombre_item(inv, s);
@@ -644,9 +644,9 @@ bool tiene_anillo_sayha(const Inventario& inv) {
     return false;
 }
 
-// Poison pulse of the exe (flag 0x20): per channel out = s + ((L * c) >> 4), c = (0, 4, 0) / 31 and
-// L = |12 - tick % 24| + 16 with a 50 ms tick. Approximated by an additive flat green silhouette over the sprite
-// (the exe adds to the sprite's own pixels; the silhouette adds the same amount to every opaque pixel).
+// Pulso de veneno del exe (flag 0x20): por canal out = s + ((L * c) >> 4), c = (0, 4, 0) / 31 y
+// L = |12 - tick % 24| + 16 con un tick de 50 ms. Se aproxima con una silueta verde plana aditiva sobre el sprite
+// (el exe suma a los píxeles propios del sprite; la silueta suma lo mismo a cada píxel opaco).
 u32 pulso_veneno(u64 ahora) {
     const int tick = static_cast<int>((ahora / 50) % 24);
     const int nivel = std::abs(12 - tick) + 16;
@@ -712,23 +712,23 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (propio) std::swap(a.luces.front(), a.luces.back());  // el corte de 700 no la apaga
         }
         if (fuera(150, 150)) continue;  // alumbra, pero no se dibuja
-        // Others' invisible bodies are not drawn at all (no name, bars or click target) without a Ring of Sayha.
+        // Los cuerpos invisibles de otros no se dibujan para nada (sin nombre, barras ni objetivo de clic) sin un Ring of Sayha.
         if ((o.col<O_FLAGS>()[s] & FLAG_INVISIBLE) && !propio && !ve_invisibles) continue;
         u32 prof = profundidad(static_cast<float>(mundo_py(fx, fy)) + 12.0f, ORDEN_PERSONAJE, 4);
-        float celda_sx = 0, celda_sy = 0;  // original UI: screen corner of the body's cell
+        float celda_sx = 0, celda_sy = 0;  // interfaz original: esquina en pantalla de la celda del cuerpo
         if (!a.cfg.ui_simple) {
             const int cx = static_cast<int>(std::lround(fx)), cy = static_cast<int>(std::lround(fy));
             celda_sx = static_cast<float>(mundo_px(cx, cy) + ox), celda_sy = static_cast<float>(mundo_py(cx, cy) + oy);
             prof = clave_celda(celda_sx, celda_sy, CAPA_CUERPO_ORIGINAL, 4);
         }
-        // Body layers: the original registers each .spr part in its own cell (0x4b0350: the foot part in the body's cell at
-        // layer 18, the parts above one row further back each, +4 layer per row), so a wall in a later row covers the head
-        // too. The fork draws the frame in 12 px bands, one per cell row above the foot, with those keys.
+        // Capas del cuerpo: el original registra cada parte del .spr en su propia celda (0x4b0350: la parte de los pies en la celda del cuerpo en
+        // la capa 18, las partes de arriba una fila más atrás cada una, +4 de capa por fila), así una pared en una fila posterior también tapa
+        // la cabeza. El fork dibuja el cuadro en bandas de 12 px, una por fila de celdas sobre los pies, con esas claves.
         auto dibujar_cuerpo = [&](const RegionAtlas& r, GfxId archivo, u16 sub_p, u16 frame_p, bool partes, float x, float y, u32 extra,
                                   u32 col, Mezcla mz) {
             if (a.cfg.ui_simple) return g.gpu().dibujar_en(r, x, y, clave_orden(CAPA_MUNDO, prof + extra), col, mz);
-            // The .spr parts themselves (0x4b0350): each part's rectangle of the composed frame, keyed by its own cell
-            // (x in half cells, y in cells from the body's cell) and its own layer byte.
+            // Las partes del .spr en sí (0x4b0350): el rectángulo de cada parte del cuadro compuesto, con la clave de su propia celda
+            // (x en medias celdas, y en celdas desde la celda del cuerpo) y su propio byte de capa.
             bool pend = false;
             const ArchivoSpr* sp = partes ? g.archivo_spr(archivo, sub_p, pend) : nullptr;
             if (sp && frame_p < sp->frames.size() && sp->frames[frame_p].ntiles) {
@@ -740,7 +740,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                     const Bytes d = sp->tiles[t.tile];
                     int cx_off, cy_off;
                     posicion_tile(t, cx_off, cy_off);
-                    const int rx = cx_off + d[0] - r.ox, ry = cy_off + d[1] - r.oy;  // in the composed image
+                    const int rx = cx_off + d[0] - r.ox, ry = cy_off + d[1] - r.oy;  // en la imagen compuesta
                     const int x0 = std::max(0, rx), y0 = std::max(0, ry);
                     const int x1 = std::min(static_cast<int>(r.w), rx + d[2]), y1 = std::min(static_cast<int>(r.h), ry + d[3]);
                     if (x1 <= x0 || y1 <= y0) continue;
@@ -756,7 +756,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 }
                 return;
             }
-            // 24 x 12 blocks on the cell grid (one block per half cell, the size of a .spr part's cell).
+            // Bloques de 24 x 12 sobre la grilla de celdas (un bloque por media celda, el tamaño de la celda de una parte del .spr).
             const float t = y + r.oy, b = t + r.h, l = x + r.ox, d = l + r.w, limite = celda_sy + 12.0f;
             const int sc = static_cast<int>(r.escala_texel());
             const int j0 = static_cast<int>(std::floor((l - celda_sx) / 24.0f)), j1 = static_cast<int>(std::ceil((d - celda_sx) / 24.0f));
@@ -786,8 +786,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         GfxId gfx = o.col<O_GFX>()[s];
         const AccionVisible acc = elegir_accion(a, s, ahora);
         const RangoAccion* r = acc.rango;
-        float top = sy - 40, pie = sy;  // pie: the sprite frame's bottom (frame + 0x1c), where a pushed-down bubble starts
-        float caja_x0 = ex, caja_x1 = ex + 48;  // sprite frame rect, left / right (exe 0x4cbf70)
+        float top = sy - 40, pie = sy;  // pie: el borde inferior del cuadro del sprite (cuadro + 0x1c), donde empieza un globo empujado abajo
+        float caja_x0 = ex, caja_x1 = ex + 48;  // rect del cuadro del sprite, izquierda / derecha (exe 0x4cbf70)
         RegionAtlas rg;
         bool rg_pendiente = false;
         bool frame_vacio = false;  // el .spr existe y este frame no tiene tiles: sin dibujo a propósito
@@ -795,7 +795,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         u16 sub_cuerpo = 0;
         // pendiente() compara la dirección: se consulta sobre la referencia, antes de copiarla a rg.
         u16 spr_sub = 0, spr_frame = 0;
-        bool spr_partes = false;  // rg is exactly that frame (not the previous one kept while loading)
+        bool spr_partes = false;  // rg es exactamente ese cuadro (no el anterior que se conserva mientras carga)
         auto pedir_frame = [&](u16 sub_pedido, u16 frame) {
             const RegionAtlas& r = g.frame_sprite(a.sprites.gfx_archivos(gfx), sub_pedido, frame);
             rg_pendiente = g.pendiente(r);
@@ -806,15 +806,15 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (!rg_pendiente) {
                 if (rg.valida()) last = {o.ids()[s], rg};
             } else if (last.id == o.ids()[s] && last.region.valida()) {
-                rg = last.region;  // keep the previous frame until the new one is loaded
+                rg = last.region;  // conserva el cuadro anterior hasta que se cargue el nuevo
                 rg_pendiente = false;
             }
         };
         if (r) {
             bool termino = false;
             bool camina = !acc.puntual && acc.bucle && caminando(a.mundo, s, ahora);
-            // Frame length modifiers of 0x4cda90 (not on the walk, which follows the step time): haste x3/4, slow x2, and the
-            // half-length damage of an attack hit.
+            // Modificadores del largo de cuadro de 0x4cda90 (no en la caminata, que sigue el tiempo del paso): haste x3/4, slow x2, y el
+            // daño de media duración de un golpe de ataque.
             u64 transcurrido = ahora - acc.inicio;
             if (!camina) {
                 u32 num = acc.ritmo_num, den = acc.ritmo_den;
@@ -845,7 +845,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             // A gfx with no table row (newer monsters) still has 8 headings per sub group: group 0 by heading.
             const u16 sub_dir = TablaSprites::sub_sin_fila(o.col<O_DIR>()[s]);
             pedir_frame(sub_dir, 0);
-            if (sub_dir != 0 && !rg.valida() && !rg_pendiente) pedir_frame(0, 0);  // ground items: only "-0"
+            if (sub_dir != 0 && !rg.valida() && !rg_pendiente) pedir_frame(0, 0);  // objetos en el suelo: solo "-0"
         }
         bool bajo_puntero = false;
         if (rg.valida()) {
@@ -854,12 +854,12 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             u32 color = BLANCO;
             if (a.cfg.sombra_personajes && en_sombra(a, static_cast<int>(std::lround(vis_x)), static_cast<int>(std::lround(vis_y))))
                 color = rgba(LUZ_EN_SOMBRA, LUZ_EN_SOMBRA, LUZ_EN_SOMBRA);
-            // Frozen: grey-blue (S_Poison and the S_CharPack flags). Poison is a pulse overlay drawn after the body.
+            // Congelado: gris azulado (S_Poison y los flags de S_CharPack). El veneno es una capa pulsante que se dibuja después del cuerpo.
             if (o.col<O_FLAGS>()[s] & FLAG_CONGELADO) color = rgba(150, 160, 185);
-            // Invisible (S_Invis, flag 0x100 / 0x40): own body at 50%; others only with a Ring of Sayha, else hidden.
+            // Invisible (S_Invis, flag 0x100 / 0x40): el cuerpo propio al 50%; los de otros solo con un Ring of Sayha, si no ocultos.
             const bool invisible = o.col<O_FLAGS>()[s] & FLAG_INVISIBLE;
             if (invisible) color = (color & 0x00FFFFFFu) | (127u << 24);
-            // Attribute 100: the object turns 50% while the local player stands in one of its rectangles.
+            // Atributo 100: el objeto pasa al 50% mientras el jugador local está en uno de sus rectángulos.
             if (!propio && a.sprites.tiene_transparencia(gfx) &&
                 a.sprites.dentro_transparencia(gfx, yo_x - o.col<O_X>()[s], yo_y - o.col<O_Y>()[s]))
                 color = (color & 0x00FFFFFFu) | (((color >> 24) / 2) << 24);
@@ -875,17 +875,17 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                                        Mezcla::SILUETA_ADITIVA);
                 }
             }
-            // Clothes (attribute 105): after the body, same sub-sprite and frame, each with its own attribute
-            // 104. As in the exe (0x4cbc50), if any layer's file is missing none is drawn.
+            // Ropa (atributo 105): después del cuerpo, mismo subsprite y cuadro, cada una con su propio atributo
+            // 104. Como en el exe (0x4cbc50), si falta el archivo de alguna capa no se dibuja ninguna.
             if (const auto ropa = a.sprites.ropa(gfx); frame_cuerpo && !ropa.empty()) {
-                RegionAtlas capas[3];  // subcapas 5-7 over the body (4)
+                RegionAtlas capas[3];  // subcapas 5-7 sobre el cuerpo (4)
                 GfxId gfx_capa[3];
                 size_t n = 0;
                 bool todas = true;
                 for (GfxId c : ropa) {
                     if (n == std::size(capas)) break;
                     const RegionAtlas& rc = g.frame_sprite(c, sub_cuerpo, frame_cuerpo->frame);
-                    if (g.pendiente(rc)) continue;  // still loading: skip it this frame
+                    if (g.pendiente(rc)) continue;  // todavía se carga: se salta en este cuadro
                     if (!rc.valida()) {
                         char nombre[32];
                         std::snprintf(nombre, sizeof nombre, "%u-%u.spr", static_cast<unsigned>(c), static_cast<unsigned>(sub_cuerpo));
@@ -916,7 +916,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             pie = top + rg.h;
             const float x0 = px + rg.ox, y0 = py + rg.oy, x1 = x0 + rg.w, y1 = y0 + rg.h;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
-            a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});  // corpses too: the cursor shows 10 over them
+            a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});  // también los cadáveres: el cursor muestra 10 sobre ellos
         } else {
             // Sin sprite: un bloque del tamaño de un cuerpo, que se puede elegir con el clic. Mientras
             // el sprite se carga (o el atlas no tiene lugar) es invisible; magenta si de verdad falta.
@@ -951,12 +951,12 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         // 0xFF para los monstruos en L1J-JP) y nombre; el objetivo del ataque, en amarillo.
         const bool soy_yo = o.ids()[s] == a.mundo.jugador.id;
         const u8 hp = o.col<O_HP>()[s];
-        // A corpse has no bar: the exe classes a dead monster as 2 (0x4cdd30), and only class 0xa gets the bar (0x467856).
+        // Un cadáver no tiene barra: el exe clasifica a un monstruo muerto como 2 (0x4cdd30), y solo la clase 0xa recibe la barra (0x467856).
         if (hp <= 100 && !soy_yo && o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
             if (a.cfg.ui_simple) {
                 overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
                 top -= 8;
-            } else {  // exe 0x466c43: centred on the frame rect (x = l + (r - l) / 2 - 21), y = top - 4; the name does not move
+            } else {  // exe 0x466c43: centrada en el rect del cuadro (x = l + (r - l) / 2 - 21), y = top - 4; el nombre no se mueve
                 const int izq = static_cast<int>(caja_x0), der = static_cast<int>(caja_x1);
                 overhead_bar(g, izq + (der - izq) / 2 - 21, static_cast<int>(top) - 4, IMG_OVERHEAD_HP, hp, 100);
             }
@@ -969,7 +969,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 11, IMG_OVERHEAD_HP, j.hp, j.hp_max);
                 overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_MP, j.mp, j.mp_max);
                 top -= 12;
-            } else {  // exe 0x466ddb: at the cell's left edge, HP at top - 12 and MP at top - 8; the name does not move
+            } else {  // exe 0x466ddb: en el borde izquierdo de la celda, HP en top - 12 y MP en top - 8; el nombre no se mueve
                 overhead_bar(g, static_cast<int>(ex), static_cast<int>(top) - 12, IMG_OVERHEAD_HP, j.hp, j.hp_max);
                 overhead_bar(g, static_cast<int>(ex), static_cast<int>(top) - 8, IMG_OVERHEAD_MP, j.mp, j.mp_max);
             }
@@ -1010,7 +1010,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             nombre = nombre.substr(p + 1);
         }
         if (!nombre.empty()) {
-            // Names and titles go through the exe's code-aware text draw (0x4334f0): \fX colours, hidden codes take no room.
+            // Nombres y títulos pasan por el dibujo de texto del exe que entiende los códigos (0x4334f0): colores \fX, los códigos ocultos no ocupan lugar.
             const bool nombre_doble = !es_utf8(nombre.data(), nombre.size());
             int w = 0;
             recorrer_codigos(nombre, 0, nombre_doble, [&](std::string_view t, u32) { w += ancho_texto(t.data(), t.size()); });
@@ -1019,11 +1019,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             // (S_PinkName). Los monstruos, según su nivel respecto del jugador (nivel_relativo).
             const bool personaje = !texto(a.mundo, o.col<O_NOMBRE>()[s]).empty() && texto(a.mundo, o.col<O_NOMBRE>()[s])[0] != '$';
             u32 color = a.cfg.ui_simple ? rgba(200, 220, 255) : BLANCO;
-            u32 contorno_nivel = 0;  // original UI: monster level tier is a 1 px outline, not the fill
-            // Original: every object's name colour comes from its lawful value (0x4cc140, set on creation 0x4cccb6), NPCs
-            // and monsters too; a live monster also gets the level-tier outline below.
+            u32 contorno_nivel = 0;  // interfaz original: el rango de nivel del monstruo es un contorno de 1 px, no el relleno
+            // Original: el color del nombre de todo objeto sale de su valor de legalidad (0x4cc140, se fija al crearlo en 0x4cccb6), NPC
+            // y monstruos incluidos; un monstruo vivo además recibe el contorno de rango de nivel de abajo.
             if (personaje || !a.cfg.ui_simple) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
-            // Level tier only for a live monster: the exe gives a dead one class 2, not 0xa (0x4cdd30, 0x467856).
+            // Rango de nivel solo para un monstruo vivo: el exe le da a uno muerto la clase 2, no 0xa (0x4cdd30, 0x467856).
             if (!personaje && o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO &&
                      o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
                 static const u32 COLORES[] = {rgba(240, 240, 240), rgba(120, 230, 120), rgba(255, 215, 80), rgba(255, 90, 80)};
@@ -1039,11 +1039,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             float nombre_x = ex + 24 - w / 2, nombre_y = top - 14, emblema_x = nombre_x - 19, emblema_y = top - 14;
             float titulo_cx = ex + 24, titulo_y = top - 28;
             if (!a.cfg.ui_simple) {
-                // Label box of the hovered object (exe 0x4cc030): 14 px tall (27 with a title) above the frame rect,
-                // flipped below it when it would leave the top; width max(name, title) + 2, + 18 for the emblem,
-                // centred on the frame rect (own character: on the cell), kept on screen. Name at box top - 3 (+13
-                // under a title), shifted 10 right with an emblem; emblem 20 left of the name, 1 px higher; title at
-                // box top - 3 (0x4676bb..0x46758e). The bars do not push it up.
+                // Caja de etiqueta del objeto bajo el puntero (exe 0x4cc030): 14 px de alto (27 con título) arriba del rect del cuadro,
+                // pasa abajo si se saldría por arriba; ancho max(nombre, título) + 2, + 18 por el emblema,
+                // centrada en el rect del cuadro (personaje propio: en la celda), dentro de la pantalla. Nombre en tope de la caja - 3 (+13
+                // bajo un título), corrido 10 a la derecha con emblema; emblema 20 a la izquierda del nombre, 1 px más arriba; título en
+                // tope de la caja - 3 (0x4676bb..0x46758e). Las barras no la empujan hacia arriba.
                 int wt = 0;
                 if (!titulo.empty()) {
                     const bool doble = !es_utf8(titulo.data(), titulo.size());
@@ -1085,18 +1085,18 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             if (con_clan) dibujar_emblema(a, o.col<O_CLAN>()[s], emblema_x, emblema_y);
             top -= 14;
             if (!titulo.empty()) {
-                // Original: same colour as the name (both take [obj+0x2c], 0x46778e / 0x467a11); \f codes in the title override it.
+                // Original: el mismo color que el nombre (ambos toman [obj+0x2c], 0x46778e / 0x467a11); los códigos \f del título lo reemplazan.
                 dibujar_titulo(g, titulo, titulo_cx, titulo_y, clave_orden(CAPA_EFECTOS, 0), a.cfg.ui_simple ? rgba(230, 200, 130) : color,
                                !a.cfg.ui_simple);
                 top -= 14;
             }
         }
-        // Without a name label the emblem floats above the head (0x462d60): tile anchor + (17, -52).
+        // Sin etiqueta de nombre el emblema flota sobre la cabeza (0x462d60): ancla de la celda + (17, -52).
         if (nombre.empty() && o.col<O_CLAN>()[s] && !(o.col<O_FLAGS>()[s] & FLAG_INVISIBLE)) {
             const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) * z : sy;
             dibujar_emblema(a, o.col<O_CLAN>()[s], ex + 17, ay - 52);
         }
-        // checkbmp: the checked bitmap floats above the character for 10 s (0x4669d1).
+        // checkbmp: el bitmap revisado flota sobre el personaje durante 10 s (0x4669d1).
         if (soy_yo && ahora < a.t_vista_emblema) {
             const float ay = a.cfg.camara_a_saltos ? static_cast<float>(mundo_py(vis_x, vis_y) + oy) * z : sy;
             const RegionAtlas& em = g.emblema(Graficos::CLAN_VISTA);
@@ -1104,12 +1104,12 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         }
         if (a.cfg.ui_simple) dibujar_globo(a, a.chat.globo(o.ids()[s], ahora), ex + 24, top);
         else if (const std::string_view dicho = a.chat.globo(o.ids()[s], ahora, soy_yo ? 5000 : 8000); !dicho.empty())
-            // original: 8 s for others, 5 s for the own character (0x41a530), anchored on the sprite top
+            // original: 8 s para los demás, 5 s para el personaje propio (0x41a530), anclado en el tope del sprite
             dibujar_globo(a, dicho, ex + 24, top_sprite - 2, true, a.chat.globo_activo(o.ids()[s], ahora, soy_yo ? 5000 : 8000), pie);
         else if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {
-            // Private shop sign (0x487140 -> 0x4ce3b0, 0x41a400): up to two lines, shown as a bubble only over the own character
-            // or in the market maps 340 / 350 / 360 / 370, flipping line every 5 s (an empty second line is skipped).
-            // Fork addition: map 800, the market of newer servers (not in the 2009 exe).
+            // Cartel de tienda privada (0x487140 -> 0x4ce3b0, 0x41a400): hasta dos líneas, como globo solo sobre el personaje propio
+            // o en los mapas de mercado 340 / 350 / 360 / 370, cambiando de línea cada 5 s (una segunda línea vacía se salta).
+            // Agregado del fork: el mapa 800, el mercado de servidores más nuevos (no está en el exe 2009).
             const MapId m = a.mundo.mapa;
             if (soy_yo || m == 340 || m == 350 || m == 360 || m == 370 || m == 800) {
                 std::string_view lineas[2];
@@ -1171,7 +1171,7 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
             }
         }
         sonido_de_frame(a, ef.sonido, *f, x, y, ahora, true);
-        // Light flash: from its trigger frame until it ends the effect holds full brightness (0x450650 / 0x450970).
+        // Destello: desde su cuadro de disparo hasta que termina, el efecto mantiene el brillo máximo (0x450650 / 0x450970).
         if (ef.flash && f - &a.sprites.frame_en(*r, 0, termino, 0, false) >= (ef.flash == 1 ? 2 : 1)) a.flash_luz_frame = a.frame;
         u16 sub = static_cast<u16>(f->sub + (r->direccional ? ef.dir : 0));
         const RegionAtlas& rg = g.frame_sprite(a.sprites.gfx_archivos(ef.gfx), sub, f->frame);
@@ -1188,7 +1188,7 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
 
 }  // namespace
 
-// The own fishing bobber (pesca_ui.cpp): gfx 6299, the bite 6385, looping on its cell.
+// El corcho de pesca propio (pesca_ui.cpp): gfx 6299, la picada 6385, en bucle sobre su celda.
 void dibujar_pesca(App& a, u64 ahora, double ox, double oy) {
     const App::Pesca& p = a.pesca;
     if (!p.activa) return;
@@ -1303,9 +1303,9 @@ bool mascota_sin_ctrl(const App& a, Slot s) {
 
 }  // namespace
 
-// Object class of the original client (0x4cdd30), from the sprite type: a live monster 10 (dead 2, pet whose
-// master is the player 6, someone else's pet 5), characters 5 and NPCs 6 / 12 (dead 3), the other types as they are.
-// It picks the cursor (0x469e40) and, among overlapping objects under the pointer, the hovered one (0x46a450).
+// Clase de objeto del cliente original (0x4cdd30), según el tipo de sprite: un monstruo vivo 10 (muerto 2, mascota cuyo
+// amo es el jugador 6, mascota de otro 5), personajes 5 y NPC 6 / 12 (muertos 3), los demás tipos tal cual.
+// Elige el cursor (0x469e40) y, entre objetos superpuestos bajo el puntero, el del hover (0x46a450).
 u8 clase_objeto(const App& a, Slot s) {
     const TablaObjetos& o = a.mundo.objetos;
     const bool muerto = o.col<O_ESTADO>()[s] == ESTADO_MUERTO;
@@ -1350,12 +1350,12 @@ void mover_jugador(App& a, u64 ahora) {
     // algo, eso queda como objetivo. Soltar lo abandona, salvo con la tecla A (ataque sostenido).
     bool clic_en_mundo = e.presionado && !a.clic_consumido && !sobre_panel && !sobre_alguna_ventana(a) &&
                          a.ventana_arrastrada < 0;
-    // Fishing: a click in the world while the bobber is out pulls it (0x469220).
+    // Pesca: un clic en el mundo con el corcho afuera lo recoge (0x469220).
     if (clic_en_mundo && e.pulsado && clic_pesca(a)) {
         a.clic_consumido = true;
         return;
     }
-    // Invite party (0x402490): the click only picks the target.
+    // Invitar al grupo (0x402490): el clic solo elige el objetivo.
     if (a.invitando && clic_en_mundo && e.pulsado) {
         elegir_invitado(a);
         a.clic_consumido = true;
@@ -1383,9 +1383,9 @@ void mover_jugador(App& a, u64 ahora) {
         elegir_objetivo_bajo_puntero(a);
         a.objetivo_fijo = a.objetivo != 0;
     }
-    // Like the original client: press on a monster and release the button over the bottom panel, and the
-    // attack keeps going on its own (like the A key) until a new click in the world, walking, or the target
-    // dies or disappears.
+    // Como el cliente original: presionar sobre un monstruo y soltar el botón sobre el panel inferior, y el
+    // ataque sigue solo (como la tecla A) hasta un nuevo clic en el mundo, caminar, o que el objetivo
+    // muera o desaparezca.
     const bool released_on_panel = e.my >= vi.panel_y && e.mx >= vi.panel_x0 && e.mx < vi.panel_x1;
     if (e.clic && released_on_panel && a.objetivo && !a.hablar_objetivo) {
         const Slot b = o.buscar(a.objetivo);
@@ -1444,7 +1444,7 @@ void mover_jugador(App& a, u64 ahora) {
             if (vendedor(a, a.objetivo))
                 abrir_tienda_de(a, a.objetivo);
             else if (a.sprites.tipo(o.col<O_GFX>()[obj]) == TIPO_CARTEL)
-                abrir_cartel(a, obj);  // signs open a local info card (exe 0x408300); the server ignores clicks on them
+                abrir_cartel(a, obj);  // los carteles abren una ficha local (exe 0x408300); el servidor ignora los clics sobre ellos
             else if (es_tablon(o.col<O_GFX>()[obj]))
                 enviar(a, cmd::tablon(a.op, Cli::BOARD, a.objetivo));
             else if (tipo_objeto(a, obj) == TIPO_PUERTA)
@@ -1517,8 +1517,8 @@ void mover_jugador(App& a, u64 ahora) {
 
 }  // namespace
 
-// F4 (original client 0x4087c0): pick up the first ground item within 2 cells across and 1 down the map,
-// at most about once a second (the original waits 0x3da ms between pickups).
+// F4 (cliente original 0x4087c0): recoge el primer objeto del suelo dentro de 2 celdas a lo ancho y 1 hacia abajo del mapa,
+// como mucho alrededor de una vez por segundo (el original espera 0x3da ms entre recogidas).
 void pick_up_nearby(App& a) {
     TablaObjetos& o = a.mundo.objetos;
     const Slot yo = o.buscar(a.mundo.jugador.id);
@@ -1537,8 +1537,8 @@ void pick_up_nearby(App& a) {
 
 namespace {
 
-// The original HUD number font (S3EP1U 0x431410, glyph table at 0x501410): 4x6 pixel glyphs, 3 bytes each (two rows
-// per byte, low nibble first, bit 0 = leftmost). Advance: '1' and '/' 4 px, '.' 2 px, everything else 5 px.
+// La fuente de números del HUD original (S3EP1U 0x431410, tabla de glifos en 0x501410): glifos de 4x6 píxeles, 3 bytes cada uno (dos filas
+// por byte, nibble bajo primero, bit 0 = el de más a la izquierda). Avance: '1' y '/' 4 px, '.' 2 px, todo lo demás 5 px.
 constexpr u8 FUENTE_HUD[] = {0x96, 0x99, 0x69, 0x32, 0x22, 0x72, 0x96, 0x68, 0xf1, 0x96, 0x84, 0x69, 0x64, 0x56,
                              0x4f, 0x1f, 0x87, 0x69, 0x16, 0x97, 0x69, 0x8f, 0x44, 0x22, 0x96, 0x96, 0x69, 0x96,
                              0xe9, 0x68, 0x44, 0x22, 0x11, 0x00, 0x00, 0x10, 0x59, 0x24, 0x9a, 0x00, 0x0f, 0x00};
@@ -1559,7 +1559,7 @@ int avance_hud(char c) { return c == '1' || c == '/' ? 4 : c == '.' ? 2 : 5; }
 void texto_hud_pasada(Graficos& g, int x, int y, std::string_view t, u64 k, u32 color) {
     for (const char c : t) {
         if (const int o = glifo_hud(c); o >= 0) {
-            if (g.texto_hd_para(k)) {  // HD pass: the same 4x6 mask as a smooth field
+            if (g.texto_hd_para(k)) {  // pasada HD: la misma máscara de 4x6 como campo suave
                 u8 filas[6];
                 for (int fila = 0; fila < 6; ++fila) filas[fila] = (FUENTE_HUD[o + fila / 2] >> (fila % 2 ? 4 : 0)) & 15;
                 g.gpu().dibujar_en(g.glifo_hd_mascara(0x1000 + static_cast<u32>(o), 4, 6, filas), static_cast<float>(x),
@@ -1577,8 +1577,8 @@ void texto_hud_pasada(Graficos& g, int x, int y, std::string_view t, u64 k, u32 
     }
 }
 
-// Number text of the bottom HUD: plain, no shadow. `contorno` (non-zero) adds the 1 px 4-way outline the HP/MP
-// numbers have (0x4b13b8, 0x4b15bc). `derecha` right-aligns like the original: x = right - 2 * length.
+// Texto numérico del HUD inferior: liso, sin sombra. `contorno` (distinto de cero) agrega el contorno de 1 px en 4 direcciones que tienen
+// los números de HP/MP (0x4b13b8, 0x4b15bc). `derecha` alinea a la derecha como el original: x = derecha - 2 * largo.
 void texto_hud(Graficos& g, int x, int y, std::string_view t, u32 contorno = 0) {
     const u64 k = clave_orden(CAPA_UI_TEXTO, 0);
     if (contorno) {
@@ -1596,7 +1596,7 @@ int texto_hud_derecha(Graficos& g, int derecha, int y, std::string_view t, u32 c
     return x;
 }
 
-// Bar image clipped to `w` pixels (the engraved "Lev"/"Hp"/"Mp" label is part of panel 1028); nothing at 0.
+// Imagen de barra recortada a `w` píxeles (la etiqueta grabada "Lev"/"Hp"/"Mp" es parte del panel 1028); nada en 0.
 void barra(Graficos& g, u32 img, int x, int y, int w) {
     RegionAtlas r = g.img(img);
     if (!r.valida() || w <= 0) return;
@@ -1604,11 +1604,11 @@ void barra(Graficos& g, u32 img, int x, int y, int w) {
     g.gpu().dibujar(r, x, y, clave_orden(CAPA_UI, 2));
 }
 
-// Orb of 0x416160. tm_hour = hour of the game-time dword; group = ((tm_hour + 23) % 24) / 2. S_GameTime re-arms the transition
-// (0x4876c0) whenever the new hour is odd and the minute is 0; t = ms since then. t < 1350: the previous group's last frame
-// (first - 1; 1213 -> 1319, 1316 -> 1245) until 900 ms, then one frame per 150 ms, plus the screen-blended sparkles 1251 + t/150
-// at the group's table position and, for 450 <= t < 1050, 1244 + t/150 over the orb. t >= 1350: the stepping frame, the flag
-// clears once t >= (frames * 3 + 18) * 50.
+// Orbe de 0x416160. tm_hour = hora del dword de la hora del juego; grupo = ((tm_hour + 23) % 24) / 2. S_GameTime rearma la transición
+// (0x4876c0) siempre que la hora nueva es impar y el minuto es 0; t = ms desde entonces. t < 1350: el último cuadro del grupo anterior
+// (primero - 1; 1213 -> 1319, 1316 -> 1245) hasta los 900 ms, después un cuadro cada 150 ms, más los destellos en mezcla screen 1251 + t/150
+// en la posición de la tabla del grupo y, para 450 <= t < 1050, 1244 + t/150 sobre el orbe. t >= 1350: el cuadro que avanza; el flag
+// se apaga cuando t >= (cuadros * 3 + 18) * 50.
 void dibujar_orbe(App& a, int X, int Y) {
     Graficos& g = *a.g;
     const int seg = static_cast<int>(hora_de_juego(a) % 86400);
@@ -1643,9 +1643,9 @@ void dibujar_panel(App& a) {
     const EstadoJugador& j = a.mundo.jugador;
     const Vista vi = vista(a);
     const int X = vi.hx, Y = vi.hy;
-    // Original layout (S3EP1U 0x416160): backdrop 1042 at (115,358), wings 1044 one pixel lower, flourishes 1043 at
-    // (121,371), all drawn under the side panels (1028 at (0,368), 1019 at (485,366)) which cover its ends.
-    // They all rise 34 px per Ctrl+T step with the orb (0x416160: y = ... - 34 * [0x7030dc]).
+    // Diseño original (S3EP1U 0x416160): fondo 1042 en (115,358), alas 1044 un píxel más abajo, adornos 1043 en
+    // (121,371), todo dibujado bajo los paneles laterales (1028 en (0,368), 1019 en (485,366)) que tapan sus extremos.
+    // Todo sube 34 px por paso de Ctrl+T con el orbe (0x416160: y = ... - 34 * [0x7030dc]).
     const int subida = 34 * a.chat_tam;
     g.gpu().dibujar(g.img(IMG_CHAT), X + 115, Y + 358 - subida, clave_orden(CAPA_UI, 0));
     g.gpu().dibujar(g.img(IMG_CHAT_ALAS), X + 115, Y + 359 - subida, clave_orden(CAPA_UI, 0));
@@ -1653,10 +1653,10 @@ void dibujar_panel(App& a) {
     g.gpu().dibujar(g.img(IMG_PANEL_IZQ), X, Y + 368, clave_orden(CAPA_UI, 1));
     g.gpu().dibujar(g.img(IMG_PANEL_DER), X + 485, Y + 366, clave_orden(CAPA_UI, 1));
     dibujar_teclas_f(a, X + 485, Y + 366);
-    g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 120, Y + 462, clave_orden(CAPA_UI, 0));  // its left end hides under 1028
+    g.gpu().dibujar(g.img(IMG_ENTRADA_CHAT), X + 120, Y + 462, clave_orden(CAPA_UI, 0));  // su extremo izquierdo queda bajo 1028
     {
-        // F-key page strip (S3EP1U 0x4b2260, callback 0x456960): page-up button 1021 at (489,387) shows the next of the 3
-        // pages, the digit 1025 + page at (489,414), page-down button 1023 at (489,429) shows the previous.
+        // Franja de página de teclas F (S3EP1U 0x4b2260, callback 0x456960): el botón de página arriba 1021 en (489,387) muestra la siguiente de las 3
+        // páginas, el dígito 1025 + página en (489,414), el botón de página abajo 1023 en (489,429) muestra la anterior.
         const u64 kb = clave_orden(CAPA_UI, 2);
         g.gpu().dibujar(g.img(1021), X + 489, Y + 387, kb);
         g.gpu().dibujar(g.img(1025 + a.pag_f), X + 489, Y + 414, kb);
@@ -1666,7 +1666,7 @@ void dibujar_panel(App& a) {
             if (ui::sobre(a.entrada, X + 489, Y + 387, arriba.w, arriba.h)) cambiar_pagina_f(a, 1);
             else if (ui::sobre(a.entrada, X + 489, Y + 429, abajo.w, abajo.h)) cambiar_pagina_f(a, -1);
         }
-        // Chat-mode "A" button (globals 0x6f5cf8/0x6f5cf4 = 136, 464) and scroll button 1045 (0x4594d8: 470, 463).
+        // Botón "A" de modo de chat (globales 0x6f5cf8/0x6f5cf4 = 136, 464) y botón de scroll 1045 (0x4594d8: 470, 463).
         g.gpu().dibujar(g.img(1045), X + 470, Y + 463, kb);
         g.gpu().dibujar(g.img(1041), X + 136, Y + 464, kb);
     }
@@ -1677,8 +1677,8 @@ void dibujar_panel(App& a) {
     if (const ZonaNombre* z = yo == SIN_SLOT ? nullptr
                               : a.zonas.buscar(a.mundo.mapa, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo])) {
         const u32 c = a.zonas.color(z->clase);
-        // Zone name (0x4d2410): the proportional system face, white with a 1 px outline in the zone-class colour, glyph tops at
-        // y 350. Matches the original HUD capture ("Thebes Desert" reads light tan: thin white strokes with an orange rim).
+        // Nombre de la zona (0x4d2410): la letra proporcional del sistema, blanca con contorno de 1 px en el color de la clase de zona, topes de los glifos en
+        // y 350. Coincide con la captura del HUD original ("Thebes Desert" se ve tostado claro: trazos blancos finos con borde naranja).
         const u32 borde = rgba(static_cast<u8>(c >> 16), static_cast<u8>(c >> 8), static_cast<u8>(c));
         const float zx = static_cast<float>(X + 16), zy = static_cast<float>(Y + 348);
         for (const auto& [dx, dy] : {std::pair{-1, 0}, {1, 0}, {0, -1}, {0, 1}})
@@ -1686,19 +1686,19 @@ void dibujar_panel(App& a) {
         g.texto_html(z->nombre, zx, zy, clave_orden(CAPA_UI_TEXTO, 1), BLANCO);
     }
     if (yo != SIN_SLOT) {
-        // Zone type, bottom-right: from the left-half attribute of the character's cell.
-        // Zone-type label of 0x4d2410 (US branch): the icon-table pictures 1226 safe / 1224 combat / 1225 normal at (530, 345), with
-        // the text baked in (RE_ROUND7 section 3; verified by drawing them).
+        // Tipo de zona, abajo a la derecha: según el atributo de la mitad izquierda de la celda del personaje.
+        // Etiqueta de tipo de zona de 0x4d2410 (rama US): las imágenes de la tabla de íconos 1226 segura / 1224 combate / 1225 normal en (530, 345), con
+        // el texto incluido (RE_ROUND7 sección 3; verificado dibujándolas).
         const TipoZona tz = tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]);
         g.gpu().dibujar(g.icono(tz == TipoZona::SEGURA ? 1226 : tz == TipoZona::COMBATE ? 1224 : 1225), X + 530, Y + 345,
                         clave_orden(CAPA_UI_TEXTO, 0));
     }
     char t[48];
-    // Level and EXP (0x4b0c80): "%2d" at (37,391); "%d.%02d%%" at (80,391) below level 40, "%d.%04d%%" at (72,391) from 40.
+    // Nivel y EXP (0x4b0c80): "%2d" en (37,391); "%d.%02d%%" en (80,391) bajo el nivel 40, "%d.%04d%%" en (72,391) desde el 40.
     {
         const bool alto = j.nivel >= 40;
         const i64 escala = alto ? 1000000 : 10000;
-        const i64 e = exp_escalada(j.nivel, j.exp, escala);  // percent * 100 (or * 10000)
+        const i64 e = exp_escalada(j.nivel, j.exp, escala);  // porcentaje * 100 (o * 10000)
         const i64 entero = e / (alto ? 10000 : 100), fraccion = e % (alto ? 10000 : 100);
         std::snprintf(t, sizeof t, "%2d", j.nivel);
         texto_hud(g, X + 37, Y + 391, t);
@@ -1706,7 +1706,7 @@ void dibujar_panel(App& a) {
         texto_hud(g, X + (alto ? 72 : 80), Y + 391, t);
         barra(g, IMG_BARRA_EXP, X + 3, Y + 386, static_cast<int>(std::min<i64>(entero * 129 / 100, 129)));
     }
-    // HP bar: image by status (poison 1357, frozen 1358, else 1030); not drawn at HP <= 0 (0x4b1180).
+    // Barra de HP: imagen según el estado (veneno 1357, congelado 1358, si no 1030); no se dibuja con HP <= 0 (0x4b1180).
     {
         const u32 img = yo == SIN_SLOT ? IMG_BARRA_HP
                         : (a.mundo.objetos.col<O_FLAGS>()[yo] & FLAG_CONGELADO) ? 1358u
@@ -1719,8 +1719,8 @@ void dibujar_panel(App& a) {
         std::snprintf(t, sizeof t, "%d/%d", j.mp, j.mp_max);
         texto_hud_derecha(g, X + 83, Y + 429, t, rgba(99, 132, 165));
     }
-    // Four icon boxes (0x4b0c10 AC, 0x4b2970 alignment, 0x4b2660 weight, 0x4b2800 food): numbers right-aligned at
-    // x = 43 / 109 minus 2 px per character; weight/food also have a gauge clipped to 43 px.
+    // Cuatro cajas de íconos (0x4b0c10 CA, 0x4b2970 alineación, 0x4b2660 peso, 0x4b2800 comida): números alineados a la derecha en
+    // x = 43 / 109 menos 2 px por carácter; peso/comida también tienen un indicador recortado a 43 px.
     std::snprintf(t, sizeof t, "%d", j.ca);
     texto_hud_derecha(g, X + 43, Y + 449, t);
     // Alignment icon 1032 (< 0) / 1033 (0..500) / 1034 (> 500) at (70,446).
@@ -1853,10 +1853,10 @@ void dibujar_minimapa(App& a, double cam_x, double cam_y) {
 
 }  // namespace
 
-// Ctrl+P (S3EP1U 0x402680, non-GM path): creates "<dir>Capture", saves "<dir>Capture\\LinC%04d.bmp" with a counter that
-// starts at 0 and prints "Saved current screen to <path>" in white (colour [0x500528]). The GM path (flag [0x8ed548] = 1) is
-// silent and asks for a file name; l1j-en never sets that flag, so it is not modelled. The exe's <dir> is its own folder;
-// here it is the settings folder.
+// Ctrl+P (S3EP1U 0x402680, camino no GM): crea "<dir>Capture", guarda "<dir>Capture\\LinC%04d.bmp" con un contador que
+// empieza en 0 e imprime "Saved current screen to <ruta>" en blanco (color [0x500528]). El camino GM (flag [0x8ed548] = 1) es
+// silencioso y pide un nombre de archivo; l1j-en nunca activa ese flag, así que no se modela. El <dir> del exe es su propia carpeta;
+// aquí es la carpeta de ajustes.
 void tomar_captura(App& a) {
     if (a.cfg.ui_simple) {
         a.gpu.pedir_captura("captura.bmp");
@@ -1877,7 +1877,7 @@ void tomar_captura(App& a) {
 
 
 void enviar_chat(App& a, std::string_view linea) {
-    if (linea == "/infracon") {  // client-side toggle of the elf infravision filter; nothing is sent
+    if (linea == "/infracon") {  // alterna en el cliente el filtro de infravisión del elfo; no se manda nada
         a.infracon = !a.infracon;
         return;
     }
@@ -1921,12 +1921,12 @@ AreaChat area_chat(const App& a) {
                 0, vi.panel_y, MARGEN_SIMPLE + ancho, vi.h - vi.panel_y};
     }
     const int X = vi.hx, Y = vi.hy;
-    const int extra = CHAT_PASO_ORIG * 3 * a.chat_tam;  // Ctrl+T grows the log upwards, 3 rows (36 px) per step (0x421330)
+    const int extra = CHAT_PASO_ORIG * 3 * a.chat_tam;  // Ctrl+T agranda el registro hacia arriba, 3 filas (36 px) por paso (0x421330)
     return {X + CHAT_X, Y + CHAT_Y_ORIG - extra, CHAT_ANCHO, X + ENTRADA_X, Y + ENTRADA_Y, 330, X + 124, Y + 363 - extra, 390, 117 + extra};
 }
 
-// Original Ctrl+O (0x456dc3): 16 colour swatches (2 rows of 8, 17 px pitch) above the input box. A click types the
-// "\fX" colour code into the chat line (callback 0x434090); Esc closes it.
+// Ctrl+O original (0x456dc3): 16 muestras de color (2 filas de 8, paso de 17 px) arriba de la caja de entrada. Un clic escribe el
+// código de color "\fX" en la línea del chat (callback 0x434090); Esc la cierra.
 void dibujar_paleta_chat(App& a) {
     if (!a.paleta_chat || a.cfg.ui_simple) return;
     constexpr char CODIGOS[16] = {'0', '9', '5', 'R', 'F', 'E', 'B', '4', '>', '7', '3', '=', '2', 'U', '1', 'Z'};
@@ -1952,15 +1952,15 @@ void dibujar_paleta_chat(App& a) {
     }
 }
 
-// Original chat scrollbar (S3EP1U 0x4599ea, ctor 0x47cd80): track 1047 at (470,401), up arrow 974 at (470,393),
-// down arrow 972 at (471,449), thumb 976 (15x16, x=469) riding the 51 px track. The thumb sits at the bottom
-// while the newest line shows; arrows step one line, the track and thumb drag, the wheel is handled in dibujar_chat.
+// Barra de scroll original del chat (S3EP1U 0x4599ea, ctor 0x47cd80): riel 1047 en (470,401), flecha arriba 974 en (470,393),
+// flecha abajo 972 en (471,449), botón 976 (15x16, x=469) sobre el riel de 51 px. El botón queda abajo
+// mientras se ve la línea más nueva; las flechas avanzan una línea, el riel y el botón se arrastran, la rueda se maneja en dibujar_chat.
 void dibujar_barra_chat(App& a, u32 total, int filas) {
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const Vista vi = vista(a);
     const int X = vi.hx + 470, Y = vi.hy;
-    // Size n grows the track image (1047 + n) and the up arrow upwards by 36 px per step; the down arrow stays.
+    // El tamaño n agranda hacia arriba la imagen del riel (1047 + n) y la flecha arriba, 36 px por paso; la flecha abajo queda fija.
     const int TRACK_Y = 401 - 36 * a.chat_tam, TRACK_H = 51 + 36 * a.chat_tam;
     constexpr int THUMB_H = 16;
     const int LIBRE = TRACK_H - THUMB_H;
@@ -1992,12 +1992,12 @@ void dibujar_barra_chat(App& a, u32 total, int filas) {
     g.gpu().dibujar(g.img(976), X - 1, thumb_y(), kb);
 }
 
-// Original chat window mouse handler (S3EP1U 0x41f680, region 0x4f1740): a double click on a chat row takes the
-// word under the pointer (0x41f980: letters, digits and bytes >= 0x80; a click on a separator takes the word that
-// starts right after it). Left double click (WM_LBUTTONDBLCLK) appends "word " to the input line (0x445010);
-// right double click (WM_RBUTTONDBLCLK) replaces the line with "/exclude word" (prefix string 0x5004c0, 0x445090).
-// With the line closed (chat with Enter) it opens it with that text instead (callback 0x407e50). The log keeps no
-// sender: the word is simply taken from the row's text, as the original does.
+// Manejador del mouse de la ventana original del chat (S3EP1U 0x41f680, región 0x4f1740): un doble clic en una fila del chat toma la
+// palabra bajo el puntero (0x41f980: letras, dígitos y bytes >= 0x80; un clic sobre un separador toma la palabra que
+// empieza justo después). Doble clic izquierdo (WM_LBUTTONDBLCLK) agrega "palabra " a la línea de entrada (0x445010);
+// doble clic derecho (WM_RBUTTONDBLCLK) reemplaza la línea por "/exclude palabra" (prefijo, texto 0x5004c0, 0x445090).
+// Con la línea cerrada (chat con Enter) la abre con ese texto (callback 0x407e50). El registro no guarda el
+// remitente: la palabra se toma del texto de la fila, como hace el original.
 bool es_letra_chat(char c) { return std::isalnum(static_cast<unsigned char>(c)) || static_cast<unsigned char>(c) >= 0x80; }
 
 std::string_view palabra_en(std::string_view t, size_t col) {
@@ -2013,7 +2013,7 @@ std::string_view palabra_en(std::string_view t, size_t col) {
     return t.substr(ini, fin - ini);
 }
 
-// Byte of the row under pixel column px (glyphs are not fixed width here, so walk their widths).
+// Byte de la fila bajo la columna de píxeles px (aquí los glifos no son de ancho fijo, así que se recorren sus anchos).
 size_t byte_en_pixel(std::string_view t, int px) {
     size_t i = 0;
     while (i < t.size()) {
@@ -2052,7 +2052,7 @@ void dibujar_chat(App& a) {
     if (!a.cfg.ui_simple) dibujar_barra_chat(a, n, filas);
     u64 kt = clave_orden(CAPA_UI_TEXTO, 0);
     const int pitch = a.cfg.ui_simple ? ALTO_GLIFO : CHAT_PASO_ORIG;
-    std::string_view visibles[CHAT_FILAS + 9] = {};  // text of each drawn row, for the double click
+    std::string_view visibles[CHAT_FILAS + 9] = {};  // texto de cada fila dibujada, para el doble clic
     int fila = filas - 1;
     for (u32 i = a.chat_desplazamiento; i < n && fila >= 0; ++i) {
         const LineaChat& l = a.chat.reciente(i);
@@ -2060,21 +2060,21 @@ void dibujar_chat(App& a) {
         std::string_view partes[8];
         int k = 0;
         while (!t.empty() && k < 8) {
-            // A shout starts with its 12 px direction icon (the exe's "\d<n>" code), which takes room in the first row.
+            // Un grito empieza con su ícono de dirección de 12 px (el código "\d<n>" del exe), que ocupa lugar en la primera fila.
             size_t c = bytes_que_caben(t.data(), t.size(), ac.ancho - (k == 0 && l.dir >= 0 ? 12 : 0));
             partes[k++] = t.substr(0, c);
             t.remove_prefix(c);
             while (!t.empty() && t[0] == ' ') t.remove_prefix(1);
         }
-        // \fX colour codes (and the hidden \b \i \k \j \c codes) are parsed as the exe's text draw does (0x4334f0):
-        // the colour carries over to the wrapped rows that follow.
+        // Los códigos de color \fX (y los ocultos \b \i \k \j \c) se interpretan como en el dibujo de texto del exe (0x4334f0):
+        // el color pasa a las filas ajustadas que siguen.
         const bool doble = !es_utf8(l.texto, l.largo);
         u32 color_fila[8];
         u32 color = l.color;
         for (int p = 0; p < k; ++p) {
             color_fila[p] = color;
             recorrer_codigos(partes[p], color, doble, [&](std::string_view, u32 c) { color = c; });
-            // A code at the very end of a row still changes the colour of the next one.
+            // Un código justo al final de una fila igual cambia el color de la siguiente.
             for (size_t j = 0; j + 2 < partes[p].size(); ++j)
                 if (partes[p][j] == '\\' && partes[p][j + 1] == 'f' && j + 3 == partes[p].size() && es_codigo_color(partes[p][j + 2]))
                     color = color_codigo(partes[p][j + 2], l.color);
@@ -2196,7 +2196,7 @@ void dibujar_estado(App& a) {
 // desde el frame siguiente (Gpu::ajustar_vista al comienzo del frame).
 void cambiar_zoom(App& a) {
     int z = a.entrada.zoom;
-    if (z == 0 || a.gpu.vista_fija()) return;  // zoom only applies to the wide view
+    if (z == 0 || a.gpu.vista_fija()) return;  // el zoom solo vale en la vista amplia
     int maxima = a.gpu.escala_maxima();
     int actual = a.cfg.zoom > 0 ? std::min(a.cfg.zoom, maxima) : maxima;
     int nuevo = z == 2 ? 0 : std::clamp(actual + z, 1, maxima);
@@ -2220,7 +2220,7 @@ void dibujar_ventanas(App& a) {
     // objetivo, Esc solo cancela eso (inventario_ui.cpp). Arrastrando algo no cierra: soltarlo lo
     // resuelve la ventana de donde salió. El intercambio tampoco: dejaría el trade abierto.
     if (e.escape && !a.usar_sobre && !arrastre) {
-        // Original: Esc with nothing open pops the exit menu (0x457352).
+        // Original: Esc sin nada abierto muestra el menú de salida (0x457352).
         const bool abierta_alguna = alguna_ventana_abierta(a);
         close_listed_windows(a);
         if (!a.cfg.ui_simple && !abierta_alguna) a.ventana_salida = true;
@@ -2286,7 +2286,7 @@ void dibujar_muerte(App& a) {
         a.t_muerte = 0;  // también si lo resucitaron (S_Resurrection)
         return;
     }
-    if (!a.cfg.ui_simple) {  // original: no death dialog, the Esc menu pops open (0x457620); its button 1 restarts
+    if (!a.cfg.ui_simple) {  // original: sin diálogo de muerte, aparece el menú de Esc (0x457620); su botón 1 reinicia
         if (a.t_muerte == 0) {
             a.t_muerte = a.entrada.ahora_ms;
             a.ventana_salida = true;
@@ -2336,9 +2336,9 @@ void dibujar_fps(App& a) {
 
 // Cursor: círculo si un hechizo espera su objetivo; espada sobre un monstruo (o con Ctrl sobre otro
 // personaje o NPC, que es atacarlo); si no, la mano (también sobre la interfaz).
-// Pending "Select a target." use (0x469f1f): the exe's setter 0x402490 stores the use in [0x81654c] and its range in [0x816548], which is
-// 15 for every caller but the out-of-range spell retry; the target (object under the pointer, else the cell under it) is in range when
-// |dx| <= range and |dy| <= range (the exe compares the doubled x against 2 * range).
+// Uso pendiente de "Select a target." (0x469f1f): el setter del exe 0x402490 guarda el uso en [0x81654c] y su alcance en [0x816548], que es
+// 15 para todos los que lo llaman salvo el reintento de hechizo fuera de alcance; el objetivo (objeto bajo el puntero, si no la celda) está en alcance si
+// |dx| <= alcance y |dy| <= alcance (el exe compara la x duplicada contra 2 * alcance).
 constexpr int PENDING_USE_RANGE = 15;
 bool pending_target_in_range(App& a, ObjId id) {
     const TablaObjetos& o = a.mundo.objetos;
@@ -2350,7 +2350,7 @@ bool pending_target_in_range(App& a, ObjId id) {
     if (s != SIN_SLOT) {
         tx = o.col<O_X>()[s];
         ty = o.col<O_Y>()[s];
-    } else {  // no object: the cell under the pointer (inverse of mundo_px / mundo_py from the character's centre)
+    } else {  // sin objeto: la celda bajo el puntero (inversa de mundo_px / mundo_py desde el centro del personaje)
         const Vista vi = vista_mundo(a);
         const double rx = (raton_mundo_x(a) - vi.cx) / 24.0, ry = (raton_mundo_y(a) - vi.cy) / 12.0;
         tx = ox + static_cast<int>(std::lround((rx - ry) / 2));
@@ -2359,26 +2359,26 @@ bool pending_target_in_range(App& a, ObjId id) {
     return std::abs(tx - ox) <= PENDING_USE_RANGE && std::abs(ty - oy) <= PENDING_USE_RANGE;
 }
 
-// Original UI chooser (0x469e40, docs/fork/RE_HUD.md): picks one of the 16 cursor states. The fork has no
-// tile flags, kind 7 / 13 data, selected-spell shortcut or "busy" action overlay, so states 14, 16 and the shortcut
-// variant of 8 are never chosen (RE_ROUND6).
+// Selector de la interfaz original (0x469e40, docs/fork/RE_HUD.md): elige uno de los 16 estados de cursor. El fork no tiene
+// flags de tile, datos de tipo 7 / 13, atajo de hechizo elegido ni capa de acción "ocupado", así que los estados 14, 16 y la variante
+// de atajo del 8 nunca se eligen (RE_ROUND6).
 void elegir_cursor_original(App& a, u64 ahora) {
-    // The exe's setter 0x477c90 is sticky: a state stays until another handler sets one. `seguir` keeps the last one.
+    // El setter del exe 0x477c90 es persistente: un estado queda hasta que otro manejador fija otro. `seguir` conserva el último.
     auto poner = [&](int estado) {
         a.cursor_estado_orig = estado;
         if (a.cursores[static_cast<int>(cursor_estado(estado))]) a.cursor = cursor_estado(estado);
     };
     auto seguir = [&] { poner(a.cursor_estado_orig); };
     const int html = a.cursor_html;
-    a.cursor_html = 0;  // the page sets it again while it is drawn
-    const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
-    const bool ataque = a.modo_ataque, pk = a.modo_pk;  // Ctrl+X [0x703105], the "pk" option [0x6f1dac]
+    a.cursor_html = 0;  // la página lo vuelve a fijar mientras se dibuja
+    const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl es [0x702dd6] (0x456bb0)
+    const bool ataque = a.modo_ataque, pk = a.modo_pk;  // Ctrl+X [0x703105], la opción "pk" [0x6f1dac]
     const Vista vi = vista(a);
     const bool sobre_ventana = sobre_alguna_ventana(a);
     const bool sobre_hud = !sobre_ventana && (a.entrada.my >= vi.panel_y || sobre_barra(a));
     if (a.gm_apuntando) return poner(11);
-    // Dragging an inventory item past the drag threshold (grid 0x44f306 / 0x44f48b): 5 everywhere; in the world 13 over an
-    // object it can go to (0x469e74: 0x4cdfc0, live character / NPC / monster), else 5.
+    // Arrastrar un objeto del inventario pasado el umbral de arrastre (grilla 0x44f306 / 0x44f48b): 5 en todos lados; en el mundo 13 sobre un
+    // objeto al que puede ir (0x469e74: 0x4cdfc0, personaje / NPC / monstruo vivo), si no 5.
     if (a.arrastrando) {
         if (sobre_ventana || sobre_hud) return poner(5);
         const ObjId id = objeto_bajo_puntero(a, false, false);
@@ -2386,19 +2386,19 @@ void elegir_cursor_original(App& a, u64 ahora) {
         const u8 c = s != SIN_SLOT ? clase_objeto(a, s) : 0;
         return poner(c == 5 || c == 6 || c == 10 || c == 12 ? 13 : 5);
     }
-    // Windows take the mouse before the world (dispatch 0x4576e0). The NPC page: 1 over text, 3 over a link (0x436f8a /
-    // 0x436f9f); buttons, grids, list rows, edit fields and scrollbars: 3 (0x4133e3, 0x45208a, 0x4be1a9, 0x4c3d9f, 0x4223c3).
-    // An inventory grid with a select callback (a scroll waiting for the item to use it on, 0x44f3a5): 9 over it.
+    // Las ventanas toman el mouse antes que el mundo (despacho 0x4576e0). La página del NPC: 1 sobre texto, 3 sobre un enlace (0x436f8a /
+    // 0x436f9f); botones, grillas, filas de lista, campos de edición y barras de scroll: 3 (0x4133e3, 0x45208a, 0x4be1a9, 0x4c3d9f, 0x4223c3).
+    // Una grilla de inventario con callback de elección (un pergamino que espera el objeto sobre el que usarse, 0x44f3a5): 9 encima.
     if (sobre_ventana && a.usar_sobre && lin::sobre_ventana(a, IdVentana::INVENTARIO)) return poner(9);
     if (sobre_ventana) return poner(html ? html : 3);
     if (sobre_hud) {
-        // Bottom panel: the chat log 1 (0x41f8ef); its buttons, quick slots and edit line 3 (0x41c02a, 0x4b1cd8, 0x4c3d9f).
+        // Panel inferior: el registro del chat 1 (0x41f8ef); sus botones, casillas rápidas y línea de edición 3 (0x41c02a, 0x4b1cd8, 0x4c3d9f).
         const AreaChat ac = area_chat(a);
         if (ui::sobre(a.entrada, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h)) return poner(1);
         return poner(3);
     }
-    // A map portal on the cell under the pointer (tile flag 2, set from the .s32 portal records at 0x460ddc) with no object
-    // there and nothing pending: 14, before the object chooser (0x469792).
+    // Un portal del mapa en la celda bajo el puntero (flag de tile 2, fijado desde los registros de portal del .s32 en 0x460ddc) sin objeto
+    // ahí y sin nada pendiente: 14, antes del selector de objetos (0x469792).
     const bool pendiente = a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando;
     auto portal_bajo_puntero = [&] {
         const TablaObjetos& o = a.mundo.objetos;
@@ -2411,39 +2411,39 @@ void elegir_cursor_original(App& a, u64 ahora) {
         return es_portal(a.mundo, a.rec, tx, ty);
     };
     if (!pendiente && !objeto_bajo_puntero(a, false, true) && portal_bajo_puntero()) return poner(14);
-    if (a.pesca.activa) return poner(16);  // the fishing rod while the bobber is out (0x469e53)
+    if (a.pesca.activa) return poner(16);  // la caña de pescar mientras el corcho está afuera (0x469e53)
     if (pendiente) {
-        // Target in range: the target circle (8), or 15 with Ctrl or the pk option (0x469f85); out of range: 11 (0x46a344).
+        // Objetivo en alcance: el círculo de objetivo (8), o 15 con Ctrl o la opción pk (0x469f85); fuera de alcance: 11 (0x46a344).
         if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
         return poner(a.entrada.ctrl || pk ? 15 : 8);
     }
     const ObjId id = objeto_bajo_puntero(a, false, true);
     const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
-    // Ctrl held, with or without an object (0x469fb1): Alt 7, attack mode 15, else 6.
+    // Ctrl mantenido, con o sin objeto (0x469fb1): Alt 7, modo ataque 15, si no 6.
     if (a.entrada.ctrl) return poner(alt ? 7 : ataque ? 15 : 6);
     if (s == SIN_SLOT) return poner(3);
-    if (vendedor(a, id)) return poner(4);  // a private shop (object byte +4, 0x46a060): 4
+    if (vendedor(a, id)) return poner(4);  // una tienda privada (byte del objeto +4, 0x46a060): 4
     const TablaObjetos& o = a.mundo.objetos;
     const bool yo = id == a.mundo.jugador.id;
-    switch (clase_objeto(a, s)) {  // jump table 0x46a358
-    case 2: case 3: return poner(10);                   // corpse: 10 (8 in attack mode with a spell weapon, not modelled)
+    switch (clase_objeto(a, s)) {  // tabla de saltos 0x46a358
+    case 2: case 3: return poner(10);                   // cadáver: 10 (8 en modo ataque con un arma de hechizo, sin modelar)
     case 4: case 14: case 15: return poner(9);
     case 7: case 13: return poner(14);
-    case 6: case 12: return poner(ataque && pk ? 15 : 4);  // NPC / own pet: lips; 15 needs attack mode and pk (0x46a1ed)
-    case TIPO_MONSTRUO:                                 // 0x46a09f: Alt 7; attack mode: pk 15, else 8; else the sword 6
+    case 6: case 12: return poner(ataque && pk ? 15 : 4);  // NPC / mascota propia: labios; 15 necesita modo ataque y pk (0x46a1ed)
+    case TIPO_MONSTRUO:                                 // 0x46a09f: Alt 7; modo ataque: pk 15, si no 8; si no la espada 6
         if (yo) return poner(3);
         return poner(alt ? 7 : ataque ? (pk ? 15 : 8) : 6);
-    case 5: case 11: {                                  // character or someone else's pet (0x46a27a)
+    case 5: case 11: {                                  // personaje o mascota de otro (0x46a27a)
         if (yo) return poner(ataque ? (pk ? 15 : 8) : 3);
-        // A pink (PK-flagged, +0x50) one is a target: Alt 7, attack mode 8 / 15, else the sword 6.
+        // Uno rosa (marcado PK, +0x50) es un objetivo: Alt 7, modo ataque 8 / 15, si no la espada 6.
         if (ahora < o.col<O_ROSA>()[s]) return poner(alt ? 7 : ataque ? (pk ? 15 : 8) : 6);
         if (ataque) return poner(pk ? 15 : 8);
         if (pk) return poner(15);
-        // Neither: no setter; a lips / sword left from before becomes 3 (0x46a31e).
+        // Ninguno de los dos: sin setter; unos labios / espada que quedaron de antes pasan a 3 (0x46a31e).
         if (a.cursor_estado_orig == 4 || a.cursor_estado_orig == 6) return poner(3);
         return seguir();
     }
-    default: return poner(3);                           // items 9, doors 8 (tile flag case not modelled), the rest
+    default: return poner(3);                           // objetos 9, puertas 8 (el caso por flag de tile no se modela), el resto
     }
 }
 
@@ -2494,8 +2494,8 @@ ObjId objeto_bajo_puntero(const App& a, bool incluir_propio, bool incluir_muerto
         if ((r.id == a.mundo.jugador.id && !incluir_propio) || mx < r.x0 || mx >= r.x1 || my < r.y0 || my >= r.y1) continue;
         const Slot s = o.buscar(r.id);
         if (s == SIN_SLOT || (!incluir_muertos && o.col<O_ESTADO>()[s] == ESTADO_MUERTO)) continue;
-        // Original UI (0x469d90 sorts the hits with 0x46a450): the own character last, then the highest object class
-        // (a monster over an NPC over a character over a corpse); the simple UI takes the frontmost.
+        // Interfaz original (0x469d90 ordena los aciertos con 0x46a450): el personaje propio al final, después la clase de objeto más alta
+        // (un monstruo sobre un NPC sobre un personaje sobre un cadáver); la interfaz simple toma el de más adelante.
         const int clase = a.cfg.ui_simple ? 0 : r.id == a.mundo.jugador.id ? -2 : clase_objeto(a, s);
         if (!mejor || clase > mejor_clase || (clase == mejor_clase && r.profundidad > mejor->profundidad)) {
             mejor = &r;
@@ -2532,8 +2532,8 @@ void dibujar_captura(App& a) {
     }
 }
 
-// Original GM hotkeys Ctrl+Y / Ctrl+Z (0x409430 / 0x409380): "Select a target." (string 179), then the clicked
-// object's id goes out with opcode 83 (cd). Ctrl+Z re-sends it every 1.5 s, 20 more times (timer 0x409320).
+// Atajos de GM originales Ctrl+Y / Ctrl+Z (0x409430 / 0x409380): "Select a target." (texto 179), después el id del objeto
+// cliqueado sale con el opcode 83 (cd). Ctrl+Z lo reenvía cada 1,5 s, 20 veces más (temporizador 0x409320).
 void procesar_gm_apuntado(App& a, u64 ahora) {
     EntradaFrame& e = a.entrada;
     if (a.gm_apuntando) {
@@ -2549,7 +2549,7 @@ void procesar_gm_apuntado(App& a, u64 ahora) {
                 a.gm_repeticiones = 0;
                 a.gm_proximo_ms = ahora + 1500;
             }
-            a.gm_apuntando = 0;  // a click on the ground cancels
+            a.gm_apuntando = 0;  // un clic en el suelo cancela
         }
     }
     if (a.gm_objetivo && ahora >= a.gm_proximo_ms) {
@@ -2568,7 +2568,7 @@ void frame_juego(App& a) {
     }
     if (a.entrada.alt_c) a.ventana_estado = !a.ventana_estado;
     if (a.entrada.alt_i) a.ventana_inventario = !a.ventana_inventario;
-    switch (a.entrada.atajo_ctrl) {  // original client: Ctrl+letter opens its windows
+    switch (a.entrada.atajo_ctrl) {  // cliente original: Ctrl+letra abre sus ventanas
     case 'I': a.ventana_inventario = !a.ventana_inventario; break;
     case 'A': a.ventana_estado = !a.ventana_estado; break;
     case 'S': a.ventana_hechizos = !a.ventana_hechizos; break;
@@ -2576,11 +2576,11 @@ void frame_juego(App& a) {
     case 'C': alternar_comunidad(a); break;
     case 'V': alternar_opciones(a); break;
     case 'H': alternar_ayuda(a); break;
-    case 'P':  // original: screenshot (BMP) to the Capture folder
+    case 'P':  // original: captura de pantalla (BMP) en la carpeta Capture
         tomar_captura(a);
         break;
-    // Only the original UI has these (Ctrl+R: see below; Ctrl+M has no handler in the US client's hotkey table).
-    case 'X':  // attack mode: flips the local byte [0x703105] (0x456e30), silently and without a packet
+    // Solo la interfaz original tiene estos (Ctrl+R: ver abajo; Ctrl+M no tiene manejador en la tabla de atajos del cliente US).
+    case 'X':  // modo ataque: invierte el byte local [0x703105] (0x456e30), en silencio y sin paquete
         if (!a.cfg.ui_simple) a.modo_ataque = !a.modo_ataque;
         break;
     case 'T':  // chat window size cycle (0x421330)
@@ -2589,10 +2589,10 @@ void frame_juego(App& a) {
     case 'O':  // chat colour palette (0x456dc3)
         if (!a.cfg.ui_simple) a.paleta_chat = !a.paleta_chat;
         break;
-    case 'R':  // floating HP/MP window: flips the option byte [0x6ddf90] (0x456d26)
+    case 'R':  // ventana flotante de HP/MP: invierte el byte de opción [0x6ddf90] (0x456d26)
         if (!a.cfg.ui_simple) a.cfg.opciones_orig ^= 1 << OPC_FLOATHPMP, guardar_config(a.cfg);
         break;
-    case 'Y': case 'Z':  // GM only: pick a target, send opcode 83 (Ctrl+Z repeats)
+    case 'Y': case 'Z':  // solo GM: elige un objetivo, manda el opcode 83 (Ctrl+Z repite)
         if (!a.cfg.ui_simple && a.es_gm) {
             a.gm_apuntando = a.entrada.atajo_ctrl == 'Y' ? 1 : 2;
             a.chat.agregar("Select a target.", rgba(255, 230, 120), CHAT_SISTEMA);
@@ -2610,10 +2610,10 @@ void frame_juego(App& a) {
     procesar_item_apuntado(a);
     procesar_gm_apuntado(a, ahora);
     procesar_mascotas(a);
-    teclas_lista_tienda(a);  // before the hotbar and the chat line take the digits
+    teclas_lista_tienda(a);  // antes de que la barra de atajos y la línea del chat tomen los dígitos
     procesar_barra(a);
-    if (a.cfg.ui_simple) {  // auto-buff and auto-potion macros: simple UI only
-        procesar_autopocion(a);  // before the auto-buffs: if both are due, heal first
+    if (a.cfg.ui_simple) {  // macros de auto-buff y auto-poción: solo interfaz simple
+        procesar_autopocion(a);  // antes de los auto-buffs: si tocan los dos, primero cura
         procesar_autobuffs(a);
     }
     procesar_npc(a, ahora);
@@ -2651,7 +2651,7 @@ void frame_juego(App& a) {
         dibujar_panel(a);
     }
     dibujar_barra(a, vi.panel_y - 36 - 6);
-    if (a.cfg.ui_simple) {  // client-side macros, not in the original client
+    if (a.cfg.ui_simple) {  // macros del cliente, no están en el cliente original
         dibujar_autobuffs(a);
         dibujar_boton_pocion(a);
     }

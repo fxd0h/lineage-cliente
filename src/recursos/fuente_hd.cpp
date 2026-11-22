@@ -6,13 +6,13 @@
 namespace lin {
 namespace {
 
-// Gaussian sigma (logical pixels) of the smoothing, and the level of the smoothed mask that becomes the outline.
-// A 1-px stroke peaks at ~0.8 after smoothing, so a level below 0.5 keeps stroke ends and corners from receding;
-// it is the "corner-preserving" knob: lower = squarer corners and thicker strokes, higher = rounder and thinner.
+// Sigma gaussiana (píxeles lógicos) del suavizado, y el nivel de la máscara suavizada que pasa a ser el contorno.
+// Un trazo de 1 px llega a ~0,8 tras el suavizado, así que un nivel bajo 0,5 evita que se achiquen los extremos y esquinas de los trazos;
+// es la perilla que "conserva las esquinas": más bajo = esquinas más cuadradas y trazos más gruesos, más alto = más redondas y finas.
 constexpr float SIGMA = 0.42f;
 constexpr float NIVEL = 0.44f;
 
-// Separable Gaussian over `src` (w*h floats) into `dst`; `tmp` is scratch.
+// Gaussiana separable sobre `src` (w*h floats) hacia `dst`; `tmp` es espacio de trabajo.
 void desenfocar(const std::vector<float>& src, std::vector<float>& tmp, std::vector<float>& dst, int w, int h) {
     const float sigma = SIGMA * HD_ESCALA;
     const int radio = static_cast<int>(std::ceil(sigma * 3.0f));
@@ -63,7 +63,7 @@ bool campo_de_mascara(const ImagenRGBA& m, ImagenRGBA& s) {
     desenfocar(a, b, c, W, H);
     s.preparar(static_cast<u16>(W), static_cast<u16>(H));
     s.ox = s.oy = -HD_BORDE;
-    for (size_t i = 0; i < c.size(); ++i) {  // the outline level becomes 0.5
+    for (size_t i = 0; i < c.size(); ++i) {  // el nivel del contorno pasa a ser 0,5
         const u32 v = static_cast<u32>(std::clamp(c[i] - NIVEL + 0.5f, 0.0f, 1.0f) * 255.0f + 0.5f);
         s.px[i] = v * 0x01010101u;
     }

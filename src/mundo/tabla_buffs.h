@@ -1,7 +1,7 @@
-// Numeric columns of the original client's buff table (exe 0x6e1020, 154 rows of 20 bytes): classic icon id, duration
-// in seconds (0 none, -1 until cleared), tooltip and end-of-effect
-// message indices into string-e.tbl (read at runtime, `TablaTexto::linea(idx)`) and the exclusion group. Only numbers
-// are embedded; no game text.
+// Columnas numéricas de la tabla de buffs del cliente original (exe 0x6e1020, 154 filas de 20 bytes): id de ícono clásico, duración
+// en segundos (0 ninguna, -1 hasta que se limpie), índices del tooltip y del mensaje de fin de efecto
+// en string-e.tbl (se leen en ejecución, `TablaTexto::linea(idx)`) y el grupo de exclusión. Solo se embeben
+// números; nada de texto del juego.
 #pragma once
 #include "core/tipos.h"
 #include "mundo/mundo.h"
@@ -55,8 +55,8 @@ inline constexpr i16 BUFF_SEG[154] = {
     3600, 3600, 3600, 3600, 480,
 };
 
-// Start-of-buff chat line (string-e index) printed by the S_SkillSound handlers that tail-jump to 0x48b679 (RE_ROUND7 section 4;
-// every pair re-checked in the 0x48a5c0..0x48b6a8 disassembly). 0 = the handler is silent. There is no start column in the slot table.
+// Línea de chat de inicio de buff (índice de string-e) que imprimen los manejadores de S_SkillSound que saltan al final a 0x48b679 (RE_ROUND7 sección 4;
+// cada par revisado de nuevo en el desensamblado de 0x48a5c0..0x48b6a8). 0 = el manejador es silencioso. La tabla de casillas no tiene columna de inicio.
 inline u16 mensaje_inicio_ranura(int ranura) {
     struct P { u8 ranura; u16 msg; };
     static constexpr P TABLA[] = {
@@ -73,15 +73,15 @@ inline u16 mensaje_inicio_ranura(int ranura) {
     return 0;
 }
 
-// Duration of a slot in seconds: its table value; -1 (until cleared by the server) lasts a day; 0 means no timer.
+// Duración de una casilla en segundos: su valor de la tabla; -1 (hasta que lo limpie el servidor) dura un día; 0 es sin temporizador.
 inline i32 segundos_de_ranura(int ranura) {
     if (ranura < 0 || ranura >= RANURAS_BUFF) return 0;
     return BUFF_SEG[ranura] < 0 ? 86400 : BUFF_SEG[ranura];
 }
 
-// S_SkillSound on the own character -> buff slot (exe FUN_0048a5c0), -1 when the graphic has none. The default for 0x1130 is
-// slot 0x38 and for 0x16c1 slot 0x42; each swaps to the other when that one is already active (0x48acd4 / 0x48ad4f, the flag
-// bytes are [0x81680c + slot]); 0xf47 also clears an active slot 0x44, 0x16c5 does nothing while slot 0x24 is active (0x48ac73 / 0x48ad93).
+// S_SkillSound sobre el personaje propio -> casilla de buff (exe FUN_0048a5c0), -1 si el gráfico no tiene. El valor por omisión para 0x1130 es
+// la casilla 0x38 y para 0x16c1 la 0x42; cada una pasa a la otra cuando esa ya está activa (0x48acd4 / 0x48ad4f, los bytes de flag
+// son [0x81680c + casilla]); 0xf47 además limpia una casilla 0x44 activa, 0x16c5 no hace nada mientras la casilla 0x24 está activa (0x48ac73 / 0x48ad93).
 inline int ranura_de_skillsound(u32 gfx) {
     struct F { u16 gfx, ranura; };
     static constexpr F TABLA[] = {
@@ -102,7 +102,7 @@ inline int ranura_de_skillsound(u32 gfx) {
     return -1;
 }
 
-// S_SkillSound 0xbe on the own character: the slot comes from the own sprite (exe 0x48a656), -1 when none.
+// S_SkillSound 0xbe sobre el personaje propio: la casilla sale del sprite propio (exe 0x48a656), -1 si no hay.
 inline int ranura_de_gfx_be(u32 sprite) {
     switch (sprite) {
     case 0x4b: case 0x5ca: case 0x9d3: case 0x9d8: return 0x26;
@@ -115,12 +115,12 @@ inline int ranura_de_gfx_be(u32 sprite) {
     }
 }
 
-// Effect type of a S_SkillBrave packet: type 4 (Holy Walk) gets the class variant in the high nibble
-// (class byte 2 elf -> 0, 3 wizard -> 1, others -> 2).
+// Tipo de efecto de un paquete S_SkillBrave: el tipo 4 (Holy Walk) lleva la variante de clase en el nibble alto
+// (byte de clase 2 elfo -> 0, 3 mago -> 1, otros -> 2).
 inline u8 tipo_brave(u8 tipo, int clase) { return tipo == 4 ? static_cast<u8>(4 | ((clase == 2 ? 0 : clase == 3 ? 1 : 2) << 4)) : tipo; }
 
-// Buff-table slot of an active effect, -1 when unknown. Derived from the packet handlers of the original client
-// (each calls sub_4647a0(duration, slot)); the Shield / Shadow Armor pair (slots 4 / 5) is inferred.
+// Casilla de la tabla de buffs de un efecto activo, -1 si no se conoce. Sale de los manejadores de paquetes del cliente original
+// (cada uno llama a sub_4647a0(duración, casilla)); el par Shield / Shadow Armor (casillas 4 / 5) es deducido.
 inline int ranura_de_efecto_activo(u8 clase, u8 tipo) {
     switch (clase) {
     case EA_HASTE: return tipo == 1 ? 0 : tipo == 2 ? 1 : -1;
@@ -129,7 +129,7 @@ inline int ranura_de_efecto_activo(u8 clase, u8 tipo) {
         case 1: case 3: case 5: return 2;
         case 6: return 110;
         default:
-            // Type 4 carries the class variant in the high nibble (see tipo_brave): elf 0x18, wizard 0x2a, others 0x25.
+            // El tipo 4 lleva la variante de clase en el nibble alto (ver tipo_brave): elfo 0x18, mago 0x2a, otros 0x25.
             if ((tipo & 15) != 4) return -1;
             return (tipo >> 4) == 0 ? 0x18 : (tipo >> 4) == 1 ? 0x2a : 0x25;
         }

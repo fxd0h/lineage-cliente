@@ -100,8 +100,8 @@ constexpr ParSrv TW380_SRV[] = {
     {140, Srv::PRIVATESHOPLIST}, {68, Srv::BOARD},        {148, Srv::BOARDREAD},    {186, Srv::MAIL},
     {156, Srv::HOUSELIST},     {187, Srv::HOUSEMAP},      {84, Srv::WAR},           {69, Srv::CASTLEMASTER},
     {185, Srv::TAXRATE},       {4, Srv::DEPOSIT},         {141, Srv::DRAWAL},
-    // USEMAP: the 3.80c Opcodes.java has no S_OPCODE_USEMAP, so the number is unknown here.
-    // 64 is S_CharReset / S_PetCtrlMenu / S_BookmarkLoad / S_EquipmentSlot / emblem sync (first byte = subtype).
+    // USEMAP: el Opcodes.java de 3.80c no tiene S_OPCODE_USEMAP, así que aquí el número no se conoce.
+    // 64 es S_CharReset / S_PetCtrlMenu / S_BookmarkLoad / S_EquipmentSlot / sincronización de emblemas (primer byte = subtipo).
     {64, Srv::PETCTRL},        {105, Srv::REDMESSAGE},    {72, Srv::CLANNAME},      {200, Srv::CLANATTENTION},
     {46, Srv::CHANGENAME},
     {231, Srv::WARTIME},
@@ -160,9 +160,9 @@ constexpr ParSrv S3EP1_SRV[] = {
     {115, Srv::PRIVATESHOPLIST}, {93, Srv::BOARD}, {91, Srv::BOARDREAD}, {127, Srv::MAIL},
     {72, Srv::HOUSELIST}, {113, Srv::HOUSEMAP}, {94, Srv::WAR}, {111, Srv::CASTLEMASTER},
     {120, Srv::TAXRATE}, {60, Srv::DEPOSIT}, {67, Srv::DRAWAL}, {26, Srv::WARTIME},
-    {38, Srv::CHANGENAME},  // S_ChangeName: d id, s name
-    {27, Srv::PETCTRL},     // S_CharReset: classic has no S_PetCtrlMenu, so 27 is only the char reset
-    {14, Srv::USEMAP},  // S_UseMap: handler 0x48e0b0 of S3EP1U.bin, format "dc"
+    {38, Srv::CHANGENAME},  // S_ChangeName: d id, s nombre
+    {27, Srv::PETCTRL},     // S_CharReset: classic no tiene S_PetCtrlMenu, así que 27 es solo el reinicio del personaje
+    {14, Srv::USEMAP},  // S_UseMap: manejador 0x48e0b0 de S3EP1U.bin, formato "dc"
 };
 constexpr ParCli S3EP1_CLI[] = {
     {Cli::CLIENTVERSION, 34}, {Cli::LOGINPACKET, 113}, {Cli::COMMONCLICK, 46}, {Cli::NEWCHAR, 50},
@@ -188,7 +188,7 @@ constexpr ParCli S3EP1_CLI[] = {
     {Cli::FISHCLICK, 125},  // C_FishClick (l1j-en C_OPCODE_FISHCLICK; exe 0x469220 sends `cc` 0x7d)
     {Cli::RANK, 78},  // C_Rank: sub 1 rank, 2 / 3 / 4 alliance list / join / leave (0x4053b3..0x4053e3: `cc` 0x4e sub)
     {Cli::PROPOSE, 22}, {Cli::FIGHT, 3}, {Cli::CHECKPK, 70},  // /propose, /duel, /checkpk
-    {Cli::LOGINTOSERVEROK, 25},  // the client sends it as `ccc` 0x19 from the chat toggles (0x406abb, 0x406bbb, 0x406cbb)
+    {Cli::LOGINTOSERVEROK, 25},  // el cliente lo manda como `ccc` 0x19 desde las opciones de chat (0x406abb, 0x406bbb, 0x406cbb)
 };
 
 const char* NOMBRES[] = {

@@ -81,7 +81,7 @@ public:
         vinculo_len_ = static_cast<u32>(v.size());
         es_enlace_ = es_enlace;
     }
-    // <b> in the original UI: bold flag of the style stack (tag handler 0x437a2c sets style byte +0x14, </b> pops it).
+    // <b> en la interfaz original: flag de negrita de la pila de estilos (el manejador de la etiqueta 0x437a2c fija el byte de estilo +0x14, </b> lo saca).
     void negrita(bool abrir) {
         if (!original_) return;
         if (abrir) ++negritas_;
@@ -300,9 +300,9 @@ void maquetar_html(std::string_view html, std::string_view datos, char separador
                 m.imagen(numero_src(atributo(tag, "src")), atributo(tag, "action"), atributo(tag, "link"), atributo(tag, "tooltip"));
             } else if (n == "var" && !cierre) {
                 if (tag.find("img") != std::string_view::npos) {
-                    // `<var img src="#2021">` (newer-client favourites of "monlist"): the number is a variable id, not a
-                    // picture. S3EP1U's var handler (0x4386a2) only knows ids 0x384..0x406 and leaves any other empty
-                    // (0x43a777), so the favourite slots draw nothing; the number must never be loaded as an image.
+                    // `<var img src="#2021">` (favoritos de "monlist" de clientes más nuevos): el número es un id de variable, no una
+                    // imagen. El manejador de var de S3EP1U (0x4386a2) solo conoce los ids 0x384..0x406 y deja vacío cualquier otro
+                    // (0x43a777), así que las casillas de favoritos no dibujan nada; el número nunca debe cargarse como imagen.
                 } else {
                     texto(dato(datos, separador, numero_src(atributo(tag, "src"))));
                 }

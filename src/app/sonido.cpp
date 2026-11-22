@@ -41,7 +41,7 @@ void aplicar_volumenes(App& a) {
 }
 
 namespace {
-constexpr u64 MS_COMBATE = 15000;  // 0x3a98: the combat music lasts this long after the last fight event
+constexpr u64 MS_COMBATE = 15000;  // 0x3a98: la música de combate dura esto tras el último evento de pelea
 
 bool combate_activado(const App& a) { return !(a.cfg.opciones_orig & (1 << OPC_COMBATMUSIC)); }  // bit set = off (0x7030f0)
 bool suena_pista_combate(const App& a) {
@@ -50,9 +50,9 @@ bool suena_pista_combate(const App& a) {
 }
 }  // namespace
 
-// 0x4c53a0: every fight event (the player attacks or casts at `objetivo`, or something attacks the player)
-// refreshes the combat clock. Against a character the PK track plays ("PlayrtKilling"), otherwise the
-// hunting one; if either already plays nothing restarts.
+// 0x4c53a0: cada evento de pelea (el jugador ataca o lanza a `objetivo`, o algo ataca al jugador)
+// renueva el reloj de combate. Contra un personaje suena la pista de PK ("PlayrtKilling"), si no la
+// de caza; si alguna ya suena no se reinicia nada.
 void combate_musica(App& a, Slot objetivo, u64 ahora) {
     a.t_combate = ahora;
     if (!combate_activado(a) || a.pantalla != Pantalla::JUEGO || suena_pista_combate(a)) return;
@@ -79,9 +79,9 @@ void actualizar_sonido(App& a, u64 ahora) {
             if (o.col<O_ESTADO>()[yo] == ESTADO_MUERTO && a.sonidos.musica_muerte >= 0) {
                 a.audio.musica(a.sonidos.musica_muerte, 0, ahora);
             } else if (a.t_combate && ahora < a.t_combate + MS_COMBATE && combate_activado(a) && suena_pista_combate(a)) {
-                // Fighting: the combat track stays until 15 s after the last event (or the option is cleared).
+                // Peleando: la pista de combate sigue hasta 15 s después del último evento (o hasta que se apague la opción).
             } else if (const ZonaMusica* z = a.sonidos.musica_en(mapa, x, y)) {
-                // Back to the zone music: a combat track fades out first (0x479ed0).
+                // De vuelta a la música de la zona: una pista de combate primero se desvanece (0x479ed0).
                 if (suena_pista_combate(a)) a.audio.musica_fundido(z->musica, z->intervalo_s, ahora);
                 else a.audio.musica(z->musica, z->intervalo_s, ahora);
             } else if (suena_pista_combate(a)) {
@@ -134,7 +134,7 @@ void sonido_de_frame(App& a, u32& ultimo, const FrameAccion& f, double x, double
         agregar_efecto(a.mundo, ef);
     }
     if (f.n_sonidos == 0) return;
-    // Up to 3 ids per frame: one is picked at random each time the frame shows.
+    // Hasta 3 ids por cuadro: se elige uno al azar cada vez que se muestra el cuadro.
     const u32 k = f.n_sonidos > 1 ? static_cast<u32>(std::rand()) % f.n_sonidos : 0;
     const i32 id = k == 0 ? f.sonido : f.sonido_mas[k - 1];
     if (id < 0) return;

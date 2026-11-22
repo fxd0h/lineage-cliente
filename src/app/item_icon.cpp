@@ -7,20 +7,20 @@ void draw_item_icon(Gpu& gpu, const RegionAtlas& r, int x, int y, float w, float
                     bool identified) {
     const u8 kind = identified ? bless_kind(bless) : static_cast<u8>(BLESS_NORMAL);
     const float fx = static_cast<float>(x + r.ox), fy = static_cast<float>(y + r.oy);
-    const u64 over = key + 1;  // low 24 bits of the key are free: above the base icon, below the next depth
+    const u64 over = key + 1;  // los 24 bits bajos de la clave están libres: encima del ícono base, debajo de la profundidad siguiente
     if (kind == BLESS_CURSED) {
-        // Original: pixel = icon / 2 + 0x3800 (565), i.e. half brightness plus a constant (58, 0, 0).
+        // Original: píxel = ícono / 2 + 0x3800 (565), o sea media luminosidad más una constante (58, 0, 0).
         gpu.dibujar_escalado(r, fx, fy, w, h, key, rgba(128, 128, 128));
         gpu.dibujar_escalado(r, fx, fy, w, h, over, rgba(58, 0, 0), Mezcla::SILUETA_ADITIVA);
         return;
     }
-    // Blessed: the halo lightens what is under it first and the icon is copied opaque on top (0x44638a), so the icon
-    // itself is not lightened: icon above the aura.
+    // Bendito: el halo aclara primero lo que está debajo y el ícono se copia opaco encima (0x44638a), así que el ícono
+    // mismo no se aclara: ícono sobre el aura.
     const bool aura_on = kind == BLESS_BLESSED && r.aura_dx != 0 && r.w != 0;
     gpu.dibujar_escalado(r, fx, fy, w, h, aura_on ? over : key, BLANCO);
     if (aura_on) {
-        // Blessed, as in the 2009 client (0x445fd0, LUT 0x8f173c: v' = (2v + max) / 3): the icon silhouette shifted
-        // +/-2 px and +/-1 px each lighten the screen one third toward white, a 1-2 px whitish halo around the icon.
+        // Bendito, como en el cliente 2009 (0x445fd0, LUT 0x8f173c: v' = (2v + max) / 3): la silueta del ícono desplazada
+        // +/-2 px y +/-1 px aclara cada vez la pantalla un tercio hacia el blanco, un halo blanquecino de 1-2 px alrededor del ícono.
         RegionAtlas aura = r;
         aura.x = static_cast<u16>(r.x + r.aura_dx);
         aura.w = static_cast<u16>(r.w + AURA_PAD);

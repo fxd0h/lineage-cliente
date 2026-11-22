@@ -137,9 +137,9 @@ TEST_CASE("NPC: maquetación del HTML con el estilo del cliente original") {
     maquetar_html("<font fg=0000ff>Red</font> plain <a link=\"x\"><font fg=00ff00>Link</font></a><br>Next", {}, '\x01', "U", 200, medir,
                   nullptr, p, true);
     REQUIRE(p.elementos.size() >= 4);
-    CHECK(p.elementos[0].color == 0xFF0000FFu);  // fg=0000ff is COLORREF red (R = low byte)
+    CHECK(p.elementos[0].color == 0xFF0000FFu);  // fg=0000ff es rojo en COLORREF (R = byte bajo)
     CHECK(p.elementos[1].color == COLOR_TEXTO_HTML_ORIGINAL);
-    CHECK(p.elementos[2].color == 0xFF00FF00u);  // a <font> inside the <a> replaces the link color
+    CHECK(p.elementos[2].color == 0xFF00FF00u);  // un <font> dentro del <a> reemplaza el color del enlace
     CHECK(p.elementos[0].h == ALTO_LINEA_HTML_ORIGINAL);
     CHECK(p.elementos.back().y == ALTO_LINEA_HTML_ORIGINAL);
     maquetar_html("<a link=\"x\">Go</a>", {}, '\x01', "U", 200, medir, nullptr, p, true);

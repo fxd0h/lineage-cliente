@@ -86,7 +86,7 @@ void agregar_efecto(Mundo& m, const EfectoVisual& e) {
     m.siguiente_efecto = (m.siguiente_efecto + 1) % MAX_EFECTOS_VISUALES;
 }
 
-// Queue the end-of-effect message of a slot (original client: table +0x10), shown a second later (see eventos_hechizos).
+// Encola el mensaje de fin de efecto de una casilla (cliente original: tabla +0x10), que se muestra un segundo después (ver eventos_hechizos).
 static void encolar_fin(EstadoJugador& j, const EfectoActivo& ef, u64 ahora) {
     const int r = ranura_de_efecto_activo(ef.clase, ef.tipo);
     if (r < 0 || !BUFF_FIN_MSG[r] || j.n_fin_pendientes == MAX_FIN_PENDIENTES) return;
@@ -110,9 +110,9 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     const bool unico = clase == EA_HASTE || clase == EA_BRAVE || clase == EA_FUERZA || clase == EA_DESTREZA;
     auto es_este = [&](const EfectoActivo& e) { return e.clase == clase && (unico || e.tipo == tipo); };
     if (segundos > 0) {
-        // Exclusion groups of the buff table (+8): the new effect removes the other active slots of its non-zero group.
+        // Grupos de exclusión de la tabla de buffs (+8): el efecto nuevo quita las otras casillas activas de su grupo distinto de cero.
         const int nueva = ranura_de_efecto_activo(clase, tipo);
-        // The slot set of the original is idempotent per slot: a second packet for the same slot replaces the first.
+        // Fijar una casilla en el original es idempotente: un segundo paquete para la misma casilla reemplaza al primero.
         for (u32 k = 0; k < j.n_efectos && nueva >= 0;) {
             if (!es_este(j.efectos[k]) && ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == nueva) j.efectos[k] = j.efectos[--j.n_efectos];
             else ++k;
@@ -141,14 +141,14 @@ void poner_efecto_activo(EstadoJugador& j, u8 clase, u8 tipo, i32 segundos, u64 
     j.efectos[i] = {clase, tipo, ahora + static_cast<u64>(segundos) * 1000};
 }
 
-// The exe keeps one byte per buff slot, [0x81680c + slot], set while the slot runs (0x4647a0 / 0x464760).
+// El exe guarda un byte por casilla de buff, [0x81680c + casilla], activo mientras la casilla corre (0x4647a0 / 0x464760).
 bool ranura_activa(const EstadoJugador& j, int ranura) {
     for (u32 k = 0; k < j.n_efectos; ++k)
         if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) return true;
     return false;
 }
 
-// 0x464760: drops a slot's icon silently (no end-of-effect message).
+// 0x464760: quita el ícono de una casilla en silencio (sin mensaje de fin de efecto).
 void quitar_ranura(EstadoJugador& j, int ranura) {
     for (u32 k = 0; k < j.n_efectos;) {
         if (ranura_de_efecto_activo(j.efectos[k].clase, j.efectos[k].tipo) == ranura) j.efectos[k] = j.efectos[--j.n_efectos];
@@ -156,11 +156,11 @@ void quitar_ranura(EstadoJugador& j, int ranura) {
     }
 }
 
-// Own S_SkillSound with graphic 870 (Cancellation), exe 0x48bc15..0x48bdb4: client-side removal of the buff icons.
+// S_SkillSound propio con el gráfico 870 (Cancellation), exe 0x48bc15..0x48bdb4: el cliente quita los íconos de buff.
 void cancelacion_propia(EstadoJugador& j) {
     if (ranura_activa(j, 0x4d)) quitar_ranura(j, 0x4d);
     else if (ranura_activa(j, 0x4e)) quitar_ranura(j, 0x4e);
-    if (!ranura_activa(j, 0x2b)) {  // while slot 0x2b (S_SkillSound 0x8ba) runs, the two ranges below stay
+    if (!ranura_activa(j, 0x2b)) {  // mientras corre la casilla 0x2b (S_SkillSound 0x8ba), los dos rangos de abajo se mantienen
         for (int r = 0xc; r < 0x3b; ++r)
             if (r != 0x2c) quitar_ranura(j, r);
         for (int r = 0x42; r <= 0x48; ++r)
@@ -170,7 +170,7 @@ void cancelacion_propia(EstadoJugador& j) {
     for (int r = 0x53; r <= 0x5a; ++r) quitar_ranura(j, r);
     for (int r = 0x5d; r <= 0x64; ++r) quitar_ranura(j, r);
     for (int r = 0x88; r <= 0x8f; ++r) quitar_ranura(j, r);
-    for (int r : {0x51, 0x4f, 0x50})  // only the first active of these three
+    for (int r : {0x51, 0x4f, 0x50})  // solo la primera activa de estas tres
         if (ranura_activa(j, r)) {
             quitar_ranura(j, r);
             break;
@@ -184,21 +184,21 @@ void poner_ranura(EstadoJugador& j, int ranura, i32 segundos, u64 ahora) {
 void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extra)[4], int gfx_propio, int clase, u64 ahora) {
     auto poner = [&](int ranura, i32 seg) { poner_efecto_activo(j, EA_ICONO, static_cast<u8>(EFECTO_RANURA + ranura), seg, ahora); };
     switch (subtipo) {
-    case 35:  // polymorph: slot 0x4b for the sprites 0x16dd-0x16e6, else 0x27; 0 removes every polymorph slot
+    case 35:  // polymorph: casilla 0x4b para los sprites 0x16dd-0x16e6, si no 0x27; 0 quita todas las casillas de polymorph
         for (int r : {0x27, 0x4b, 0x6d, 0x70, 0x73}) poner(r, 0);
         if (segundos > 0) poner(gfx_propio >= 0x16dd && gfx_propio <= 0x16e6 ? 0x4b : 0x27, segundos);
         break;
     case 36: poner(0x29, segundos); break;  // chat ban
-    case 56:  // slot 0x5c when the second h is in 0xc20-0xc29, else 0x52; t <= 0 removes both
+    case 56:  // casilla 0x5c cuando el segundo h está en 0xc20-0xc29, si no 0x52; t <= 0 quita las dos
         poner(0x52, 0);
         poner(0x5c, 0);
         if (segundos > 0) poner(extra[0] >= 0xc20 && extra[0] <= 0xc29 ? 0x5c : 0x52, segundos);
         break;
     case 59: poner(0x87, 0); break;
     case 74: poner(0x4a, segundos); break;
-    case 75: poner(0x87, extra[0] > 0 ? 86400 : 0); break;  // until 59 or n = 0 (no duration in the packet)
+    case 75: poner(0x87, extra[0] > 0 ? 86400 : 0); break;  // hasta el 59 o n = 0 (el paquete no trae duración)
     case 21: {
-        // Four class icons, each lasting b*16-8 s: dark elf 0x1f 0x1d 0x1e 0x20, illusionist b3 -> 0x74, the rest 0xe 0x11 0xf 0x10.
+        // Cuatro íconos por clase, cada uno de b*16-8 s: elfo oscuro 0x1f 0x1d 0x1e 0x20, ilusionista b3 -> 0x74, el resto 0xe 0x11 0xf 0x10.
         static constexpr int OSCURO[4] = {0x1f, 0x1d, 0x1e, 0x20}, OTRAS[4] = {0xe, 0x11, 0xf, 0x10};
         for (int i = 0; i < 4; ++i) {
             const int r = clase == 4 ? OSCURO[i] : (clase == 6 && i == 3) ? 0x74 : OTRAS[i];
@@ -210,7 +210,7 @@ void icono_de_caja(EstadoJugador& j, int subtipo, int segundos, const i32 (&extr
     }
 }
 
-// Plays the level-up effect on the player when the reported level rose from `previo`.
+// Reproduce el efecto de subida de nivel sobre el jugador cuando el nivel informado subió desde `previo`.
 static void efecto_subida_nivel(Mundo& m, i32 previo, u64 ahora) {
     if (!subida_de_nivel(previo, m.jugador.nivel) || m.jugador.id == 0) return;
     EfectoVisual ef;
@@ -287,8 +287,8 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // Muerto al aparecer (un cadáver en el suelo): directamente el último frame de morir.
             o.col<O_ACCION>()[s] = e.v[OB_ESTADO] == ESTADO_MUERTO ? ACC_MORIR : 0xFF;
             o.col<O_TACCION>()[s] = 0;
-            // The server sends S_DoActionGFX (appear / hide) right before the S_NPCPack with the new status:
-            // keep that fresh action playing instead of cutting it.
+            // El servidor manda S_DoActionGFX (aparecer / ocultarse) justo antes del S_NPCPack con el estado nuevo:
+            // se deja seguir esa acción reciente en vez de cortarla.
             if (existia && e.v[OB_ESTADO] != ESTADO_MUERTO && accion_previa != 0xFF && ahora - t_previa < 1500) {
                 o.col<O_ACCION>()[s] = accion_previa;
                 o.col<O_TACCION>()[s] = t_previa;
@@ -356,7 +356,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (s == SIN_SLOT) break;
             const GfxId anterior = o.col<O_GFX>()[s];
             o.col<O_GFX>()[s] = static_cast<GfxId>(e.v[CF_GFX]);
-            // Attribute 113: the new gfx names an effect that plays at the object when it morphs into it.
+            // Atributo 113: el gfx nuevo nombra un efecto que se reproduce en el objeto cuando se transforma en él.
             if (m.sprites && anterior != o.col<O_GFX>()[s])
                 if (const GfxId morfo = m.sprites->morfo(o.col<O_GFX>()[s])) {
                     EfectoVisual ef;
@@ -408,8 +408,8 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                     o.col<O_ACCION>()[sa] = accion;
                     o.col<O_TACCION>()[sa] = ahora;
                     o.col<O_DANO_RAPIDO>()[sa] = 0;
-                    // The attacker turns to its target when it is known (0x4c64d0 -> 0x4cc6c0); the packet heading only
-                    // otherwise (S_AttackPacketForNpc carries the target's heading).
+                    // El atacante gira hacia su objetivo cuando se lo conoce (0x4c64d0 -> 0x4cc6c0); si no, solo el rumbo
+                    // del paquete (S_AttackPacketForNpc trae el rumbo del objetivo).
                     o.col<O_DIR>()[sa] = static_cast<u8>(e.v[AT_DIR]);
                     if (const Slot st = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO])); st != SIN_SLOT && st != sa) {
                         const int dx = (o.col<O_X>()[st] > o.col<O_X>()[sa]) - (o.col<O_X>()[st] < o.col<O_X>()[sa]);
@@ -423,8 +423,8 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             // hasta el objetivo.
             u64 impacto = 0;
             if (sa != SIN_SLOT && m.sprites) {
-                // Only attack (1) and damage (2) add the weapon stance (SetAction 0x4c96c0); a missing weapon row falls back
-                // to the bare action.
+                // Solo el ataque (1) y el daño (2) suman la postura del arma (SetAction 0x4c96c0); si falta la fila del arma se usa
+                // la acción sola.
                 GfxId g = o.col<O_GFX>()[sa];
                 const u8 base = static_cast<u8>(e.v[AT_ACCION]);
                 u8 accion = base == ACC_ATACAR || base == ACC_DANADO ? static_cast<u8>(base + o.col<O_ESTADO>()[sa]) : base;
@@ -450,8 +450,8 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             }
             // Si acertó, el objetivo muestra el daño cuando lo alcanza el golpe.
             Slot so = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO]));
-            // The flinch fires at the attacker's "!" frame only (0x4c8950 -> 0x4cbef0): an attack with no "!" never flinches
-            // (a spell or arrow flinches when its graphic arrives).
+            // El estremecimiento ocurre solo en el cuadro "!" del atacante (0x4c8950 -> 0x4cbef0): un ataque sin "!" nunca estremece
+            // (un hechizo o una flecha estremece cuando llega su gráfico).
             if (e.v[AT_GOLPE] && (con_impacto || e.v[AT_GFX] > 0) && so != SIN_SLOT && o.col<O_ESTADO>()[so] != ESTADO_MUERTO) {
                 // Si el flinch ya se está mostrando (p. ej. predicho por la compensación de ataque, con
                 // su t de impacto todavía en el futuro), no reiniciarlo con el eco del servidor.
@@ -482,10 +482,10 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (gfx_con_flash(ef.gfx)) ef.flash = 2;
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
             if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
-                // Own S_SkillSound: some graphics start a buff slot lasting the slot's table time (exe 0x48a5c0).
+                // S_SkillSound propio: algunos gráficos inician una casilla de buff que dura el tiempo de la tabla (exe 0x48a5c0).
                 if (ef.gfx == 0xbe) {
-                    // Graphic 0xbe: the slot depends on the own sprite (exe 0x48a656). Slot 0x5b replaces 0x26; 0x4f, 0x50, 0x51
-                    // and 0x84 replace each other.
+                    // Gráfico 0xbe: la casilla depende del sprite propio (exe 0x48a656). La casilla 0x5b reemplaza a 0x26; 0x4f, 0x50, 0x51
+                    // y 0x84 se reemplazan entre sí.
                     const Slot yo = o.buscar(m.jugador.id);
                     const u32 sprite = yo == SIN_SLOT ? 0 : o.col<O_GFX>()[yo];
                     const int r = ranura_de_gfx_be(sprite);
@@ -502,7 +502,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                     else if (ef.gfx == 0x16c5 && ranura_activa(m.jugador, 0x24)) r = -1;
                     if (ef.gfx == 870) cancelacion_propia(m.jugador);
                     if (const i32 seg = segundos_de_ranura(r); seg > 0) poner_ranura(m.jugador, r, seg, ahora);
-                    // Start line (0x48b679 tail): gfx 0x1130 is silent in both branches; 0x16c1 restarting slot 0x38 has no line.
+                    // Línea de inicio (cola de 0x48b679): el gfx 0x1130 es silencioso en ambas ramas; 0x16c1 al reiniciar la casilla 0x38 no tiene línea.
                     if (r >= 0 && ef.gfx != 0x1130)
                         if (const u16 msg = mensaje_inicio_ranura(r); msg && m.jugador.n_fin_pendientes < MAX_FIN_PENDIENTES)
                             m.jugador.fin_pendientes[m.jugador.n_fin_pendientes++] = {msg, ahora};
@@ -516,7 +516,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 EstadoJugador& j = m.jugador;
                 (e.v[VE_CLASE] == VE_HASTE ? j.haste : j.brave) = tipo;
                 if (e.v[VE_CLASE] == VE_HASTE) poner_efecto_activo(j, EA_HASTE, tipo, tipo ? e.v[VE_SEG] : 0, ahora);
-                else if (tipo == 0) {  // type 0 clears the brave slots 2, 0x25 and 0x6e
+                else if (tipo == 0) {  // el tipo 0 limpia las casillas de brave 2, 0x25 y 0x6e
                     poner_efecto_activo(j, EA_BRAVE, 0, 0, ahora);
                 } else {
                     poner_efecto_activo(j, EA_BRAVE, tipo_brave(tipo, j.clase), e.v[VE_SEG], ahora);
@@ -528,7 +528,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             break;
         }
         case Ev::ICONO_EFECTO: {
-            if (e.v[IE_CLASE] == IE_CONTEXTO) break;  // resolved by the app (needs the class): icono_de_caja
+            if (e.v[IE_CLASE] == IE_CONTEXTO) break;  // lo resuelve la app (necesita la clase): icono_de_caja
             static constexpr u8 CLASES[] = {EA_ESCUDO, EA_AURA, EA_ICONO, EA_FUERZA, EA_DESTREZA, EA_EVA};
             poner_efecto_activo(m.jugador, CLASES[e.v[IE_CLASE]], static_cast<u8>(e.v[IE_TIPO]), e.v[IE_SEG], ahora);
             break;
@@ -589,7 +589,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (s != SIN_SLOT) o.col<O_TITULO>()[s] = guardar_texto(m, e.s[0]);
             break;
         }
-        case Ev::CLAN_EMBLEMA_OBJETO: {  // 3.80C emblem sync: the object's clan (emblem) id changed
+        case Ev::CLAN_EMBLEMA_OBJETO: {  // sincronización de emblemas de 3.80C: cambió el id de clan (emblema) del objeto
             Slot s = o.buscar(e.id);
             if (s != SIN_SLOT) o.col<O_CLAN>()[s] = static_cast<u32>(e.v[0]);
             break;
@@ -651,7 +651,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
         }
         case Ev::PARALISIS: {
             const u8 t = static_cast<u8>(e.v[0]);
-            // Stun (22 / 23) and bind (24 / 25) also show their buff slots (0x3e, 0x3d).
+            // Aturdimiento (22 / 23) y atadura (24 / 25) también muestran sus casillas de buff (0x3e, 0x3d).
             if (t == ATURDIDO || t == ATADO) poner_ranura(m.jugador, t == ATURDIDO ? 0x3e : 0x3d, segundos_de_ranura(t == ATURDIDO ? 0x3e : 0x3d), ahora);
             if (t == ATURDIDO + 1 || t == ATADO + 1) poner_ranura(m.jugador, t == ATURDIDO + 1 ? 0x3e : 0x3d, 0, ahora);
             if (t == PARALISIS || t == PARALISIS_2 || t == SUENO || t == CONGELADO || t == ATURDIDO || t == ATADO)
@@ -661,7 +661,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             break;
         }
         case Ev::MENSAJE_SERVIDOR: {
-            // Messages that drive slot 0x3f: 0x11e sets it for atoi(arg) * 20 s, 0x120 clears it, 0x99 sets the table default.
+            // Mensajes que manejan la casilla 0x3f: 0x11e la fija por atoi(arg) * 20 s, 0x120 la limpia, 0x99 fija el valor por omisión de la tabla.
             const int id = e.v[MS_ID];
             if (id == 0x11e) {
                 i32 n = 0;
@@ -711,7 +711,7 @@ static std::string ruta_segmento(const Recursos& rec, MapId mapa, int x, int y) 
         if (std::filesystem::exists(ruta)) return ruta;
     }
     const std::string ruta = rec.ruta_archivo(nombre_segmento(mapa, x, y));
-    // Without the .s32, the old .seg format: Chaotic Temple and north Gludio exist only that way.
+    // Sin el .s32, el formato viejo .seg: Chaotic Temple y el norte de Gludio solo existen así.
     if (!std::filesystem::exists(ruta)) {
         std::string nombre = nombre_segmento(mapa, x, y);
         nombre.replace(nombre.size() - 3, 3, "seg");

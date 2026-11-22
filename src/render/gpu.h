@@ -32,13 +32,13 @@ struct Instancia {
 static_assert(sizeof(Instancia) == 48, "debe coincidir con el struct del shader");
 
 // Normal (tapa según el alfa) o aditiva (suma su luz al fondo: efectos de hechizos).
-// SILUETA: ignores the texture's color, uses the tint's color with the texture's alpha (bit 1); the additive
-// variant adds that flat color to the background.
-// PANTALLA: screen blend, dst' = src + dst * (1 - src) per channel (the original client's buff icons);
-// drawn in a second draw call after the normal ones of the same pass.
-// GRIS (bit 5): the texture's luminance times the tint, for the original's monochrome bottom-strip icons.
-// TEXTO_HD (bit 6): HD text glyph (the atlas region is a field, recursos/fuente_hd.h). Skipped by the pre-filter passes
-// and drawn by Gpu::pase_texto after the scaling filter, at output resolution.
+// SILUETA: ignora el color de la textura, usa el color del tinte con el alfa de la textura (bit 1); la variante
+// aditiva suma ese color plano al fondo.
+// PANTALLA: mezcla screen, dst' = src + dst * (1 - src) por canal (los íconos de buff del cliente original);
+// se dibuja en una segunda llamada después de las normales de la misma pasada.
+// GRIS (bit 5): la luminancia de la textura por el tinte, para los íconos monocromos de la franja inferior del original.
+// TEXTO_HD (bit 6): glifo de texto HD (la región del atlas es un campo, recursos/fuente_hd.h). Lo saltan las pasadas previas al filtro
+// y lo dibuja Gpu::pase_texto después del filtro de escalado, a la resolución de salida.
 enum class Mezcla : u32 { NORMAL = 0, ADITIVA = 1, SILUETA = 2, SILUETA_ADITIVA = 3, PANTALLA = 8, GRIS = 32, MULTIPLICAR = 128, TEXTO_HD = 64 };
 
 // Capas de dibujo (byte alto de la clave de orden). CAPA_VENTANAS no se usa directo: es donde
@@ -65,7 +65,7 @@ constexpr u32 MAX_INSTANCIAS = 1u << 17;
 constexpr u32 RESERVA_CAPAS = 1u << 14;
 constexpr u32 TAM_SUBIDA_ATLAS = 32u << 20; // máximo de píxeles nuevos por frame
 
-// Final-present filter (settings.ini "escalado"): entero = nearest blit, the others are one fullscreen pass.
+// Filtro de la presentación final ("escalado" de settings.ini): entero = blit por vecino más cercano, los demás son una pasada de pantalla completa.
 enum class Escalado : int { ENTERO = 0, XBR = 1, FSR = 2, CRT = 3, ANIME4K = 4 };
 inline constexpr int N_ESCALADOS = 5;
 inline const char* nombre_escalado(Escalado e) {
@@ -91,8 +91,8 @@ public:
     void ajustar_vista(bool ampliable, int zoom, int franja = 0, bool solo_mundo = false);
     // Mayor escala con la que entra el tamaño mínimo en la ventana actual.
     int escala_maxima(int franja = 0) const;
-    // Fixed view (default): the logical grid is constant (640 x (480 + franja)) and is scaled into the
-    // window with its aspect ratio kept. Otherwise (wide view) the grid grows with the window.
+    // Vista fija (por omisión): la grilla lógica es constante (640 x (480 + franja)) y se escala dentro de la
+    // ventana conservando su proporción. Si no (vista amplia) la grilla crece con la ventana.
     void fijar_vista_fija(bool fija) { vista_fija_ = fija; }
     bool vista_fija() const { return vista_fija_; }
     void cerrar();
@@ -136,12 +136,12 @@ public:
     // Ordena si hace falta, sube y presenta el frame. Si hay una captura pedida, guarda la imagen lógica.
     void presentar();
     void pedir_captura(const std::string& ruta_bmp) { ruta_captura_ = ruta_bmp; }
-    // Saves the final image (after the scaling filter, at window-grid resolution) as BMP.
+    // Guarda la imagen final (después del filtro de escalado, a la resolución de la grilla de la ventana) como BMP.
     void pedir_captura_final(const std::string& ruta_bmp) { ruta_final_ = ruta_bmp; }
     void fijar_escalado(Escalado e) { escalado_ = e; }
-    // HD text (settings.ini "texto_hd"): glyphs drawn after the scaling filter at output resolution. Works on SPIR-V and MSL
-    // (fs_texto in both) and is off while a logical capture is pending, so
-    // `captura` still shows the text.
+    // Texto HD ("texto_hd" de settings.ini): glifos dibujados después del filtro de escalado a la resolución de salida. Funciona con SPIR-V y MSL
+    // (fs_texto en ambos) y se apaga mientras hay una captura lógica pendiente, así
+    // `captura` igual muestra el texto.
     void fijar_texto_hd(bool si) { texto_hd_ = si; }
     bool texto_hd() const { return texto_hd_ && pipe_texto_ && pipe_comp_[0] && ruta_captura_.empty(); }
 
@@ -182,19 +182,19 @@ private:
     bool crear_pipeline();
     bool crear_destino();
     void blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUTexture* dst);
-    // Anime4K CNN x2 (S): 6 passes, intermediates created lazily on first use and on grid change.
+    // Anime4K CNN x2 (S): 6 pasadas, los intermedios se crean recién al primer uso y al cambiar la grilla.
     bool crear_anime4k();
     SDL_GPUTexture* pase_anime4k(SDL_GPUCommandBuffer* cmd);  // destino_ -> copia_; nullptr if unavailable
     // Vacía la lista de dibujo y los efectos del frame (con o sin presentarlo).
     void terminar_frame(u32 instancias_dibujadas);
     bool asegurar_luz(int bw, int bh);
     void ordenar();
-    // Downloads `tex` (destino_ size) and saves it as BMP; `logica` keeps one pixel per logical pixel.
+    // Descarga `tex` (del tamaño de destino_) y la guarda como BMP; `logica` deja un píxel por píxel lógico.
     SDL_GPUCommandBuffer* guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* tex, int w, int h, std::string& ruta, bool logica);
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
-    bool mailbox_ = false;          // present mode MAILBOX: the loop is paced by pace_frame()
+    bool mailbox_ = false;          // modo de presentación MAILBOX: el bucle lo regula pace_frame()
     Uint64 next_frame_ns_ = 0;
     void pace_frame();
     bool usar_dxil_ = false;   // Windows (D3D12): DXIL compiled from shaders/*.hlsl (cmake/shaders.cmake)
@@ -202,26 +202,26 @@ private:
     SDL_GPUGraphicsPipeline* pipeline_ = nullptr;
     SDL_GPUGraphicsPipeline* pipeline_pantalla_ = nullptr;  // same shaders, screen blend factors
     SDL_GPUGraphicsPipeline* pipeline_mult_ = nullptr;      // multiply blend (dst * src), see sprite shaders
-    u32 n_mult_ = 0;                                        // multiply instances queued this frame
-    u32 n_pantalla_ = 0;                                    // screen-blend instances queued this frame
+    u32 n_mult_ = 0;                                        // instancias de multiplicar encoladas en este cuadro
+    u32 n_pantalla_ = 0;                                    // instancias de mezcla screen encoladas en este cuadro
     SDL_GPUGraphicsPipeline* pipeline_brillo_ = nullptr;
-    // HD text pass: instances sorted from the first text one are drawn into `capa_texto_` (colour + coverage) by
-    // pipe_texto_ (text adds, other non-additive instances attenuate by their alpha), then pipe_comp_ lays
-    // the layer over the destination: [0] for R8G8B8A8 textures, [1] for the swapchain format.
+    // Pasada de texto HD: las instancias ordenadas desde la primera de texto se dibujan en `capa_texto_` (color + cobertura) con
+    // pipe_texto_ (el texto suma, las demás instancias no aditivas atenúan según su alfa), después pipe_comp_ pone
+    // la capa sobre el destino: [0] para texturas R8G8B8A8, [1] para el formato del swapchain.
     SDL_GPUGraphicsPipeline* pipe_texto_ = nullptr;
     SDL_GPUGraphicsPipeline* pipe_comp_[2] = {};
     SDL_GPUTexture* capa_texto_ = nullptr;  // RGBA8: premultiplied text colour
     SDL_GPUTexture* capa_cob_ = nullptr;    // R8: text coverage
     int capa_w_ = 0, capa_h_ = 0;
     bool texto_hd_ = false;
-    u32 primer_texto_ = 0;  // index of the first TEXTO_HD instance in the sorted list (== n if none)
+    u32 primer_texto_ = 0;  // índice de la primera instancia TEXTO_HD en la lista ordenada (== n si no hay)
     void crear_pipelines_texto(SDL_GPUGraphicsPipelineCreateInfo pi, SDL_GPUShader* fs_texto);
-    // Draws the HD text over `destino` (`w` x `h`); `rect`: where the logical grid lands (nullptr = all of it).
+    // Dibuja el texto HD sobre `destino` (`w` x `h`); `rect`: dónde cae la grilla lógica (nullptr = todo).
     void pase_texto(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* destino, int w, int h, int formato, const RectVista* rect);
     SDL_GPUGraphicsPipeline* pipeline_esc_[N_ESCALADOS] = {};  // [0] unused (nearest blit)
     Escalado escalado_ = Escalado::ENTERO;
-    // Anime4K: conv1..conv4, depth-to-space, resample. a4k_a_/a4k_b_ ping-pong at the logical grid size
-    // (RGBA16F); a4k_x2_ is the 2x image (only when the integer scale is not 2).
+    // Anime4K: conv1..conv4, depth-to-space, resample. a4k_a_/a4k_b_ alternan al tamaño de la grilla lógica
+    // (RGBA16F); a4k_x2_ es la imagen de 2x (solo cuando la escala entera no es 2).
     static constexpr int A4K_PASES = 6;
     SDL_GPUGraphicsPipeline* a4k_pipe_[A4K_PASES] = {};
     SDL_GPUTexture* a4k_a_ = nullptr;
@@ -258,7 +258,7 @@ private:
     int ancho_min_ = 0, alto_min_ = 0;
     int escala_ = 1;
     bool vista_fija_ = true;
-    RectVista rect_{0, 0, 1, 1};          // fixed view: where the grid lands in the window (pixels)
+    RectVista rect_{0, 0, 1, 1};          // vista fija: dónde cae la grilla en la ventana (píxeles)
     int ventana_pw_ = 1, ventana_ph_ = 1;
     int escala_mundo_ = 1;
     bool sin_zoom_mundo_ = false;

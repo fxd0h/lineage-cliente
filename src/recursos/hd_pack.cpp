@@ -6,7 +6,7 @@
 namespace lin {
 
 namespace {
-// "img_123" / "tbt_45" -> type + id (variants such as "img_1067h" are not addressable by the game).
+// "img_123" / "tbt_45" -> tipo + id (variantes como "img_1067h" no son direccionables por el juego).
 bool parsear_nombre(std::string_view n, HdPack::Tipo& t, u32& id) {
     std::string_view num;
     if (n.starts_with("img_")) {
@@ -70,7 +70,7 @@ bool HdPack::abrir(const std::string& dir) {
     if (!dir_.empty() && dir_.back() != '/') dir_ += '/';
     entradas_.clear();
     std::vector<u8> bytes;
-    // The manifest ships next to the images or in a sibling "src_ui" directory.
+    // El manifiesto viene junto a las imágenes o en una carpeta hermana "src_ui".
     if (!leer_archivo(dir_ + "manifest.tsv", bytes) && !leer_archivo(dir_ + "../../src_ui/manifest.tsv", bytes)) return false;
     leer_manifest({reinterpret_cast<const char*>(bytes.data()), bytes.size()});
     return abierto();

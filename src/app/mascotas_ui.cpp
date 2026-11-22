@@ -30,7 +30,7 @@ void eventos_mascotas(App& a, const Evento& e) {
             if (it != a.mascotas.end()) a.mascotas.erase(it);
         } else if (it == a.mascotas.end()) {
             a.mascotas.push_back({e.id, std::string(e.s[0])});
-            a.ventana_mascota = true;  // the summon opens its window (S_PetCtrlMenu, 0x495473)
+            a.ventana_mascota = true;  // la invocación abre su ventana (S_PetCtrlMenu, 0x495473)
         }
         break;
     }
@@ -65,15 +65,15 @@ void procesar_mascotas(App& a) {
     }
 }
 
-// ---- Original pet window (frame 1170; ctor 0x495473, draw 0x494880, command handler 0x494650 of S3EP1U.bin) ----
-//  - background 1169 at (7,7), frame 1170, ornament 1171, close 1177 at (165,17), drag handle (1,5,189,20);
-//  - command buttons (image, hover = image + 1) at x 45 / 79 / 113, y 180 and 214: aggressive 1183, defensive 1185, stay 1193 /
-//    extend 1187, alert 1179, and 1191 (the exe's case 7 closes the window: the fork puts "attackchr" there, the only way to
-//    order an attack). Each sends the NPC action of the pet (0x4a7df0 "cdss" 0x41 + name; here C_NPCAction on the pet).
-//  - the pet's HP is the S_HpMeter percentage (the server sends no level / exp / hunger for pets: the NAME / LEVEL / Exp /
-//    MP / State / Hunger fields of the art stay empty). Bag (1351, 0x547 of the second window variant) opens the pet bag.
-// Unverified: the positions of the name and the HP bar (guessed on the art), which of the two ctor variants the US client uses for
-// tamed pets (the fork shows this one for pets and summons alike), the tooltips (strings 884..892).
+// ---- Ventana original de mascota (marco 1170; ctor 0x495473, dibujo 0x494880, manejador de órdenes 0x494650 de S3EP1U.bin) ----
+//  - fondo 1169 en (7,7), marco 1170, adorno 1171, cerrar 1177 en (165,17), zona de arrastre (1,5,189,20);
+//  - botones de órdenes (imagen, hover = imagen + 1) en x 45 / 79 / 113, y 180 y 214: agresivo 1183, defensivo 1185, quieto 1193 /
+//    dispersarse 1187, alerta 1179, y 1191 (el caso 7 del exe cierra la ventana: el fork pone ahí "attackchr", la única forma de
+//    ordenar un ataque). Cada uno manda la acción de NPC de la mascota (0x4a7df0 "cdss" 0x41 + nombre; aquí C_NPCAction sobre la mascota).
+//  - el HP de la mascota es el porcentaje de S_HpMeter (el servidor no manda nivel / exp / hambre de las mascotas: los campos NAME / LEVEL / Exp /
+//    MP / State / Hunger del arte quedan vacíos). La bolsa (1351, 0x547 de la segunda variante de ventana) abre la bolsa de la mascota.
+// Sin verificar: las posiciones del nombre y de la barra de HP (estimadas sobre el arte), cuál de las dos variantes del ctor usa el cliente US para
+// las mascotas domadas (el fork muestra esta para mascotas e invocaciones por igual), los tooltips (textos 884..892).
 namespace {
 
 struct PetBtn { u32 img; int x, y; const char* accion; int tip; };
@@ -131,7 +131,7 @@ void dibujar_mascotas(App& a) {
     const u64 kf = clave_orden(CAPA_UI, 4), kt = clave_orden(CAPA_UI_TEXTO, 4);
     const TablaObjetos& o = a.mundo.objetos;
     int y = y_lista(a);
-    for (size_t i = 0; a.cfg.ui_simple && i < a.mascotas.size(); ++i, y += FILA) {  // original UI: the pet window
+    for (size_t i = 0; a.cfg.ui_simple && i < a.mascotas.size(); ++i, y += FILA) {  // interfaz original: la ventana de mascota
         const Mascota& m = a.mascotas[i];
         const Slot s = o.buscar(m.id);
         const int x = 4, w_nombre = ANCHO_LISTA - BOTON - 4;

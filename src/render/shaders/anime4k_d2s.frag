@@ -1,9 +1,9 @@
 #version 450
 // Anime4K v3.2 Upscale CNN x2 (S), https://github.com/bloc97/Anime4K (MIT License, Copyright (c) 2019-2021
-// bloc97; full notice in anime4k_c1.frag). Pass 5: depth-to-space of the last conv (4 channels = the 2x2
-// sub-pixels) added to a bilinear sample of the original, producing the 2x image. Hand port of the
-// "Depth-to-Space" hook. u.xy = logical grid size, u.z = integer scale of the scene texture.
-// MSL twin: fs_anime4k_d2s in shaders_msl_anime4k.h.
+// bloc97; aviso completo en anime4k_c1.frag). Pasada 5: depth-to-space de la última convolución (4 canales = los 2x2
+// subpíxeles) sumado a una muestra bilineal del original, que da la imagen de 2x. Portado a mano del hook
+// "Depth-to-Space". u.xy = tamaño de la grilla lógica, u.z = escala entera de la textura de la escena.
+// Gemelo MSL: fs_anime4k_d2s en shaders_msl_anime4k.h.
 layout(set = 2, binding = 0) uniform sampler2D conv;
 layout(set = 2, binding = 1) uniform sampler2D scene;
 layout(std140, set = 3, binding = 0) uniform Params { vec4 u; };

@@ -1,10 +1,10 @@
-// Original volume window (Options page action `volume`): client class built at 0x4a9cd0, drawn at 0x4aa3b0 (S3EP1U.bin).
-//  - frame image 1197 at (0,0), translucent background 1198 at (8,11), close button 969 at (182,19);
-//  - four labels (strings 792, 793, 794, 1016) at x 25, y 60 / 95 / 135 / 175; the title one has its own colour;
-//  - three horizontal sliders, range 0..100 and step 1 (scroll bar class 0x47cd80): bar 1269 (141 px, with the MIN / MAX
-//    captions) at x 30, arrows 1270 at x 24 and 172, thumb 1272 sliding along the bar; rows at y 106 / 146 / 190, callbacks 0x4a9bf0 (music), 0x4a9af0 (effects),
-//    0x4a9b70 (third value, [0x6e42b8]; the fork has no audio channel for it, it is only remembered);
-//  - OK button 1274 at (82,265) closes it (0x4a9c80).
+// Ventana de volumen original (acción `volume` de la página de Opciones): clase del cliente construida en 0x4a9cd0, dibujada en 0x4aa3b0 (S3EP1U.bin).
+//  - imagen de marco 1197 en (0,0), fondo translúcido 1198 en (8,11), botón de cerrar 969 en (182,19);
+//  - cuatro etiquetas (textos 792, 793, 794, 1016) en x 25, y 60 / 95 / 135 / 175; la del título tiene su propio color;
+//  - tres deslizadores horizontales, rango 0..100 y paso 1 (clase de barra de scroll 0x47cd80): barra 1269 (141 px, con los rótulos MIN / MAX)
+//    en x 30, flechas 1270 en x 24 y 172, botón 1272 que se desliza por la barra; filas en y 106 / 146 / 190, callbacks 0x4a9bf0 (música), 0x4a9af0 (efectos),
+//    0x4a9b70 (tercer valor, [0x6e42b8]; el fork no tiene canal de audio para él, solo se recuerda);
+//  - el botón OK 1274 en (82,265) la cierra (0x4a9c80).
 #include <algorithm>
 #include "app/app.h"
 

@@ -92,7 +92,7 @@ DayPhase day_phase(int minute, int day_of_year) {
     int dawn, dusk;
     horas_de_luz(std::clamp(day_of_year, 0, 365), dawn, dusk);
     if (minute >= dawn && minute <= dusk) return {false, minute - dawn, dusk - dawn};
-    // Night runs from dusk to the next dawn, across midnight.
+    // La noche va del anochecer al amanecer siguiente, pasando la medianoche.
     const int length = MINUTOS_DIA - dusk + dawn;
     return {true, (minute > dusk ? minute - dusk : minute + MINUTOS_DIA - dusk), length};
 }

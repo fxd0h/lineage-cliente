@@ -1,5 +1,5 @@
-// Ogre (gfx 1020; Contaminated Ogre 5687 aliases it): the die action must resolve and every
-// heading's death frames must exist in the install. Skipped without LINEAGE_DIR.
+// Ogre (gfx 1020; Contaminated Ogre 5687 es alias suyo): la acción de muerte debe resolverse y los cuadros de muerte
+// de cada rumbo deben existir en la instalación. Se salta sin LINEAGE_DIR.
 #include <doctest/doctest.h>
 #include <cstdio>
 #include "comun.h"
@@ -19,7 +19,7 @@ TEST_CASE("Gfx 1020 (Ogre): la acción morir resuelve y sus frames existen" * do
         const RangoAccion* m = t.accion(gfx, ACC_MORIR);
         REQUIRE(m);
         CHECK(m->cantidad == 7);  
-        // The fall runs through the file's frames in order and holds the last (lying) one.
+        // La caída recorre los cuadros del archivo en orden y se queda en el último (acostado).
         for (u32 i = 0; i < m->cantidad; ++i) {
             CHECK(t.frame(m->primer + i).sub == 40);
             CHECK(t.frame(m->primer + i).frame == i);
@@ -46,8 +46,8 @@ TEST_CASE("Gfx 1020 (Ogre): la acción morir resuelve y sus frames existen" * do
 }
 
 TEST_CASE("Tabla de sprites: la fila morir gira el frame inicial al final") {
-    // Table rows list the last file frame first ("8 1 4 40 3 6 40 0 5 40 1 4 40 2 4"): played as listed
-    // the corpse stands up again. Walking keeps the rotation (it loops).
+    // Las filas de la tabla listan primero el último cuadro del archivo ("8 1 4 40 3 6 40 0 5 40 1 4 40 2 4"): reproducido tal cual
+    // el cadáver se vuelve a levantar. La caminata conserva la rotación (es un bucle).
     const char reg[] = "?48 0 1 4 0 0 3 0 1 3 0 2 3 0 3 3 8 1 4 40 3 6 40 0 5 40 1 4 40 2 4 102 10";
     std::vector<u8> t(reg, reg + sizeof reg - 1);
     TablaSprites s;

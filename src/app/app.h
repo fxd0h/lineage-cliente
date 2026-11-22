@@ -99,10 +99,10 @@ struct TiendaJugadores {
     std::vector<LineaTiendaVista> lineas;
     bool armando = false, abierta = false;  // la propia
     std::string titulo;
-    std::vector<cmd::LineaTienda> venta, compra;  // the own shop: "Selling item" / "Buying item" grids (original window)
-    std::vector<LineaTiendaVista> grilla[2];      // the shop being looked at: its sell (0) and buy (1) lists
-    std::string titulo2;                          // second title line (original window)
-    u8 rejilla = 0;                               // grid the next inventory click adds to
+    std::vector<cmd::LineaTienda> venta, compra;  // la tienda propia: grillas "Selling item" / "Buying item" (ventana original)
+    std::vector<LineaTiendaVista> grilla[2];      // la tienda que se mira: sus listas de venta (0) y compra (1)
+    std::string titulo2;                          // segunda línea del título (ventana original)
+    u8 rejilla = 0;                               // grilla a la que suma el próximo clic en el inventario
     int foco = 0;                                 // title edit box with the keyboard
     // Scroll: la tienda que se mira (`lineas`) y la propia (`venta`).
     u32 desplaza_vista = 0, desplaza_venta = 0;
@@ -158,7 +158,7 @@ struct Subastas {
 struct MapaItem {
     int numero = 0;
     ObjId objeto = 0;
-    int x = 0, y = 0;  // window position (origin of the game surface when opened)
+    int x = 0, y = 0;  // posición de la ventana (origen de la superficie de juego al abrirse)
     bool arrastrando = false;
     int ult_x = 0, ult_y = 0;
 };
@@ -196,7 +196,7 @@ struct Marcador {
 // Barras de scroll de las ventanas que no tienen un struct propio (ver barra_scroll_ventana).
 struct ScrollVentanas {
     ui::BarraScroll hechizos, inventario, tienda, tienda_elegidas, forma;
-    u32 tienda_elegidas_pos = 0;  // first visible row of the original shop's selection grid
+    u32 tienda_elegidas_pos = 0;  // primera fila visible de la grilla de elegidos de la tienda original
     u32 forma_pos = 0;       // primera sugerencia visible de polymorph
     std::string forma_filtro;  // lo escrito la última vez: al cambiar, la lista va a los niveles más altos
 };
@@ -211,8 +211,8 @@ struct ElegirDestino {
     int dx = 0, dy = 0;
     u32 desplaza = 0;
     ui::BarraScroll barra;
-    int sel = -1;          // original UI: the row clicked (tinted until the teleport happens)
-    bool enviado = false;  // original UI: the choice was sent; the window stays until the teleport (0x418d6e)
+    int sel = -1;          // interfaz original: la fila cliqueada (teñida hasta que ocurre el teleport)
+    bool enviado = false;  // interfaz original: la elección se mandó; la ventana sigue hasta el teleport (0x418d6e)
 };
 
 // Reiniciar atributos (reinicio_ui.cpp): S_CharReset / C_CharReset, con la Candle of Reminiscence.
@@ -239,15 +239,15 @@ struct DialogoCantidad {
     std::string accion, titulo;
 };
 
-// The original's text input box (vtable [0x702dd8]+0x64, 0x4451d0): the chat edit line takes the next line typed (its prompt
-// goes to the chat log) and hands it to a callback instead of sending it as chat. Enter confirms, Esc cancels.
+// La caja de ingreso de texto del original (vtable [0x702dd8]+0x64, 0x4451d0): la línea de edición del chat toma la próxima línea escrita (su
+// pregunta va al registro del chat) y se la pasa a un callback en vez de mandarla como chat. Enter confirma, Esc cancela.
 struct PromptChat {
     bool activo = false;
-    std::string accion;       // what the typed text is for (social_ui.cpp: confirmar_prompt)
-    i32 x = 0, y = 0;         // pickup: tile
+    std::string accion;       // para qué es el texto escrito (social_ui.cpp: confirmar_prompt)
+    i32 x = 0, y = 0;         // recoger: celda
     ObjId id = 0;             // pickup: item
     u32 maximo = 0;           // pickup / drop / give: stack size
-    ObjId objetivo = 0;       // give: the receiving object
+    ObjId objetivo = 0;       // dar: el objeto que recibe
 };
 
 struct PosVentana {
@@ -277,8 +277,8 @@ struct Intercambio {
     std::string con;
     std::vector<ItemIntercambio> propio, otro;
     bool ok = false;  // ya se mandó C_TradeOK
-    ui::BarraScroll barra[2];  // original UI scroll bars of the own / partner grids
-    u32 desplaza[2] = {0, 0};  // first visible row of each
+    ui::BarraScroll barra[2];  // barras de scroll de la interfaz original de las grillas propia / del otro
+    u32 desplaza[2] = {0, 0};  // primera fila visible de cada una
 };
 
 // Cursor del mouse (cursores.cpp): mano, espada sobre un monstruo, círculo al elegir objetivo.
@@ -314,13 +314,13 @@ struct App {
     const AmbienteZona* ambiente = nullptr;
     u64 proximo_ambiente[8] = {};
     u64 t_zona_sonido = 0;
-    // Combat music (0x4c53a0 sets the time, the 500 ms tick 0x468113 ends it 15 s later).
+    // Música de combate (0x4c53a0 fija la hora, el tick de 500 ms 0x468113 la termina 15 s después).
     u64 t_combate = 0;
     i32 pista_combate = -1;
-    u64 t_emblema_subido = 0;     // last emblem upload (the original allows one per 59876 ms)
-    std::string emblemas_ruta;    // cache file in use (Emblem.dat in the settings folder)
+    u64 t_emblema_subido = 0;     // última subida de emblema (el original permite una cada 59876 ms)
+    std::string emblemas_ruta;    // archivo de caché en uso (Emblem.dat en la carpeta de ajustes)
     u64 t_emblema_sucio = 0;
-    std::vector<u8> emblema_vista;  // checkbmp preview (RGB555, 384 bytes) while t_vista_emblema is in the future
+    std::vector<u8> emblema_vista;  // vista previa de checkbmp (RGB555, 384 bytes) mientras t_vista_emblema está en el futuro
     u64 t_vista_emblema = 0;
 
     TablaOpcodes op{};
@@ -371,8 +371,8 @@ struct App {
         u8 sprite;  // 0 dibujado, 1 pendiente (bloque verde), 2 faltante (bloque magenta)
     };
     std::vector<ObjetoEnPantalla> en_pantalla;
-    // Last sprite frame drawn per object slot. While a new frame is still loading (new action such
-    // as being hit), the previous one is kept on screen instead of the sprite vanishing.
+    // Último cuadro de sprite dibujado por casilla de objeto. Mientras un cuadro nuevo todavía se carga (acción nueva como
+    // recibir un golpe), se mantiene el anterior en pantalla en vez de que el sprite desaparezca.
     struct LastFrame {
         ObjId id = 0;
         RegionAtlas region;
@@ -386,16 +386,16 @@ struct App {
     std::vector<LuzEnPantalla> luces;
     std::vector<u8> luz_mascara, luz_brillo;  // aplicar_luz: buffers del frame, se reusan
     bool orbe_anim = false;                   // game-time orb transition running (0x8f0809)
-    u64 orbe_t0 = 0;                          // its start tick (0x8f080c)
-    u32 orbe_hora_n = 0;                      // last mundo.hora_n seen by the orb
-    int hint_boton = -1;                      // bottom-strip hint: button under the pointer (-1 none)
-    u64 hint_t0 = 0;                          // tick the pointer entered it / last clicked (0x4bbb50)
+    u64 orbe_t0 = 0;                          // su tick de inicio (0x8f080c)
+    u32 orbe_hora_n = 0;                      // último mundo.hora_n que vio el orbe
+    int hint_boton = -1;                      // ayuda de la franja inferior: botón bajo el puntero (-1 ninguno)
+    u64 hint_t0 = 0;                          // tick en que el puntero entró / último clic (0x4bbb50)
     i32 hora_forzada = -1;                    // comando forzar-hora (pruebas): segundos del día, -1 = la del servidor
     bool ambiente_agua = false;               // el ambiente que suena es el del agua (sonido 330)
     std::vector<u32> agua_filas;              // color por fila del agua (1416.img), cargado al primer uso
     // Roof groups of the local player's cell fading (original UI; see actualizar_techos): level 0..31 per group.
     struct TechoFade {
-        u32 segmento;  // base_x << 16 | base_y of the segment that owns the group id
+        u32 segmento;  // base_x << 16 | base_y del segmento dueño del id de grupo
         u16 gid;
         u8 tipo, nivel;
         bool activo;
@@ -422,7 +422,7 @@ struct App {
     u32 hechizo_apuntando = 0;
     u32 hechizo_pendiente = 0;
     ObjId objetivo_hechizo = 0;
-    u16 msgs_recientes[8] = {};       // last S_ServerMessage ids (ring) and their times: dedupes end-of-effect texts
+    u16 msgs_recientes[8] = {};       // últimos ids de S_ServerMessage (anillo) y sus horas: evita repetir textos de fin de efecto
     u64 msgs_recientes_ms[8] = {};
     u8 msgs_recientes_n = 0;
     u64 fin_demora_hechizo = 0;       // useDelay del último hechizo
@@ -454,14 +454,14 @@ struct App {
     } tecla_mantenida;
     bool clic_consumido = false;      // el clic que eligió el objetivo no camina hasta soltarlo
     u16 atajos[8] = {};               // F5..F12: spell ids
-    u8 tecla_f_sel = 0;               // selected F-key box 0..7 ([0x703100]): last clicked, moved by the wheel (shortcutscroll), fired by the middle button
-    bool medio_antes = false;         // middle button state of the previous frame
-    u64 medio_proximo_ms = 0;         // next repeat of the selected F-key box while the middle button is held
-    int tecla_f_arrastrada = -1;      // F box being dragged
-    u16 atajos_pg[3][8] = {};         // the three F-key pages (a.atajos / items_f are the one on show, pag_f)
+    u8 tecla_f_sel = 0;               // casilla F elegida 0..7 ([0x703100]): la última cliqueada, la mueve la rueda (shortcutscroll), la dispara el botón del medio
+    bool medio_antes = false;         // estado del botón del medio en el cuadro anterior
+    u64 medio_proximo_ms = 0;         // próxima repetición de la casilla F elegida mientras se mantiene el botón del medio
+    int tecla_f_arrastrada = -1;      // casilla F que se arrastra
+    u16 atajos_pg[3][8] = {};         // las tres páginas de teclas F (a.atajos / items_f son la que se muestra, pag_f)
     Atajo items_pg[3][8];
     u8 pag_f = 0;
-    Atajo items_f[8];                 // F5..F12: item (when the box holds an item; its atajos[] entry is 0)
+    Atajo items_f[8];                 // F5..F12: objeto (cuando la casilla tiene un objeto; su entrada en atajos[] es 0)
     std::string atajos_de;            // personaje cuyos atajos están cargados
     // Barra de atajos (Alt+1..Alt+0; barra_ui.cpp): hechizos o ítems arrastrados a sus casilleros.
     // Páginas (cfg.paginas_barra a la vista; las de más se conservan) y la visible.
@@ -486,7 +486,7 @@ struct App {
     std::vector<Forma> formas;
     // NPC (npc_ui.cpp): diálogo con la página HTML, y tienda o almacén en la misma ventana.
     ObjId npc = 0;
-    bool npc_local = false;  // the page is a client-side one (option2, ...): no NPC, no distance close, actions stay local
+    bool npc_local = false;  // la página es del cliente (option2, ...): sin NPC, sin cierre por distancia, las acciones quedan locales
     std::string npc_pagina, npc_datos;
     u32 npc_casa = 0;  // página "agsel" del tablón de subastas: la casa ("map" y "apply" la llevan)
     PaginaHtml npc_html;
@@ -495,17 +495,17 @@ struct App {
     ObjId tienda_npc = 0;
     std::vector<FilaTienda> tienda_filas;
     u32 tienda_desplazamiento = 0;
-    u8 tienda_tipo = 0;       // original list window type (S3EP1U 0x4d1000): 0 buy, 1 sell, 2/3 warehouse, 4/5 clan, 8/9 elf, ...
-    int tienda_marcada = -1;  // row marked by a click (image 536)
+    u8 tienda_tipo = 0;       // tipo de ventana de lista original (S3EP1U 0x4d1000): 0 compra, 1 venta, 2/3 depósito, 4/5 clan, 8/9 elfo, ...
+    int tienda_marcada = -1;  // fila marcada por un clic (imagen 536)
     u32 tienda_digitos = 0;
-    // Fishing (pesca_ui.cpp): the own bobber cast by S_Fishing.
+    // Pesca (pesca_ui.cpp): el corcho propio lanzado por S_Fishing.
     struct Pesca {
         bool activa = false, picada = false;
         i32 x = 0, y = 0;
         u64 inicio = 0;
     } pesca;
-    int cursor_html = 0;           // original UI: cursor the NPC page asked for last frame (1 text, 3 link), 0 none
-    int cursor_estado_orig = 3;    // original UI: last cursor state set (0x477c90 is sticky: areas with no setter keep it)   // amount typed on the marked row (pane +0x98), reset by any click in the list
+    int cursor_html = 0;           // interfaz original: cursor que pidió la página del NPC el cuadro anterior (1 texto, 3 enlace), 0 ninguno
+    int cursor_estado_orig = 3;    // interfaz original: último estado de cursor fijado (0x477c90 es persistente: las zonas sin setter lo conservan)   // cantidad escrita en la fila marcada (panel +0x98), la reinicia cualquier clic en la lista
     int tienda_flecha = -1;   // quantity arrow held down: row * 2 + (1 = increase), -1 none
     bool hablar_objetivo = false;  // a.objetivo es un NPC al que se camina para hablarle
     bool objetivo_fijo = false;    // elegido al apretar el botón: se mantiene aunque el puntero ya no esté encima
@@ -558,8 +558,8 @@ struct App {
     // Render no interactivo a PNG (LIN_RENDER=id,x,y,salida.bmp): dibuja el mapa y sale. Ver app.cpp.
     struct { bool activo = false; MapId mapa = 0; int x = 0, y = 0; std::string salida; } render;
     PromptChat chat_prompt;
-    bool telcon = false;               // /telcon: elves of level 50+ get the bookmark picker without the ring (0x409690)
-    bool invitando = false;            // invite party: the next click in the world picks the target (0x402490, message 0xb3)
+    bool telcon = false;               // /telcon: los elfos de nivel 50+ tienen el selector de marcadores sin el anillo (0x409690)
+    bool invitando = false;            // invitar al grupo: el próximo clic en el mundo elige el objetivo (0x402490, mensaje 0xb3)
     bool ventana_social = false;
     // Original party / pledge / buddy list window (lista_ui.cpp; S_ShowHTML pages "party", "pledge", "buddy").
     struct ListaOrig {
@@ -570,22 +570,22 @@ struct App {
         u32 pos = 0;
         ui::BarraScroll barra;
     } lista;
-    bool ventana_mascota = true;       // original pet window (mascotas_ui.cpp), closed with its X until the next summon
+    bool ventana_mascota = true;       // ventana original de mascota (mascotas_ui.cpp), cerrada con su X hasta la próxima invocación
     size_t mascota_activa = 0;
     u8 hpmp_estilo = 0;                // floating HP/MP window style 0..2 ([0x8169b0], float_hpmp_ui.cpp)
     bool ventana_volumen = false;      // original volume window (volume_ui.cpp)
-    // Original cooking window (cocina_ui.cpp; S_PacketBox 52 opens it for the cook book used).
+    // Ventana original de cocina (cocina_ui.cpp; S_PacketBox 52 la abre para el libro de cocina usado).
     struct Cocina {
         bool abierta = false;
-        u8 modo = 0;        // cook book stage 1..5 (8 recipes per stage shown, up to 24)
-        ObjId pan = 0;      // the cook book item used last ([0x8f2fb8]); 0 = none
-        int sel = -1;       // selected recipe (+8 of the row)
-        u32 desplaza = 0;   // scroll, in rows of 4 recipes
+        u8 modo = 0;        // etapa del libro de cocina 1..5 (se muestran 8 recetas por etapa, hasta 24)
+        ObjId pan = 0;      // el último libro de cocina usado ([0x8f2fb8]); 0 = ninguno
+        int sel = -1;       // receta elegida (+8 de la fila)
+        u32 desplaza = 0;   // scroll, en filas de 4 recetas
         ui::BarraScroll barra;
-        std::vector<std::string> nombres;  // recipe.tbl, list order: the dish name field ("$N")
+        std::vector<std::string> nombres;  // recipe.tbl, en el orden de la lista: el campo del nombre del plato ("$N")
     } cocina;
-    struct Cartel { bool abierto = false; u8 rumbo = 0; u32 desc = 0; } cartel;  // sign info card (cartel_ui.cpp)
-    int volumen_tercero = 100;         // third slider of that window (no audio channel in the fork)
+    struct Cartel { bool abierto = false; u8 rumbo = 0; u32 desc = 0; } cartel;  // ficha de un cartel (cartel_ui.cpp)
+    int volumen_tercero = 100;         // tercer deslizador de esa ventana (el fork no tiene ese canal de audio)
     int volumen_arrastre = -1;         // slider being dragged
 
     std::vector<Pregunta> preguntas;
@@ -598,21 +598,21 @@ struct App {
     // Inventario (Alt+I).
     bool ventana_inventario = false;
     u32 inventario_desplazamiento = 0;  // filas
-    u8 inventory_tab = 0;               // original UI: 0 all, 1 equipment, 2 quest, 3 miscellaneous
+    u8 inventory_tab = 0;               // interfaz original: 0 todo, 1 equipo, 2 misión, 3 varios
     ObjId arrastrando = 0;              // ítem que se arrastra (para soltarlo al suelo)
     bool es_gm = false;                 // the chosen character was flagged administrator in the character list
-    u8 gm_apuntando = 0;                // GM Ctrl+Y (1) / Ctrl+Z (2): the next click in the world picks the target
-    ObjId gm_objetivo = 0;              // Ctrl+Z target being re-sent
+    u8 gm_apuntando = 0;                // GM Ctrl+Y (1) / Ctrl+Z (2): el próximo clic en el mundo elige el objetivo
+    ObjId gm_objetivo = 0;              // objetivo de Ctrl+Z que se reenvía
     u8 gm_repeticiones = 0;
     u64 gm_proximo_ms = 0;
-    u64 flash_luz_frame = 0;            // last frame in which a light-flash effect was past its trigger frame
-    u8 ceguera_avisada = 0;             // last S_CurseBlind state whose string was printed
-    bool infracon = true;               // "/infracon" toggle (0x6f1e4b): elves / dark elves use their infravision filter
-    u32 capturas = 0;                   // original UI Ctrl+P screenshot counter ([0x6f1e54], starts at 0 each run)
+    u64 flash_luz_frame = 0;            // último cuadro en que un efecto de destello pasó su cuadro de disparo
+    u8 ceguera_avisada = 0;             // último estado de S_CurseBlind cuyo texto se imprimió
+    bool infracon = true;               // "/infracon" (0x6f1e4b): elfos / elfos oscuros usan su filtro de infravisión
+    u32 capturas = 0;                   // contador de capturas Ctrl+P de la interfaz original ([0x6f1e54], empieza en 0 cada vez)
     u8 chat_tam = 0;                    // original UI Ctrl+T: chat window size 0..3 (+3 rows per step)
     bool paleta_chat = false;           // original UI Ctrl+O: chat colour palette
-    ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
-    std::vector<ObjId> inventario_seleccion;  // marked with Shift+click: dragged together
+    ObjId item_apuntando = 0;           // varita u objeto apuntado que espera el clic en su objetivo (inventario_ui.cpp)
+    std::vector<ObjId> inventario_seleccion;  // marcados con Shift+clic: se arrastran juntos
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
     bool usar_sobre_armado = false;     // a fresh press happened after usar_sobre was set (the double click's release doesn't pick)
     ObjId ultimo_clic_item = 0;         // para el doble clic
@@ -661,43 +661,43 @@ bool sobre_ventana(const App& a, IdVentana v);  // abierta, con el puntero encim
 bool sobre_alguna_ventana(const App& a);
 // Al dibujar cada ventana, antes que nada: arrastrarla por la barra de título.
 void arrastrar_ventana(App& a, IdVentana v);
-bool alguna_ventana_abierta(const App& a);  // any IdVentana window open (except the floating HP/MP bar)
-void close_listed_windows(App& a);  // Esc: the four listed windows, and a pending trade (original UI)
+bool alguna_ventana_abierta(const App& a);  // alguna ventana IdVentana abierta (salvo la barra flotante de HP/MP)
+void close_listed_windows(App& a);  // Esc: las cuatro ventanas de lista y un intercambio pendiente (interfaz original)
 void guardar_posiciones_ventanas(App& a);  // after a custom drag
 // Una vez por frame, antes de procesar la entrada: las que se abren pasan adelante (y a un lugar
 // libre), y la que se toca con el clic también.
 void actualizar_ventanas(App& a);
 bool tapa_a_otra(const App& a, IdVentana v);  // se solapa con otra abierta que está detrás
 u8 opacidad_ventanas(const App& a);
-// Original client's framed windows (original_window.cpp): size, frame with close button (returns true
-// when it is clicked), ornaments drawn over the contents, and the image scroll bar.
-constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;  // inventory and status
-constexpr int SHOP_WINDOW_W = 258, SHOP_WINDOW_H = 335;  // frame image 1100 (shop, warehouse and other lists)
-constexpr int NPC_WINDOW_W = 258, NPC_WINDOW_H = 335;    // frame image 1356 (NPC dialog)
-void original_npc_size(const App& a, int& w, int& h);    // size of the NPC window in the original UI
-constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // size of frame image 934
+// Ventanas con marco del cliente original (original_window.cpp): tamaño, marco con botón de cerrar (devuelve true
+// cuando se cliquea), adornos dibujados sobre el contenido y la barra de scroll con imágenes.
+constexpr int ORIGINAL_WINDOW_W = 190, ORIGINAL_WINDOW_H = 288;  // inventario y estado
+constexpr int SHOP_WINDOW_W = 258, SHOP_WINDOW_H = 335;  // imagen de marco 1100 (tienda, depósito y otras listas)
+constexpr int NPC_WINDOW_W = 258, NPC_WINDOW_H = 335;    // imagen de marco 1356 (diálogo de NPC)
+void original_npc_size(const App& a, int& w, int& h);    // tamaño de la ventana del NPC en la interfaz original
+constexpr int SPELLBOOK_WINDOW_W = 207, SPELLBOOK_WINDOW_H = 289;  // tamaño de la imagen de marco 934
 bool uses_original_frame(const App& a, IdVentana v);
-void draw_original_status(App& a, int x, int y);  // status window: equipment and attributes tabs
-// close_x < 0: the close button of the inventory-sized windows. Returns true when the close button was clicked.
-// The hover box of the original lists and inventory (0x49a440 halves the pixels under it, 0x498720 draws the bevel).
-// Name colour of an item by its wire state (0 blessed, 1 normal, 2 cursed, 3 unidentified; table 0x8f0f34).
+void draw_original_status(App& a, int x, int y);  // ventana de estado: pestañas de equipo y atributos
+// close_x < 0: el botón de cerrar de las ventanas del tamaño del inventario. Devuelve true si se cliqueó el botón de cerrar.
+// La caja de hover de las listas e inventario originales (0x49a440 oscurece a la mitad los píxeles debajo, 0x498720 dibuja el bisel).
+// Color del nombre de un objeto según su estado en el protocolo (0 bendito, 1 normal, 2 maldito, 3 sin identificar; tabla 0x8f0f34).
 u32 original_item_color(u8 state);
 void draw_original_hover_box(App& a, int x, int y, int w, int h);
 bool draw_original_frame(App& a, int x, int y, u32 background, int bg_x, int bg_y, u32 frame, int close_x = -1, int close_y = -1);
-void draw_original_overlay(App& a, int x, int y, u32 image);  // ornament image at the window position as is
-// A button made of two images (normal, pointer over); true when clicked.
+void draw_original_overlay(App& a, int x, int y, u32 image);  // imagen de adorno tal cual en la posición de la ventana
+// Un botón hecho de dos imágenes (normal, puntero encima); true al cliquearlo.
 bool draw_original_button(App& a, int x, int y, u32 image, u32 hover_image);
 void dibujar_volumen(App& a);  // volume_ui.cpp
-void dibujar_cartel(App& a);   // cartel_ui.cpp: info card of a sign (exe 0x4a6c90)
+void dibujar_cartel(App& a);   // cartel_ui.cpp: ficha de un cartel (exe 0x4a6c90)
 Rect rect_cartel(const App& a);
-void abrir_cartel(App& a, Slot s);  // reads the sign's `$` name and heading; no-op when the name is not a desc id
+void abrir_cartel(App& a, Slot s);  // lee el nombre `$` y el rumbo del cartel; no hace nada si el nombre no es un id de desc
 Rect rect_volumen(const App& a);
 void dibujar_hpmp_flotante(App& a);  // float_hpmp_ui.cpp
 Rect rect_hpmp_flotante(const App& a);
-void abrir_lista_orig(App& a, std::string_view pagina, std::string_view datos);  // lista_ui.cpp; false-less: only for the 3 pages
+void abrir_lista_orig(App& a, std::string_view pagina, std::string_view datos);  // lista_ui.cpp; sin resultado: solo para las 3 páginas
 bool es_pagina_lista(std::string_view pagina);
 void dibujar_lista_orig(App& a);
-void dibujar_destino_orig(App& a);  // marcadores_ui.cpp: the teleport bookmark list (original UI)
+void dibujar_destino_orig(App& a);  // marcadores_ui.cpp: la lista de marcadores de teleport (interfaz original)
 Rect rect_destino_orig(const App& a);
 bool destino_orig_abierto(const App& a);
 Rect rect_lista_orig(const App& a);
@@ -782,7 +782,7 @@ void dibujar_espera_hechizo(App& a, int x, int y, int w, int h);
 // Panel original: los casilleros F5–F12 con sus hechizos (`x`, `y`: esquina del panel 1019).
 void dibujar_teclas_f(App& a, int x, int y);
 int tecla_f_bajo_puntero(const App& a);
-// Puts a spell/item (or nothing) in F5..F12 box k and saves it per character.
+// Pone un hechizo/objeto (o nada) en la casilla k de F5..F12 y lo guarda por personaje.
 void poner_tecla_f(App& a, int k, Atajo atajo);
 void dibujar_hechizos(App& a);
 // Efectos activos (haste, escudos...) arriba a la izquierda, y el aviso de elegir objetivo.
@@ -797,23 +797,23 @@ void entrar_juego(App& a);                         // pantalla_personajes.cpp: c
 void enviar_chat(App& a, std::string_view linea);  // pantalla_juego.cpp: como escrita en el chat (comandos "/" incluidos)
 ObjId buscar_item(const App& a, std::string_view texto);    // inventario_ui.cpp: el primero cuyo nombre lo contenga
 u32 buscar_hechizo(const App& a, std::string_view texto);   // hechizos_ui.cpp: uno que sepa, por nombre
-void alternar_comunidad(App& a);  // Ctrl+C / hands button: option2p (prince) or option2 page, toggled; simple UI: Social window
+void alternar_comunidad(App& a);  // Ctrl+C / botón de las manos: página option2p (príncipe) u option2, alterna; interfaz simple: ventana Social
 void accion_comunidad(App& a, std::string_view accion);
 void cambiar_pagina_f(App& a, int delta);  // hechizos_ui.cpp
-void rueda_teclas_f(App& a);                // wheel (shortcutscroll) and middle button on the selected F-key box
-void combate_musica(App& a, Slot objetivo, u64 ahora);  // sonido.cpp: combat started (attack, cast, being attacked)
-void emblemas_abrir(App& a);                            // social_ui.cpp: pick the emblem cache of this server
-void emblemas_guardar(App& a, u64 ahora, bool ya);      // social_ui.cpp: write it when it changed (ya = now)
-void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter on the prompt line (Esc: cancelar_prompt)
+void rueda_teclas_f(App& a);                // rueda (shortcutscroll) y botón del medio sobre la casilla F elegida
+void combate_musica(App& a, Slot objetivo, u64 ahora);  // sonido.cpp: empezó un combate (ataque, hechizo, recibir un ataque)
+void emblemas_abrir(App& a);                            // social_ui.cpp: elige la caché de emblemas de este servidor
+void emblemas_guardar(App& a, u64 ahora, bool ya);      // social_ui.cpp: la escribe si cambió (ya = ahora mismo)
+void confirmar_prompt(App& a, std::string_view texto);  // social_ui.cpp: Enter en la línea de pregunta (Esc: cancelar_prompt)
 void cancelar_prompt(App& a);
-void pedir_soltar(App& a, ObjId item, u32 cantidad);  // original UI: drop a stack asking how many in the chat line (string 119)
-void pedir_dar(App& a, ObjId objetivo, ObjId item, u32 cantidad);  // same for giving (string 140)
-void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // pick up; asks how many of a stack unless `getall`
-void elegir_invitado(App& a);  // click in the world while `invitando`
-std::string datos_opciones(const App& a);  // social_ui.cpp: `<var src="#N">` values of the option pages
-bool accion_opciones(App& a, std::string_view accion);  // social_ui.cpp: option11/12/13 actions (true = handled)
-void alternar_opciones(App& a);  // Options button / Ctrl+V: option1 page (simple UI: the fork window)
-void alternar_ayuda(App& a);     // Help button / Ctrl+H: help page (simple UI: the key list)
+void pedir_soltar(App& a, ObjId item, u32 cantidad);  // interfaz original: soltar una pila preguntando cuántos en la línea del chat (texto 119)
+void pedir_dar(App& a, ObjId objetivo, ObjId item, u32 cantidad);  // lo mismo para dar (texto 140)
+void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad);  // recoger; pregunta cuántos de una pila salvo con `getall`
+void elegir_invitado(App& a);  // clic en el mundo mientras `invitando`
+std::string datos_opciones(const App& a);  // social_ui.cpp: valores `<var src="#N">` de las páginas de opciones
+bool accion_opciones(App& a, std::string_view accion);  // social_ui.cpp: acciones de option11/12/13 (true = atendida)
+void alternar_opciones(App& a);  // botón Opciones / Ctrl+V: página option1 (interfaz simple: la ventana del fork)
+void alternar_ayuda(App& a);     // botón Ayuda / Ctrl+H: página de ayuda (interfaz simple: la lista de teclas)
 void abrir_pagina_local(App& a, std::string_view id);  // npc_ui.cpp: client-side HTML page in the NPC window (Ctrl+C: option2)
 void activar(App& a, std::string_view vinculo, bool es_enlace);  // npc_ui.cpp: un vínculo de la página del NPC
 void responder_pregunta(App& a, bool si);                   // social_ui.cpp: la primera pregunta pendiente
@@ -873,8 +873,8 @@ bool sobre_forma(const App& a);
 // NPCs y comercio (npc_ui.cpp). El diálogo va arriba a la izquierda.
 // Tipo de gfx del objeto (TipoGfx); un gfx que no está en la tabla de sprites cuenta como monstruo.
 u8 tipo_objeto(const App& a, Slot s);
-u8 clase_objeto(const App& a, Slot s);  // original client object class (0x4cdd30)
-// Original NPC list: digits / Backspace typed into the marked row's amount (0x4be860); call before the hotbar and chat.
+u8 clase_objeto(const App& a, Slot s);  // clase de objeto del cliente original (0x4cdd30)
+// Lista de NPC original: dígitos / Backspace escritos en la cantidad de la fila marcada (0x4be860); llamar antes de la barra y del chat.
 void teclas_lista_tienda(App& a);
 bool es_npc(const App& a, Slot s);
 // Encola un texto de combate (daño/"Miss") sobre el personaje; descarta el más viejo si no entra.
@@ -905,8 +905,8 @@ bool sobre_cantidad(const App& a);
 
 // Mascotas e invocaciones (mascotas_ui.cpp).
 void eventos_mascotas(App& a, const Evento& e);
-void procesar_gm_apuntado(App& a, u64 ahora);  // GM Ctrl+Y / Ctrl+Z: pick a target and send opcode 83
-void procesar_item_apuntado(App& a);  // click on the target of an aimed item (wand of polymorph)
+void procesar_gm_apuntado(App& a, u64 ahora);  // GM Ctrl+Y / Ctrl+Z: elige un objetivo y manda el opcode 83
+void procesar_item_apuntado(App& a);  // clic en el objetivo de un objeto apuntado (varita de polymorph)
 void procesar_mascotas(App& a);  // antes del movimiento: elegir el objetivo de una mascota
 void dibujar_mascotas(App& a);
 bool sobre_mascotas(const App& a);
@@ -917,10 +917,10 @@ void eventos_marcadores(App& a, const Evento& e);
 void eventos_hechizos(App& a, const Evento& e);
 // "/bookmark nombre" y "/delbookmark nombre"; true si era uno de esos.
 bool comando_marcador(App& a, std::string_view orden, std::string_view nombre);
-void abrir_prompt_borrar_marcador(App& a, ObjId marcador);  // Del on a bookmark row: yes/no prompt (string 0x34e)
-void abrir_prompt_marcador(App& a);                        // social_ui.cpp: /bookmark without a name (string 0x246)
-void marcar_lugar_aqui(App& a, std::string_view nombre);  // checks name length / map, then C_AddBookmark
-int clase_personaje(const App& a);                          // class byte of the selected character (0 prince, 2 elf)
+void abrir_prompt_borrar_marcador(App& a, ObjId marcador);  // Supr en una fila de marcador: pregunta sí/no (texto 0x34e)
+void abrir_prompt_marcador(App& a);                        // social_ui.cpp: /bookmark sin nombre (texto 0x246)
+void marcar_lugar_aqui(App& a, std::string_view nombre);  // revisa el largo del nombre / el mapa, después C_AddBookmark
+int clase_personaje(const App& a);                          // byte de clase del personaje elegido (0 príncipe, 2 elfo)
 bool es_hechizo_teleport(u32 id);
 // Abre el diálogo de destino (si hay marcadores) para un pergamino o un hechizo de teleport;
 // false si no hay ninguno (se usa como siempre).
@@ -939,10 +939,10 @@ void dibujar_equipo(App& a, int x, int y);
 // Tienda de jugadores (tienda_ui.cpp).
 void eventos_tienda(App& a, const Evento& e);
 void eventos_pesca(App& a, const Evento& e);
-bool clic_pesca(App& a);  // a world click while the bobber is out: C_FishClick; true if it took the click
+bool clic_pesca(App& a);  // un clic en el mundo con el corcho afuera: C_FishClick; true si tomó el clic
 void dibujar_pesca(App& a, u64 ahora, double ox, double oy);
-void dibujar_tienda(App& a);       // simple UI only
-void dibujar_tienda_original(App& a);  // original window, in the window stack
+void dibujar_tienda(App& a);       // solo interfaz simple
+void dibujar_tienda_original(App& a);  // ventana original, en la pila de ventanas
 Rect rect_tienda_original(const App& a);
 bool tienda_original_abierta(const App& a);
 bool sobre_tienda(const App& a);

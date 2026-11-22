@@ -231,7 +231,7 @@ void objetos(App& a, Conexion& c, int radio) {
                       a.sprites.accion(gfx, ACC_QUIETO) || a.sprites.accion(gfx, ACC_CAMINAR) ? 1 : 0, a.rec.sprite(spr0).size(),
                       static_cast<unsigned>(o.col<O_ESTADO>()[s]), px, py,
                       o.col<O_ESTADO>()[s] == ESTADO_MUERTO ? " muerto" : s == yo ? " yo" : "");
-        // Title, raw bytes (non-ASCII as \xNN), to check colour codes.
+        // Título, bytes crudos (lo no ASCII como \xNN), para revisar los códigos de color.
         if (o.col<O_MASCOTA>()[s]) {
             const size_t usado = std::strlen(l);
             std::snprintf(l + usado, sizeof l - usado, " mascota=%u clase=%u", static_cast<unsigned>(o.col<O_MASCOTA>()[s]),
@@ -305,7 +305,7 @@ void estado(App& a, Conexion& c) {
         if (a.castillos.asedio[k]) (asedios += std::to_string(k)) += ',';
     if (u8 cs = castillo_de(a, j.id)) asedios += " senor=" + std::to_string(cs);
     responder(c, asedios);
-    // Cursor applied last frame (a.cursor itself is reset to the hand at the start of each frame): the original-UI state 1..16, <= 0 a fork role.
+    // Cursor aplicado el cuadro anterior (a.cursor se vuelve a la mano al empezar cada cuadro): el estado 1..16 de la interfaz original, <= 0 un rol del fork.
     const int cs = static_cast<int>(a.cursor_aplicado) - static_cast<int>(Cursor::ESTADO_1) + 1;
     responder(c, "cursor=" + std::to_string(cs));
 }
@@ -386,7 +386,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         es.tipo = Espera::CREAR;
         es.texto = p[1];
         return false;
-    } else if (cmd == "cartel") {  // opens the sign info card without a sign nearby (l1j-en only sends `$` ids after patch 0102)
+    } else if (cmd == "cartel") {  // abre la ficha de cartel sin un cartel cerca (l1j-en solo manda ids `$` desde el parche 0102)
         if (a.pantalla != Pantalla::JUEGO || p.size() < 2) return error("uso: cartel <id desc-e> [rumbo 0-7] (en el juego)");
         a.cartel = {true, static_cast<u8>(p.size() > 2 ? std::atoi(p[2].c_str()) & 7 : 0), static_cast<u32>(std::atoi(p[1].c_str()))};
     } else if (cmd == "girar") {
@@ -422,7 +422,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             const long s = std::strtol(p[1].c_str(), &fin, 10);
             if (fin == p[1].c_str() || *fin || s < 0 || s > 86399) return error("la hora va de 0 a 86399, o off");
             a.hora_forzada = static_cast<i32>(s);
-            ++a.mundo.hora_n;  // like a S_GameTime packet: re-arms the orb transition
+            ++a.mundo.hora_n;  // como un paquete S_GameTime: vuelve a armar la transición del orbe
         }
     } else if (cmd == "perf") {
         a.perf = p.size() < 2 || p[1] == "on";
@@ -438,21 +438,21 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         inventario(a, c);
     } else if (cmd == "html") {
         html(a, c);
-    } else if (cmd == "debug-mascota") {  // debug: mascota <id> <nombre> as S_PetCtrlMenu would
+    } else if (cmd == "debug-mascota") {  // depuración: mascota <id> <nombre> como lo haría S_PetCtrlMenu
         Evento ev{};
         ev.tipo = Ev::MASCOTA;
         ev.id = p.size() > 1 ? static_cast<ObjId>(std::atoi(p[1].c_str())) : 1;
         ev.v[MA_AGREGAR] = 1;
         ev.s[0] = p.size() > 2 ? std::string_view(p[2]) : std::string_view("Pet");
         eventos_mascotas(a, ev);
-    } else if (cmd == "debug-cocina") {  // debug: cooking window for cook book stage <1..5> as S_PacketBox 52 would, optional book object id
+    } else if (cmd == "debug-cocina") {  // depuración: ventana de cocina para la etapa <1..5> del libro como S_PacketBox 52, id de libro opcional
         Evento ev{};
         ev.tipo = Ev::COCINA;
         ev.v[0] = 1;
         ev.v[1] = (p.size() > 1 ? std::atoi(p[1].c_str()) : 1) - 1;
         eventos_cocina(a, ev);
         if (p.size() > 2) a.cocina.pan = static_cast<ObjId>(std::atoi(p[2].c_str()));
-    } else if (cmd == "debug-correo") {  // debug: a letter from <name> in the inbox, shown in the reading window
+    } else if (cmd == "debug-correo") {  // depuración: una carta de <nombre> en la bandeja, mostrada en la ventana de lectura
         Correo& c = a.correo;
         c.abierto = true;
         c.escribiendo = false;
@@ -461,7 +461,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         c.cartas.push_back({7, 1700000000u, false, false, p.size() > 1 ? p[1] : "Sender", "Test subject"});
         c.leyendo = 7;
         c.texto = "Body of the letter. Second sentence to check the wrapping inside the paper edit area of the window.";
-    } else if (cmd == "debug-tienda") {  // debug: an NPC buy list of 3 items with property bytes, as S_ShopSellList would
+    } else if (cmd == "debug-tienda") {  // depuración: una lista de compra de NPC con 3 objetos con bytes de propiedades, como S_ShopSellList
         Evento ev{};
         ev.tipo = Ev::LISTA_TIENDA;
         ev.id = a.mundo.jugador.id;
@@ -480,7 +480,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
             eventos_npc(a, it);
         }
         a.tienda_filas[1].elegido = 1;
-    } else if (cmd == "debug-html") {  // debug: debug-html <pagina> <dato1> <dato2> ... as S_ShowHTML would
+    } else if (cmd == "debug-html") {  // depuración: debug-html <pagina> <dato1> <dato2> ... como lo haría S_ShowHTML
         Evento ev{};
         ev.tipo = Ev::HTML;
         ev.id = a.mundo.jugador.id;
@@ -639,7 +639,7 @@ bool ejecutar(App& a, Conexion& c, std::string_view linea) {
         g.ctrl = p.size() > 1 && p[1] == "on";
     } else if (cmd == "shift") {
         g.shift = p.size() > 1 && p[1] == "on";
-    } else if (cmd == "mapa") {  // debug: mapa <1..18> opens the world-map window as S_UseMap would
+    } else if (cmd == "mapa") {  // depuración: mapa <1..18> abre la ventana del mapa del mundo como S_UseMap
         Evento ev{};
         ev.tipo = Ev::USAR_MAPA;
         ev.v[0] = p.size() > 1 ? std::atoi(p[1].c_str()) : 0;

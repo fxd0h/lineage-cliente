@@ -22,10 +22,10 @@ enum class Ev : u8 {
     MARCADOR, INVISIBLE, RESUCITAR, NOMBRE_ROSA, LICOR, ANILLO, REINICIO, GRUPO, BLOQUEADO, SONIDO, TIENDA, TIENDA_LINEA, TABLON, TABLON_TEMA, TABLON_LEER, CORREO,
     CASAS, CASA, CASA_MAPA, GUERRA, ASEDIO, SENOR_CASTILLO, CASTILLO_FONDOS, FECHA_ASEDIO,
     USAR_MAPA, CLAN_EMBLEMA_OBJETO,
-    DUELO, VOLVER_PERSONAJES,  // S_PacketBox 5 (id = the opponent) and 42
-    CAMBIO_NOMBRE,             // S_ChangeName: id = object, s[0] = the new name
-    COCINA,                    // S_PacketBox 52 (COOK_WINDOW): v[0] = sub (1 = open), v[1] = cook book stage - 1
-    PESCA_PICADA,              // S_PacketBox 55 (FISHING): the own bobber shows a bite
+    DUELO, VOLVER_PERSONAJES,  // S_PacketBox 5 (id = el rival) y 42
+    CAMBIO_NOMBRE,             // S_ChangeName: id = objeto, s[0] = el nombre nuevo
+    COCINA,                    // S_PacketBox 52 (COOK_WINDOW): v[0] = sub (1 = abrir), v[1] = etapa del libro de cocina - 1
+    PESCA_PICADA,              // S_PacketBox 55 (FISHING): el corcho propio muestra una picada
     IGNORADO,
 };
 
@@ -83,9 +83,9 @@ enum : int { VE_CLASE, VE_TIPO, VE_SEG };
 enum : int { VE_HASTE, VE_BRAVE };
 // ICONO_EFECTO (S_SkillIconShield, S_SkillIconAura, S_SkillIconGFX): clase, tipo y segundos
 // (0 = se terminó).
-// IE_CONTEXTO (S_PacketBox icon subtypes that need the own sprite or class to pick the slot, see
-// icono_de_caja in mundo.h): IE_TIPO = the subtype (21, 35, 36, 56, 59, 74, 75), IE_SEG = seconds,
-// IE_EXTRA... = the extra bytes (21: b0..b3; 56: the second h; 75: n).
+// IE_CONTEXTO (subtipos de ícono de S_PacketBox que necesitan el sprite propio o la clase para elegir la casilla, ver
+// icono_de_caja en mundo.h): IE_TIPO = el subtipo (21, 35, 36, 56, 59, 74, 75), IE_SEG = segundos,
+// IE_EXTRA... = los bytes extra (21: b0..b3; 56: el segundo h; 75: n).
 enum : int { IE_CLASE, IE_TIPO, IE_SEG, IE_EXTRA };
 // GRUPO (S_PacketBox 104–110): GR_TIPO GR_VACIAR (llega la lista entera), GR_MIEMBRO (e.id, s[0]
 // nombre, GR_HP en % o 0xFF, GR_LIDER), GR_LIDER_NUEVO (e.id). BLOQUEADO (S_PacketBox 17–19): s[0]

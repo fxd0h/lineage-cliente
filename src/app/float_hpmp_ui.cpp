@@ -1,12 +1,12 @@
-// Floating HP/MP pair window of the original client (original UI only): built at 0x4b56c0 (vtable 0x4f53cc), drawn at
-// 0x4b5c60 (S3EP1U.bin), toggled by Ctrl+R (0x456d26) and the Options action `showfloathpmp` (byte [0x6ddf90], default 1).
-//  - frame image 1330 + 3 * style (style 0..2, [0x8169b0]) at the top centre of the screen (x = 320 - w / 2, y = 0);
-//  - HP bar 1331 + 3 * style and MP bar 1332 + 3 * style at (20, 0), cut to hp / hpmax and mp / mpmax of the width; when
-//    the character is poisoned the HP bar is image 1345 + 2 * style, when frozen 1346 + 2 * style (0x4b5d2e);
-//  - "%d/%d" centred on the bar at y 6 (HP) and 23 (MP): outline colours 0x5949 / 0x3214 (RGB555) one pixel around, white
-//    0x7fff in the middle (0x431390 calls);
-//  - button 1339 (hover 1341) at (0,7) cycles the style (0x4b5250); close 1342 (hover 1344) at (w - 16, 12) clears the
-//    option (0x4b56b0); the rest of the window is a drag handle clamped to y <= 430 (0x4b51d0).
+// Ventana flotante del par HP/MP del cliente original (solo interfaz original): se construye en 0x4b56c0 (vtable 0x4f53cc), se dibuja en
+// 0x4b5c60 (S3EP1U.bin), se alterna con Ctrl+R (0x456d26) y con la acción de Opciones `showfloathpmp` (byte [0x6ddf90], por omisión 1).
+//  - imagen de marco 1330 + 3 * estilo (estilo 0..2, [0x8169b0]) arriba al centro de la pantalla (x = 320 - w / 2, y = 0);
+//  - barra de HP 1331 + 3 * estilo y barra de MP 1332 + 3 * estilo en (20, 0), cortadas a hp / hpmax y mp / mpmax del ancho; si
+//    el personaje está envenenado la barra de HP es la imagen 1345 + 2 * estilo, si está congelado 1346 + 2 * estilo (0x4b5d2e);
+//  - "%d/%d" centrado en la barra en y 6 (HP) y 23 (MP): colores de contorno 0x5949 / 0x3214 (RGB555) un píxel alrededor, blanco
+//    0x7fff en el medio (llamadas a 0x431390);
+//  - el botón 1339 (hover 1341) en (0,7) rota el estilo (0x4b5250); cerrar 1342 (hover 1344) en (w - 16, 12) apaga la
+//    opción (0x4b56b0); el resto de la ventana es zona de arrastre limitada a y <= 430 (0x4b51d0).
 #include <cstdio>
 #include <cstring>
 #include "app/app.h"
@@ -40,7 +40,7 @@ void dibujar_hpmp_flotante(App& a) {
     const EstadoJugador& j = a.mundo.jugador;
     Rect r = rect_ventana(a, IdVentana::HPMP);
     PosVentana& p = a.pos_ventanas[static_cast<int>(IdVentana::HPMP)];
-    // Drag handle: everything right of the style button (the 0x88-byte control at (22,1) of the window).
+    // Zona de arrastre: todo lo que está a la derecha del botón de estilo (el control de 0x88 bytes en (22,1) de la ventana).
     const bool sobre_cierre = ui::sobre(e, r.x + r.w - 16, r.y + 12, 12, 12), sobre_estilo = ui::sobre(e, r.x, r.y + 7, 22, 22);
     if (e.pulsado && a.ventana_arrastrada < 0 && ui::sobre(e, r.x + 22, r.y + 1, r.w - 22, 33) && !sobre_cierre) {
         a.ventana_arrastrada = static_cast<int>(IdVentana::HPMP);

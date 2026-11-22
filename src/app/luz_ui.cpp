@@ -142,8 +142,8 @@ void preparar_luz(App& a) {
     a.gpu.reservar_brillo(bw, bh);
 }
 
-// Game clock as 0x4bad30 reads it: the S_GameTime dword as unsigned, values >= 2^31 first shifted by 0x879e0800 (mod 2^32),
-// then gmtime. The orb, the light level, the status-window gauge and the ambience all use this one value.
+// Reloj del juego como lo lee 0x4bad30: el dword de S_GameTime sin signo, los valores >= 2^31 antes corridos en 0x879e0800 (mód 2^32),
+// después gmtime. El orbe, el nivel de luz, el indicador de la ventana de estado y el ambiente usan todos este mismo valor.
 i64 hora_de_juego(const App& a) {
     if (a.hora_forzada >= 0) return a.hora_forzada;
     const u32 crudo = static_cast<u32>(a.mundo.hora);
@@ -167,9 +167,9 @@ void aplicar_luz(App& a, u64 ahora) {
     const bool lluvia = m.nieve > 0 || m.lluvia > 0;
     int nivel = nivel_ambiente(m.mapa, seg / 60, dia_del_anio(hora), lluvia);
     if (m.jugador.luz_hechizo) nivel = nivel_con_luz_hechizo(nivel);
-    // Original: blindness has no overlay image; the world is drawn at light level 0 (0x4626c0).
+    // Original: la ceguera no tiene imagen superpuesta; el mundo se dibuja con nivel de luz 0 (0x4626c0).
     if (m.jugador.ceguera && !a.cfg.ui_simple) nivel = 0;
-    // A light-flash effect forces full brightness (the day/night updater skips while it holds); blindness is drawn after it.
+    // Un efecto de destello fuerza brillo máximo (el actualizador de día/noche se salta mientras dura); la ceguera se dibuja después.
     else if (a.flash_luz_frame && a.frame - a.flash_luz_frame <= 1) nivel = 15;
 
     // Elfo y elfo oscuro: la visión reemplaza a la luz (no hay luces ni mapa de brillo).

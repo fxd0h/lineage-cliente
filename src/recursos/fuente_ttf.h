@@ -21,7 +21,7 @@ static_assert(GLIFO_HTML_BASE - GLIFO_TTF_BASE > 0x10FFFF && GLIFO_HTML_NEGRITA_
 constexpr int ALTO_LINEA_HTML_ORIGINAL = 13;
 int ancho_html(u32 codepunto, bool negrita = false);
 bool rasterizar_html(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
-// HD field (recursos/fuente_hd.h) from the real outlines; false for glyphs without ink.
+// Campo HD (recursos/fuente_hd.h) desde los contornos reales; false para glifos sin tinta.
 bool rasterizar_html_hd(u32 codepunto, ImagenRGBA& salida, bool negrita = false);
 
 // Avance del carácter en píxeles (proporcional). Un carácter que la fuente no tiene se dibuja como '?'.

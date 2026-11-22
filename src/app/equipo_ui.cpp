@@ -20,19 +20,19 @@ namespace {
 constexpr u32 IMG_EQUIPO = 981;  // 179×275
 
 struct Recuadro {
-    u8 uso;       // item use type (ItemTable)
-    int px, py;   // icon top-left from the window corner: table at 0x8f0818 (filled by 0x4b2f50), used by 0x4b3220
+    u8 uso;       // tipo de uso del objeto (ItemTable)
+    int px, py;   // esquina superior izquierda del ícono desde la esquina de la ventana: tabla en 0x8f0818 (la llena 0x4b2f50), la usa 0x4b3220
     const char* nombre;
 };
-// Use types: 1 weapon, 2 armor, 18 T-shirt, 19 cloak (also 10), 20 gloves, 21 boots, 22 helm, 24 necklace,
-// 25 shield, 37 belt, 40 earring. The slot chosen per type is 0x4b30d0's classification.
+// Tipos de uso: 1 arma, 2 armadura, 18 camiseta, 19 capa (también 10), 20 guantes, 21 botas, 22 casco, 24 collar,
+// 25 escudo, 37 cinturón, 40 aro. La casilla elegida por tipo es la clasificación de 0x4b30d0.
 constexpr Recuadro RECUADROS[] = {
     {22, 77, 46, "Helm"},     {40, 38, 52, "Earring"}, {19, 116, 89, "Cloak"},  {24, 116, 52, "Amulet"},
     {18, 38, 89, "T-shirt"},  {2, 77, 89, "Armor"},    {20, 33, 189, "Gloves"}, {1, 33, 157, "Weapon"},
     {25, 121, 125, "Shield"}, {37, 78, 131, "Belt"},   {21, 78, 189, "Boots"},
 };
 constexpr u8 USO_ANILLO = 23;
-// The two ring slots (the first ring takes the first one).
+// Las dos casillas de anillo (el primer anillo toma la primera).
 constexpr int ANILLO_POS[2][2] = {{33, 125}, {121, 157}};
 constexpr int LADO_ANILLO = 32;
 
@@ -44,7 +44,7 @@ void dibujar_equipo(App& a, int x0, int y0) {
     const Inventario& inv = a.mundo.inventario;
     const TablaItems& t = inv.items;
     const bool framed_ui = uses_original_frame(a, IdVentana::ESTADO);
-    // In the original frame the icons go above background (10) and frame (11), below the ornament (15).
+    // En el marco original los íconos van sobre el fondo (10) y el marco (11), debajo del adorno (15).
     const u64 kf = clave_orden(CAPA_UI, 3), ki = clave_orden(CAPA_UI, framed_ui ? 14 : 5), kt = clave_orden(CAPA_UI_TEXTO, 5);
     // Qué hay equipado en cada parte.
     constexpr size_t N = std::size(RECUADROS);
@@ -66,12 +66,12 @@ void dibujar_equipo(App& a, int x0, int y0) {
     }
 
     Slot bajo = SIN_SLOT;
-    int bajo_x = 0, bajo_y = 0;  // top-left of the hovered slot (the label sits relative to it)
+    int bajo_x = 0, bajo_y = 0;  // esquina superior izquierda de la casilla bajo el puntero (la etiqueta se ubica respecto de ella)
     bool native = false;
     auto poner = [&](Slot s, int rx, int ry, int rw, int rh) {
         const RegionAtlas& ic = g.icono(t.col<I_GFX>()[s]);
         if (native) {
-            // 0x4b3220 -> 0x445fd0 draws the icon at its own size from the slot origin, like the inventory (no stretch).
+            // 0x4b3220 -> 0x445fd0 dibuja el ícono a su tamaño desde el origen de la casilla, como el inventario (sin estirar).
             draw_item_icon(g.gpu(), ic, rx, ry, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);
         } else {
             const int lado = std::min({32, rw, rh});
@@ -118,27 +118,27 @@ void dibujar_equipo(App& a, int x0, int y0) {
         g.texto("Armor Class", static_cast<float>(x + 4), static_cast<float>(y + 6), kt, rotulo);
         g.texto(txt, static_cast<float>(x + ROTULO + 30), static_cast<float>(y + 6), kt, ui::COLOR_TEXTO);
     } else {
-        // In the original frame the image is its background (drawn by the frame, 1440 at (6,9));
-        // in upstream's frame, 981 centered in the window.
+        // En el marco original la imagen es su fondo (lo dibuja el marco, 1440 en (6,9));
+        // en el marco de upstream (la interfaz simple), 981 centrada en la ventana.
         const bool framed = uses_original_frame(a, IdVentana::ESTADO);
         const int x = x0 + (framed ? 6 : 34), y = y0 + (framed ? 9 : 24);
         if (!framed) g.gpu().dibujar(fondo, x, y, kf);
-        // Icons are placed in window coordinates (the image origin is 6,9 inside the original frame).
+        // Los íconos se ubican en coordenadas de la ventana (el origen de la imagen es 6,9 dentro del marco original).
         const int ox = x - 6, oy = y - 9;
         native = framed;
         for (size_t i = 0; i < N; ++i)
             if (en[i] != SIN_SLOT) poner(en[i], ox + RECUADROS[i].px, oy + RECUADROS[i].py, 32, 32);
         for (int i = 0; i < std::min(nanillos, 2); ++i)
             poner(anillos[i], ox + ANILLO_POS[i][0], oy + ANILLO_POS[i][1], LADO_ANILLO, LADO_ANILLO);
-        // AC as 0x4b3740: white, centred between window x 92 and 149 on 6 px per character, text top at window y 231.
+        // CA como 0x4b3740: blanco, centrado entre x 92 y 149 de la ventana a 6 px por carácter, tope del texto en y 231 de la ventana.
         std::snprintf(txt, sizeof txt, "%d", a.mundo.jugador.ca);
         const int ac_x = ox + 92 + (149 - 92 - 6 * static_cast<int>(std::strlen(txt)) + 1) / 2;
         g.texto(txt, static_cast<float>(ac_x), static_cast<float>(oy + 231), kt, rgba(255, 255, 255));
     }
 
-    // Original frame: the hovered slot ([+0xa4] set by the mouse-move handler 0x4b36c8) shows only the item name, white
-    // with a black outline, at (slot x - 32, slot y + 34) (second loop of 0x4b3220 via 0x4334f0). The name is not the
-    // attribute box of the simple UI.
+    // Marco original: la casilla bajo el puntero ([+0xa4], la fija el manejador de movimiento del mouse 0x4b36c8) muestra solo el nombre
+    // del objeto, blanco con contorno negro, en (x de la casilla - 32, y de la casilla + 34) (segundo bucle de 0x4b3220 vía 0x4334f0). El nombre no es
+    // la caja de atributos de la interfaz simple.
     if (bajo != SIN_SLOT && !(a.cfg.ui_simple || !fondo.valida())) {
         const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), txt, sizeof txt);
         std::string_view nom(txt, n);
@@ -146,7 +146,7 @@ void dibujar_equipo(App& a, int x0, int y0) {
         g.texto_contorno(nom, static_cast<float>(bajo_x - 32), static_cast<float>(bajo_y + 34), clave_orden(CAPA_UI_TEXTO, 6),
                          rgba(255, 255, 255));
     } else if (bajo != SIN_SLOT) {
-        // Simple UI: the item name and its attributes.
+        // Interfaz simple: el nombre del objeto y sus atributos.
         char nombre[256], det[1024];
         const size_t n = expandir_desc(a.desc, nombre_item(inv, bajo), nombre, sizeof nombre);
         const size_t nd = describir_atributos(atributos_item(inv, bajo), det, sizeof det);

@@ -26,7 +26,7 @@ struct FuenteBitmap {
     // Glifo blanco sobre transparente; el color se aplica al dibujar. `glifo`: 0–94 ASCII,
     // 1000+ índice coreano.
     bool rasterizar(u32 glifo, ImagenRGBA& salida) const;
-    // Same glyph as an HD field (recursos/fuente_hd.h) for the post-filter text pass; false if it has no ink.
+    // El mismo glifo como campo HD (recursos/fuente_hd.h) para la pasada de texto posterior al filtro; false si no tiene tinta.
     bool rasterizar_hd(u32 glifo, ImagenRGBA& salida) const;
 };
 

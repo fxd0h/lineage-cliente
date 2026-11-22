@@ -1,5 +1,5 @@
-// Minimal PE (Windows executable) resource reader. Only what is needed to pull the monochrome
-// RT_CURSOR resources out of the game binary (S3EP1U.bin). Bounds-checked, no exceptions.
+// Lector mínimo de recursos PE (ejecutable de Windows). Solo lo necesario para sacar los recursos RT_CURSOR
+// monocromos del binario del juego (S3EP1U.bin). Con revisión de límites, sin excepciones.
 #pragma once
 #include <vector>
 #include "core/tipos.h"
@@ -14,14 +14,14 @@ struct PeCursor {
     std::vector<PePixel> pixels;  // width * height
 };
 
-// Locates the raw data of a resource (type, id) in a PE image (first language). Empty if missing.
+// Ubica los datos crudos de un recurso (tipo, id) en una imagen PE (primer idioma). Vacío si falta.
 Bytes pe_find_resource(Bytes pe, u32 type_id, u32 res_id);
 
-// Decodes RT_CURSOR `res_id` (4-byte hotspot + 1 bpp DIB with XOR and AND masks). False if it is
-// missing, malformed or not 1 bpp.
+// Decodifica el RT_CURSOR `res_id` (hotspot de 4 bytes + DIB de 1 bpp con máscaras XOR y AND). False si
+// falta, está mal formado o no es de 1 bpp.
 bool pe_load_cursor(Bytes pe, u32 res_id, PeCursor& out);
 
-// RT_GROUP_CURSOR `group_id` (LoadCursor's resource name) -> the RT_CURSOR id of its first image; 0 if missing.
+// RT_GROUP_CURSOR `group_id` (el nombre de recurso de LoadCursor) -> el id RT_CURSOR de su primera imagen; 0 si falta.
 u32 pe_cursor_group_image(Bytes pe, u32 group_id);
 
 }  // namespace lin

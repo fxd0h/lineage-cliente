@@ -32,9 +32,9 @@ bool igual_sin_mayusculas(std::string_view x, std::string_view y) {
 // Ir al destino elegido (marcador o, con nullptr, al azar).
 void ir(App& a, const Marcador* m) {
     ElegirDestino& d = a.destino;
-    if (!a.cfg.ui_simple) d.enviado = true;  // the window stays up until the teleport happens (0x418d84, closed at 0x4623aa)
+    if (!a.cfg.ui_simple) d.enviado = true;  // la ventana sigue hasta que ocurre el teleport (0x418d84, se cierra en 0x4623aa)
     else d.abierto = false;
-    // A row without coordinates (x = y = 0, what l1j-en sends) goes out with the current map (0x418b50).
+    // Una fila sin coordenadas (x = y = 0, lo que manda l1j-en) sale con el mapa actual (0x418b50).
     const u16 mapa = m ? (m->x == 0 && m->y == 0 ? static_cast<u16>(a.mundo.mapa) : m->mapa) : 0;
     const u32 id = m ? m->id : 0;
     if (d.item) {
@@ -52,7 +52,7 @@ void ir(App& a, const Marcador* m) {
 bool es_hechizo_teleport(u32 id) { return id == HECHIZO_TELEPORT || id == HECHIZO_MASS_TELEPORT; }
 
 void eventos_marcadores(App& a, const Evento& e) {
-    if (e.tipo == Ev::TELETRANSPORTE || e.tipo == Ev::MAPA) a.destino.abierto = false;  // the teleport went through
+    if (e.tipo == Ev::TELETRANSPORTE || e.tipo == Ev::MAPA) a.destino.abierto = false;  // el teleport se hizo
     if (e.tipo != Ev::MARCADOR) return;
     auto it = std::find_if(a.marcadores.begin(), a.marcadores.end(), [&](const Marcador& m) { return m.id == e.id; });
     if (it == a.marcadores.end()) it = a.marcadores.insert(a.marcadores.end(), Marcador{});
@@ -67,7 +67,7 @@ static void aviso_cadena(App& a, int id) {
     a.chat.agregar(a.mensajes.linea(static_cast<size_t>(id)), rgba(255, 230, 120), CHAT_SISTEMA);
 }
 
-// Maps where bookmarks are refused (0x406df0): string 0xd6.
+// Mapas donde se rechazan los marcadores (0x406df0): texto 0xd6.
 static bool mapa_sin_marcadores(u32 m) {
     return m == 2 || m == 5 || m == 6 || m == 0x53 || m == 0x54 || m == 0x1be || m == 0x1bf || (m >= 8 && m <= 0xf) || m == 0x12 ||
            m == 0x14 || m == 0x15;
@@ -82,7 +82,7 @@ void marcar_lugar_aqui(App& a, std::string_view nombre) {
 
 bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
     if (igual_sin_mayusculas(orden, "bookmark")) {
-        // No name: the original opens its text prompt (string 0x246, callback 0x40d240); the typed name takes the same path.
+        // Sin nombre: el original abre su pregunta de texto (texto 0x246, callback 0x40d240); el nombre escrito sigue el mismo camino.
         if (nombre.empty()) abrir_prompt_marcador(a);
         else marcar_lugar_aqui(a, nombre);
         return true;
@@ -101,9 +101,9 @@ bool comando_marcador(App& a, std::string_view orden, std::string_view nombre) {
 }
 
 bool elegir_destino(App& a, ObjId item, u32 hechizo) {
-    // Only with the Ring of Teleport Control on (S_Ability 1, bit 1 of jugador.anillos); otherwise random.
-    // The original client (0x409690, 0x4ac830) opens its bookmark window whenever the ring is on, even with no bookmarks.
-    // Also open for an elf of level 50+ with /telcon on (0x409690: class == 2 && level >= 50 && telcon).
+    // Solo con el Ring of Teleport Control puesto (S_Ability 1, bit 1 de jugador.anillos); si no, al azar.
+    // El cliente original (0x409690, 0x4ac830) abre su ventana de marcadores siempre que el anillo está puesto, aun sin marcadores.
+    // También se abre para un elfo de nivel 50+ con /telcon activo (0x409690: clase == 2 && nivel >= 50 && telcon).
     const bool control = (a.mundo.jugador.anillos & 2) || (a.telcon && clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50);
     if (!control || (a.marcadores.empty() && a.cfg.ui_simple)) return false;
     a.destino = ElegirDestino{};
@@ -122,7 +122,7 @@ bool sobre_destino(const App& a) {
 
 void dibujar_destino(App& a) {
     ElegirDestino& d = a.destino;
-    if (!d.abierto || !a.cfg.ui_simple) return;  // the original UI draws it as a framed window (dibujar_destino_orig)
+    if (!d.abierto || !a.cfg.ui_simple) return;  // la interfaz original la dibuja como ventana con marco (dibujar_destino_orig)
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const u64 kf = clave_orden(CAPA_UI, 3), kt = clave_orden(CAPA_UI_TEXTO, 3);
@@ -188,15 +188,15 @@ void dibujar_destino(App& a) {
     else if (cancelar || a.marcadores.empty()) d.abierto = false;
 }
 
-// Original UI: the bookmark list window of S3EP1U.bin. Teleport use with the Ring of Teleport Control (S_Ability 1) opens it
-// (0x409690 scroll, 0x4ac830 spell); a click on a name sends the use with that bookmark (0x418b50 -> 0x418d62 `cdhhh`: item,
-// then the three words of the S_Bookmarks row; the spell sends 0x500320 `ccchhh`). Class: window ctor 0x419040, draw
-// 0x419360, row list 0x418a50 (rect (23,46)-(174,260), row 12 px, rows at (25,49), up to 17).
-//  - translucent background 978 at (8,11), frame 979, ornament 980 at (2,11) over the rows, close 969 at (182,19);
-//  - scroll bar (0x47cd80): track 971 at (176,60), up arrow at (176,52), down arrow at (177,239), range 0..count-1 (0..2 for
-//    fewer than 3 rows);
-//  - no title, no Random row, no buttons: names in plain colour 0x5ef7 (chat run 0x432aa0), the clicked row tinted over
-//    145 px like the NPC lists (0x498d90); closing the window cancels, Esc closes it.
+// Interfaz original: la ventana de lista de marcadores de S3EP1U.bin. Usar el teleport con el Ring of Teleport Control (S_Ability 1) la abre
+// (0x409690 pergamino, 0x4ac830 hechizo); un clic en un nombre manda el uso con ese marcador (0x418b50 -> 0x418d62 `cdhhh`: objeto,
+// después las tres palabras de la fila de S_Bookmarks; el hechizo manda 0x500320 `ccchhh`). Clase: ctor de ventana 0x419040, dibujo
+// 0x419360, lista de filas 0x418a50 (rect (23,46)-(174,260), fila de 12 px, filas en (25,49), hasta 17).
+//  - fondo translúcido 978 en (8,11), marco 979, adorno 980 en (2,11) sobre las filas, cerrar 969 en (182,19);
+//  - barra de scroll (0x47cd80): riel 971 en (176,60), flecha arriba en (176,52), flecha abajo en (177,239), rango 0..cantidad-1 (0..2 con
+//    menos de 3 filas);
+//  - sin título, sin fila Random, sin botones: nombres en el color liso 0x5ef7 (tramo de chat 0x432aa0), la fila cliqueada teñida sobre
+//    145 px como las listas de NPC (0x498d90); cerrar la ventana cancela, Esc la cierra.
 bool destino_orig_abierto(const App& a) { return !a.cfg.ui_simple && a.destino.abierto; }
 
 Rect rect_destino_orig(const App& a) { return rect_lista_orig(a); }
@@ -224,7 +224,7 @@ void dibujar_destino_orig(App& a) {
         return;
     }
     const u32 total = static_cast<u32>(a.marcadores.size());
-    // Del / Backspace on the selected row (else the one under the pointer) asks to delete it (string 0x34e).
+    // Supr / Backspace en la fila elegida (si no, la que está bajo el puntero) pregunta si borrarla (texto 0x34e).
     if ((e.suprimir || e.retroceso) && !a.escribiendo_chat && !d.enviado) {
         int fila = d.sel;
         if (fila < 0 && ui::sobre(e, r.x + HIT_L, r.y + HIT_T, HIT_R - HIT_L, HIT_B - HIT_T))
@@ -232,12 +232,12 @@ void dibujar_destino_orig(App& a) {
         if (fila >= 0 && static_cast<u32>(fila) < total) abrir_prompt_borrar_marcador(a, a.marcadores[static_cast<size_t>(fila)].id);
         e.suprimir = e.retroceso = false;
     }
-    // The bar scrolls one row per step up to the last one (the original range is count-1, 2 for fewer than 3 rows).
+    // La barra desplaza una fila por paso hasta la última (el rango original es cantidad-1, 2 con menos de 3 filas).
     const bool sobre_lista = sobre_ventana(a, IdVentana::DESTINO);
     original_scrollbar(a, d.barra, r.x + SCROLL_X, r.y + SCROLL_Y, SCROLL_H, std::max<u32>(total, 3) + ROWS - 1, ROWS, d.desplaza,
                        sobre_lista, 0, -2);
     const u32 primero = std::min(d.desplaza, total ? total - 1 : 0);
-    // A click on a row: hit rows start 3 px above the drawn ones (list rect top 46 vs text 49).
+    // Un clic en una fila: las filas de acierto empiezan 3 px arriba de las dibujadas (tope del rect de la lista 46 contra texto 49).
     if (sobre_lista && e.clic && !d.enviado && ui::sobre(e, r.x + HIT_L, r.y + HIT_T, HIT_R - HIT_L, HIT_B - HIT_T)) {
         const u32 i = primero + static_cast<u32>((e.my - (r.y + HIT_T)) / ROW_H);
         if (i < total) {

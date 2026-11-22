@@ -10,15 +10,15 @@ layout(location = 0) out vec4 salida;
 void main() {
     vec4 t;
     if ((i_mezcla & 4u) != 0u) {
-        // Bit 2 = HD pack image: premultiplied texels, bilinear; back to straight alpha for the common path.
+        // Bit 2 = imagen del pack HD: texels premultiplicados, bilineal; de vuelta a alfa directo para el camino común.
         t = texture(atlas_lin, vec3(i_uv, float(i_pagina)));
         t.rgb = t.a > 0.0 ? t.rgb / t.a : vec3(0.0);
     } else {
         t = texture(atlas, vec3(i_uv, float(i_pagina)));
     }
-    // Bit 1 of mezcla = silhouette: the tint's color with the texture's alpha. Bit 0 = additive.
+    // Bit 1 de mezcla = silueta: el color del tinte con el alfa de la textura. Bit 0 = aditiva.
     vec4 c = (i_mezcla & 2u) != 0u ? vec4(i_color.rgb, t.a * i_color.a) : t * i_color;
-    // Bit 5 = grey: the texture's luminance times the tint (monochrome HUD icons).
+    // Bit 5 = gris: la luminancia de la textura por el tinte (íconos monocromos del HUD).
     if ((i_mezcla & 32u) != 0u) c.rgb = vec3(dot(t.rgb, vec3(0.299, 0.587, 0.114))) * i_color.rgb;
     if (c.a <= 0.0) discard;
     // Alfa premultiplicado: con alfa 0 el color se suma al fondo sin taparlo (mezcla aditiva).

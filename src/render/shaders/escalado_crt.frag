@@ -1,7 +1,7 @@
 #version 450
-// Final-present scaler "crt": lightweight CRT look (own implementation): horizontal linear
-// interpolation between source pixels, per-source-row scanline profile, RGB triad mask, slight gain.
-// u.xy = source size, u.zw = output size. MSL twin: fs_escalado_crt in gpu.cpp.
+// Escalador de la presentación final "crt": aspecto CRT liviano (implementación propia): interpolación lineal
+// horizontal entre píxeles de origen, perfil de línea de barrido por fila de origen, máscara de tríadas RGB, leve ganancia.
+// u.xy = tamaño de origen, u.zw = tamaño de salida. Gemelo MSL: fs_escalado_crt en gpu.cpp.
 layout(set = 2, binding = 0) uniform sampler2D escena;
 layout(std140, set = 3, binding = 0) uniform Params { vec4 u; };
 layout(location = 0) in vec2 i_uv;
@@ -14,7 +14,7 @@ void main() {
     float nx = f.x < 0.5 ? -1.0 : 1.0;
     float k = abs(f.x - 0.5);
     vec3 col = mix(P(c), P(c + vec2(nx, 0.0)), smoothstep(0.0, 1.0, k * 0.8));
-    float scan = 0.82 + 0.18 * cos(6.2831853 * (f.y - 0.25));  // 1.0 on the first half-row, 0.64 on the second
+    float scan = 0.82 + 0.18 * cos(6.2831853 * (f.y - 0.25));  // 1,0 en la primera media fila, 0,64 en la segunda
     int ox = int(i_uv.x * u.z);
     vec3 mask = vec3(0.8);
     mask[ox % 3] = 1.0;

@@ -1,17 +1,17 @@
-// Final-present scalers, HLSL twins of escalado_xbr.frag / escalado_fsr.frag / escalado_crt.frag (Windows/D3D12).
-// Entry points fs_escalado_xbr, fs_escalado_fsr, fs_escalado_crt; vertex stage: vs_mundo (mundo.hlsl).
-// Source: logical image sampled with nearest at texel centres. u.xy = source size, u.zw = output size.
-// Resource convention: see sprite.hlsl. Texture fetches use SampleLevel(.., 0): the scene texture has one level.
+// Escaladores de la presentación final, gemelos HLSL de escalado_xbr.frag / escalado_fsr.frag / escalado_crt.frag (Windows/D3D12).
+// Puntos de entrada fs_escalado_xbr, fs_escalado_fsr, fs_escalado_crt; etapa de vértices: vs_mundo (mundo.hlsl).
+// Origen: imagen lógica muestreada por vecino más cercano en el centro de los texels. u.xy = tamaño de origen, u.zw = tamaño de salida.
+// Convención de recursos: ver sprite.hlsl. Las lecturas de textura usan SampleLevel(.., 0): la textura de la escena tiene un nivel.
 //
-// xbr: xBR-style edge-directed pixel-art upscaler (own implementation, GPL-3.0 like the rest of the client). Uses
-//   the xBR edge test (weighted colour distances along the two diagonals around each source-pixel corner, as
-//   published by Hyllian's xBR family) with a corner-cut rule; it is NOT a port of xBR-lv2.
-// fsr: AMD FidelityFX Super Resolution 1.0, EASU pass, re-written from the public algorithm (FsrEasuF, ffx_fsr1.h).
+// xbr: escalador de pixel art dirigido por bordes al estilo xBR (implementación propia, GPL-3.0 como el resto del cliente). Usa
+//   la prueba de bordes de xBR (distancias de color ponderadas a lo largo de las dos diagonales alrededor de cada esquina del píxel de origen, como
+//   la publicó la familia xBR de Hyllian) con una regla de corte de esquinas; NO es un port de xBR-lv2.
+// fsr: AMD FidelityFX Super Resolution 1.0, pasada EASU, reescrita desde el algoritmo público (FsrEasuF, ffx_fsr1.h).
 //   Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved. MIT License: permission is granted, free of
 //   charge, to use, copy, modify, merge, publish and distribute this software and derived works, provided this notice
-//   is kept; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. RCAS sharpening is not included.
-// crt: lightweight CRT look (own implementation): horizontal linear interpolation between source pixels,
-//   per-source-row scanline profile, RGB triad mask, slight gain.
+//   is kept; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. No incluye el afilado RCAS.
+// crt: aspecto CRT liviano (implementación propia): interpolación lineal horizontal entre píxeles de origen,
+//   perfil de línea de barrido por fila de origen, máscara de tríadas RGB, leve ganancia.
 
 [[vk::binding(0, 2)]] Texture2D<float4> escena : register(t0, space2);
 [[vk::binding(0, 2)]] SamplerState muestreo : register(s0, space2);
@@ -35,26 +35,26 @@ float d(float3 a, float3 b) { return dot(abs(a - b), float3(0.299, 0.587, 0.114)
 float4 fs_escalado_xbr(Salida in_) : SV_Target0 {
     float2 sp = in_.uv * u.xy;
     float2 c = floor(sp);
-    float2 f = sp - c - 0.5;  // -0.5..0.5 inside the source pixel
-    float2 s = float2(f.x < 0.0 ? -1.0 : 1.0, f.y < 0.0 ? -1.0 : 1.0);  // nearest corner
+    float2 f = sp - c - 0.5;  // -0.5..0.5 dentro del píxel de origen
+    float2 s = float2(f.x < 0.0 ? -1.0 : 1.0, f.y < 0.0 ? -1.0 : 1.0);  // esquina más cercana
     float3 E = P(c);
-    float3 H = P(c + float2(s.x, 0.0));         // horizontal neighbour towards the corner
-    float3 V = P(c + float2(0.0, s.y));         // vertical neighbour towards the corner
+    float3 H = P(c + float2(s.x, 0.0));         // vecino horizontal hacia la esquina
+    float3 V = P(c + float2(0.0, s.y));         // vecino vertical hacia la esquina
     float3 I = P(c + s);                        // diagonal
     float3 Hb = P(c + float2(-s.x, 0.0));       // E's opposite neighbours
     float3 Vb = P(c + float2(0.0, -s.y));
-    float3 C = P(c + float2(s.x, -s.y));        // anti-diagonal pair around the corner
+    float3 C = P(c + float2(s.x, -s.y));        // par antidiagonal alrededor de la esquina
     float3 G = P(c + float2(-s.x, s.y));
-    float3 H2 = P(c + float2(2.0 * s.x, s.y));  // outer taps next to I
+    float3 H2 = P(c + float2(2.0 * s.x, s.y));  // lecturas exteriores junto a I
     float3 V2 = P(c + float2(s.x, 2.0 * s.y));
-    // Edge test for the corner: 'e' = cost of the E-I diagonal being a line separating H and V
+    // Prueba de borde para la esquina: 'e' = costo de que la diagonal E-I sea una línea que separa H y V
     float e = d(E, C) + d(E, G) + d(I, H2) + d(I, V2) + 4.0 * d(V, H);
     float i = d(V, Hb) + d(V, V2) + d(H, H2) + d(H, Vb) + 4.0 * d(E, I);
     float3 col = E;
     if (e < i && d(E, I) > 0.02) {
-        float3 n = d(E, H) <= d(E, V) ? H : V;           // neighbour closest to E carries the edge
-        float t = abs(f.x) + abs(f.y);                   // 0 centre .. 1 corner
-        float w = 0.5 * length(u.xy / u.zw) * 1.5;       // ~1 output pixel in t units
+        float3 n = d(E, H) <= d(E, V) ? H : V;           // el vecino más cercano a E lleva el borde
+        float t = abs(f.x) + abs(f.y);                   // 0 centro .. 1 esquina
+        float w = 0.5 * length(u.xy / u.zw) * 1.5;       // ~1 píxel de salida en unidades de t
         float a = smoothstep(0.5 - w, 0.5 + w, t);
         col = lerp(E, n, a);
     }
@@ -153,7 +153,7 @@ float4 fs_escalado_crt(Salida in_) : SV_Target0 {
     float nx = f.x < 0.5 ? -1.0 : 1.0;
     float k = abs(f.x - 0.5);
     float3 col = lerp(P(c), P(c + float2(nx, 0.0)), smoothstep(0.0, 1.0, k * 0.8));
-    float scan = 0.82 + 0.18 * cos(6.2831853 * (f.y - 0.25));  // 1.0 on the first half-row, 0.64 on the second
+    float scan = 0.82 + 0.18 * cos(6.2831853 * (f.y - 0.25));  // 1,0 en la primera media fila, 0,64 en la segunda
     int ox = int(in_.uv.x * u.z) % 3;
     float3 mask = float3(ox == 0 ? 1.0 : 0.8, ox == 1 ? 1.0 : 0.8, ox == 2 ? 1.0 : 0.8);
     return float4(clamp(col * scan * mask * 1.12, 0.0, 1.0), 1.0);

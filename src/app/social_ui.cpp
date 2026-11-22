@@ -22,9 +22,9 @@ namespace {
 constexpr int ANCHO_PREGUNTA = 300, ALTO_PREGUNTA = 92;
 constexpr int ANCHO_INTERCAMBIO = ui::VENTANA_ANCHO, ALTO_INTERCAMBIO = 300;
 constexpr int CELDA = 36, COLUMNAS = 6, FILAS = 3;
-// Original trade window (client ctor 0x42bf20, draw 0x42d280): background 1199 at (7,10), frame 1201, ornaments 1200 at
-// (2,12), close button at (174,18), OK 1202 at (53,282), Cancel 1204 at (100,282); two 4x3 grids of 34 px cells at x 27,
-// the one you offer at y 47 and the other side's at y 175.
+// Ventana original de intercambio (ctor del cliente 0x42bf20, dibujo 0x42d280): fondo 1199 en (7,10), marco 1201, adornos 1200 en
+// (2,12), botón de cerrar en (174,18), OK 1202 en (53,282), Cancelar 1204 en (100,282); dos grillas de 4x3 celdas de 34 px en x 27,
+// la que uno ofrece en y 47 y la del otro en y 175.
 constexpr int TRADE_W = 200, TRADE_H = 308, TRADE_CELL = 34, TRADE_COLS = 4, TRADE_ROWS = 3, TRADE_X = 27;
 constexpr int TRADE_MINE_Y = 47, TRADE_OTHER_Y = 175;
 constexpr int TRADE_SCROLL_X = 168, TRADE_SCROLL_H = 105;
@@ -49,17 +49,17 @@ void aviso(App& a, std::string_view t) { a.chat.agregar(t, rgba(255, 230, 120), 
 
 }  // namespace
 
-// Class byte of the selected character (char-list record +0x1e, [0x81b534]): 0 is the prince.
+// Byte de clase del personaje elegido (registro de la lista de personajes +0x1e, [0x81b534]): 0 es el príncipe.
 int clase_personaje(const App& a) {
     return a.pj_sel >= 0 && a.pj_sel < static_cast<int>(a.pjs.size()) ? a.pjs[static_cast<size_t>(a.pj_sel)].v[PJ_CLASE] : -1;
 }
 
 namespace {
 
-// Client string table line as a std::string (the table is the US string-e.tbl).
+// Línea de la tabla de textos del cliente como std::string (la tabla es el string-e.tbl US).
 std::string cadena(const App& a, int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); }
 
-// The original input box (0x4451d0): the prompt goes to the chat log and the chat line takes over until Enter / Esc.
+// La caja de entrada original (0x4451d0): la pregunta va al registro del chat y la línea del chat queda tomada hasta Enter / Esc.
 void abrir_prompt(App& a, std::string prompt, std::string_view accion) {
     cancelar_prompt(a);
     a.chat_prompt.activo = true;
@@ -70,9 +70,9 @@ void abrir_prompt(App& a, std::string prompt, std::string_view accion) {
 }
 
 
-// Clan emblem upload (action "emblem", 0x4070c0) and check (action "checkbmp", 0x406fc0). The file is a 16 x 12,
-// 24-bit, uncompressed BMP (12 or 40 byte info header); it becomes 384 bytes of RGB555 (0x4247a0: R >> 3 << 10 |
-// G >> 3 << 5 | B >> 3, top row first). A relative name is looked up in the game folder.
+// Subida de emblema de clan (acción "emblem", 0x4070c0) y revisión (acción "checkbmp", 0x406fc0). El archivo es un BMP de 16 x 12,
+// 24 bits, sin compresión (cabecera de info de 12 o 40 bytes); se convierte en 384 bytes de RGB555 (0x4247a0: R >> 3 << 10 |
+// G >> 3 << 5 | B >> 3, fila de arriba primero). Un nombre relativo se busca en la carpeta del juego.
 bool leer_bmp_emblema(const App& a, std::string_view nombre, u8* out) {
     namespace fs = std::filesystem;
     fs::path ruta{std::string(nombre)};
@@ -109,30 +109,30 @@ void subir_emblema(App& a, std::string_view nombre) {
     const Slot yo = a.mundo.objetos.buscar(a.mundo.jugador.id);
     if (yo == SIN_SLOT) return aviso(a, cadena(a, 219));
     const i32 rango = a.mundo.jugador.rango_clan;
-    // The clan id field is 0 without an emblem in 3.80C (it is the emblem id), so also look at the rank (0xb = none).
-    if (a.mundo.objetos.col<O_CLAN>()[yo] == 0 && rango == 0xb) return aviso(a, cadena(a, 220));  // not in a pledge
-    if (rango != 0 && rango != a.op.perfil.rango_principe) return aviso(a, cadena(a, 785));  // not the prince
-    if (a.t_emblema_subido && ahora < a.t_emblema_subido + 59876) return aviso(a, cadena(a, 229));  // one per minute
+    // El campo de id de clan es 0 sin emblema en 3.80C (es el id del emblema), así que también se mira el rango (0xb = ninguno).
+    if (a.mundo.objetos.col<O_CLAN>()[yo] == 0 && rango == 0xb) return aviso(a, cadena(a, 220));  // no está en un clan
+    if (rango != 0 && rango != a.op.perfil.rango_principe) return aviso(a, cadena(a, 785));  // no es el príncipe
+    if (a.t_emblema_subido && ahora < a.t_emblema_subido + 59876) return aviso(a, cadena(a, 229));  // uno por minuto
     u8 datos[BYTES_EMBLEMA];
     if (!leer_bmp_emblema(a, nombre, datos)) return aviso(a, "Incorrect BMP File format");
     enviar(a, cmd::subir_emblema(a.op, datos));
     a.t_emblema_subido = ahora;
-    a.emblemas_pedidos.clear();  // the server answers with S_Emblem to everybody
+    a.emblemas_pedidos.clear();  // el servidor responde con S_Emblem a todos
 }
 
 void ver_emblema(App& a, std::string_view nombre) {
     u8 datos[BYTES_EMBLEMA];
     if (!leer_bmp_emblema(a, nombre, datos)) return aviso(a, "Incorrect BMP File format");
     a.g->poner_emblema_vista({datos, BYTES_EMBLEMA});
-    a.t_vista_emblema = a.entrada.ahora_ms + 10000;  // shown above the character for 10 s (0x407068)
+    a.t_vista_emblema = a.entrada.ahora_ms + 10000;  // se muestra sobre el personaje durante 10 s (0x407068)
 }
 
-// 'y' / 'Y' answers of the join / leave confirmations (0x405f60, 0x405fb0; the Japanese full-width forms are not typed here).
+// Respuestas 'y' / 'Y' de las confirmaciones de entrar / salir (0x405f60, 0x405fb0; las formas japonesas de ancho completo no se escriben aquí).
 bool dijo_si(std::string_view t) { return !t.empty() && (t[0] == 'y' || t[0] == 'Y'); }
 
 }  // namespace
 
-// Del / Backspace on a selected bookmark row (0x418f70): the yes/no text prompt with string 0x34e; `y` deletes it.
+// Supr / Backspace en una fila de marcador elegida (0x418f70): la pregunta de texto sí/no con el texto 0x34e; `y` lo borra.
 void abrir_prompt_borrar_marcador(App& a, ObjId marcador) {
     abrir_prompt(a, cadena(a, 0x34e), "delbookmark");
     a.chat_prompt.id = marcador;
@@ -144,13 +144,13 @@ void cancelar_prompt(App& a) {
     a.chat_prompt = {};
 }
 
-// Callback of the input box once Enter is pressed (the callbacks at 0x40d470, 0x40d4d0, 0x406600, 0x406550, 0x405f60,
-// 0x405fb0, 0x40d120, 0x40d180, 0x40d1e0, 0x40d3b0, 0x4086f0). The box always closes afterwards (0x41f1d0).
+// Callback de la caja de entrada al presionar Enter (los callbacks en 0x40d470, 0x40d4d0, 0x406600, 0x406550, 0x405f60,
+// 0x405fb0, 0x40d120, 0x40d180, 0x40d1e0, 0x40d3b0, 0x4086f0). La caja siempre se cierra después (0x41f1d0).
 void confirmar_prompt(App& a, std::string_view texto) {
     const std::string accion = a.chat_prompt.accion;
     const PromptChat p = a.chat_prompt;
     cancelar_prompt(a);
-    if (accion == "soltar" || accion == "dar" || accion == "ofrecer") {  // like pick up: empty = the whole stack, 0 or more than it = nothing
+    if (accion == "soltar" || accion == "dar" || accion == "ofrecer") {  // como recoger: vacío = toda la pila, 0 o más que la pila = nada
         u32 n = p.maximo;
         if (!texto.empty()) {
             long v = 0;
@@ -172,7 +172,7 @@ void confirmar_prompt(App& a, std::string_view texto) {
         }
         return;
     }
-    if (accion == "recoger") {  // 0x4086f0: nothing typed = the whole stack; 0 or more than the stack = nothing
+    if (accion == "recoger") {  // 0x4086f0: nada escrito = toda la pila; 0 o más que la pila = nada
         u32 n = p.maximo;
         if (!texto.empty()) {
             long v = 0;
@@ -186,7 +186,7 @@ void confirmar_prompt(App& a, std::string_view texto) {
         if (dijo_si(texto)) enviar(a, cmd::entrar_clan(a.op));
     } else if (accion == "leave") {
         if (dijo_si(texto)) enviar(a, cmd::dejar_clan(a.op));
-    } else if (accion == "delbookmark") {  // C_DeleteBookmark by name (0x80), then the row goes away
+    } else if (accion == "delbookmark") {  // C_DeleteBookmark por nombre (0x80), después se va la fila
         if (!dijo_si(texto)) return;
         auto it = std::find_if(a.marcadores.begin(), a.marcadores.end(), [&](const Marcador& m) { return m.id == p.id; });
         if (it == a.marcadores.end()) return;
@@ -195,7 +195,7 @@ void confirmar_prompt(App& a, std::string_view texto) {
         a.marcadores.erase(it);
     } else if (texto.empty()) {
         return;
-    } else if (accion == "bookmark") {  // 0x40d240: the typed name goes through the normal add-bookmark path
+    } else if (accion == "bookmark") {  // 0x40d240: el nombre escrito sigue el camino normal de agregar marcador
         marcar_lugar_aqui(a, texto);
     } else if (accion == "banish") {
         enviar(a, cmd::echar_del_grupo(a.op, texto));
@@ -228,7 +228,7 @@ void confirmar_prompt(App& a, std::string_view texto) {
     }
 }
 
-// Prompt text with its "%u" (or "%d") replaced by the stack size.
+// Texto de la pregunta con su "%u" (o "%d") reemplazado por el tamaño de la pila.
 static std::string texto_con_maximo(const App& a, int id, u32 maximo) {
     std::string t = cadena(a, id);
     for (const char* f : {"%u", "%d"})
@@ -239,7 +239,7 @@ static std::string texto_con_maximo(const App& a, int id, u32 maximo) {
     return t;
 }
 
-// Drop a stack (string 119) and give a stack (string 140): the chat line is the prompt, as in pick up.
+// Soltar una pila (texto 119) y dar una pila (texto 140): la línea del chat es la pregunta, como al recoger.
 void pedir_soltar(App& a, ObjId item, u32 cantidad) {
     if (a.chat_prompt.activo) return;
     abrir_prompt(a, texto_con_maximo(a, 119, cantidad), "soltar");
@@ -252,7 +252,7 @@ void pedir_dar(App& a, ObjId objetivo, ObjId item, u32 cantidad) {
     a.chat_prompt.id = item, a.chat_prompt.objetivo = objetivo, a.chat_prompt.maximo = cantidad;
 }
 
-// Pick up: a stack asks how many unless the "getall" option is on (0x408529 -> 0x408670, prompt string 0x79).
+// Recoger: una pila pregunta cuántos salvo que la opción "getall" esté activa (0x408529 -> 0x408670, texto de la pregunta 0x79).
 void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad) {
     if (cantidad <= 1 || (a.cfg.opciones_orig >> OPC_GETALL & 1)) {
         enviar(a, cmd::recoger(a.op, static_cast<u16>(x), static_cast<u16>(y), id, std::max<u32>(1, cantidad)));
@@ -265,8 +265,8 @@ void pedir_recoger(App& a, i32 x, i32 y, ObjId id, u32 cantidad) {
     a.chat_prompt.x = x, a.chat_prompt.y = y, a.chat_prompt.id = id, a.chat_prompt.maximo = cantidad;
 }
 
-// Invite: a click on a character within 6 x 3 cells (0x469903: |dx| <= 2 * 3, |dy| <= 3) sends C_CreateParty with the
-// "random party" option as its type (0x4075b3) and writes string 0x3bb ("invited %0"); any click ends the mode.
+// Invitar: un clic en un personaje dentro de 6 x 3 celdas (0x469903: |dx| <= 2 * 3, |dy| <= 3) manda C_CreateParty con la
+// opción "random party" como tipo (0x4075b3) y escribe el texto 0x3bb ("invited %0"); cualquier clic termina el modo.
 void elegir_invitado(App& a) {
     a.invitando = false;
     const ObjId id = objeto_bajo_puntero(a);
@@ -280,12 +280,12 @@ void elegir_invitado(App& a) {
     enviar(a, cmd::invitar_grupo(a.op, id, a.cfg.opciones_orig >> OPC_RANDOMPARTY & 1));
 }
 
-// `<var src="#N">` of option11/12/13 (html var switch 0x438766..0x43a56e): a flag shows string 567 when set, 568 when
-// clear (573 / 574 for accepttrade); the chat size and window transparency steps show 893..896 (client string table). The ids that only the
-// newer Text.pak pages use (1032, 1037, 2026..2028) have no case in the US client: they stay empty.
+// `<var src="#N">` de option11/12/13 (switch de var html 0x438766..0x43a56e): un flag muestra el texto 567 si está activo, 568 si
+// no (573 / 574 para accepttrade); los pasos de tamaño del chat y de transparencia de ventanas muestran 893..896 (tabla de textos del cliente). Los ids que solo usan
+// las páginas de Text.pak más nuevas (1032, 1037, 2026..2028) no tienen caso en el cliente US: quedan vacíos.
 std::string datos_opciones(const App& a) {
     auto bit = [&](OpcionOrig o) { return (a.cfg.opciones_orig >> o & 1) != 0; };
-    auto msg = [&](int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); };  // the client string table
+    auto msg = [&](int id) { return std::string(a.mensajes.linea(static_cast<size_t>(id))); };  // la tabla de textos del cliente
     auto onoff = [&](bool v) { return msg(v ? 567 : 568); };
     std::string v[1031];
     v[1002] = onoff(bit(OPC_GETALL));
@@ -304,7 +304,7 @@ std::string datos_opciones(const App& a) {
     v[1027] = onoff(bit(OPC_MARKETMSG));
     v[1028] = onoff(bit(OPC_RANDOMPARTY));
     v[1029] = onoff(bit(OPC_PARTYREJECT));
-    v[1030] = onoff(!bit(OPC_COMBATMUSIC));  // the only inverted one (0x43a484: set -> $568)
+    v[1030] = onoff(!bit(OPC_COMBATMUSIC));  // el único invertido (0x43a484: activo -> $568)
     std::string datos;
     for (int i = 0; i <= 1030; ++i) {
         if (i) datos += SEPARADOR_DATOS;
@@ -313,9 +313,9 @@ std::string datos_opciones(const App& a) {
     return datos;
 }
 
-// Option toggles of the original Options pages (dispatcher 0x40b1de..0x40c660). Each flips a byte of the client's option
-// block and reopens the page. dochat / dotradechat / dowhisper also send `ccc` 0x19 (what, flag) with the new state
-// (0x4069f0, 0x406af0, 0x406bf0 -> 0x406abb..0x406cc6); `volume` opens the volume window ([0x8f028c], volume_ui.cpp).
+// Opciones de las páginas originales de Opciones (despachador 0x40b1de..0x40c660). Cada una invierte un byte del bloque de opciones
+// del cliente y reabre la página. dochat / dotradechat / dowhisper además mandan `ccc` 0x19 (qué, flag) con el estado nuevo
+// (0x4069f0, 0x406af0, 0x406bf0 -> 0x406abb..0x406cc6); `volume` abre la ventana de volumen ([0x8f028c], volume_ui.cpp).
 bool accion_opciones(App& a, std::string_view accion) {
     struct Fila { std::string_view nombre; OpcionOrig bit; };
     static constexpr Fila FILAS[] = {
@@ -327,7 +327,7 @@ bool accion_opciones(App& a, std::string_view accion) {
     bool hecho = false;
     for (const Fila& f : FILAS)
         if (accion == f.nombre) a.cfg.opciones_orig ^= 1 << f.bit, hecho = true;
-    // Chat toggles tell the server: 0 world chat, 6 trade chat, 2 whisper.
+    // Las opciones de chat le avisan al servidor: 0 chat del mundo, 6 chat de comercio, 2 susurro.
     auto avisar = [&](std::string_view nombre, OpcionOrig bit, u8 que) {
         if (accion == nombre && a.op.tiene(Cli::LOGINTOSERVEROK))
             enviar(a, cmd::opcion_chat(a.op, que, a.cfg.opciones_orig >> bit & 1));
@@ -344,23 +344,23 @@ bool accion_opciones(App& a, std::string_view accion) {
         a.cfg.alpha_orig = (a.cfg.alpha_orig + 1) % 4, hecho = true;
     } else if (accion == "chatstate") {
         a.chat_tam = static_cast<u8>((a.chat_tam + 1) % 4), hecho = true;
-    } else if (accion == "telcon") {  // elves of level 50+ toggle it; anyone else can only switch it off (0x40c566)
+    } else if (accion == "telcon") {  // los elfos de nivel 50+ lo alternan; cualquier otro solo puede apagarlo (0x40c566)
         if (clase == 2 && a.mundo.jugador.nivel >= 50) a.cfg.opciones_orig ^= 1 << OPC_TELCON;
         else if (telcon) a.cfg.opciones_orig &= ~(1 << OPC_TELCON);
         else return true;
         hecho = true;
-    } else if (accion == "infracon") {  // elves and dark elves toggle it; the others can only clear it when telcon is on (0x40c5dc)
+    } else if (accion == "infracon") {  // elfos y elfos oscuros lo alternan; los demás solo pueden apagarlo con telcon activo (0x40c5dc)
         if (clase == 2 || clase == 4) a.cfg.opciones_orig ^= 1 << OPC_INFRACON;
         else if (telcon) a.cfg.opciones_orig &= ~(1 << OPC_INFRACON);
         else return true;
         hecho = true;
-    } else if (accion == "volume") {  // 0x40b19d: shows the volume window
+    } else if (accion == "volume") {  // 0x40b19d: muestra la ventana de volumen
         a.ventana_volumen = true;
         return true;
     }
     if (!hecho) return false;
     guardar_config(a.cfg);
-    abrir_pagina_local(a, a.npc_pagina);  // every toggle clears and reopens its own page (0x43c510 + vtable[0x54])
+    abrir_pagina_local(a, a.npc_pagina);  // cada opción limpia y reabre su propia página (0x43c510 + vtable[0x54])
     return true;
 }
 
@@ -369,13 +369,13 @@ void accion_comunidad(App& a, std::string_view accion) {
     const bool principe = clase_personaje(a) == 0;
     if (accion == "party") enviar(a, cmd::ver_grupo(a.op));
     else if (accion == "outparty") enviar(a, cmd::dejar_grupo(a.op));
-    else if (accion == "join") {  // a prince confirms first (string 0x313); the others send it at once (0x40b950)
+    else if (accion == "join") {  // un príncipe confirma primero (texto 0x313); los demás lo mandan de inmediato (0x40b950)
         if (principe) abrir_prompt(a, cadena(a, 787), "join");
         else enviar(a, cmd::entrar_clan(a.op));
     } else if (accion == "leave") abrir_prompt(a, cadena(a, 484), "leave");  // string 0x1e4, then y / n (0x405fb0)
     else if (accion == "pledge") enviar(a, cmd::ver_clan(a.op));
     else if (accion == "buddy" || accion == "refreshbuddy") enviar(a, cmd::amigos(a.op));
-    else if (accion == "invite") {  // click-on-target mode: message 0xb3, then the click (elegir_invitado)
+    else if (accion == "invite") {  // modo de clic en el objetivo: mensaje 0xb3, después el clic (elegir_invitado)
         aviso(a, cadena(a, 179));
         a.invitando = true;
     } else if (accion == "banish") abrir_prompt(a, cadena(a, 409), accion);
@@ -383,7 +383,7 @@ void accion_comunidad(App& a, std::string_view accion) {
     else if (accion == "addbuddy") abrir_prompt(a, cadena(a, 588), accion);
     else if (accion == "delbuddy") abrir_prompt(a, cadena(a, 589), accion);
     else if (accion == "title") abrir_prompt(a, cadena(a, 586), accion);
-    else if (accion == "war" || accion == "surrender" || accion == "cease") {  // princes only (0x40bb46); war also needs the clan state
+    else if (accion == "war" || accion == "surrender" || accion == "cease") {  // solo príncipes (0x40bb46); la guerra además necesita el estado del clan
         if (!principe) return;
         abrir_prompt(a, cadena(a, accion == "war" ? 577 : accion == "surrender" ? 578 : 579), accion);
     }
@@ -391,14 +391,14 @@ void accion_comunidad(App& a, std::string_view accion) {
     else if (accion == "emblem") abrir_prompt(a, cadena(a, 576), accion);    // 0x40d030
     else if (accion == "checkbmp") abrir_prompt(a, cadena(a, 575), accion);  // 0x40cfd0
     else if (accion == "alliancelist") enviar(a, cmd::alianza(a.op, 2));
-    else if (accion == "alliancejoin") {  // s3ep1 sends only `cc` 0x4e 3: the server takes the lord you face
+    else if (accion == "alliancejoin") {  // s3ep1 manda solo `cc` 0x4e 3: el servidor toma al señor que uno tiene enfrente
         if (a.op.perfil.bytes_numero_pregunta) abrir_prompt(a, cadena(a, 580), accion);
         else enviar(a, cmd::alianza(a.op, 3));
     } else if (accion == "allianceleave") {
         if (a.op.perfil.bytes_numero_pregunta) enviar(a, cmd::alianza(a.op, 4));
         else abrir_prompt(a, cadena(a, 1210), accion);  // asks first, y -> 0x4e 4 (0x401d86)
     }
-    // pledgefocus*: not wired (audit U-D7)
+    // pledgefocus*: sin conectar (auditoría U-D7)
 }
 
 void responder_pregunta(App& a, bool si) {
@@ -436,7 +436,7 @@ int grilla(App& a, const std::vector<ItemIntercambio>& items, int x0, int y0, bo
     for (int c = 0; c < cols * (original ? TRADE_ROWS : FILAS); ++c) {
         const int x = x0 + (c % cols) * cell, y = y0 + (c / cols) * cell;
         const bool encima = ui::sobre(a.entrada, x, y, cell - 2, cell - 2);
-        if (original) {  // the frame image has the cell lines
+        if (original) {  // la imagen del marco tiene las líneas de las celdas
             if (encima) g.gpu().rectangulo(x, y, cell - 1, cell - 1, clave_orden(CAPA_UI, 14), rgba(120, 100, 40, 110));
         } else {
             g.gpu().rectangulo(x, y, cell - 2, cell - 2, clave_orden(CAPA_UI, 12), encima ? rgba(60, 50, 35, 230) : rgba(28, 24, 20, 230));
@@ -477,7 +477,7 @@ void eventos_social(App& a, const Evento& e) {
             std::erase_if(a.grupo, [&](const MiembroGrupo& m) { return m.nombre == e.s[0]; });
         }
         break;
-    case Ev::DUELO: {  // S_PacketBox 5: message 645 "%s accepted the duel..." with the opponent's name
+    case Ev::DUELO: {  // S_PacketBox 5: mensaje 645 "%s accepted the duel..." con el nombre del rival
         const TablaObjetos& o = a.mundo.objetos;
         const Slot s = o.buscar(e.id);
         if (s == SIN_SLOT) break;
@@ -510,14 +510,14 @@ void eventos_social(App& a, const Evento& e) {
         u32 color = 0;
         size_t n = formatear_mensaje(a.mensajes, a.desc, m, buf, sizeof buf, color);
         p.texto.assign(buf, n);
-        if (p.tipo == 951 && (a.cfg.opciones_orig >> OPC_PARTYREJECT & 1)) {  // 0x4887e6: refuse invitations by itself
+        if (p.tipo == 951 && (a.cfg.opciones_orig >> OPC_PARTYREJECT & 1)) {  // 0x4887e6: rechaza invitaciones solo
             std::string t = cadena(a, 1005);
             if (const size_t k = t.find("%0"); k != std::string::npos) t.replace(k, 2, e.s[0]);
             aviso(a, t);
             enviar(a, cmd::responder(a.op, p.numero, p.tipo, false));
             break;
         }
-        if (p.tipo == 252 && !(a.cfg.opciones_orig >> OPC_ACCEPTTRADE & 1)) {  // 0x48876d: refuses trade requests by itself
+        if (p.tipo == 252 && !(a.cfg.opciones_orig >> OPC_ACCEPTTRADE & 1)) {  // 0x48876d: rechaza pedidos de intercambio solo
             enviar(a, cmd::responder(a.op, p.numero, p.tipo, false));
             break;
         }
@@ -550,8 +550,8 @@ void ofrecer_en_intercambio(App& a, ObjId item) {
     Slot s = a.mundo.inventario.items.buscar(item);
     if (s == SIN_SLOT) return;
     const u32 n = a.mundo.inventario.items.col<I_CANTIDAD>()[s];
-    // Original (drag release 0x448230 -> 0x4477b0): a stack of more than one asks how many in the chat line, with the give
-    // prompt (string 140); the callback 0x4472b0 takes empty = all, 0 or more than the stack = nothing.
+    // Original (soltar del arrastre 0x448230 -> 0x4477b0): una pila de más de uno pregunta cuántos en la línea del chat, con la pregunta
+    // de dar (texto 140); el callback 0x4472b0 toma vacío = todo, 0 o más que la pila = nada.
     if (!a.cfg.ui_simple && n > 1) {
         if (a.chat_prompt.activo) return;
         abrir_prompt(a, texto_con_maximo(a, 140, n), "ofrecer");
@@ -618,7 +618,7 @@ bool comando_social(App& a, std::string_view linea) {
     } else if (igual_sin_mayusculas(orden, "leave") || igual_sin_mayusculas(orden, "outparty")) {
         enviar(a, cmd::dejar_grupo(a.op));
     } else if (igual_sin_mayusculas(orden, "kick") || igual_sin_mayusculas(orden, "banish")) {
-        if (arg.empty()) accion_comunidad(a, "banish");  // no name: the original asks for it (string 409)
+        if (arg.empty()) accion_comunidad(a, "banish");  // sin nombre: el original lo pide (texto 409)
         else enviar(a, cmd::echar_del_grupo(a.op, arg));
     } else if (igual_sin_mayusculas(orden, "trade")) {
         enviar(a, cmd::pedir_intercambio(a.op));
@@ -633,7 +633,7 @@ bool comando_social(App& a, std::string_view linea) {
         if (arg.empty()) aviso(a, "/clan <name>: create a blood pledge (princes; 30000 adena).");
         else enviar(a, cmd::crear_clan(a.op, arg));
     } else if (igual_sin_mayusculas(orden, "banclan") || igual_sin_mayusculas(orden, "ban")) {
-        if (arg.empty()) accion_comunidad(a, "ban");  // no name: the original asks for it (string 107)
+        if (arg.empty()) accion_comunidad(a, "ban");  // sin nombre: el original lo pide (texto 107)
         else enviar(a, cmd::echar_del_clan(a.op, arg));
     } else if (igual_sin_mayusculas(orden, "rank")) {  // /rank <rank 1..3> <name> (C_Rank sub 1)
         const size_t sp = arg.find(' ');
@@ -665,7 +665,7 @@ bool comando_social(App& a, std::string_view linea) {
         std::snprintf(t, sizeof t, "location (%d, %d)", s != SIN_SLOT ? static_cast<int>(a.mundo.objetos.col<O_X>()[s]) : 0,
                       s != SIN_SLOT ? static_cast<int>(a.mundo.objetos.col<O_Y>()[s]) : 0);
         aviso(a, t);
-    } else if (igual_sin_mayusculas(orden, "telcon")) {  // elves of level 50+ only; otherwise the flag is forced off (0x40a100)
+    } else if (igual_sin_mayusculas(orden, "telcon")) {  // solo elfos de nivel 50+; si no, el flag se fuerza a apagado (0x40a100)
         a.telcon = clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50 && !a.telcon;
     } else if (igual_sin_mayusculas(orden, "title")) {
         // /title <título> (el propio) o /title <personaje> <título> (príncipe a su clan).
@@ -688,7 +688,7 @@ bool comando_social(App& a, std::string_view linea) {
     return true;
 }
 
-// Splits `t` into at most two lines that fit `max_w` pixels (word wrap); returns the byte lengths in `n`.
+// Parte `t` en como mucho dos líneas que quepan en `max_w` píxeles (ajuste por palabras); devuelve los largos en bytes en `n`.
 static void partir_pregunta(std::string_view t, int max_w, char (&lineas)[2][128], size_t (&n)[2]) {
     n[0] = n[1] = 0;
     int linea = 0;
@@ -737,9 +737,9 @@ void dibujar_pregunta(App& a) {
     if (a.preguntas.empty()) return;
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
-    // Original UI (0x41fe30): a parchment bar (image 701) at x 137 of the 640x480 block with the question on up to two
-    // lines (12 px pitch from y + 4) and YES / NO at x + 224 / x + 264, vertically centred. A house-name prompt still
-    // needs its text box, so it keeps the dialog below.
+    // Interfaz original (0x41fe30): una barra de pergamino (imagen 701) en x 137 del bloque de 640x480 con la pregunta en hasta dos
+    // líneas (paso de 12 px desde y + 4) y YES / NO en x + 224 / x + 264, centrados verticalmente. Una pregunta de nombre de casa todavía
+    // necesita su caja de texto, así que conserva el diálogo de abajo.
     if (!a.cfg.ui_simple && a.preguntas.front().tipo != PREGUNTA_NOMBRE_CASA) return dibujar_pregunta_original(a);
     const Rect r{(a.gpu.ancho() - ANCHO_PREGUNTA) / 2, a.gpu.alto() / 4, ANCHO_PREGUNTA, ALTO_PREGUNTA};
     marco(a, r, "Question", false);
@@ -787,8 +787,8 @@ void dibujar_intercambio(App& a) {
     if (!a.cfg.ui_simple) {
         if (draw_original_frame(a, r.x, r.y, 1199, 7, 10, 1201, 174, 18)) enviar(a, cmd::cancelar_intercambio(a.op));
         draw_original_overlay(a, r.x + 2, r.y + 12, 1200);
-        // Scroll bars at x 168 (0x42c327, 0x42c3bd): up at y 46 / 175, track 1212 from y + 8, down at y + 93; the grids
-        // show 3 rows of 4 and scroll by whole rows.
+        // Barras de scroll en x 168 (0x42c327, 0x42c3bd): arriba en y 46 / 175, riel 1212 desde y + 8, abajo en y + 93; las grillas
+        // muestran 3 filas de 4 y se desplazan de a filas enteras.
         Intercambio& tr = a.intercambio;
         const bool sobre_tr = sobre_ventana(a, IdVentana::INTERCAMBIO);
         const std::vector<ItemIntercambio>* listas[2] = {&tr.propio, &tr.otro};
@@ -809,7 +809,7 @@ void dibujar_intercambio(App& a) {
             g.gpu().rectangulo(e.mx + 10, e.my + 14, w + 8, ALTO_GLIFO + 6, clave_orden(CAPA_UI, 30), rgba(0, 0, 0, 220));
             g.texto({buf, m}, static_cast<float>(e.mx + 14), static_cast<float>(e.my + 17), clave_orden(CAPA_UI_TEXTO, 30));
         }
-        // Name plates printed on the frame: own name at (43,31), the partner's at (43,159), white (0x42d4e4).
+        // Placas de nombre impresas en el marco: el nombre propio en (43,31), el del otro en (43,159), en blanco (0x42d4e4).
         g.texto_sombra(nombre_personaje(a), static_cast<float>(r.x + 43), static_cast<float>(r.y + 31), clave_orden(CAPA_UI_TEXTO, 14),
                        rgba(255, 255, 254));
         g.texto_sombra(tr.con, static_cast<float>(r.x + 43), static_cast<float>(r.y + 159), clave_orden(CAPA_UI_TEXTO, 14),
@@ -912,7 +912,7 @@ Rect rect_intercambio(const App& a) {
     return {(a.gpu.ancho() - ANCHO_INTERCAMBIO) / 2, ui::VENTANA_Y + 20, ANCHO_INTERCAMBIO, ALTO_INTERCAMBIO};
 }
 
-// Emblem cache file (the original's Emblem.dat / Emblem<server>.dat) in the settings folder, one per server port.
+// Archivo de caché de emblemas (el Emblem.dat / Emblem<servidor>.dat del original) en la carpeta de ajustes, uno por puerto de servidor.
 void emblemas_abrir(App& a) {
     namespace fs = std::filesystem;
     const u16 puerto = servidor_elegido(a.cfg).puerto;
@@ -927,7 +927,7 @@ void emblemas_abrir(App& a) {
 void emblemas_guardar(App& a, u64 ahora, bool ya) {
     if (!a.g || a.emblemas_ruta.empty() || !a.g->emblemas_sucios()) return;
     if (!a.t_emblema_sucio) a.t_emblema_sucio = ahora;
-    if (!ya && ahora < a.t_emblema_sucio + 3000) return;  // batches of arrivals are written once
+    if (!ya && ahora < a.t_emblema_sucio + 3000) return;  // las llegadas en tanda se escriben una sola vez
     a.t_emblema_sucio = 0;
     a.g->emblemas_guardar(a.emblemas_ruta);
 }

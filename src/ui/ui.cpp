@@ -261,8 +261,8 @@ bool barra_evento(Gpu& gpu, SDL_Window* v, Barra& b, const SDL_Event& ev, bool a
             return true;
         }
 #if !defined(__APPLE__)
-        // Linux/Windows: moving and resizing are done by the window manager through the hit test
-        // (activar_hit_test); a borderless window can't move itself on Wayland.
+        // Linux/Windows: mover y redimensionar lo hace el administrador de ventanas con la prueba de acierto
+        // (activar_hit_test); una ventana sin borde no puede moverse sola en Wayland.
         if (boton == 0) return false;
 #endif
         const int bordes = b.redimensionable ? bordes_bajo(v, ev.button.x, ev.button.y) : 0;
@@ -354,8 +354,8 @@ struct HitTestData {
 };
 HitTestData hit_test_data;
 
-// Window-manager hit test: edges resize, the title bar (except its buttons) moves the window, like a
-// normal decorated window. Not used on macOS (see the note on barra_evento in ui.h).
+// Prueba de acierto del administrador de ventanas: los bordes redimensionan, la barra de título (salvo sus botones) mueve la ventana, como una
+// ventana normal con decoración. No se usa en macOS (ver la nota sobre barra_evento en ui.h).
 SDL_HitTestResult hit_test(SDL_Window* v, const SDL_Point* p, void* data) {
     const auto* d = static_cast<const HitTestData*>(data);
     if (SDL_GetWindowFlags(v) & SDL_WINDOW_FULLSCREEN) return SDL_HITTEST_NORMAL;
@@ -363,7 +363,7 @@ SDL_HitTestResult hit_test(SDL_Window* v, const SDL_Point* p, void* data) {
     int gx = 0, gy = 0;
     d->gpu->a_grilla(x, y, gx, gy);
     const int boton = boton_bajo(*d->gpu, gx, gy);
-    if (boton > 0) return SDL_HITTEST_NORMAL;  // minimize / close are handled by barra_evento
+    if (boton > 0) return SDL_HITTEST_NORMAL;  // minimizar / cerrar los maneja barra_evento
     switch (d->barra->redimensionable ? bordes_bajo(v, x, y) : 0) {
     case BORDE_IZQ | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPLEFT;
     case BORDE_DER | BORDE_ARR: return SDL_HITTEST_RESIZE_TOPRIGHT;
