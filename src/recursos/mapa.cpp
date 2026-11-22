@@ -108,7 +108,12 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
     s.portales.clear();
     // Roof records: u8 x (half tiles), u8 y, u16 gid, u8 kind; those outside the segment are dropped.
     s.techos.clear();
-    for (u32 n_techos = l.u32_(), i = 0; i < n_techos && l.quedan(5) && !l.error; ++i) {
+    const u32 n_techos = l.u32_();
+    for (u32 i = 0; i < n_techos && !l.error; ++i) {
+        if (!l.quedan(5)) {  // cortado: lo que sigue (los .til y los portales) se leería de otro lado
+            l.error = true;
+            break;
+        }
         const u8 x = l.u8_(), y = l.u8_();
         const u16 gid = l.u16_();
         const u8 tipo = l.u8_();
@@ -118,7 +123,7 @@ static bool decodificar_s32_o_seg(Bytes datos, int base_x, int base_y, SegmentoM
         return a.y != b.y ? a.y < b.y : a.x < b.x;
     });
     l.saltar(seg ? l.u8_() : static_cast<size_t>(l.u32_()) * 4);  // los .til que usa
-    const u16 nportales = l.quedan(2) ? l.u16_() : 0;
+    const u16 nportales = !l.error && l.quedan(2) ? l.u16_() : 0;  // con los techos cortados, sin portales
     for (u16 i = 0; i < nportales && !l.error; ++i) {
         l.saltar(l.u8_());  // nombre
         const u8 x = l.u8_(), y = l.u8_();
