@@ -149,6 +149,9 @@ public:
                                 bool bucle = true) const;
     // ms desde el comienzo de la acción hasta su primer frame de impacto ("!"); si no tiene, la
     // mitad de la acción.
+    // ms from the action start to its "!" frame (frame length n * 1000 / rate, exe 0x440ba8); SIN_IMPACTO if the action
+    // is missing or has no "!" (the exe then never flinches the target).
+    static constexpr u32 SIN_IMPACTO = 0xFFFFFFFFu;
     u32 ms_hasta_impacto(GfxId gfx, u8 accion) const;
     size_t cantidad_gfx() const { return alias_.size(); }
 

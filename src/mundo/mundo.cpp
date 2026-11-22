@@ -386,6 +386,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             if (e.id == m.jugador.id && o.col<O_ACCION>()[s] == e.v[0] && ahora - o.col<O_TACCION>()[s] < 500) break;
             o.col<O_ACCION>()[s] = static_cast<u8>(e.v[0]);
             o.col<O_TACCION>()[s] = ahora;
+            o.col<O_DANO_RAPIDO>()[s] = 0;  // S_DoActionGFX(2) plays the damage at its full length
             // Una puerta queda abierta o cerrada (un portón o una torre, dañados): el estado guarda la
             // última (ver elegir_accion).
             if (m.sprites && accion_fija(m.sprites->tipo(o.col<O_GFX>()[s]), static_cast<u8>(e.v[0]))) {
@@ -406,18 +407,32 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 } else {
                     o.col<O_ACCION>()[sa] = accion;
                     o.col<O_TACCION>()[sa] = ahora;
+                    o.col<O_DANO_RAPIDO>()[sa] = 0;
+                    // The attacker turns to its target when it is known (0x4c64d0 -> 0x4cc6c0); the packet heading only
+                    // otherwise (S_AttackPacketForNpc carries the target's heading).
                     o.col<O_DIR>()[sa] = static_cast<u8>(e.v[AT_DIR]);
+                    if (const Slot st = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO])); st != SIN_SLOT && st != sa) {
+                        const int dx = (o.col<O_X>()[st] > o.col<O_X>()[sa]) - (o.col<O_X>()[st] < o.col<O_X>()[sa]);
+                        const int dy = (o.col<O_Y>()[st] > o.col<O_Y>()[sa]) - (o.col<O_Y>()[st] < o.col<O_Y>()[sa]);
+                        for (int d = 0; d < 8; ++d)
+                            if ((dx || dy) && DIR_DX[d] == dx && DIR_DY[d] == dy) o.col<O_DIR>()[sa] = static_cast<u8>(d);
+                    }
                 }
             }
             // El golpe sale en el frame "!" del ataque. Un hechizo o una flecha sale ahí y vuela
             // hasta el objetivo.
             u64 impacto = 0;
             if (sa != SIN_SLOT && m.sprites) {
+                // Only attack (1) and damage (2) add the weapon stance (SetAction 0x4c96c0); a missing weapon row falls back
+                // to the bare action.
                 GfxId g = o.col<O_GFX>()[sa];
-                u8 accion = static_cast<u8>(e.v[AT_ACCION] + o.col<O_ESTADO>()[sa]);
+                const u8 base = static_cast<u8>(e.v[AT_ACCION]);
+                u8 accion = base == ACC_ATACAR || base == ACC_DANADO ? static_cast<u8>(base + o.col<O_ESTADO>()[sa]) : base;
+                if (!m.sprites->accion(g, accion)) accion = base;
                 impacto = m.sprites->ms_hasta_impacto(g, accion);
-                if (impacto == 0) impacto = m.sprites->ms_hasta_impacto(g, static_cast<u8>(e.v[AT_ACCION]));
             }
+            const bool con_impacto = impacto != TablaSprites::SIN_IMPACTO;
+            if (!con_impacto) impacto = 0;
             if (e.v[AT_GFX] > 0) {
                 EfectoVisual ef;
                 ef.gfx = static_cast<GfxId>(e.v[AT_GFX]);
@@ -435,7 +450,9 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             }
             // Si acertó, el objetivo muestra el daño cuando lo alcanza el golpe.
             Slot so = o.buscar(static_cast<ObjId>(e.v[AT_OBJETIVO]));
-            if (e.v[AT_GOLPE] && so != SIN_SLOT && o.col<O_ESTADO>()[so] != ESTADO_MUERTO) {
+            // The flinch fires at the attacker's "!" frame only (0x4c8950 -> 0x4cbef0): an attack with no "!" never flinches
+            // (a spell or arrow flinches when its graphic arrives).
+            if (e.v[AT_GOLPE] && (con_impacto || e.v[AT_GFX] > 0) && so != SIN_SLOT && o.col<O_ESTADO>()[so] != ESTADO_MUERTO) {
                 // Si el flinch ya se está mostrando (p. ej. predicho por la compensación de ataque, con
                 // su t de impacto todavía en el futuro), no reiniciarlo con el eco del servidor.
                 const u64 t = o.col<O_TACCION>()[so];
@@ -443,6 +460,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 if (!ya) {
                     o.col<O_ACCION>()[so] = ACC_DANADO;
                     o.col<O_TACCION>()[so] = std::max(ahora, inicio + impacto);
+                    o.col<O_DANO_RAPIDO>()[so] = 1;  // [+0x11d]: half length
                 }
             }
             break;

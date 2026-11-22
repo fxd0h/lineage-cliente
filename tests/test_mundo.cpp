@@ -151,11 +151,11 @@ TEST_CASE("Mundo: el sprite se dibuja desde la celda de origen y el frame aporta
 }
 
 TEST_CASE("Mundo: ataque, daño en el frame de impacto, muerte, cadáver y reinicio") {
-    // gfx 0 (atacante): atacar = 4 frames de 4 ticks, impacto ("!") en el tercero -> 320 ms.
+    // gfx 0 (atacante): atacar = 4 frames de 4 ticks, impacto ("!") en el tercero -> 8 ticks * 1000 / 24 = 333 ms.
     const char reg[] = "?16 1 1 4 24 0 4 24 1 4 24 2 4! 24 3 4";
     TablaSprites sp;
     REQUIRE(sp.cargar(std::vector<u8>(reg, reg + sizeof reg - 1)));
-    CHECK(sp.ms_hasta_impacto(0, ACC_ATACAR) == 320);
+    CHECK(sp.ms_hasta_impacto(0, ACC_ATACAR) == 333);
     Mundo m;
     m.sprites = &sp;
     m.jugador.id = 1;
@@ -175,7 +175,7 @@ TEST_CASE("Mundo: ataque, daño en el frame de impacto, muerte, cadáver y reini
     CHECK(m.objetos.col<O_ACCION>()[yo] == ACC_ATACAR);
     CHECK(m.objetos.col<O_DIR>()[yo] == 2);
     CHECK(m.objetos.col<O_ACCION>()[orco] == ACC_DANADO);
-    CHECK(m.objetos.col<O_TACCION>()[orco] == 1320);  // cuando lo alcanza el golpe
+    CHECK(m.objetos.col<O_TACCION>()[orco] == 1333);  // cuando lo alcanza el golpe
 
     // Fallo: el objetivo no reacciona.
     m.objetos.col<O_ACCION>()[orco] = 0xFF;

@@ -238,13 +238,13 @@ u32 TablaSprites::ticks(const RangoAccion& r) const {
 
 u32 TablaSprites::ms_hasta_impacto(GfxId gfx, u8 acc) const {
     const RangoAccion* r = accion(gfx, acc);
-    if (!r) return 0;
+    if (!r) return SIN_IMPACTO;
     u32 antes = 0;
     for (u32 i = 0; i < r->cantidad; ++i) {
-        if (frames_[r->primer + i].impacto) return antes * 960 / r->velocidad;
+        if (frames_[r->primer + i].impacto) return antes * 1000 / r->velocidad;
         antes += frames_[r->primer + i].duracion;
     }
-    return ticks(*r) * 960 / r->velocidad / 2;
+    return SIN_IMPACTO;
 }
 
 u32 TablaSprites::duracion_ms(GfxId gfx, u8 acc) const {
@@ -255,8 +255,9 @@ u32 TablaSprites::duracion_ms(GfxId gfx, u8 acc) const {
 const FrameAccion& TablaSprites::frame_en(const RangoAccion& r, u64 transcurrido, bool& termino, u64 ciclo_ms,
                                           bool bucle) const {
     u64 total = ticks(r);
-    // Tiempo en ticks (enteros de 1/960 s × velocidad, sin acumular redondeos).
-    u64 t = ciclo_ms > 0 ? transcurrido * total / ciclo_ms : transcurrido * r.velocidad / 960;
+    // Time in ticks: a frame of n ticks lasts n * 1000 / rate ms in the exe (list.spz loader 0x440ba8..0x440bb5). The
+    // server throttles (duracion_ms) keep the 960 of its spr_action table.
+    u64 t = ciclo_ms > 0 ? transcurrido * total / ciclo_ms : transcurrido * r.velocidad / 1000;
     termino = t >= total;
     if (termino && !bucle) {
         for (u32 i = r.cantidad; i-- > 0;)  // último frame visible (duración > 0)

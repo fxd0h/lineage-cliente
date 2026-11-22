@@ -153,3 +153,14 @@ There is no `1516.img` / `1518.img` in this installation (only unrelated monster
   packet state nibble 2 -> base action 4 (11 with stride). Attr 106 and 114 have no uses in the 2009 data.
 - **0x7026d0 (C/U):** reference count of effects whose frame byte +0x13 == 2 forcing ambient light level 15 (flash);
   trigger unknown.
+
+## Combat animation (2026-11-22, S_AttackPacket 0x487780 -> 0x4c64d0, SetAction 0x4c96c0, tick 0x4c8950)
+
+- The attacker turns to its target when the target object is known (0x4cc6c0); the packet heading only otherwise.
+- Only actions 1 (attack) and 2 (damage) add the weapon stance; every other action id is absolute (spells 18 / 19, emotes).
+- The target's damage starts at the attacker's "!" frame (frame byte +0x12 bit 0); an attack with no "!" never flinches.
+  That damage plays at half length ([+0x11d]); S_DoActionGFX(2) plays it at full length.
+- A frame of n ticks lasts n * 1000 / rate ms (list.spz loader 0x440ba8), not 960.
+- Frame length modifiers (0x4cda90): haste x3/4, slow x2 (fork: O_VEL), brave factors, queue catch-up (not modelled).
+- Not modelled: the busy queue (0x4cb8a0 IsBusy / 0x4cb080 / 0x4ce630): actions, attacks and moves arriving while an
+  object is mid-action are queued and run when it ends, instead of restarting the current one.

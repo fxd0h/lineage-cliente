@@ -145,6 +145,7 @@ struct AccionVisible {
     u64 inicio = 0;
     bool puntual = false;  // al terminar se vuelve a caminar/quieto
     bool bucle = true;
+    u32 ritmo_num = 1, ritmo_den = 1;  // elapsed time scale (frame lengths divided by num / den)
 };
 AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     const TablaObjetos& o = a.mundo.objetos;
@@ -177,7 +178,11 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         base = accion;
         v.inicio = o.col<O_TACCION>()[s];
         v.puntual = true;
-        if (base == ACC_MORIR) arma = 0;
+        // Only attack and damage add the weapon stance; every other action id is absolute (SetAction 0x4c96c0): a spell
+        // (18, 19) or an emote must not become another weapon's row.
+        if (base != ACC_ATACAR && base != ACC_DANADO) arma = 0;
+        // A damage from an attack packet's hit plays at half length ([+0x11d], 0x4cda90).
+        if (base == ACC_DANADO && o.col<O_DANO_RAPIDO>()[s]) v.ritmo_num *= 2;
     } else if (caminando(a.mundo, s, ahora)) {
         base = ACC_CAMINAR;
         v.inicio = o.col<O_TMOV>()[s];
@@ -808,8 +813,17 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (r) {
             bool termino = false;
             bool camina = !acc.puntual && acc.bucle && caminando(a.mundo, s, ahora);
+            // Frame length modifiers of 0x4cda90 (not on the walk, which follows the step time): haste x3/4, slow x2, and the
+            // half-length damage of an attack hit.
+            u64 transcurrido = ahora - acc.inicio;
+            if (!camina) {
+                u32 num = acc.ritmo_num, den = acc.ritmo_den;
+                if (o.col<O_VEL>()[s] == 1) num *= 4, den *= 3;
+                else if (o.col<O_VEL>()[s] == 2) den *= 2;
+                transcurrido = transcurrido * num / den;
+            }
             const FrameAccion* f =
-                &a.sprites.frame_en(*r, ahora - acc.inicio, termino, camina ? o.col<O_DURMOV>()[s] : 0, acc.bucle);
+                &a.sprites.frame_en(*r, transcurrido, termino, camina ? o.col<O_DURMOV>()[s] : 0, acc.bucle);
             if (termino && acc.puntual) o.col<O_ACCION>()[s] = 0xFF;  // fin de la acción puntual
             sonido_de_frame(a, o.col<O_SONIDO>()[s], *f, vis_x, vis_y, ahora, false, o.col<O_DIR>()[s]);
             u16 sub = static_cast<u16>(f->sub + (r->direccional ? o.col<O_DIR>()[s] : 0));
@@ -1236,7 +1250,8 @@ void atacar(App& a, Slot yo, Slot obj, u64 ahora) {
         o.col<O_TACCION>()[yo] = ahora;
         if (o.col<O_ESTADO>()[obj] != ESTADO_MUERTO) {
             u64 impacto = a.sprites.ms_hasta_impacto(gfx, static_cast<u8>(ACC_ATACAR + o.col<O_ESTADO>()[yo]));
-            if (impacto == 0) impacto = a.sprites.ms_hasta_impacto(gfx, ACC_ATACAR);
+            if (impacto == TablaSprites::SIN_IMPACTO) impacto = a.sprites.ms_hasta_impacto(gfx, ACC_ATACAR);
+            if (impacto == TablaSprites::SIN_IMPACTO) impacto = 0;
             o.col<O_ACCION>()[obj] = ACC_DANADO;
             o.col<O_TACCION>()[obj] = ahora + impacto;
         }
