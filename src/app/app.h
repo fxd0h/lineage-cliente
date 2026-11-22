@@ -604,6 +604,7 @@ struct App {
     ObjId item_apuntando = 0;           // wand or aimed item waiting for the click on its target (inventario_ui.cpp)
     std::vector<ObjId> inventario_seleccion;  // marked with Shift+click: dragged together
     ObjId usar_sobre = 0;               // pergamino (identificar, encantar) esperando el clic en su objetivo
+    bool usar_sobre_armado = false;     // a fresh press happened after usar_sobre was set (the double click's release doesn't pick)
     ObjId ultimo_clic_item = 0;         // para el doble clic
     ObjId inv_press = 0;                // original inventory: item pressed, drag not started yet
     int inv_press_x = 0, inv_press_y = 0;

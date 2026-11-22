@@ -178,6 +178,7 @@ void usar_item(App& a, ObjId item) {
     }
     if (s != SIN_SLOT && se_usa_sobre_item(a.mundo.inventario.items.col<I_USO>()[s])) {
         a.usar_sobre = item;  // el próximo clic en el inventario elige el objetivo
+        a.usar_sobre_armado = false;
         a.ventana_inventario = true;
         return;
     }
@@ -405,7 +406,12 @@ void dibujar_inventario(App& a) {
         if (e.escape) {
             a.usar_sobre = 0;
             e.escape = false;
-        } else if (e.clic) {
+        } else if (e.pulsado) {
+            a.usar_sobre_armado = true;
+        }
+        // Only a click that started after the scroll was used picks the target: the release of the double click that
+        // used it would otherwise pick the scroll itself.
+        if (a.usar_sobre && e.clic && a.usar_sobre_armado) {
             if (bajo >= 0) enviar(a, cmd::usar_item_sobre(a.op, a.usar_sobre, t.ids()[slot_bajo]));
             a.usar_sobre = 0;
             a.arrastrando = 0;
