@@ -77,3 +77,11 @@ Tags: [C] confirmed from decompile, [I] inferred. In REA pass addresses as `ram:
   (0x46a060). Dragging an inventory item: 13 over a valid target, else 5 (0x469e74). Pending use in range: 15 with Ctrl or the pk
   option, not Alt (0x469f85). Not modelled: self +0x12c -> 16, [0x702dcc] / status 0x456860(0x18) -> 11, [0x816558] -> 13/5,
   the PC branch flags +0x24 / +0x50 / [0x81667c] and the Tab cycling index [0x816564].
+- Full cursor audit (2026-11-22, every 0x477c90 call site). The setter is sticky (no per-frame default). Mouse dispatch 0x4576e0:
+  modal, chat container, HUD 0x4b1c50, open windows, then the world handler 0x469630 only if nothing consumed it. Windows: NPC
+  page 1 over text / 3 over links and controls (0x436f8a / 0x436f9f); buttons, grids, list rows, edit fields, scrollbars 3
+  (0x4133e3, 0x45208a, 0x4be1a9, 0x4c3d9f, 0x4223c3); chat log 1 (0x41f8ef); bottom panel buttons / quick slots 3. Item drag past
+  25 px: 5 over windows and HUD, in the world 13 over a live character / NPC / monster else 5. Monster in attack mode: pk 15 else 8.
+  NPC: 15 only with attack mode and pk, else 4. Characters: self 3 (attack mode 8 / 15); pink ones are targets (Alt 7, attack 8 /
+  15, else 6); others 8 / 15 in attack mode, 15 with pk, else unchanged (4 / 6 become 3). Not modelled: tile flag bit 2 -> 14,
+  login wait cursor 2, +0x12c -> 16, item-select grids 9, separate Ctrl+X / pk flags.

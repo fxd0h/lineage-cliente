@@ -2236,48 +2236,77 @@ bool pending_target_in_range(App& a, ObjId id) {
 // Original UI chooser (0x469e40, docs/fork/RE_HUD.md): picks one of the 16 cursor states. The fork has no
 // tile flags, kind 7 / 13 data, selected-spell shortcut or "busy" action overlay, so states 14, 16 and the shortcut
 // variant of 8 are never chosen (RE_ROUND6).
-void elegir_cursor_original(App& a) {
+void elegir_cursor_original(App& a, u64 ahora) {
+    // The exe's setter 0x477c90 is sticky: a state stays until another handler sets one. `seguir` keeps the last one.
     auto poner = [&](int estado) {
+        a.cursor_estado_orig = estado;
         if (a.cursores[static_cast<int>(cursor_estado(estado))]) a.cursor = cursor_estado(estado);
     };
-    if (a.gm_apuntando) return poner(11);
-    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
-        // Target in range: the target circle (8), or 15 with Ctrl ([0x702dd6]) or the pk option ([0x6f1dac]) (0x469f85);
-        // out of range: 11 (0x46a344).
-        if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
-        return poner(a.entrada.ctrl || a.modo_pk ? 15 : 8);
-    }
-    const Vista vi = vista(a);
-    if (sobre_alguna_ventana(a)) return poner(3);  // window mouse handlers set 3 when no button is held (e.g. list pane 0x4be1a4)
-    if (a.entrada.my >= vi.panel_y || sobre_barra(a)) return poner(1);  // arrow over the HUD
+    auto seguir = [&] { poner(a.cursor_estado_orig); };
+    const int html = a.cursor_html;
+    a.cursor_html = 0;  // the page sets it again while it is drawn
     const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
-    // Attack mode: the fork's one flag stands for both Ctrl+X ([0x703105]) and the "pk" option ([0x6f1dac]).
-    const bool ataque = a.modo_pk;
+    // Attack mode (Ctrl+X, [0x703105]) and the "pk" option ([0x6f1dac]) are one flag in the fork.
+    const bool ataque = a.modo_pk, pk = a.modo_pk;
+    const Vista vi = vista(a);
+    const bool sobre_ventana = sobre_alguna_ventana(a);
+    const bool sobre_hud = !sobre_ventana && (a.entrada.my >= vi.panel_y || sobre_barra(a));
+    if (a.gm_apuntando) return poner(11);
+    // Dragging an inventory item past the drag threshold (grid 0x44f306 / 0x44f48b): 5 everywhere; in the world 13 over an
+    // object it can go to (0x469e74: 0x4cdfc0, live character / NPC / monster), else 5.
+    if (a.arrastrando) {
+        if (sobre_ventana || sobre_hud) return poner(5);
+        const ObjId id = objeto_bajo_puntero(a, false, false);
+        const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
+        const u8 c = s != SIN_SLOT ? clase_objeto(a, s) : 0;
+        return poner(c == 5 || c == 6 || c == 10 || c == 12 ? 13 : 5);
+    }
+    // Windows take the mouse before the world (dispatch 0x4576e0). The NPC page: 1 over text, 3 over a link (0x436f8a /
+    // 0x436f9f); buttons, grids, list rows, edit fields and scrollbars: 3 (0x4133e3, 0x45208a, 0x4be1a9, 0x4c3d9f, 0x4223c3).
+    if (sobre_ventana) return poner(html ? html : 3);
+    if (sobre_hud) {
+        // Bottom panel: the chat log 1 (0x41f8ef); its buttons, quick slots and edit line 3 (0x41c02a, 0x4b1cd8, 0x4c3d9f).
+        const AreaChat ac = area_chat(a);
+        if (ui::sobre(a.entrada, ac.zona_x, ac.zona_y, ac.zona_w, ac.zona_h)) return poner(1);
+        return poner(3);
+    }
+    if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
+        // Target in range: the target circle (8), or 15 with Ctrl or the pk option (0x469f85); out of range: 11 (0x46a344).
+        if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
+        return poner(a.entrada.ctrl || pk ? 15 : 8);
+    }
     const ObjId id = objeto_bajo_puntero(a, false, true);
     const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
-    // Dragging an inventory item (0x469e74): 13 over an object it can go to, else 5.
-    if (a.arrastrando) return poner(s != SIN_SLOT && a.mundo.objetos.col<O_ESTADO>()[s] != ESTADO_MUERTO ? 13 : 5);
     // Ctrl held, with or without an object (0x469fb1): Alt 7, attack mode 15, else 6.
     if (a.entrada.ctrl) return poner(alt ? 7 : ataque ? 15 : 6);
     if (s == SIN_SLOT) return poner(3);
     if (vendedor(a, id)) return poner(4);  // a private shop (object byte +4, 0x46a060): 4
+    const TablaObjetos& o = a.mundo.objetos;
     const bool yo = id == a.mundo.jugador.id;
     switch (clase_objeto(a, s)) {  // jump table 0x46a358
     case 2: case 3: return poner(10);                   // corpse: 10 (8 in attack mode with a spell weapon, not modelled)
     case 4: case 14: case 15: return poner(9);
     case 7: case 13: return poner(14);
-    case 6: case 12: return poner(ataque ? 15 : 4);     // NPC / own pet: lips (0x46a1ed)
-    case TIPO_MONSTRUO:                                 // 0x46a09f: Alt 7, attack mode 15, else the sword 6
+    case 6: case 12: return poner(ataque && pk ? 15 : 4);  // NPC / own pet: lips; 15 needs attack mode and pk (0x46a1ed)
+    case TIPO_MONSTRUO:                                 // 0x46a09f: Alt 7; attack mode: pk 15, else 8; else the sword 6
         if (yo) return poner(3);
-        return poner(alt ? 7 : ataque ? 15 : 6);
-    case 5: case 11:                                    // character (0x46a27a): attack mode 15, else 3
-        return poner(ataque ? 15 : 3);
+        return poner(alt ? 7 : ataque ? (pk ? 15 : 8) : 6);
+    case 5: case 11: {                                  // character or someone else's pet (0x46a27a)
+        if (yo) return poner(ataque ? (pk ? 15 : 8) : 3);
+        // A pink (PK-flagged, +0x50) one is a target: Alt 7, attack mode 8 / 15, else the sword 6.
+        if (ahora < o.col<O_ROSA>()[s]) return poner(alt ? 7 : ataque ? (pk ? 15 : 8) : 6);
+        if (ataque) return poner(pk ? 15 : 8);
+        if (pk) return poner(15);
+        // Neither: no setter; a lips / sword left from before becomes 3 (0x46a31e).
+        if (a.cursor_estado_orig == 4 || a.cursor_estado_orig == 6) return poner(3);
+        return seguir();
+    }
     default: return poner(3);                           // items 9, doors 8 (tile flag case not modelled), the rest
     }
 }
 
-void elegir_cursor(App& a) {
-    if (!a.cfg.ui_simple) return elegir_cursor_original(a);
+void elegir_cursor(App& a, u64 ahora) {
+    if (!a.cfg.ui_simple) return elegir_cursor_original(a, ahora);
     if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando || a.gm_apuntando) {
         a.cursor = Cursor::OBJETIVO;
         return;
@@ -2446,7 +2475,7 @@ void frame_juego(App& a) {
         procesar_autobuffs(a);
     }
     procesar_npc(a, ahora);
-    elegir_cursor(a);
+    elegir_cursor(a, ahora);
     mover_jugador(a, ahora);
     Slot s = a.mundo.objetos.buscar(a.mundo.jugador.id);
     double cam_x = 0, cam_y = 0;

@@ -373,6 +373,8 @@ void dibujar_pagina(App& a, int x0, int y0) {
             }
         }
     }
+    // Original cursor over the page (HTML view 0x436d60, hit test 0x436fd0): 3 over a link / button / embedded control, else 1.
+    if (!simple && ui::sobre(e, x0 + left, y0 + top, NPC_TEXT_W, view_h)) a.cursor_html = bajo ? 3 : 1;
     if (simple && max_desp > 0) {  // barra de desplazamiento
         int h = ALTO_PAGINA * ALTO_PAGINA / p.alto, yb = y0 + ARRIBA + (ALTO_PAGINA - h) * a.npc_desplazamiento / max_desp;
         g.gpu().rectangulo(x0 + ui::VENTANA_ANCHO - 8, yb, 3, h, ki, rgba(160, 130, 80, 200));

@@ -497,7 +497,9 @@ struct App {
     u32 tienda_desplazamiento = 0;
     u8 tienda_tipo = 0;       // original list window type (S3EP1U 0x4d1000): 0 buy, 1 sell, 2/3 warehouse, 4/5 clan, 8/9 elf, ...
     int tienda_marcada = -1;  // row marked by a click (image 536)
-    u32 tienda_digitos = 0;   // amount typed on the marked row (pane +0x98), reset by any click in the list
+    u32 tienda_digitos = 0;
+    int cursor_html = 0;           // original UI: cursor the NPC page asked for last frame (1 text, 3 link), 0 none
+    int cursor_estado_orig = 3;    // original UI: last cursor state set (0x477c90 is sticky: areas with no setter keep it)   // amount typed on the marked row (pane +0x98), reset by any click in the list
     int tienda_flecha = -1;   // quantity arrow held down: row * 2 + (1 = increase), -1 none
     bool hablar_objetivo = false;  // a.objetivo es un NPC al que se camina para hablarle
     bool objetivo_fijo = false;    // elegido al apretar el botón: se mantiene aunque el puntero ya no esté encima
