@@ -318,14 +318,14 @@ std::string datos_opciones(const App& a) {
 // (0x4069f0, 0x406af0, 0x406bf0 -> 0x406abb..0x406cc6); `volume` abre la ventana de volumen ([0x8f028c], volume_ui.cpp).
 bool accion_opciones(App& a, std::string_view accion) {
     struct Fila { std::string_view nombre; OpcionOrig bit; };
-    static constexpr Fila FILAS[] = {
+    static constexpr Fila FILAS_OPCION[] = {
         {"getall", OPC_GETALL}, {"bubbleon", OPC_BUBBLE}, {"dochat", OPC_DOCHAT}, {"dotradechat", OPC_DOTRADECHAT},
         {"dowhisper", OPC_DOWHISPER}, {"showMargetMsg", OPC_MARKETMSG}, {"randomParty", OPC_RANDOMPARTY},
         {"cPartyReject", OPC_PARTYREJECT}, {"combatMusic", OPC_COMBATMUSIC}, {"shortcutscroll", OPC_SHORTCUTSCROLL},
         {"tooltip", OPC_TOOLTIP}, {"accepttrade", OPC_ACCEPTTRADE}, {"showfloathpmp", OPC_FLOATHPMP},
     };
     bool hecho = false;
-    for (const Fila& f : FILAS)
+    for (const Fila& f : FILAS_OPCION)
         if (accion == f.nombre) a.cfg.opciones_orig ^= 1 << f.bit, hecho = true;
     // Las opciones de chat le avisan al servidor: 0 chat del mundo, 6 chat de comercio, 2 susurro.
     auto avisar = [&](std::string_view nombre, OpcionOrig bit, u8 que) {
