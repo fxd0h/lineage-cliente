@@ -27,7 +27,7 @@ void big5_a_utf8(std::string_view e, std::string& salida) {
         if (c < 0x80) { salida += static_cast<char>(c); continue; }
         if (c >= 0x81 && c <= 0xFE && i + 1 < e.size()) {
             const u8 t = static_cast<u8>(e[i + 1]);
-            if (t >= 0x40) {
+            if (t >= 0x40 && t <= 0xFE) {  // 191 por fila: 0xFF se saldría de la tabla
                 const u16 cp = TABLA[(c - 0x81) * ANCHO_FILA + (t - 0x40)];
                 if (cp) { agregar(salida, cp); ++i; continue; }
             }
