@@ -1,5 +1,6 @@
 #include "plataforma/socket.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #if defined(_WIN32)
