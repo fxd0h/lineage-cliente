@@ -177,7 +177,7 @@ client. The front page is the [root README](../../README.md).
   `fs_texto_comp`) wins; upstream's `texto_hd` (`ampliar_glifo_suave`, `glifo_hd(g, k)`) was dropped. Our GLSL ->
   SPIR-V shaders and hand-written MSL stay; upstream's HLSL sources and `cmake/shaders.cmake` (DXIL) are now
   used for Windows only, with our extra shaders ported (see "Windows (D3D12) shaders" above). Upstream's
-  `CHANGES.md` and `ENTREGABLES.md` are in `docs/upstream/`.
+  `ENTREGABLES.md` is in `docs/upstream/`; the version change log is `CHANGES.md` at the root.
 - Upstream `main` is merged from time to time (last: auto-buff potions and NPC shop stack quantity,
   2026-11-15). Upstream's experimental branches (`agente/modelos-3d`, `agente/plan-portado`) are not merged.
 
