@@ -79,11 +79,11 @@ bool desplegable(Graficos& g, EntradaFrame& e, std::span<const std::string> opci
     g.texto("v", x + ancho - 6, y, clave_orden(CAPA_UI_TEXTO, 0), rgba(214, 190, 140));
     bool cambio = false;
     if (abierto) {
-        // La lista va en un nivel de ventana propio, encima de todo: si no, el texto de los
-        // controles de abajo (que va en CAPA_UI_TEXTO) se vería a través de ella.
+        // La lista va en CAPA_ARRASTRE, encima de todo: en un nivel de ventana, el texto de los controles de abajo
+        // del mismo nivel (la ventana de ajustes ya usa el 31) quedaba sobre su fondo y se veía a través.
         const u32 nivel_antes = g.gpu().nivel_ventana();
-        g.gpu().nivel_ventana(31);
-        const u64 kf = clave_orden(CAPA_UI, 200), kt = clave_orden(CAPA_UI_TEXTO, 200);
+        g.gpu().nivel_ventana(0);
+        const u64 kf = clave_orden(CAPA_ARRASTRE, 200), kt = clave_orden(CAPA_ARRASTRE, 210);
         const int ly = y - 4 + fila, lh = fila * static_cast<int>(opciones.size());
         g.gpu().rectangulo(x - 5, ly - 1, ancho + 10, lh + 2, kf, rgba(150, 130, 90));
         for (size_t i = 0; i < opciones.size(); ++i) {
