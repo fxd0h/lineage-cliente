@@ -26,7 +26,7 @@ namespace {
 
 constexpr u32 IMG_FRAME = 1480, IMG_BACK = 1481, IMG_CLOSE = 969, IMG_ORNAMENT = 998, IMG_MARK = 536, IMG_STAGE = 1482;
 constexpr int WINDOW_W = 190, WINDOW_H = 292, CLOSE_X = 165, CLOSE_Y = 18;
-constexpr int GRID_X = 21, GRID_Y = 42, GRID_W = 134, GRID_H = 202, CELL = 34, COLS = 4, ROWS = 6;
+constexpr int GRID_X = 21, GRID_Y = 42, GRID_W = 134, GRID_H = 202, CELL = 34, COLS = 4;  // 6 filas visibles
 constexpr int SCROLL_X = 161, SCROLL_Y = 48, SCROLL_H = 199;
 constexpr int RECIPES = 24;
 constexpr int MSG_NO_COOK_BOOK = 1167;  // 0x48f: no cook book has been used

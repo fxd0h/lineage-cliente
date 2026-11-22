@@ -55,7 +55,7 @@ constexpr int ORBE_X = 295, ORBE_Y = 359;
 constexpr u32 IMG_BARRA_EXP = 1029, IMG_BARRA_HP = 1030, IMG_BARRA_MP = 1031;
 // Original chat log: top y 402 at size 0, 12 px row pitch, 5/8/11/14 rows for Ctrl+T sizes 0..3 (RE_ROUND4 U-A12).
 constexpr int CHAT_PASO_ORIG = 12, CHAT_Y_ORIG = 402;
-constexpr int CHAT_X = 124 + 20, CHAT_Y = 363 + 32, CHAT_ANCHO = 342, CHAT_FILAS = 5;
+constexpr int CHAT_X = 124 + 20, CHAT_ANCHO = 342, CHAT_FILAS = 5;
 constexpr u64 DUR_COMBATE = 900;  // ms que dura un texto de combate flotante (sube y se desvanece)
 constexpr int ENTRADA_X = 124 + 30, ENTRADA_Y = 363 + 102;
 constexpr size_t MAX_ENTRADA_CHAT = 60;
@@ -957,8 +957,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
                 overhead_bar(g, static_cast<int>(ex) + 2, static_cast<int>(top) - 7, IMG_OVERHEAD_HP, hp, 100);
                 top -= 8;
             } else {  // exe 0x466c43: centred on the frame rect (x = l + (r - l) / 2 - 21), y = top - 4; the name does not move
-                const int l = static_cast<int>(caja_x0), r = static_cast<int>(caja_x1);
-                overhead_bar(g, l + (r - l) / 2 - 21, static_cast<int>(top) - 4, IMG_OVERHEAD_HP, hp, 100);
+                const int izq = static_cast<int>(caja_x0), der = static_cast<int>(caja_x1);
+                overhead_bar(g, izq + (der - izq) / 2 - 21, static_cast<int>(top) - 4, IMG_OVERHEAD_HP, hp, 100);
             }
         }
         // Barra de HP/MP propia (opción): dos barras finas sobre el personaje, con los valores reales.
@@ -1690,7 +1690,7 @@ void dibujar_panel(App& a) {
         // Zone-type label of 0x4d2410 (US branch): the icon-table pictures 1226 safe / 1224 combat / 1225 normal at (530, 345), with
         // the text baked in (RE_ROUND7 section 3; verified by drawing them).
         const TipoZona tz = tipo_zona_celda(a.mundo, a.rec, a.mundo.objetos.col<O_X>()[yo], a.mundo.objetos.col<O_Y>()[yo]);
-        g.gpu().dibujar(g.icono(tz == TipoZona::SEGURA ? 1226 : tz == TipoZona::COMBATE ? 1224 : 1225), X + 530.0f, Y + 345.0f,
+        g.gpu().dibujar(g.icono(tz == TipoZona::SEGURA ? 1226 : tz == TipoZona::COMBATE ? 1224 : 1225), X + 530, Y + 345,
                         clave_orden(CAPA_UI_TEXTO, 0));
     }
     char t[48];

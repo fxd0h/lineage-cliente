@@ -294,11 +294,11 @@ void dibujar_inventario(App& a) {
         }
         if (!hay) continue;
         if (!original && seleccionado(a, t.ids()[s])) {  // light-blue frame (simple UI only)
-            const u32 c = rgba(120, 190, 255);
-            g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, c);
-            g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, c);
-            g.gpu().rectangulo(x, y, 2, CELDA - 2, ki, c);
-            g.gpu().rectangulo(x + CELDA - 4, y, 2, CELDA - 2, ki, c);
+            const u32 celeste = rgba(120, 190, 255);
+            g.gpu().rectangulo(x, y, CELDA - 2, 2, ki, celeste);
+            g.gpu().rectangulo(x, y + CELDA - 4, CELDA - 2, 2, ki, celeste);
+            g.gpu().rectangulo(x, y, 2, CELDA - 2, ki, celeste);
+            g.gpu().rectangulo(x + CELDA - 4, y, 2, CELDA - 2, ki, celeste);
         }
         if (!arrastrado(t.ids()[s]))
             draw_item_icon(g.gpu(), g.icono(t.col<I_GFX>()[s]), x + 1, y + 1, ki, t.col<I_BENDICION>()[s], t.col<I_IDENTIFICADO>()[s] != 0);

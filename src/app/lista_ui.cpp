@@ -17,7 +17,7 @@ namespace lin {
 
 namespace {
 
-constexpr u32 IMG_BG = 978, IMG_FRAME = 979, IMG_CLOSE = 969;
+constexpr u32 IMG_BG = 978, IMG_FRAME = 979;
 constexpr int ROW_H = 13, VISIBLE = 17, ROW_X = 25, ROW_Y = 49, SCROLL_Y = 47, TITLE_Y = 28;
 
 std::vector<std::string> split(std::string_view s, char sep) {

@@ -355,11 +355,11 @@ void dibujar_pagina(App& a, int x0, int y0) {
             const RegionAtlas hover = (encima && simple) ? g.img(el.imagen + 1) : base;
             const bool use_hover = hover.valida() && hover.w == base.w && hover.h == base.h;
             RegionAtlas r = use_hover ? hover : base;
-            const int cut_top = simple ? std::max(0, view_top - y) : 0, cut_bottom = 0;  // simple UI only: the original never crops
-            if (cut_top || cut_bottom) {  // crop the region (texel rect; w/h/oy are logical)
+            const int cut_top = simple ? std::max(0, view_top - y) : 0;  // simple UI only: the original never crops
+            if (cut_top) {  // crop the region (texel rect; w/h/oy are logical)
                 const int sc = static_cast<int>(r.escala_texel());
                 r.y = static_cast<u16>(r.y + cut_top * sc);
-                r.h = static_cast<u16>(std::max(0, r.h - cut_top - cut_bottom));
+                r.h = static_cast<u16>(std::max(0, r.h - cut_top));
                 r.oy = static_cast<i16>(r.oy + cut_top);
             }
             g.gpu().dibujar(r, x, y, ki);
