@@ -1,14 +1,20 @@
 # Empaquetado y releases.
-# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS y
-#   los .zip de Windows (x64 y arm64), y publica la release en GitHub con los tres adjuntos y notas generadas.
+# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS, los
+#   .zip de Windows y los .tar.gz de Linux (x64 y arm64), y publica la release en GitHub con notas generadas.
 # - A mano (Actions > Release > Run workflow): lo mismo sin publicar; los paquetes quedan como artefactos.
-# Linux todavía no tiene paquete (PLAN_PORTADO.md, Fase 4).
+#   Con `tag` (p. ej. v0.2.0), los paquetes llevan esa versión y se suman a esa release los que le falten
+#   (sin reemplazar los que ya tiene): así se agregan plataformas nuevas a una release publicada.
 name: Release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release existente a la que sumar los paquetes que le falten (p. ej. v0.2.0); vacío = no publicar"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -31,8 +37,10 @@ jobs:
       - name: Empaquetar
         id: paquete
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          [[ "$GITHUB_REF_TYPE" == tag ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
+          TAG="${{ inputs.tag }}"
+          [[ -n "$TAG" || "$GITHUB_REF_TYPE" != tag ]] || TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          [[ -n "$TAG" ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
           echo "dmg=$(herramientas/empaquetar_macos.sh "$VERSION" | tail -1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
@@ -66,7 +74,9 @@ jobs:
       - name: Empaquetar
         id: paquete
         run: |
-          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".Substring(1) } else { "0.0.0-$("${{ github.sha }}".Substring(0, 7))" }
+          $tag = "${{ inputs.tag }}"
+          if (-not $tag -and "${{ github.ref_type }}" -eq "tag") { $tag = "${{ github.ref_name }}" }
+          $version = if ($tag) { $tag.Substring(1) } else { "0.0.0-$("${{ github.sha }}".Substring(0, 7))" }
           $zip = herramientas/empaquetar_windows.ps1 -Version $version | Select-Object -Last 1
           "zip=$zip" >> $env:GITHUB_OUTPUT
 
@@ -75,10 +85,48 @@ jobs:
           name: lineage-windows-${{ matrix.arch }}
           path: ${{ steps.paquete.outputs.zip }}
 
-  # La release se publica una vez, con los paquetes de todos los jobs.
+  linux:
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest, arch: x64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Herramientas
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev \
+            glslang-tools mesa-vulkan-drivers xvfb  # shaders a SPIR-V; Vulkan por software para tests/test_gpu.cpp
+
+      - name: Tests
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --target lin_tests
+          xvfb-run -a build/debug/lin_tests  # sin LINEAGE_DIR se saltan los que necesitan los recursos del juego
+
+      - name: Empaquetar
+        id: paquete
+        run: |
+          TAG="${{ inputs.tag }}"
+          [[ -n "$TAG" || "$GITHUB_REF_TYPE" != tag ]] || TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          [[ -n "$TAG" ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
+          echo "tgz=$(herramientas/empaquetar_linux.sh "$VERSION" | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lineage-linux-${{ matrix.arch }}
+          path: ${{ steps.paquete.outputs.tgz }}
+
+  # La release se publica una vez, con los paquetes de todos los jobs. Si ya existe (Run workflow con `tag`),
+  # se le suman solo los paquetes que no tiene.
   publicar:
-    if: github.ref_type == 'tag'
-    needs: [macos, windows]
+    if: github.ref_type == 'tag' || inputs.tag != ''
+    needs: [macos, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -89,4 +137,14 @@ jobs:
       - name: Publicar la release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          TAG="${{ inputs.tag }}"
+          [[ -n "$TAG" ]] || TAG="$GITHUB_REF_NAME"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+            exit 0
+          fi
+          tiene=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
+          for f in paquetes/*; do
+            grep -qxF "$(basename "$f")" <<< "$tiene" || gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY"
+          done

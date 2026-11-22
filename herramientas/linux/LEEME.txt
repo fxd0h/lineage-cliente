@@ -1,0 +1,32 @@
+Lineage Cliente para Linux
+==========================
+
+Un cliente nuevo para Lineage 1. El juego NO viene incluido: hace falta una instalación del
+juego original (la carpeta con Sprite.pak, Tile.pak, Text.pak y map/).
+
+Uso
+---
+1. Descomprimir donde se quiera:  tar xzf Lineage-<versión>-linux-<arq>.tar.gz
+2. Abrir ./lineage. La primera vez pide la carpeta del juego.
+3. Ajustes (en el login, o Options en el juego) cambia la configuración: carpeta del juego,
+   servidores, interfaz y sonido.
+
+La configuración queda en ~/.local/share/Lineage/LineageCliente/settings.ini.
+Los archivos del juego se buscan sin distinguir mayúsculas (Sprite.pak, sprite.pak).
+
+Requisitos: Linux de 64 bits (x64 o arm64 según el paquete) con glibc 2.39 o más nueva (Ubuntu
+24.04, Debian 13, Fedora 40 o similares), un driver de Vulkan y X11 o Wayland.
+
+Licencia: GPLv3 (LICENSE.txt). Lineage es una marca de su dueño; este proyecto no tiene relación
+con él.
+
+
+Lineage Client for Linux (English)
+----------------------------------
+A new client for Lineage 1. The game is NOT included: you need an installation of the original
+game (the folder with Sprite.pak, Tile.pak, Text.pak and map/). Extract anywhere and run
+./lineage; the first time it asks for the game folder. Settings (on the login screen, or Options
+in the game) changes the settings. Settings are stored in ~/.local/share/Lineage/LineageCliente/settings.ini.
+Requires 64-bit Linux (x64 or arm64, matching the package) with glibc 2.39 or newer, a Vulkan
+driver and X11 or Wayland.
+License: GPLv3 (LICENSE.txt).

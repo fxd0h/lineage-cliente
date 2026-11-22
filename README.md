@@ -74,10 +74,11 @@ cmake --build --preset debug
 LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, resource tests are skipped
 ```
 
-Programs: `build/<preset>/lineage` (the game), `settings` (settings editor), `explorador` (resource explorer),
-`lin_tests`. macOS packaging: `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app` and a `.dmg`
-(not notarized: right-click, Open); the `v*` tag workflow in `.github/workflows/release.yml` is upstream's and
-untested in this fork.
+Programs: `build/<preset>/lineage` (the game; its settings are edited in-game), `explorador` (resource explorer),
+`lin_tests`. Packaging: `herramientas/empaquetar_macos.sh [VERSION]` (`Lineage.app` and a `.dmg`, not notarized:
+right-click, Open), `herramientas/empaquetar_windows.ps1` (`.zip`) and `herramientas/empaquetar_linux.sh` (`.tar.gz`).
+A `v*` tag runs `.github/workflows/release.yml`, which publishes the release with all of them (macOS, Windows and
+Linux x64/arm64).
 
 ## Configuration
 
