@@ -2,10 +2,44 @@
 
 Cambios entre versiones del cliente. Cada versión es un tag `vX.Y.Z` sobre `main`; al subir el tag,
 `.github/workflows/release.yml` publica la release con el `.dmg` de macOS. El detalle de cada función,
-con su verificación y lo pendiente, está en [ENTREGABLES.md](ENTREGABLES.md).
+con su verificación y lo pendiente, está en [docs/upstream/ENTREGABLES.md](docs/upstream/ENTREGABLES.md).
 
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
+
+## Sin publicar
+
+### Agregado
+- **Fork de fxd0h** ([fxd0h/lineage-cliente](https://github.com/fxd0h/lineage-cliente)), traído con sus correcciones (#51):
+  - **Interfaz original del cliente US 2009** (`ui_simple=0`, F2 alterna): panel, ventanas, cursores, íconos de buff,
+    globos, colores, orbe de la hora y el resto del HUD, con capas, posiciones y fuentes leídas del binario de 2009.
+  - **Protocolos:** además de `jp363`, `tw380` (Taiwán 3.80C, texto Big5) y `s3ep1` (US 2009), con un servidor de
+    pruebas local para cada uno.
+  - **Linux** probado en el juego (Vulkan), con instancias de prueba invisibles en Xvfb.
+  - **Dibujo de sprites del original:** modos de mezcla, capas de ropa, techos que se desvanecen, casas que se
+    transparentan, destellos de luz y sonidos por cuadro.
+  - **Filtros de escalado** (`escalado=`, Shift+F5): entero, xBR, FSR, CRT y Anime4K, y una vista fija de 640×480
+    opcional (`vista=fija`).
+  - **Carpetas extra del juego** (`juego_extra=`) para lo que le falta a la instalación principal, y pack HD de la
+    interfaz opcional (`hd=`).
+  - **Juego:** emblemas de clan, alianzas, barco, música de combate, pesca, cocina, mapas del mundo, tiendas
+    privadas, mascotas e invocaciones.
+- **Ajustes:** filas para carpetas extra, pack HD, fuente original, escalado, vista y transparencia original (#51).
+- **Pantalla completa en Mac:** también con Cmd+Enter y Ctrl+Cmd+F (#51).
+
+### Cambiado
+- **C++23.** Los comentarios del código están en español; el README queda en inglés como portada (#51).
+- **Íconos de buff:** la interfaz simple usa los del cliente original, con su tiempo restante (#51).
+- **Casilleros Auto:** si no entran junto a la barra de atajos, van en una fila arriba de ella (#51).
+
+### Corregido
+- **Taiwán 3.80C:** los nombres con caracteres chinos se mandan en Big5 (susurros, intercambio, correo, clan y
+  grupo); antes salían en UTF-8 y el servidor no los encontraba (#51).
+- **Protocolo:** no se mandan comandos que no existen en la versión del servidor; el barco mandaba cada 180 s un
+  paquete con opcode 0 en `jp363` y `tw380` (#51).
+- **Cursor en Retina:** se veía al doble de tamaño (#51).
+- **Zoom:** con la vista fija no hacía nada; ahora acerca y aleja el mapa (#51).
+- **Desplegables de Ajustes:** al abrirse se veía el texto de los controles de abajo y costaba elegir (#51).
 
 ## v0.1.5 (2026-11-20)
 
