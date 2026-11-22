@@ -970,7 +970,7 @@ Rect rect_intercambio(const App& a);
 
 // De pantalla_juego.cpp: objeto vivo bajo el puntero (0 si no hay; el propio personaje solo con
 // `incluir_propio`) y dirección (0–7) de un paso hacia (dx, dy), -1 si es (0, 0).
-ObjId objeto_bajo_puntero(const App& a, bool incluir_propio = false);
+ObjId objeto_bajo_puntero(const App& a, bool incluir_propio = false, bool incluir_muertos = false);
 int direccion_de(int dx, int dy);
 
 // Eventos de la red que afectan a las pantallas previas al juego.

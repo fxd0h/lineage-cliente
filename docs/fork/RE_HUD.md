@@ -72,3 +72,8 @@ Tags: [C] confirmed from decompile, [I] inferred. In REA pass addresses as `ram:
   attack mode; [0x6f1dac] = the "pk" option toggle (0x403dbd). Ctrl with or without an object is checked before the object class.
   Class from 0x4cdd30: sprite type 10 -> 10 (dead 2; pet whose master is the player 6, other pet 5); types 5/6/12 dead -> 3; 0xb doors
   by action; 4/7/8/9/13/14/15/16/0 as their type; else 1. Fork: `elegir_cursor_original` (NPCs and own pet 4, not the sword).
+- Hovered object (0x469d90 -> 0x46a390 hit list, sorted by 0x46a450): the own character last, then the highest class (monster 10 over
+  NPC 6/12 over character 5 over corpse 2/3), ties by list order; corpses are hit (cursor 10). Private shop (object byte +4) -> 4
+  (0x46a060). Dragging an inventory item: 13 over a valid target, else 5 (0x469e74). Pending use in range: 15 with Ctrl or the pk
+  option, not Alt (0x469f85). Not modelled: self +0x12c -> 16, [0x702dcc] / status 0x456860(0x18) -> 11, [0x816558] -> 13/5,
+  the PC branch flags +0x24 / +0x50 / [0x81667c] and the Tab cycling index [0x816564].

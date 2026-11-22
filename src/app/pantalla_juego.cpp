@@ -780,7 +780,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             pie = top + rg.h;
             const float x0 = px + rg.ox, y0 = py + rg.oy, x1 = x0 + rg.w, y1 = y0 + rg.h;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
-            if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});
+            a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, 0});  // corpses too: the cursor shows 10 over them
         } else {
             // Sin sprite: un bloque del tamaño de un cuerpo, que se puede elegir con el clic. Mientras
             // el sprite se carga (o el atlas no tiene lugar) es invisible; magenta si de verdad falta.
@@ -795,7 +795,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             caja_x1 = x1;
             pie = y0 + 36;
             bajo_puntero = mx >= x0 && mx < x1 && my >= y0 && my < y1;
-            if (o.col<O_ESTADO>()[s] != ESTADO_MUERTO) a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
+            a.en_pantalla.push_back({o.ids()[s], x0, y0, x1, y1, prof, static_cast<u8>(rg_pendiente ? 1 : frame_vacio ? 0 : 2)});
         }
         // Con zoom solo del mapa, lo de encima de la cabeza (barras, nombre, título, globo, daño) va al tamaño
         // de la interfaz para que se lea: el ancla pasa a coordenadas de la interfaz y la GPU no lo escala.
@@ -1112,6 +1112,18 @@ bool mascota_propia(const App& a, Slot s) {
 bool mascota_sin_ctrl(const App& a, Slot s) {
     if (s == SIN_SLOT || !a.mundo.objetos.col<O_MASCOTA>()[s] || a.entrada.ctrl) return false;
     return !mascota_propia(a, s);
+}
+
+// Object class of the original client (0x4cdd30), from the sprite type: a live monster 10 (dead 2, pet whose
+// master is the player 6, someone else's pet 5), characters 5 and NPCs 6 / 12 (dead 3), the other types as they are.
+// It picks the cursor (0x469e40) and, among overlapping objects under the pointer, the hovered one (0x46a450).
+u8 clase_objeto(const App& a, Slot s) {
+    const TablaObjetos& o = a.mundo.objetos;
+    const bool muerto = o.col<O_ESTADO>()[s] == ESTADO_MUERTO;
+    const u8 tipo = tipo_objeto(a, s);
+    if (tipo == TIPO_MONSTRUO) return muerto ? 2 : mascota_propia(a, s) ? 6 : o.col<O_MASCOTA>()[s] ? 5 : TIPO_MONSTRUO;
+    if (tipo == 5 || tipo == 6 || tipo == 12) return muerto ? 3 : tipo;
+    return tipo;
 }
 
 // Objetivo bajo el puntero según su tipo de gfx: un ítem se recoge, un monstruo se ataca, a un
@@ -2144,10 +2156,10 @@ void elegir_cursor_original(App& a) {
     };
     if (a.gm_apuntando) return poner(11);
     if (a.hechizo_apuntando || a.mascota_eligiendo || a.item_apuntando) {
-        // Target in range: the target circle (8), or the attack cursor with Ctrl / Alt held (15); out of range: 11 (0x46a344).
+        // Target in range: the target circle (8), or 15 with Ctrl ([0x702dd6]) or the pk option ([0x6f1dac]) (0x469f85);
+        // out of range: 11 (0x46a344).
         if (!pending_target_in_range(a, objeto_bajo_puntero(a))) return poner(11);
-        const bool alt_held = (SDL_GetModState() & SDL_KMOD_ALT) != 0;
-        return poner(a.entrada.ctrl || alt_held ? 15 : 8);
+        return poner(a.entrada.ctrl || a.modo_pk ? 15 : 8);
     }
     const Vista vi = vista(a);
     if (sobre_alguna_ventana(a)) return poner(5);
@@ -2155,26 +2167,16 @@ void elegir_cursor_original(App& a) {
     const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
     // Attack mode: the fork's one flag stands for both Ctrl+X ([0x703105]) and the "pk" option ([0x6f1dac]).
     const bool ataque = a.modo_pk;
-    const ObjId id = objeto_bajo_puntero(a);
+    const ObjId id = objeto_bajo_puntero(a, false, true);
     const Slot s = id ? a.mundo.objetos.buscar(id) : SIN_SLOT;
-    if (a.arrastrando && s != SIN_SLOT) return poner(13);  // dragging an item over an object
+    // Dragging an inventory item (0x469e74): 13 over an object it can go to, else 5.
+    if (a.arrastrando) return poner(s != SIN_SLOT && a.mundo.objetos.col<O_ESTADO>()[s] != ESTADO_MUERTO ? 13 : 5);
     // Ctrl held, with or without an object (0x469fb1): Alt 7, attack mode 15, else 6.
     if (a.entrada.ctrl) return poner(alt ? 7 : ataque ? 15 : 6);
     if (s == SIN_SLOT) return poner(3);
-    const TablaObjetos& o = a.mundo.objetos;
-    const bool muerto = o.col<O_ESTADO>()[s] == ESTADO_MUERTO;
-    // Object class (0x4cdd30) from the sprite type: a live monster 10 (dead 2, own pet 6, someone else's pet 5);
-    // characters 5, NPCs 6 / 12 (dead 3); doors 8, items 9, others as their type.
-    u8 clase = tipo_objeto(a, s);
-    if (clase == TIPO_MONSTRUO) {
-        if (muerto) clase = 2;
-        else if (mascota_propia(a, s)) clase = 6;
-        else if (o.col<O_MASCOTA>()[s]) clase = 5;
-    } else if ((clase == 5 || clase == 6 || clase == 12) && muerto) {
-        clase = 3;
-    }
+    if (vendedor(a, id)) return poner(4);  // a private shop (object byte +4, 0x46a060): 4
     const bool yo = id == a.mundo.jugador.id;
-    switch (clase) {  // jump table 0x46a358
+    switch (clase_objeto(a, s)) {  // jump table 0x46a358
     case 2: case 3: return poner(10);                   // corpse: 10 (8 in attack mode with a spell weapon, not modelled)
     case 4: case 14: case 15: return poner(9);
     case 7: case 13: return poner(14);
@@ -2226,12 +2228,22 @@ void reiniciar(App& a) {
 
 // Objeto vivo bajo el puntero (el de adelante si hay varios), con los rectángulos del frame
 // anterior.
-ObjId objeto_bajo_puntero(const App& a, bool incluir_propio) {
+ObjId objeto_bajo_puntero(const App& a, bool incluir_propio, bool incluir_muertos) {
     const float mx = raton_mundo_x(a), my = raton_mundo_y(a);  // los rectángulos están en el mundo
+    const TablaObjetos& o = a.mundo.objetos;
     const App::ObjetoEnPantalla* mejor = nullptr;
+    int mejor_clase = -1;
     for (const App::ObjetoEnPantalla& r : a.en_pantalla) {
         if ((r.id == a.mundo.jugador.id && !incluir_propio) || mx < r.x0 || mx >= r.x1 || my < r.y0 || my >= r.y1) continue;
-        if (!mejor || r.profundidad > mejor->profundidad) mejor = &r;
+        const Slot s = o.buscar(r.id);
+        if (s == SIN_SLOT || (!incluir_muertos && o.col<O_ESTADO>()[s] == ESTADO_MUERTO)) continue;
+        // Original UI (0x469d90 sorts the hits with 0x46a450): the own character last, then the highest object class
+        // (a monster over an NPC over a character over a corpse); the simple UI takes the frontmost.
+        const int clase = a.cfg.ui_simple ? 0 : r.id == a.mundo.jugador.id ? -2 : clase_objeto(a, s);
+        if (!mejor || clase > mejor_clase || (clase == mejor_clase && r.profundidad > mejor->profundidad)) {
+            mejor = &r;
+            mejor_clase = clase;
+        }
     }
     return mejor ? mejor->id : 0;
 }
