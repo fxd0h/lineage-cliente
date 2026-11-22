@@ -865,7 +865,9 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             u32 color = a.cfg.ui_simple ? rgba(200, 220, 255) : BLANCO;
             u32 contorno_nivel = 0;  // original UI: monster level tier is a 1 px outline, not the fill
             if (personaje) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
-            else if (o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO) {
+            // Level tier only for a live monster: the exe gives a dead one class 2, not 0xa (0x4cdd30, 0x467856).
+            else if (o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO &&
+                     o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
                 static const u32 COLORES[] = {rgba(240, 240, 240), rgba(120, 230, 120), rgba(255, 215, 80), rgba(255, 90, 80)};
                 if (a.cfg.ui_simple) color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
                 else contorno_nivel = color_nivel_original(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel);
