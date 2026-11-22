@@ -6,8 +6,10 @@ juego original (la carpeta con Sprite.pak, Tile.pak, Text.pak y map/).
 
 Uso
 ---
-1. Descomprimir donde se quiera:  tar xzf Lineage-<versión>-linux-<arq>.tar.gz
-2. Abrir ./lineage. La primera vez pide la carpeta del juego.
+1. AppImage: chmod +x Lineage-<versión>-linux-<arq>.AppImage y abrirlo (necesita FUSE; si no
+   está, ./Lineage-...AppImage --appimage-extract-and-run).
+   .tar.gz: descomprimirlo donde se quiera (tar xzf ...) y abrir ./lineage.
+2. La primera vez pide la carpeta del juego.
 3. Ajustes (en el login, o Options en el juego) cambia la configuración: carpeta del juego,
    servidores, interfaz y sonido.
 
@@ -24,8 +26,8 @@ con él.
 Lineage Client for Linux (English)
 ----------------------------------
 A new client for Lineage 1. The game is NOT included: you need an installation of the original
-game (the folder with Sprite.pak, Tile.pak, Text.pak and map/). Extract anywhere and run
-./lineage; the first time it asks for the game folder. Settings (on the login screen, or Options
+game (the folder with Sprite.pak, Tile.pak, Text.pak and map/). Make the AppImage executable and run
+it, or extract the .tar.gz anywhere and run ./lineage; the first time it asks for the game folder. Settings (on the login screen, or Options
 in the game) changes the settings. Settings are stored in ~/.local/share/Lineage/LineageCliente/settings.ini.
 Requires 64-bit Linux (x64 or arm64, matching the package) with glibc 2.39 or newer, a Vulkan
 driver and X11 or Wayland.

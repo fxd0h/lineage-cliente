@@ -1,6 +1,6 @@
 # Empaquetado y releases.
 # - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS, los
-#   .zip de Windows y los .tar.gz de Linux (x64 y arm64), y publica la release en GitHub con notas generadas.
+#   .zip de Windows y el AppImage y el .tar.gz de Linux (x64 y arm64), y publica la release en GitHub con notas generadas.
 # - A mano (Actions > Release > Run workflow): lo mismo sin publicar; los paquetes quedan como artefactos.
 #   Con `tag` (p. ej. v0.2.0), los paquetes llevan esa versión y se suman a esa release los que le falten
 #   (sin reemplazar los que ya tiene): así se agregan plataformas nuevas a una release publicada.
@@ -115,12 +115,15 @@ jobs:
           [[ -n "$TAG" || "$GITHUB_REF_TYPE" != tag ]] || TAG="$GITHUB_REF_NAME"
           VERSION="${TAG#v}"
           [[ -n "$TAG" ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
-          echo "tgz=$(herramientas/empaquetar_linux.sh "$VERSION" | tail -1)" >> "$GITHUB_OUTPUT"
+          herramientas/empaquetar_linux.sh "$VERSION"
 
       - uses: actions/upload-artifact@v4
         with:
           name: lineage-linux-${{ matrix.arch }}
-          path: ${{ steps.paquete.outputs.tgz }}
+          path: |
+            dist/Lineage-*-linux-*.tar.gz
+            dist/Lineage-*-linux-*.AppImage
+          if-no-files-found: error
 
   # La release se publica una vez, con los paquetes de todos los jobs. Si ya existe (Run workflow con `tag`),
   # se le suman solo los paquetes que no tiene.

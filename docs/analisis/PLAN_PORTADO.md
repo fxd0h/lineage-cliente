@@ -55,6 +55,12 @@ para probar rápido, no para las releases.
   `.exe` (`cmake/windows.rc.in`, `datos/iconos/*.ico` de `tools/generar_iconos.py --ico`, `LIN_VERSION`), runtime
   de C++ estático (`/MT`, comprobado con `dumpbin`). El CI lo arma en cada push (artefacto) y `release.yml` lo
   publica con un tag. Falta: instalador (Inno Setup o WiX) y firma de código (sin firma, SmartScreen avisa).
+- **Fase 4 (Linux, 2026-11-22):** `herramientas/empaquetar_linux.sh` arma, para x64 y arm64, el AppImage
+  (`linuxdeploy`, con `herramientas/linux/lineage.desktop` y el ícono de 256 px; `datos/` en `usr/bin/`, junto al
+  ejecutable) y un `.tar.gz` con `lineage`, `datos/`, `LICENSE.txt` y `herramientas/linux/LEEME.txt` para
+  sistemas sin FUSE. SDL3 va estático; el binario pide la glibc de Ubuntu 24.04 (2.39). `release.yml` los
+  publica con el tag, y "Run workflow" con `tag` suma a una release publicada los paquetes que le falten.
+  Falta: Flatpak o paquetes .deb/.rpm si se piden, y bajar el requisito de glibc compilando en una distro más vieja.
 
 ## Fase 0: CI de compilación en las 4 plataformas (medio día)
 

@@ -76,7 +76,7 @@ LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, resour
 
 Programs: `build/<preset>/lineage` (the game; its settings are edited in-game), `explorador` (resource explorer),
 `lin_tests`. Packaging: `herramientas/empaquetar_macos.sh [VERSION]` (`Lineage.app` and a `.dmg`, not notarized:
-right-click, Open), `herramientas/empaquetar_windows.ps1` (`.zip`) and `herramientas/empaquetar_linux.sh` (`.tar.gz`).
+right-click, Open), `herramientas/empaquetar_windows.ps1` (`.zip`) and `herramientas/empaquetar_linux.sh` (AppImage and `.tar.gz`).
 A `v*` tag runs `.github/workflows/release.yml`, which publishes the release with all of them (macOS, Windows and
 Linux x64/arm64).
 
