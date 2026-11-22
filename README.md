@@ -34,7 +34,7 @@ No game assets are included: you need your own Lineage installation (the folder 
   binary), shout direction icons, original mail compose window, Ctrl+P
   screenshots to `Capture/`, Alt+1..4 emotes, `/rank`, `/propose`, `/divorce`, `/duel`, `/checkpk`, `/loc`, `/telcon` and the
   original command aliases.
-- **Fixed 640x480 view** scaled to any window (`vista=fija`) with filters: integer, xBR, FSR (default), CRT,
+- **The view fills the window** (`vista=amplia`, default), or an optional fixed 640x480 view (`vista=fija`), with filters: integer, xBR, FSR (default), CRT,
   Anime4K (`escalado=`, Shift+F5).
 - **HD text** (`texto_hd=1`, default): UI and world text drawn after the scaling filter at output resolution,
   sharp at any scale with identical layout ([docs/fork/hd_text.md](docs/fork/hd_text.md)). Optional 4x HD UI

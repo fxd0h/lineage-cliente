@@ -44,7 +44,7 @@ All of these can be changed from the editor; most can also be changed in the gam
 | `ventana` | Window size (`WIDTHxHEIGHT`), saved on close |
 | `zoom` | Game scale; 0 = automatic |
 | `ui_simple` | `0` (default when absent): the original 2009 UI (framed windows, panel images); `1`: upstream's simple text interface. F2 toggles |
-| `vista` | `fija` (default): fixed 640×480 view, as in the original, scaled to the window; `amplia`: the view grows with the window and the zoom |
+| `vista` | `amplia` (default): the view fills the window and grows with it and the zoom; `fija`: fixed 640×480 view, as in the original, scaled to the window with black bars |
 | `escalado` | Filter used to scale the fixed view: `entero` (nearest), `xbr`, `fsr` (default), `crt`, `anime4k` (Shift+F5) |
 | `texto_hd` | `1` (default): UI text is drawn after the scaling filter at the output resolution (sharp at any scale, same glyphs and layout; hd_text.md); `0` pixel text drawn into the 640×480 frame. Live: `texto-hd on|off` |
 | `fuente_original` | `1` (default) ASCII text with the game's `font/eng.fnt`; `0` Departure Mono |
@@ -105,7 +105,7 @@ Original UI also: Ctrl+T chat size (4 steps), Ctrl+O chat colour palette, Ctrl+X
 - **Shift+F12:** saves `captura.bmp`.
 - **Shift+click on the world:** turns the character that way without walking (to face someone, e.g. to trade).
 - **Window size:** with `vista=fija` the 640×480 view is scaled to any window size (drag the window border to
-  resize it) and the zoom keys don't apply.
+  resize it), with black bars when the window is not 4:3; the zoom keys only zoom the map.
 - **Ctrl/⌘ + and Ctrl/⌘ −:** zoom in and out (integer scale; zooming out shows more map).
 - **Ctrl/⌘ 0:** automatic zoom, the largest that fits 640×480.
 - **Game view (`vista=amplia`):** adapts to the window. Enlarging it shows more map, with the panel centered at the
