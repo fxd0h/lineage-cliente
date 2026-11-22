@@ -1012,8 +1012,9 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         else if (const Vendedor* v = vendedor(a, o.ids()[s]); v && !v->titulo.empty()) {
             // Private shop sign (0x487140 -> 0x4ce3b0, 0x41a400): up to two lines, shown as a bubble only over the own character
             // or in the market maps 340 / 350 / 360 / 370, flipping line every 5 s (an empty second line is skipped).
+            // Fork addition: map 800, the market of newer servers (not in the 2009 exe).
             const MapId m = a.mundo.mapa;
-            if (soy_yo || m == 340 || m == 350 || m == 360 || m == 370) {
+            if (soy_yo || m == 340 || m == 350 || m == 360 || m == 370 || m == 800) {
                 std::string_view lineas[2];
                 lineas_cartel_tienda(v->titulo, lineas);
                 const std::string_view linea = !lineas[1].empty() && (ahora / 5000) % 2 ? lineas[1] : lineas[0];
