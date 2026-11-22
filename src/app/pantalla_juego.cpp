@@ -884,9 +884,11 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             const bool personaje = !texto(a.mundo, o.col<O_NOMBRE>()[s]).empty() && texto(a.mundo, o.col<O_NOMBRE>()[s])[0] != '$';
             u32 color = a.cfg.ui_simple ? rgba(200, 220, 255) : BLANCO;
             u32 contorno_nivel = 0;  // original UI: monster level tier is a 1 px outline, not the fill
-            if (personaje) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
+            // Original: every object's name colour comes from its lawful value (0x4cc140, set on creation 0x4cccb6), NPCs
+            // and monsters too; a live monster also gets the level-tier outline below.
+            if (personaje || !a.cfg.ui_simple) color = ahora < o.col<O_ROSA>()[s] ? rgb555(0x767d) : color_alineamiento(o.col<O_LEGAL>()[s]);
             // Level tier only for a live monster: the exe gives a dead one class 2, not 0xa (0x4cdd30, 0x467856).
-            else if (o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO &&
+            if (!personaje && o.col<O_NIVEL>()[s] && a.mundo.jugador.nivel && tipo_objeto(a, s) == TIPO_MONSTRUO &&
                      o.col<O_ESTADO>()[s] != ESTADO_MUERTO) {
                 static const u32 COLORES[] = {rgba(240, 240, 240), rgba(120, 230, 120), rgba(255, 215, 80), rgba(255, 90, 80)};
                 if (a.cfg.ui_simple) color = COLORES[static_cast<int>(nivel_relativo(o.col<O_NIVEL>()[s], a.mundo.jugador.nivel))];
