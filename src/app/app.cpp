@@ -536,6 +536,12 @@ void bucle_app(App& a) {
         u64 t0 = SDL_GetPerformanceCounter();
         u64 asign0 = asignaciones_hilo();
         a.cursor = Cursor::MANO;
+        // Original login / character screens: the arrow (1, 0x474695 / 0x474c00), the wait cursor (2) while a request is
+        // in flight (0x470476..0x472680).
+        if (!a.cfg.ui_simple && a.pantalla != Pantalla::JUEGO) {
+            const Cursor c = cursor_estado(a.esperando ? 2 : 1);
+            if (a.cursores[static_cast<int>(c)]) a.cursor = c;
+        }
         if (a.g) a.g->nuevo_frame();
         // Dentro del juego la vista se amplía con la ventana (y el zoom); el resto, 640×480. With the simple UI the
         // zoom is for the map only: the interface keeps its size.

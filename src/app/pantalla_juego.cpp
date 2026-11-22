@@ -1207,7 +1207,7 @@ void elegir_objetivo_bajo_puntero(App& a) {
     u8 tipo = b != SIN_SLOT ? tipo_objeto(a, b) : 0;
     // Un NPC (sin Ctrl): se camina hasta él y se le habla, aunque se suelte el botón.
     a.hablar_objetivo = b != SIN_SLOT && (es_npc(a, b) || vendedor(a, a.objetivo) || mascota_propia(a, b)) && !e.ctrl;
-    const bool forzar = e.ctrl || (a.modo_pk && tipo == TIPO_PERSONAJE);
+    const bool forzar = e.ctrl || ((a.modo_pk || a.modo_ataque) && tipo == TIPO_PERSONAJE);
     if (b != SIN_SLOT && tipo != TIPO_ITEM && tipo != TIPO_MONSTRUO && !a.hablar_objetivo && !forzar) a.objetivo = 0;
     if (mascota_sin_ctrl(a, b)) {  // la de otro jugador: solo con Ctrl
         a.objetivo = 0;
@@ -1273,7 +1273,7 @@ void mover_jugador(App& a, u64 ahora) {
         ObjId t = a.objetivo && !a.hablar_objetivo ? a.objetivo : objeto_bajo_puntero(a);
         Slot b = t ? o.buscar(t) : SIN_SLOT;
         if (b != SIN_SLOT && !mascota_sin_ctrl(a, b) && !(mascota_propia(a, b) && !e.ctrl) &&
-            (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || (a.modo_pk && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
+            (tipo_objeto(a, b) == TIPO_MONSTRUO || e.ctrl || ((a.modo_pk || a.modo_ataque) && tipo_objeto(a, b) == TIPO_PERSONAJE))) {
             a.objetivo = t;
             a.hablar_objetivo = false;
             a.ataque_sostenido = true;
@@ -2246,8 +2246,7 @@ void elegir_cursor_original(App& a, u64 ahora) {
     const int html = a.cursor_html;
     a.cursor_html = 0;  // the page sets it again while it is drawn
     const bool alt = (SDL_GetModState() & SDL_KMOD_ALT) != 0;  // [0x702dd5]; Ctrl is [0x702dd6] (0x456bb0)
-    // Attack mode (Ctrl+X, [0x703105]) and the "pk" option ([0x6f1dac]) are one flag in the fork.
-    const bool ataque = a.modo_pk, pk = a.modo_pk;
+    const bool ataque = a.modo_ataque, pk = a.modo_pk;  // Ctrl+X [0x703105], the "pk" option [0x6f1dac]
     const Vista vi = vista(a);
     const bool sobre_ventana = sobre_alguna_ventana(a);
     const bool sobre_hud = !sobre_ventana && (a.entrada.my >= vi.panel_y || sobre_barra(a));
@@ -2263,6 +2262,8 @@ void elegir_cursor_original(App& a, u64 ahora) {
     }
     // Windows take the mouse before the world (dispatch 0x4576e0). The NPC page: 1 over text, 3 over a link (0x436f8a /
     // 0x436f9f); buttons, grids, list rows, edit fields and scrollbars: 3 (0x4133e3, 0x45208a, 0x4be1a9, 0x4c3d9f, 0x4223c3).
+    // An inventory grid with a select callback (a scroll waiting for the item to use it on, 0x44f3a5): 9 over it.
+    if (sobre_ventana && a.usar_sobre && lin::sobre_ventana(a, IdVentana::INVENTARIO)) return poner(9);
     if (sobre_ventana) return poner(html ? html : 3);
     if (sobre_hud) {
         // Bottom panel: the chat log 1 (0x41f8ef); its buttons, quick slots and edit line 3 (0x41c02a, 0x4b1cd8, 0x4c3d9f).
@@ -2439,7 +2440,7 @@ void frame_juego(App& a) {
         break;
     // Only the original UI has these (Ctrl+R: see below; Ctrl+M has no handler in the US client's hotkey table).
     case 'X':  // attack mode: flips the local byte [0x703105] (0x456e30), silently and without a packet
-        if (!a.cfg.ui_simple) a.modo_pk = !a.modo_pk;
+        if (!a.cfg.ui_simple) a.modo_ataque = !a.modo_ataque;
         break;
     case 'T':  // chat window size cycle (0x421330)
         if (!a.cfg.ui_simple) a.chat_tam = static_cast<u8>((a.chat_tam + 1) % 4);

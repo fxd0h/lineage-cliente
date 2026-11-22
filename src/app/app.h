@@ -504,7 +504,8 @@ struct App {
     bool hablar_objetivo = false;  // a.objetivo es un NPC al que se camina para hablarle
     bool objetivo_fijo = false;    // elegido al apretar el botón: se mantiene aunque el puntero ya no esté encima
     bool ataque_sostenido = false; // tecla A: se sigue atacando al objetivo sin mantener el botón
-    bool modo_pk = false;          // "/pk": el clic sobre otro jugador lo ataca sin Ctrl
+    bool modo_pk = false;          // "/pk": el clic sobre otro jugador lo ataca sin Ctrl (original: the "pk" option [0x6f1dac])
+    bool modo_ataque = false;      // original UI Ctrl+X attack mode ([0x703105]); clicks treat it like modo_pk
     // Ventanas: posiciones, la que se está arrastrando y la de opciones.
     PosVentana pos_ventanas[static_cast<int>(IdVentana::CANTIDAD)];
     bool ventanas_cargadas = false;
