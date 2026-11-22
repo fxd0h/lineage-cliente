@@ -888,22 +888,18 @@ void dibujar_efectos_activos(App& a, u64 ahora) {
         const u64 resta = ef.fin > ahora ? (ef.fin - ahora + 999) / 1000 : 0;
         u32 icono = item_de_efecto(a, ef).icono;
         if (!icono) icono = a.hechizos[hechizo_de_efecto(ef)].icono;
-        // Interfaz original: el ícono de la barra de buffs (marco claro con puntos en las esquinas, glifo de líneas) cuando se conoce.
-        if (original) {
-            if (const u32 hi = icono_de_buff_efecto(ef)) icono = hi;
-            else if (const u32 hs = icono_de_buff_original(hechizo_de_efecto(ef))) icono = hs;
-        }
+        // El ícono de la barra de buffs del original (marco claro con puntos en las esquinas, glifo de líneas) cuando se
+        // conoce, en las dos interfaces; si no, el del objeto o el del hechizo.
+        if (const u32 hi = icono_de_buff_efecto(ef)) icono = hi;
+        else if (const u32 hs = icono_de_buff_original(hechizo_de_efecto(ef))) icono = hs;
         const RegionAtlas& r = icono ? g.icono(icono) : RegionAtlas{};
         // A punto de terminar (menos de 10 s), parpadea.
         const bool visible = original || resta >= 10 || (ahora / 250) % 2 == 0;  // el dibujo original no parpadea
         if (r.valida() && visible) {
             // El cliente original dibuja los íconos de buff con mezcla screen (cliente 0x47e6f0 -> blit 0x49d420 con
             // las tablas de 5 bits armadas en 0x4a03b0: out = max + min * (31 - max) / 31 por canal): el fondo cuadrado
-            // oscuro desaparece, el marco claro brilla y se ve el suelo a través.
-            if (original)
-                g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::PANTALLA);
-            else
-                g.gpu().dibujar(r, x, Y, ki);
+            // oscuro desaparece, el marco claro brilla y se ve el suelo a través. Va igual en la interfaz simple.
+            g.gpu().dibujar_en(r, static_cast<float>(x), static_cast<float>(Y), ki, BLANCO, Mezcla::PANTALLA);
         } else if (visible) {
             char t[8];
             size_t m = nombre_efecto_activo(a, ef, t, 4);
