@@ -232,6 +232,14 @@ void objetos(App& a, Conexion& c, int radio) {
                       static_cast<unsigned>(o.col<O_ESTADO>()[s]), px, py,
                       o.col<O_ESTADO>()[s] == ESTADO_MUERTO ? " muerto" : s == yo ? " yo" : "");
         // Title, raw bytes (non-ASCII as \xNN), to check colour codes.
+        if (o.col<O_MASCOTA>()[s]) {
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " mascota=%u clase=%u", static_cast<unsigned>(o.col<O_MASCOTA>()[s]),
+                          static_cast<unsigned>(clase_objeto(a, s)));
+        } else if (tipo_objeto(a, s) == TIPO_MONSTRUO) {
+            const size_t usado = std::strlen(l);
+            std::snprintf(l + usado, sizeof l - usado, " clase=%u", static_cast<unsigned>(clase_objeto(a, s)));
+        }
         std::string_view ti = texto(a.mundo, o.col<O_TITULO>()[s]);
         for (const Vendedor& v : a.tienda_pj.vendedores)
             if (v.id == id && !v.titulo.empty()) ti = v.titulo;  // private shop sign

@@ -1175,6 +1175,8 @@ bool mascota_sin_ctrl(const App& a, Slot s) {
     return !mascota_propia(a, s);
 }
 
+}  // namespace
+
 // Object class of the original client (0x4cdd30), from the sprite type: a live monster 10 (dead 2, pet whose
 // master is the player 6, someone else's pet 5), characters 5 and NPCs 6 / 12 (dead 3), the other types as they are.
 // It picks the cursor (0x469e40) and, among overlapping objects under the pointer, the hovered one (0x46a450).
@@ -1186,6 +1188,8 @@ u8 clase_objeto(const App& a, Slot s) {
     if (tipo == 5 || tipo == 6 || tipo == 12) return muerto ? 3 : tipo;
     return tipo;
 }
+
+namespace {
 
 // Objetivo bajo el puntero según su tipo de gfx: un ítem se recoge, un monstruo se ataca, a un
 // NPC se le habla (con Ctrl se lo ataca) y a otros personajes se los ataca con Ctrl o en modo PK

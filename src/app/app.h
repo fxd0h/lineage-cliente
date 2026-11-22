@@ -863,6 +863,7 @@ bool sobre_forma(const App& a);
 // NPCs y comercio (npc_ui.cpp). El diálogo va arriba a la izquierda.
 // Tipo de gfx del objeto (TipoGfx); un gfx que no está en la tabla de sprites cuenta como monstruo.
 u8 tipo_objeto(const App& a, Slot s);
+u8 clase_objeto(const App& a, Slot s);  // original client object class (0x4cdd30)
 bool es_npc(const App& a, Slot s);
 // Encola un texto de combate (daño/"Miss") sobre el personaje; descarta el más viejo si no entra.
 void empujar_texto_combate(App& a, const char* t, u8 r, u8 g, u8 b);
