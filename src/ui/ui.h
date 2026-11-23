@@ -52,6 +52,8 @@ bool sobre(const EntradaFrame& e, int x, int y, int w, int h);
 void imagen(Graficos& g, u32 n, int x, int y, Capa capa = CAPA_UI);
 // Botón con imagen N (normal) y N+1 (resaltado). Devuelve true al hacer clic.
 bool boton(Graficos& g, const EntradaFrame& e, u32 n, int x, int y);
+// Botón de texto con un triángulo hacia arriba o hacia abajo (barras de scroll).
+bool boton_flecha(Graficos& g, const EntradaFrame& e, bool arriba, int x, int y, int w, int h);
 // Caja de texto de una línea. Devuelve true si se presionó Enter con foco.
 bool caja_texto(Graficos& g, const EntradaFrame& e, std::string& valor, int x, int y, int ancho, bool foco,
                 bool es_clave, size_t maximo);
