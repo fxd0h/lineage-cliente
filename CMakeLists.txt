@@ -83,6 +83,7 @@ add_library(lin_proto STATIC
 target_link_libraries(lin_proto PUBLIC lin_core lin_plataforma)
 
 add_library(lin_recursos STATIC
+    src/recursos/aes.cpp
     src/recursos/des.cpp
     src/recursos/pak.cpp
     src/recursos/pe_resources.cpp
@@ -242,6 +243,7 @@ if(LIN_TESTS)
         tests/main.cpp
         tests/test_core.cpp
         tests/test_cifrado.cpp
+        tests/test_aes.cpp
         tests/test_des.cpp
         tests/test_proto.cpp
         tests/test_recursos.cpp
