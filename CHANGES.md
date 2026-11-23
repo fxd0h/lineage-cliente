@@ -7,6 +7,18 @@ con su verificación y lo pendiente, está en [docs/upstream/ENTREGABLES.md](doc
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
+## v0.2.1 (2026-11-22)
+
+### Agregado
+- **Instalar con un comando** en Linux, macOS y BSD:
+  `curl -fsSL https://raw.githubusercontent.com/javiercorrea/lineage-cliente/latest/instalar.sh | sh`.
+  Instala lo que falte para compilar (pregunta antes), baja el código, compila e instala en el usuario; volver a
+  correrlo actualiza. El README trae también el paso a paso a mano (#53).
+- **Paquetes de Linux** (x64 y arm64) en la release: AppImage y `.tar.gz` (#53).
+- **`cmake --install`** (o `make install` / `ninja install`) instala el cliente, su lanzador y, en Linux y BSD, el
+  acceso directo del escritorio (#53).
+- **Tag `latest`:** apunta siempre a la última versión publicada; lo mueve la release (#53).
+
 ## v0.2.0 (2026-11-22)
 
 ### Agregado
