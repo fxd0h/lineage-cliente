@@ -191,9 +191,10 @@ void usar_item(App& a, ObjId item) {
         else abrir_polimorfia(a, item);
         return;
     }
-    // Pergamino de teleport: con marcadores guardados se elige el destino; si no, al azar.
-    if (s != SIN_SLOT && (a.mundo.inventario.items.col<I_USO>()[s] == USO_TELEPORT || a.mundo.inventario.items.col<I_USO>()[s] == USO_TELEPORT_BENDITO)) {
-        if (!elegir_destino(a, item, 0)) enviar(a, cmd::usar_teleport(a.op, item, 0, 0));
+    // Pergamino de teleport: el bendito deja elegir un marcador guardado; el normal va siempre al azar.
+    const u8 uso = s != SIN_SLOT ? a.mundo.inventario.items.col<I_USO>()[s] : 0;
+    if (uso == USO_TELEPORT || uso == USO_TELEPORT_BENDITO) {
+        if (uso == USO_TELEPORT || !elegir_destino(a, item, 0)) enviar(a, cmd::usar_teleport(a.op, item, 0, 0));
         return;
     }
     enviar(a, cmd::usar_item(a.op, item));

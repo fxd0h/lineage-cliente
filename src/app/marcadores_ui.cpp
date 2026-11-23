@@ -1,7 +1,7 @@
 // Marcadores de teleport (bookmarks).
 //  - "/bookmark nombre" en el chat recuerda el lugar donde se está (C_AddBookmark); el servidor lo
 //    confirma con S_Bookmarks, que también manda todos al entrar al juego.
-//  - Al usar un pergamino de teleport (usos 6 y 29) o el hechizo Teleport / Mass Teleport con
+//  - Al usar un pergamino de teleport bendito (uso 29) o el hechizo Teleport / Mass Teleport con
 //    marcadores guardados, se elige el destino: uno de ellos o "Random". Clic derecho sobre un
 //    marcador lo borra (C_DeleteBookmark); Esc cancela.
 #include "app/app.h"
