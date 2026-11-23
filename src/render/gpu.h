@@ -159,6 +159,8 @@ public:
     int ancho() const { return ancho_; }
     // Píxeles reales por píxel lógico (la del último frame). Para redondear la cámara a 1/escala.
     int escala() const { return escala_; }
+    // Píxeles de la escena (destino_) por píxel lógico: la escala, o 1 con un filtro de escalado (el filtro hace el escalado).
+    int escala_escena() const { return escalado_ != Escalado::ENTERO ? 1 : escala_; }
     // Píxeles reales por píxel lógico del mundo, y el mundo respecto de la interfaz (escala_mundo /
     // escala, <= 1): un punto del mundo (x, y) se ve en (x, y) × zoom_mundo de la interfaz, así que el
     // mundo visible mide ancho() / zoom_mundo() × alto() / zoom_mundo().
@@ -171,6 +173,10 @@ public:
     int alto() const { return alto_; }
     u32 llamadas_ultimo_frame() const { return llamadas_; }
     u32 instancias_ultimo_frame() const { return instancias_previas_; }
+    // Tiempo de GPU de cada cuadro (comando enviado -> terminado), para `perf on`. Mientras está activo, el cuadro
+    // espera a la GPU: mide, pero no deja que CPU y GPU trabajen en paralelo.
+    void medir_gpu(bool si) { medir_gpu_ = si; }
+    double tomar_ms_gpu() { const double v = cuadros_gpu_ ? ms_gpu_ / cuadros_gpu_ : 0; ms_gpu_ = 0; cuadros_gpu_ = 0; return v; }
     u32 paginas_usadas() const { return empaquetado_.paginas_usadas(); }
     u32 reemplazos_atlas() const { return empaquetado_.reemplazos(); }
 
@@ -184,7 +190,7 @@ private:
     void blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUTexture* dst);
     // Anime4K CNN x2 (S): 6 pasadas, los intermedios se crean recién al primer uso y al cambiar la grilla.
     bool crear_anime4k();
-    SDL_GPUTexture* pase_anime4k(SDL_GPUCommandBuffer* cmd);  // destino_ -> copia_; nullptr if unavailable
+    SDL_GPUTexture* pase_anime4k(SDL_GPUCommandBuffer* cmd);  // destino_ -> salida_; nullptr si no se puede
     // Vacía la lista de dibujo y los efectos del frame (con o sin presentarlo).
     void terminar_frame(u32 instancias_dibujadas);
     bool asegurar_luz(int bw, int bh);
@@ -194,6 +200,9 @@ private:
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
+    bool medir_gpu_ = false;
+    double ms_gpu_ = 0;
+    u32 cuadros_gpu_ = 0;
     bool mailbox_ = false;          // modo de presentación MAILBOX: el bucle lo regula pace_frame()
     Uint64 next_frame_ns_ = 0;
     void pace_frame();
@@ -232,6 +241,9 @@ private:
     std::string ruta_final_;
     SDL_GPUGraphicsPipeline* pipeline_mundo_ = nullptr;   // reemplazar el mundo (ola, visión)
     SDL_GPUTexture* copia_ = nullptr;                      // copia de destino_ para leerla al reemplazar
+    // Con un filtro de escalado la escena (destino_, copia_) va a la grilla lógica y el filtro escribe aquí, a grilla × escala.
+    SDL_GPUTexture* salida_ = nullptr;
+    int salida_tw_ = 0, salida_th_ = 0;   // tamaño con que se creó salida_
     SDL_GPUTexture* filas_tex_ = nullptr;                  // color por fila (1 × LUZ_TAM RGBA)
     SDL_GPUTransferBuffer* subida_filas_ = nullptr;
     std::vector<u32> brillo_filas_;
@@ -262,7 +274,8 @@ private:
     int ventana_pw_ = 1, ventana_ph_ = 1;
     int escala_mundo_ = 1;
     bool sin_zoom_mundo_ = false;
-    int destino_w_ = 0, destino_h_ = 0;   // tamaño real de destino_
+    int destino_w_ = 0, destino_h_ = 0;   // tamaño real de destino_ (la escena)
+    int salida_w_ = 0, salida_h_ = 0;     // tamaño de la imagen final: grilla × escala
 
     EmpaquetadoAtlas empaquetado_{TAM_PAGINA, PAGINAS_ATLAS};
     u64 frame_ = 1;
