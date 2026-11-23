@@ -33,6 +33,9 @@ lógica mide 1008 × 604 (0,61 Mpx) y la textura de destino `destino_`, 3024 × 
 | 7 | Texto HD: capa + composición | `texto_hd=1` y hay texto | destino (vista fija: ventana) | 2 (capa) + 2 (composición) | borra dos destinos (RGBA8 + R8) y redibuja los paneles como atenuadores |
 | 8 | Copia a la ventana | siempre | ventana | 1 | vista fija: lineal a la ventana (≤ 2×) |
 
+La tabla describe el camino sin filtro (o el de antes de la recomendación 1). Con un filtro activo, las pasadas 2 a 5 van a
+la grilla lógica (0,61 Mpx) y solo el filtro, el texto HD y la copia a la ventana trabajan a la resolución de salida.
+
 Cada pasada a pantalla completa en RGBA8 mueve unos 44 MB (leer + escribir 5,48 Mpx). Un cuadro con agua, luz,
 filtro y texto HD hace 6 a 8 de esas: 260 a 350 MB por cuadro, unos 16 a 21 GB/s a 60 fps. Una M5 tiene más de
 100 GB/s; una GPU integrada de PC, 25 a 50 GB/s compartidos con la CPU.
