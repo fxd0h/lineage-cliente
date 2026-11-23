@@ -51,6 +51,17 @@ bool boton_texto(Graficos& g, const EntradaFrame& e, std::string_view t, int x, 
     return encima && e.clic;
 }
 
+bool boton_flecha(Graficos& g, const EntradaFrame& e, bool arriba, int x, int y, int w, int h) {
+    const bool clic = boton_texto(g, e, "", x, y, w, h);
+    // Triángulo de 4 filas (7, 5, 3, 1 px): la fuente no tiene flechas y "^" y "v" no se parecen entre sí.
+    const u64 k = clave_orden(CAPA_UI, 100) + (2u << 24);
+    for (int f = 0; f < 4; ++f) {
+        const int ancho = 7 - 2 * f, fy = arriba ? y + (h + 4) / 2 - 1 - f : y + (h - 4) / 2 + f;
+        g.gpu().rectangulo(x + (w - ancho) / 2, fy, ancho, 1, k, rgba(255, 240, 200));
+    }
+    return clic;
+}
+
 void recuadro(Graficos& g, int x, int y, int w, int h, u8 opacidad) {
     const u32 borde = rgba(150, 130, 90);
     const u64 k = clave_orden(CAPA_UI, 2);
@@ -150,8 +161,8 @@ void barra_scroll(Graficos& g, EntradaFrame& e, BarraScroll& st, int x, int y, i
     const int pulgar_h = std::max(ancho, pista_h * static_cast<int>(visibles) / static_cast<int>(total));
     const int libre = pista_h - pulgar_h;
     auto pulgar_en = [&](u32 q) { return pista_y + static_cast<int>(static_cast<i64>(libre) * q / max); };
-    const bool arriba = boton_texto(g, e, "^", x, y, ancho, flecha);
-    const bool abajo = boton_texto(g, e, "v", x, y + alto - flecha, ancho, flecha);
+    const bool arriba = boton_flecha(g, e, true, x, y, ancho, flecha);
+    const bool abajo = boton_flecha(g, e, false, x, y + alto - flecha, ancho, flecha);
     if (!st.arrastrando) {  // soltar el pulgar sobre una flecha no es un clic en ella
         if (arriba && p > 0) --p;
         if (abajo && p < max) ++p;

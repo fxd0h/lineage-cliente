@@ -1,7 +1,7 @@
 // Marcadores de teleport (bookmarks).
 //  - "/bookmark nombre" en el chat recuerda el lugar donde se está (C_AddBookmark); el servidor lo
 //    confirma con S_Bookmarks, que también manda todos al entrar al juego.
-//  - Al usar un pergamino de teleport (usos 6 y 29) o el hechizo Teleport / Mass Teleport con
+//  - Al usar un pergamino de teleport bendito (uso 29) o el hechizo Teleport / Mass Teleport con
 //    marcadores guardados, se elige el destino: uno de ellos o "Random". Clic derecho sobre un
 //    marcador lo borra (C_DeleteBookmark); Esc cancela.
 #include "app/app.h"
@@ -104,7 +104,8 @@ bool elegir_destino(App& a, ObjId item, u32 hechizo) {
     // Solo con el Ring of Teleport Control puesto (S_Ability 1, bit 1 de jugador.anillos); si no, al azar.
     // El cliente original (0x409690, 0x4ac830) abre su ventana de marcadores siempre que el anillo está puesto, aun sin marcadores.
     // También se abre para un elfo de nivel 50+ con /telcon activo (0x409690: clase == 2 && nivel >= 50 && telcon).
-    const bool control = (a.mundo.jugador.anillos & 2) || (a.telcon && clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50);
+    // El pergamino bendito (el único que llega con item, inventario_ui.cpp) elige siempre, sin anillo.
+    const bool control = item || (a.mundo.jugador.anillos & 2) || (a.telcon && clase_personaje(a) == 2 && a.mundo.jugador.nivel >= 50);
     if (!control || (a.marcadores.empty() && a.cfg.ui_simple)) return false;
     a.destino = ElegirDestino{};
     a.destino.abierto = true;

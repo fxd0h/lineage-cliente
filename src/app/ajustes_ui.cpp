@@ -506,8 +506,8 @@ void dibujar_ajustes(App& a) {
     f.desplaza_max = std::max(0, f.alto_contenido - (CAJA_Y + CAJA_ALTO - 4 - Y_PRIMERA));
     if (f.desplaza_max > 0) {
         const int x_flechas = p.ox + CAJA_X + CAJA_ANCHO - 22;
-        if (ui::boton_texto(g, e, "^", x_flechas, p.oy + CAJA_Y + 4, 18, 18)) f.desplaza -= PASO;
-        if (ui::boton_texto(g, e, "v", x_flechas, p.oy + CAJA_Y + CAJA_ALTO - 22, 18, 18)) f.desplaza += PASO;
+        if (ui::boton_flecha(g, e, true, x_flechas, p.oy + CAJA_Y + 4, 18, 18)) f.desplaza -= PASO;
+        if (ui::boton_flecha(g, e, false, x_flechas, p.oy + CAJA_Y + CAJA_ALTO - 22, 18, 18)) f.desplaza += PASO;
         f.desplaza = std::clamp(f.desplaza, 0, f.desplaza_max);
     }
     if (!f.aviso.empty()) ui::texto_centrado(g, f.aviso, p.ox, p.oy + 412, ANCHO, f.aviso_error ? COLOR_ERROR : COLOR_OK);
