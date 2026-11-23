@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include "plataforma/lanzador.h"
 #include "plataforma/rutas.h"
 #include <random>
 #include <unordered_map>
@@ -136,7 +137,21 @@ TEST_CASE("settings.ini: servidores, el elegido, migración del formato anterior
     CHECK(d.servidor == 1);
     CHECK(d.servidores[1].nombre == "Otro de prueba");
     CHECK(d.servidores[1].puerto == 2100);
+    CHECK(d.servidores[1].lanzador.empty());
+    CHECK(texto.find("bob|") == std::string::npos);  // no empty launcher field: the old 5-field format stays
     CHECK_FALSE(d.ui_simple);
     CHECK(d.ventana_ancho == 1024);
     CHECK(d.ventana_alto == 768);
+}
+
+TEST_CASE("server launcher: field 6 takes the rest of the line, port from its output") {
+    Config c = leer_config("servidor=P|127.0.0.1|0|jp363|ana|/opt/l/proxy.sh --a|b\nservidor_elegido=P\n");
+    REQUIRE(c.servidores.size() == 1);
+    CHECK(c.servidores[0].lanzador == "/opt/l/proxy.sh --a|b");
+    CHECK(c.servidores[0].puerto == 0);
+    Config d = leer_config(escribir_config(c));
+    CHECK(d.servidores[0].lanzador == "/opt/l/proxy.sh --a|b");
+    CHECK(puerto_en_salida("starting\nport 25134\n") == 25134);
+    CHECK(puerto_en_salida("pid 123456 port 7001") == 7001);  // out of range numbers are skipped
+    CHECK(puerto_en_salida("no port") == 0);
 }

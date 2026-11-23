@@ -66,6 +66,7 @@ target_include_directories(lin_core INTERFACE src)
 
 add_library(lin_plataforma STATIC
     src/plataforma/archivo_mapeado.cpp
+    src/plataforma/lanzador.cpp
     src/plataforma/socket.cpp
     src/plataforma/rutas.cpp
     src/i18n/textos.cpp)

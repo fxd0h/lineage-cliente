@@ -338,6 +338,7 @@ void leer_entrada(App& a) {
 
 // Red: transiciones de estado y paquetes -> eventos -> pantallas y mundo.
 void procesar_red(App& a) {
+    atender_lanzador(a);
     EstadoRed st = a.red.estado();
     if (st != a.estado_red_previo) {
         if (st == EstadoRed::CONECTADA) {
@@ -630,6 +631,7 @@ void cerrar_app(App& a) {
         SDL_Delay(200);  // tiempo para que el hilo escritor lo envíe
     }
     a.red.cerrar();
+    a.lanzador.parar();  // the launcher's proxy is not needed any more
     a.audio.cerrar();
     emblemas_guardar(a, a.entrada.ahora_ms, true);
     a.g.reset();

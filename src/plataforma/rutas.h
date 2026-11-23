@@ -7,13 +7,17 @@
 
 namespace lin {
 
-// Un servidor del menú del login: "servidor=Nombre|host|puerto|protocolo|cuenta" en settings.ini
+// Un servidor del menú del login: "servidor=Nombre|host|puerto|protocolo|cuenta|lanzador" en settings.ini
 // (la cuenta es la última usada en ese servidor; opcional).
+// lanzador (optional, rest of the line): a command run before connecting, for servers reached through a local proxy
+// that their own launcher opens. The client connects to host at the last number the command prints (its port);
+// "puerto" then only names the server (emblem cache). On exit the client runs it again with the argument "stop".
 struct Servidor {
     std::string nombre, host;
     u16 puerto = 2000;
     std::string protocolo = "jp363";
     std::string usuario;
+    std::string lanzador;
 };
 
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
