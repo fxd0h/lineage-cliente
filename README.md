@@ -11,6 +11,80 @@ No game assets are included: you need your own Lineage installation (the folder 
 
 ![Original 2009 UI with HD text, on the l1j-en classic server](docs/capturas/fork_2026-11-17.png)
 
+## Install
+
+On **Linux, macOS or BSD**, one command downloads the latest version, builds it and installs it for your user
+(no root needed, except to install missing build tools, which it asks for first):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/javiercorrea/lineage-cliente/latest/instalar.sh | sh
+```
+
+Run it again to update. It installs `~/.local/bin/lineage` plus a desktop entry on Linux and BSD, and
+`~/Applications/Lineage.app` on macOS. Options (environment variables) are described at the top of
+[instalar.sh](instalar.sh), e.g. `LIN_REF=v0.2.1` for a given version. BSD is untested.
+
+### Step by step
+
+The same, by hand:
+
+1. **Install the build tools:** CMake 3.25+, Ninja, Git, a C++23 compiler (GCC 13+ or Clang 17+) and, on Linux and
+   BSD, the X11/Wayland, ALSA/PulseAudio and Vulkan headers that SDL3 builds against.
+
+   ```sh
+   # Debian, Ubuntu
+   sudo apt-get install build-essential cmake ninja-build git pkg-config libx11-dev libxext-dev libxrandr-dev \
+     libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev \
+     libasound2-dev libpulse-dev libvulkan-dev
+   # Fedora
+   sudo dnf install gcc-c++ cmake ninja-build git pkgconf libX11-devel libXext-devel libXrandr-devel \
+     libXcursor-devel libXi-devel libXScrnSaver-devel libXfixes-devel libXtst-devel wayland-devel \
+     libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel vulkan-loader-devel
+   # Arch
+   sudo pacman -S --needed base-devel cmake ninja git libx11 libxext libxrandr libxcursor libxi libxss \
+     libxfixes libxtst wayland libxkbcommon alsa-lib libpulse vulkan-icd-loader vulkan-headers
+   # FreeBSD
+   sudo pkg install cmake ninja git pkgconf libX11 libXext libXrandr libXcursor libXi libXScrnSaver libXfixes \
+     libXtst wayland libxkbcommon vulkan-loader vulkan-headers
+   # macOS (Xcode Command Line Tools and Homebrew)
+   xcode-select --install
+   brew install cmake ninja git
+   ```
+
+2. **Download the source** of the latest version (`latest` always points to it; or a version such as `v0.2.1`):
+
+   ```sh
+   git clone --depth 1 --branch latest https://github.com/javiercorrea/lineage-cliente.git
+   cd lineage-cliente
+   ```
+
+3. **Build** (SDL3 and the other libraries are downloaded and built by CMake, pinned to exact versions):
+
+   ```sh
+   cmake --preset release
+   cmake --build --preset release
+   ```
+
+4. **Install** for your user (`--prefix /usr/local` with `sudo` for every user):
+
+   ```sh
+   cmake --install build/release --prefix ~/.local
+   ```
+
+   This installs `~/.local/bin/lineage`, the client and its `datos/` in `~/.local/share/lineage-cliente/`, and on
+   Linux and BSD a desktop entry and icon. On macOS, `herramientas/empaquetar_macos.sh` builds `Lineage.app`
+   instead (in `dist/`).
+
+5. **Run** `lineage` (or `~/.local/bin/lineage` if `~/.local/bin` is not in your `PATH`). The first time it asks
+   for the folder of your Lineage installation.
+
+To uninstall, delete `~/.local/bin/lineage`, `~/.local/share/lineage-cliente/`,
+`~/.local/share/applications/lineage.desktop` and `~/.local/share/icons/hicolor/256x256/apps/lineage.png`.
+
+Prebuilt packages (macOS `.dmg`, Windows `.zip`, Linux AppImage and `.tar.gz`) are on the
+[Releases](https://github.com/javiercorrea/lineage-cliente/releases/latest) page. The game itself is not included:
+the first time, the client asks for the folder of your Lineage installation.
+
 ## What the fork does
 
 - **Platforms:** Linux (Ubuntu 24.04, Vulkan with SPIR-V shaders compiled from GLSL) and macOS (Metal, hand-written
@@ -74,10 +148,11 @@ cmake --build --preset debug
 LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, resource tests are skipped
 ```
 
-Programs: `build/<preset>/lineage` (the game), `settings` (settings editor), `explorador` (resource explorer),
-`lin_tests`. macOS packaging: `herramientas/empaquetar_macos.sh [VERSION]` builds `Lineage.app` and a `.dmg`
-(not notarized: right-click, Open); the `v*` tag workflow in `.github/workflows/release.yml` is upstream's and
-untested in this fork.
+Programs: `build/<preset>/lineage` (the game; its settings are edited in-game), `explorador` (resource explorer),
+`lin_tests`. Packaging: `herramientas/empaquetar_macos.sh [VERSION]` (`Lineage.app` and a `.dmg`, not notarized:
+right-click, Open), `herramientas/empaquetar_windows.ps1` (`.zip`) and `herramientas/empaquetar_linux.sh` (AppImage and `.tar.gz`).
+A `v*` tag runs `.github/workflows/release.yml`, which publishes the release with all of them (macOS, Windows and
+Linux x64/arm64).
 
 ## Configuration
 

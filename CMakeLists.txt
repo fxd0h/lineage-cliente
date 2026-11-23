@@ -217,6 +217,22 @@ if(APPLE)
     target_compile_definitions(lineage PRIVATE LIN_MACOS=1)
 endif()
 
+# Instalación (Linux, BSD y macOS; `cmake --install <build> --prefix ~/.local`, o `ninja install` / `make install`):
+#   <prefix>/share/lineage-cliente/lineage y datos/ (el cliente busca datos/ junto a su ejecutable),
+#   <prefix>/bin/lineage (un lanzador hacia el anterior) y, fuera de macOS, el acceso directo y el ícono del escritorio.
+# Windows y el .app de macOS se arman con herramientas/empaquetar_*.
+if(NOT WIN32)
+    include(GNUInstallDirs)
+    set(LIN_DIR_INSTALADO "${CMAKE_INSTALL_DATADIR}/lineage-cliente")
+    install(TARGETS lineage RUNTIME DESTINATION "${LIN_DIR_INSTALADO}")
+    install(DIRECTORY datos DESTINATION "${LIN_DIR_INSTALADO}")
+    install(PROGRAMS herramientas/linux/lineage.sh DESTINATION "${CMAKE_INSTALL_BINDIR}" RENAME lineage)
+    if(NOT APPLE)
+        install(FILES herramientas/linux/lineage.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+        install(FILES herramientas/linux/lineage.png DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps")
+    endif()
+endif()
+
 add_executable(explorador tools/explorador.cpp)
 target_link_libraries(explorador PRIVATE lin_ui)
 

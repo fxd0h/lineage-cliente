@@ -1,8 +1,8 @@
 # Empaquetado y releases.
-# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS y
-#   los .zip de Windows (x64 y arm64), y publica la release en GitHub con los tres adjuntos y notas generadas.
+# - Un tag v* (git tag v0.1.0 && git push origin v0.1.0): compila, corre los tests, arma el .dmg de macOS, los
+#   .zip de Windows y el AppImage y el .tar.gz de Linux (x64 y arm64), y publica la release en GitHub con notas generadas.
+#   Después mueve el tag `latest` a esa versión: instalar.sh (curl ... | sh) instala lo que apunta `latest`.
 # - A mano (Actions > Release > Run workflow): lo mismo sin publicar; los paquetes quedan como artefactos.
-# Linux todavía no tiene paquete (PLAN_PORTADO.md, Fase 4).
 name: Release
 
 on:
@@ -75,10 +75,48 @@ jobs:
           name: lineage-windows-${{ matrix.arch }}
           path: ${{ steps.paquete.outputs.zip }}
 
+  linux:
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest, arch: x64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Herramientas
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxfixes-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libvulkan-dev \
+            glslang-tools mesa-vulkan-drivers xvfb  # shaders a SPIR-V; Vulkan por software para tests/test_gpu.cpp
+
+      - name: Tests
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --target lin_tests
+          xvfb-run -a build/debug/lin_tests  # sin LINEAGE_DIR se saltan los que necesitan los recursos del juego
+
+      - name: Empaquetar
+        id: paquete
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || VERSION="0.0.0-${GITHUB_SHA::7}"
+          herramientas/empaquetar_linux.sh "$VERSION"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lineage-linux-${{ matrix.arch }}
+          path: |
+            dist/Lineage-*-linux-*.tar.gz
+            dist/Lineage-*-linux-*.AppImage
+          if-no-files-found: error
+
   # La release se publica una vez, con los paquetes de todos los jobs.
   publicar:
     if: github.ref_type == 'tag'
-    needs: [macos, windows]
+    needs: [macos, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -89,4 +127,14 @@ jobs:
       - name: Publicar la release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          gh release create "$GITHUB_REF_NAME" paquetes/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+
+      # `latest` apunta siempre a la última versión publicada (instalar.sh la descarga). Lo mueve el workflow,
+      # no una persona: un push del GITHUB_TOKEN no dispara otros workflows, y `latest` no coincide con v*.
+      - name: Mover el tag latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true ||
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"

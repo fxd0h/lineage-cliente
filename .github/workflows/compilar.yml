@@ -71,6 +71,17 @@ jobs:
         if: runner.os == 'Linux'
         run: xvfb-run -a ctest --preset debug
 
+      # instalar.sh de punta a punta (el curl | sh del README): baja esta misma rama, compila la versión final e
+      # instala en una carpeta temporal. Las dependencias ya están instaladas, así que no pide nada.
+      - name: Instalador (Linux x64)
+        if: matrix.nombre == 'Linux x64'
+        run: |
+          LIN_REF="${{ github.head_ref || github.ref_name }}" LIN_SRC="$RUNNER_TEMP/src" LIN_PREFIX="$RUNNER_TEMP/prefijo" sh instalar.sh
+          test -x "$RUNNER_TEMP/prefijo/share/lineage-cliente/lineage"
+          test -f "$RUNNER_TEMP/prefijo/share/lineage-cliente/datos/sprite_table.txt"
+          test -x "$RUNNER_TEMP/prefijo/bin/lineage"
+          grep -q "^Exec=$RUNNER_TEMP/prefijo/share/lineage-cliente/lineage$" "$RUNNER_TEMP/prefijo/share/applications/lineage.desktop"
+
       # El .zip de la versión final (preset release), como artefacto descargable de la corrida: comprueba
       # que la versión final compila y deja un paquete para probar.
       - name: Empaquetar (Windows)

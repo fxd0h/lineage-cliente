@@ -26,7 +26,7 @@ código. El idioma del proyecto es el **español**: código (identificadores), c
    Nunca conectarse al servidor privado real ni a ningún otro servidor público.
 2. **No subir recursos del juego.** Ni `.pak`, `.idx`, mapas, sprites, sonidos ni imágenes extraídas.
    Se leen de la instalación del usuario en tiempo de ejecución. Las capturas de `docs/capturas/` son
-   la única excepción, porque documentan el trabajo. El repo es **privado**: no cambiar la visibilidad.
+   la única excepción, porque documentan el trabajo. El repo es **público**: lo que se sube lo ve cualquiera.
 3. **Licencia GPLv3** ([LICENSE](LICENSE)): el código de formatos se escribió leyendo l1j-client (GPLv3)
    y `datos/sprite_table.txt` viene de ahí.
 4. **Nada de asignaciones de memoria en el bucle del frame.** `tests/test_asignaciones.cpp` lo verifica.
@@ -202,7 +202,7 @@ Mantener la lógica en el archivo propio; en los archivos compartidos, solo los 
 - Integrar seguido: `git fetch && git rebase origin/main`. Al terminar, PR a `main` con `gh pr create`
   (descripción: qué, cómo se verificó y qué queda pendiente). Si nadie revisa, el mismo agente puede
   mergear después de rebasear y volver a correr los tests.
-- **Cuenta: siempre `javiercorrea`.** El repo es privado de esa cuenta y todo lo que se hace en él va a
+- **Cuenta: siempre `javiercorrea`.** El repo es de esa cuenta y todo lo que se hace en él va a
   su nombre: commits, push, PRs e issues. En esta máquina hay otras identidades (la de git global, el
   llavero de macOS, la cuenta activa de `gh`), que no se usan aquí.
   - **Commits:** autor `javiercorrea <58250+javiercorrea@users.noreply.github.com>` (el email noreply de
@@ -219,6 +219,12 @@ Mantener la lógica en el archivo propio; en los archivos compartidos, solo los 
   - `git worktree add ../cliente-<tema> -b agente/<tema>`;
   - cada worktree con su propio `build/`.
 - **Commits:** en español, en imperativo y con alcance: `social: contar miembros en la página del clan`.
+- **Versiones:** el PR de una versión agrega su sección arriba de todo en `CHANGES.md` (los PRs mezclados desde el
+  tag anterior). Mezclado, se marca el tag `vX.Y.Z` sobre el commit de merge y se sube: `release.yml` compila,
+  publica la release (macOS, Windows y Linux) y **mueve el tag `latest`** a esa versión. `latest` apunta siempre
+  a la última versión publicada y es lo que descarga `instalar.sh` (el `curl ... | sh` del README): no moverlo a
+  mano ni borrarlo, y no subir tags de versiones viejas después de una nueva (el workflow movería `latest`
+  hacia atrás).
 
 ### Repartir el trabajo
 
