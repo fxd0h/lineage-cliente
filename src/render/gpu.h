@@ -171,6 +171,10 @@ public:
     int alto() const { return alto_; }
     u32 llamadas_ultimo_frame() const { return llamadas_; }
     u32 instancias_ultimo_frame() const { return instancias_previas_; }
+    // Tiempo de GPU de cada cuadro (comando enviado -> terminado), para `perf on`. Mientras está activo, el cuadro
+    // espera a la GPU: mide, pero no deja que CPU y GPU trabajen en paralelo.
+    void medir_gpu(bool si) { medir_gpu_ = si; }
+    double tomar_ms_gpu() { const double v = cuadros_gpu_ ? ms_gpu_ / cuadros_gpu_ : 0; ms_gpu_ = 0; cuadros_gpu_ = 0; return v; }
     u32 paginas_usadas() const { return empaquetado_.paginas_usadas(); }
     u32 reemplazos_atlas() const { return empaquetado_.reemplazos(); }
 
@@ -194,6 +198,9 @@ private:
 
     SDL_Window* ventana_ = nullptr;
     SDL_GPUDevice* dev_ = nullptr;
+    bool medir_gpu_ = false;
+    double ms_gpu_ = 0;
+    u32 cuadros_gpu_ = 0;
     bool mailbox_ = false;          // modo de presentación MAILBOX: el bucle lo regula pace_frame()
     Uint64 next_frame_ns_ = 0;
     void pace_frame();

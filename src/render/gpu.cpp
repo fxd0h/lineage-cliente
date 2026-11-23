@@ -889,8 +889,10 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
     if (x >= grid_w_ || y >= grid_h_ || x + w <= 0 || y + h <= 0) return;  // fuera de pantalla
     empaquetado_.usar(r.pagina, frame_);
     // Al píxel real más cercano: con muestreo "nearest" el arte no se deforma en posiciones
-    // fraccionarias (cada texel ocupa siempre escala × escala píxeles).
-    const float e = static_cast<float>(escala_ > 0 ? escala_ : 1);
+    // fraccionarias (cada texel ocupa siempre escala × escala píxeles). Con un filtro de escalado, al píxel
+    // lógico: el filtro lee un punto por bloque de escala × escala, y un sprite a mitad de bloque se le corre
+    // de a saltos que en x y en y caen en cuadros distintos (en diagonal, el borde tiembla).
+    const float e = escalado_ != Escalado::ENTERO ? 1.0f : static_cast<float>(escala_ > 0 ? escala_ : 1);
     x = std::round(x * e) / e;
     y = std::round(y * e) / e;
     constexpr float inv = 1.0f / TAM_PAGINA;
@@ -1376,7 +1378,15 @@ void Gpu::presentar() {
             SDL_BlitGPUTexture(cmd, &b);
         }
     }
-    SDL_SubmitGPUCommandBuffer(cmd);
+    if (SDL_GPUFence* f = medir_gpu_ ? SDL_SubmitGPUCommandBufferAndAcquireFence(cmd) : nullptr) {
+        const Uint64 t0 = SDL_GetTicksNS();
+        SDL_WaitForGPUFences(dev_, true, &f, 1);
+        SDL_ReleaseGPUFence(dev_, f);
+        ms_gpu_ += static_cast<double>(SDL_GetTicksNS() - t0) / 1e6;
+        ++cuadros_gpu_;
+    } else if (!medir_gpu_) {
+        SDL_SubmitGPUCommandBuffer(cmd);
+    }
     terminar_frame(n);
     pace_frame();
 }
