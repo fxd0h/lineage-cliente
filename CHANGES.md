@@ -7,6 +7,23 @@ con su verificación y lo pendiente, está en [docs/upstream/ENTREGABLES.md](doc
 Al hacer una versión nueva: agregar su sección arriba de todo, con los PRs mergeados desde el tag
 anterior (`git log --first-parent <tag anterior>..main`).
 
+## v0.2.2 (2026-11-22)
+
+### Agregado
+- **Botón Sort en la interfaz original:** junto a la X del inventario; el orden guardado se aplica en las dos
+  interfaces (#55).
+- **`perf on` informa el tiempo de GPU** por cuadro (#54).
+
+### Cambiado
+- **Con un filtro de escalado, la escena se dibuja a la grilla lógica** y el filtro escribe la imagen final: menos
+  memoria y trabajo de GPU a escala alta (#54).
+- **Flechas de las barras de scroll:** triángulos hacia arriba y hacia abajo en lugar de "^" y "v" (#55).
+
+### Corregido
+- **Temblor al moverse en diagonal** con un filtro de escalado (xBR, FSR, CRT, Anime4K) (#54).
+- **Pergamino de teleport:** el normal va siempre al azar; solo el bendito deja elegir un marcador, y lo deja aunque
+  no se tenga el Ring of Teleport Control (#55).
+
 ## v0.2.1 (2026-11-22)
 
 ### Agregado
