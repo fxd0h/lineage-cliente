@@ -530,8 +530,8 @@ static void cerrar_medicion(App& a) {
     a.asign_frame_max = a.max_asign;
     a.asign_total = a.acum_asign;
     if (a.perf)
-        LIN_LOG("perf: %.0f fps  cpu %.2f ms (max %.2f)  decod %.2f ms (%u)  asign %llu (max/frame %llu)  inst %u  pag %u (reemplazos %u)  precarga %u  efectos %u (wav %u)  musica %d",
-                a.fps, a.ms_cpu, a.ms_cpu_max, a.ms_decod, a.decodificados, static_cast<unsigned long long>(a.asign_total),
+        LIN_LOG("perf: %.0f fps  gpu %.2f ms  cpu %.2f ms (max %.2f)  decod %.2f ms (%u)  asign %llu (max/frame %llu)  inst %u  pag %u (reemplazos %u)  precarga %u  efectos %u (wav %u)  musica %d",
+                a.fps, a.gpu.tomar_ms_gpu(), a.ms_cpu, a.ms_cpu_max, a.ms_decod, a.decodificados, static_cast<unsigned long long>(a.asign_total),
                 static_cast<unsigned long long>(a.asign_frame_max), a.gpu.instancias_ultimo_frame(), a.gpu.paginas_usadas(), a.gpu.reemplazos_atlas(),
                 a.g ? a.g->precargas_en_curso() : 0u, a.audio.efectos_tocados(), a.audio.wavs_cargados(), a.audio.musica_actual());
     a.acum_cpu = a.max_cpu = 0;
@@ -556,6 +556,7 @@ void bucle_app(App& a) {
         // zoom es solo del mapa: la interfaz conserva su tamaño.
         a.gpu.fijar_escalado(escalado_desde(a.cfg.escalado));
         a.gpu.fijar_texto_hd(a.cfg.texto_hd);
+        a.gpu.medir_gpu(a.perf);
         a.gpu.fijar_vista_fija(a.cfg.vista != "amplia");
         a.gpu.ajustar_vista(a.pantalla == Pantalla::JUEGO || a.pantalla == Pantalla::CARGANDO, a.cfg.zoom, alto_barra(a),
                             a.cfg.ui_simple);

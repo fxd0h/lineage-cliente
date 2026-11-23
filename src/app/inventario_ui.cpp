@@ -191,9 +191,10 @@ void usar_item(App& a, ObjId item) {
         else abrir_polimorfia(a, item);
         return;
     }
-    // Pergamino de teleport: con marcadores guardados se elige el destino; si no, al azar.
-    if (s != SIN_SLOT && (a.mundo.inventario.items.col<I_USO>()[s] == USO_TELEPORT || a.mundo.inventario.items.col<I_USO>()[s] == USO_TELEPORT_BENDITO)) {
-        if (!elegir_destino(a, item, 0)) enviar(a, cmd::usar_teleport(a.op, item, 0, 0));
+    // Pergamino de teleport: el bendito deja elegir un marcador guardado; el normal va siempre al azar.
+    const u8 uso = s != SIN_SLOT ? a.mundo.inventario.items.col<I_USO>()[s] : 0;
+    if (uso == USO_TELEPORT || uso == USO_TELEPORT_BENDITO) {
+        if (uso == USO_TELEPORT || !elegir_destino(a, item, 0)) enviar(a, cmd::usar_teleport(a.op, item, 0, 0));
         return;
     }
     enviar(a, cmd::usar_item(a.op, item));
@@ -210,7 +211,7 @@ void soltar_item(App& a, ObjId item, bool preguntar) {
 }
 
 void dibujar_inventario(App& a) {
-    if (!uses_original_frame(a, IdVentana::INVENTARIO)) cargar_orden(a);  // saved order: simple UI only; el orden solo se ve aquí: basta con aplicarlo al abrir la ventana
+    cargar_orden(a);  // el orden solo se ve aquí: basta con aplicarlo al abrir la ventana
     Graficos& g = *a.g;
     EntradaFrame& e = a.entrada;
     const Inventario& inv = a.mundo.inventario;
@@ -329,9 +330,10 @@ void dibujar_inventario(App& a) {
         if (a.usar_sobre) g.texto("Click the target item (Esc cancels)", x0 + gr.x, pie_y, kt, rgba(255, 230, 120));
         else g.texto(pie, x0 + gr.x, pie_y, kt, rgba(214, 190, 140));
     }
-    // Ordenar es una función del fork: el inventario 2009 no tiene botón Ordenar (ver docs/fork/AUDIT_ORIGINAL_UI.md sección 8).
-    if (!original && !a.usar_sobre && !a.arrastrando &&
-        ui::boton_texto(g, e, "Sort", x0 + gr.trash_x - 44, y0 + gr.trash_y, 40, BASURA_H))
+    // Ordenar es una función del fork (el inventario 2009 no lo tiene; docs/fork/AUDIT_ORIGINAL_UI.md sección 8),
+    // pero se deja en las dos interfaces. En la original, junto a la X: al lado del basurero están las pestañas.
+    const int sort_x = original ? x0 + 122 : x0 + gr.trash_x - 44, sort_y = original ? y0 + 21 : y0 + gr.trash_y;
+    if (!a.usar_sobre && !a.arrastrando && ui::boton_texto(g, e, "Sort", sort_x, sort_y, 40, BASURA_H))
         ordenar_inventario(a);
     const bool sobre_basura = ui::sobre(e, x0 + gr.trash_x, y0 + gr.trash_y, BASURA_W, BASURA_H);
     dibujar_basurero(g, x0 + gr.trash_x - (original ? 3 : 0), y0 + gr.trash_y, sobre_basura && a.arrastrando);

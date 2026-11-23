@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lineage
+Comment=Cliente de Lineage 1
+Comment[en]=Lineage 1 client
+Exec=lineage
+Icon=lineage
+Terminal=false
+Categories=Game;RolePlaying;
