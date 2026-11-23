@@ -1,10 +1,10 @@
-# Lineage Client: Linux + macOS, original 2009 look (C++23 + SDL3)
+# Lineage Client: Linux, macOS and Windows, original 2009 look (C++23 + SDL3)
 
 A from-scratch Lineage 1 client in C++23 on SDL3 (SDL_GPU). It reads the resources of an original game
-installation and speaks the L1J protocol. This repository is a **fork** of
-[javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente) (GPL-3.0). The fork's goal is
-to play Lineage 1 natively on **Linux** (and macOS) with a look and feel faithful to the **2009 US client**
-(`S3EP1U`), which was reverse engineered to get windows, layouts, fonts and colours right.
+installation and speaks the L1J protocol. It runs natively on **Linux, macOS and Windows** (x64 and arm64) with a
+look and feel faithful to the **2009 US client** (`S3EP1U`), which was reverse engineered to get windows, layouts,
+fonts and colours right. The original-client interface and the Linux port came from
+[fxd0h's fork](https://github.com/fxd0h/lineage-cliente), merged back in v0.2.0.
 
 No game assets are included: you need your own Lineage installation (the folder with `Sprite*.pak`, `Tile.pak`,
 `Text.pak`, `map/`, `font/`).
@@ -81,20 +81,29 @@ The same, by hand:
 To uninstall, delete `~/.local/bin/lineage`, `~/.local/share/lineage-cliente/`,
 `~/.local/share/applications/lineage.desktop` and `~/.local/share/icons/hicolor/256x256/apps/lineage.png`.
 
-Prebuilt packages (macOS `.dmg`, Windows `.zip`, Linux AppImage and `.tar.gz`) are on the
-[Releases](https://github.com/javiercorrea/lineage-cliente/releases/latest) page. The game itself is not included:
-the first time, the client asks for the folder of your Lineage installation.
+### Prebuilt packages
 
-## What the fork does
+The [Releases](https://github.com/javiercorrea/lineage-cliente/releases/latest) page has, for every version:
 
-- **Platforms:** Linux (Ubuntu 24.04, Vulkan with SPIR-V shaders compiled from GLSL) and macOS (Metal, hand-written
-  MSL twins of every shader). Verified on Intel Iris Xe (Mesa) and Apple M5 Pro. Windows: HLSL versions of every
-  shader and the DXIL path exist but are untested; the rest of the port is not started.
+- **macOS:** `.dmg` (Apple Silicon and Intel). Not notarized: the first time, right-click the app and choose Open.
+- **Windows** (x64 and arm64): `.zip`. Unzip anywhere and run `lineage.exe`. Not signed: SmartScreen warns the
+  first time ("More info" > "Run anyway"). Requires Windows 10 or 11 with DirectX 12.
+- **Linux** (x64 and arm64): AppImage (`chmod +x` and run) or `.tar.gz`. Requires glibc 2.39 or newer (Ubuntu
+  24.04, Debian 13, Fedora 40) and a Vulkan driver.
+
+The game itself is not included: the first time, the client asks for the folder of your Lineage installation.
+
+## Features
+
+- **Platforms:** Linux (Vulkan, SPIR-V shaders compiled from GLSL), macOS (Metal, hand-written MSL twins of every
+  shader) and Windows (Direct3D 12, HLSL shaders compiled to DXIL; Winsock2, memory-mapped files with UTF-16 paths).
+  x64 and arm64 everywhere. CI builds and tests all five on every pull request. Played on Intel Iris Xe (Mesa)
+  and Apple M5 Pro; Windows tested on Windows 11 arm64 in a VM.
 - **Original 2009 client UI is the default** (`ui_simple=0`): framed inventory, status, spellbook, options, volume,
   pet, party/pledge/buddy and private-shop windows, shop list and tooltips, F-key bar with 3 pages, HP/MP floating
   window, NPC HTML pages in the original GDI-style face, original cursors, buff icons, overhead bars, level-up
   effect, game-time orb, zone type label. Layers, offsets, colours and fonts are read from the 2009 binary.
-  Upstream's simple text interface is still there (`ui_simple=1`, F2).
+  The simpler text interface is still there (`ui_simple=1`, F2).
 - **Original window behaviour:** windows drag only by the title bar, at most four open at once, Esc closes them all
   (or opens the Esc/restart menu, which also pops up on death), right double-click closes one; original default
   positions, status page bars, spellbook tabs and slots per class, trade window and yes/no bar, inventory
@@ -124,29 +133,27 @@ the first time, the client asks for the folder of your Lineage installation.
 - **Test tooling:** live-control socket (debug builds), Python driver and scripted live tests, invisible test
   instances on Xvfb (`herramientas/lanzar_prueba.sh`).
 
-Features inherited from upstream (login, character selection and creation, movement, chat, combat, inventory,
-spells, NPCs and trading, party/trade/clan, houses, castles and sieges, boards and mail, shops, weather, zone
-music, five interface languages, settings editor, resource explorer) work as before; their upstream-era status
-write-up is kept in [docs/upstream/](docs/upstream/README.md).
+- **Core game:** login, character selection and creation, movement, chat, combat, inventory, spells, NPCs and
+  trading, party/trade/clan, houses, castles and sieges, boards and mail, shops, weather, zone music, five interface
+  languages, an in-game settings window and a resource explorer. The status write-up of these is in
+  [docs/upstream/](docs/upstream/README.md).
 
-## Requirements and build
+## Building for development
 
-Common: CMake 3.25+, Ninja, a C++23 compiler (GCC 13 / Apple Clang). SDL3 3.4.18, stb, dr_mp3 and doctest are
-fetched by CMake (pinned).
-
-**Linux** (Ubuntu 24.04 tested): `cmake ninja-build`, a Vulkan driver, and the SDL3 build dependencies
-`libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libwayland-dev
-libxkbcommon-dev libasound2-dev libpulse-dev libdecor-0-dev libdrm-dev libgbm-dev libudev-dev`.
-`glslangValidator` is only needed to regenerate shaders (`herramientas/compilar_shaders.sh`; run it after editing
-a GLSL shader, and update the MSL twin in `src/render/gpu.cpp` too).
-
-**macOS**: Xcode Command Line Tools, `brew install cmake ninja`.
+The build tools are those of [Step by step](#step-by-step) (CMake 3.25+, Ninja, a C++23 compiler; SDL3 3.4.18, stb,
+dr_mp3 and doctest are fetched by CMake, pinned). On **Windows**, build from the Visual Studio developer console
+(x64 or arm64) with Ninja (`pip install ninja`): `dxc.exe` from the Windows SDK compiles the shaders.
 
 ```sh
 cmake --preset debug          # or release / debug-asan
 cmake --build --preset debug
 LINEAGE_DIR="/path/to/game" ctest --preset debug   # without LINEAGE_DIR, resource tests are skipped
 ```
+
+A shader change goes into the GLSL file (`src/render/shaders/*.frag`, `*.vert`), its HLSL twin (`*.hlsl`) and its
+MSL twin (`src/render/gpu.cpp` or `shaders_msl_anime4k.h`); `herramientas/compilar_shaders.sh` (needs
+`glslangValidator`) regenerates the embedded SPIR-V. A review of every shader and its cost is in
+[docs/analisis/REVISION_SHADERS.md](docs/analisis/REVISION_SHADERS.md).
 
 Programs: `build/<preset>/lineage` (the game; its settings are edited in-game), `explorador` (resource explorer),
 `lin_tests`. Packaging: `herramientas/empaquetar_macos.sh [VERSION]` (`Lineage.app` and a `.dmg`, not notarized:
@@ -157,9 +164,11 @@ Linux x64/arm64).
 ## Configuration
 
 The client takes no command-line parameters. Everything comes from `settings.ini`:
-`~/.local/share/Lineage/LineageCliente/settings.ini` on Linux,
-`~/Library/Application Support/Lineage/LineageCliente/settings.ini` on macOS. Edit it with `build/<preset>/settings`
-(close the game first) or by hand. Debug builds accept `LIN_CONFIG=/path/own.ini` to use another file.
+`~/.local/share/Lineage/LineageCliente/settings.ini` on Linux and BSD,
+`~/Library/Application Support/Lineage/LineageCliente/settings.ini` on macOS and
+`%APPDATA%\Lineage\LineageCliente\settings.ini` on Windows. Every option is in the settings window (Settings on the
+login screen, Options in game), which applies changes at once or says when a restart is needed; the file can also
+be edited by hand with the game closed. Debug builds accept `LIN_CONFIG=/path/own.ini` to use another file.
 
 ```ini
 juego=/path/to/Lineage-US-2009
@@ -177,10 +186,10 @@ texto_hd=1
 | `juego` | Main game folder |
 | `juego_extra` | Fallback game folder, repeatable, tried in order |
 | `servidor`, `servidor_elegido` | One line per server: `name\|host\|port\|profile\|last account`; profile is `jp363`, `tw380` or `s3ep1`. The chosen one is `servidor_elegido` |
-| `ui_simple` | `0` (default): original 2009 UI; `1`: upstream's simple text UI (F2 toggles) |
+| `ui_simple` | `0` (default): original 2009 UI; `1`: the simple text UI (F2 toggles) |
 | `texto_hd` | `1` (default): HD text pass; `0`: pixel text in the 640x480 frame |
 | `fuente_original` | `1` (default): game's `eng.fnt` for ASCII; `0`: Departure Mono |
-| `vista`, `escalado` | `fija`/`amplia`; `entero`/`xbr`/`fsr`/`crt`/`anime4k` |
+| `vista`, `escalado` | `amplia` (default, fills the window) or `fija` (640x480 with black bars); `fsr` (default), `entero`, `xbr`, `crt` or `anime4k` |
 | `hd`, `lista_sprites`, `idioma`, `logo` | HD UI pack folder, plaintext `list.spz` path, interface language, simple-login logo |
 
 The full list (volume, effects, auto-buffs, shortcut bars...) is in [docs/fork/REFERENCE.md](docs/fork/REFERENCE.md).
@@ -208,13 +217,13 @@ servidor_classic/detener.sh
 Accounts are created on first login with the password typed that time. Server changes are kept reproducible as
 `*.patch` files, idempotent `corregir_db.sql` and migration scripts (e.g. `migrar_fx.py`). Evaluations:
 [l1j-en classic](docs/fork/SERVER_L1JEN_EVALUATION.md), [Whale 3.80C](docs/fork/SERVER_380_EVALUATION.md),
-[3.81C data coverage](docs/fork/DATA_COVERAGE_381.md). The classic server also carries fork patches for alliances,
+[3.81C data coverage](docs/fork/DATA_COVERAGE_381.md). The classic server also carries our patches for alliances,
 the Giran Bugbear Race and several l1j-en issues; the Whale server has Linux support, alliance and English item
 names.
 
 ## Controls
 
-F1 lists all keys in game. Highlights (original-client hotkeys): Ctrl+I inventory, Ctrl+A status, Ctrl+S magic,
+F1 lists all keys in game (simple UI). Highlights (original-client hotkeys): Ctrl+I inventory, Ctrl+A status, Ctrl+S magic,
 Ctrl+C social, Ctrl+V options, Ctrl+Q restart/quit, F5-F12 spells/items, Ctrl+1..8 = F5..F12, Ctrl+R floating
 HP/MP, Ctrl+T chat size, Ctrl+X attack mode, Ctrl+P screenshot. Hold the left button to walk or attack; Ctrl+click
 forces an attack on NPCs/players; F2 toggles the UI mode; Shift+F5 cycles the scaling filter; Alt+Enter toggles
@@ -230,33 +239,37 @@ original UI are tracked in [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIG
 ## Development and testing
 
 Rules, architecture and recipes for people and coding agents are in [AGENTS.md](AGENTS.md). Tests: doctest
-(`lin_tests`). Debug builds open a live-control Unix socket driven by `herramientas/lin_ctl.py` and the scripts in
-`herramientas/pruebas/`; launch test clients only with `herramientas/lanzar_prueba.sh <own.ini>` so they run on an
-invisible display. Fork notes, changes and audits: [docs/fork/](docs/fork/README.md).
+(`lin_tests`). Debug builds open a live-control socket (a Unix socket; TCP on Windows) driven by
+`herramientas/lin_ctl.py` and the scripts in `herramientas/pruebas/`; on Linux, `herramientas/lanzar_prueba.sh
+<own.ini>` runs test clients on an invisible display. `perf on` logs frame, CPU and GPU times. Version history:
+[CHANGES.md](CHANGES.md). Notes, changes and audits of the original-UI work: [docs/fork/](docs/fork/README.md).
 
 ## Known gaps
 
-- Shop and options windows are partly upstream's; the full list of differences from the 2009 UI is in
+- Shop and options windows are partly from the simple UI; the full list of differences from the 2009 UI is in
   [docs/fork/AUDIT_ORIGINAL_UI.md](docs/fork/AUDIT_ORIGINAL_UI.md).
 - New-monster animations from the encrypted `list.spz` are not decoded.
-- Windows port: shaders are ported to HLSL/DXIL but untested; Winsock and file mapping not started; no CI.
+- Packages are not signed: macOS asks to confirm the first launch and Windows SmartScreen warns; no Windows
+  installer yet (the `.zip` only).
+- BSD builds are untested.
 - Not yet matched to the original: the time-orb sparkle overlays, cursor states 14 / 16 and the selected-spell variant of 8, the cooking
   progress bar (the l1j-en server never starts it) (see the audit, `RE_ROUND5.md` and `RE_ROUND6.md`).
 - Approximate: the bubble text block position inside its rectangle and the downward flip of a bubble clipped at the top
   (inferred, RE_ROUND7 section 1).
-- Interface translations (es, en, pt, de, fr) cover login, character screens and the settings editor only.
+- Interface translations (es, en, pt, de, fr) cover login, character screens and the settings window only.
 - Server text for `tw380` depends on Whale's Big5 output and the data in the game folder; see the evaluations above.
 
-## Issues and discussions
+## Issues
 
-Bug reports and feature requests go to [Issues](https://github.com/fxd0h/lineage-cliente/issues); questions,
-setup help and ideas to [Discussions](https://github.com/fxd0h/lineage-cliente/discussions). When reporting a
-UI difference from the original client, a screenshot of both helps a lot. Game assets are never accepted.
+Bug reports, feature requests and setup questions go to
+[Issues](https://github.com/javiercorrea/lineage-cliente/issues). When reporting a UI difference from the original
+client, a screenshot of both helps a lot. Game assets are never accepted.
 
 ## Credits and license
 
-Upstream client by Javier Correa ([javiercorrea/lineage-cliente](https://github.com/javiercorrea/lineage-cliente)).
-Its original README and status tracker are kept in [docs/upstream/](docs/upstream/README.md). The format code derives
+Client by Javier Correa; the original 2009 interface, the Linux port and the `tw380`/`s3ep1` profiles by fxd0h
+([fork](https://github.com/fxd0h/lineage-cliente), merged in v0.2.0). The earlier README and status tracker are kept
+in [docs/upstream/](docs/upstream/README.md). The format code derives
 from [l1j-client](https://github.com/uglyoldbob/l1j-client) (GPLv3), as does `datos/sprite_table.txt`, so the client
 is distributed under **GPL-3.0** ([LICENSE](LICENSE)). Servers: L1J-JP, l1j-en (classic) and L1JGO-Whale
 (eddy7697 fork), each under its own license. Interface font Departure Mono: SIL OFL 1.1
