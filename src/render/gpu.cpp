@@ -826,6 +826,7 @@ void Gpu::cerrar() {
     SDL_ReleaseGPUTexture(dev_, luz_);
     SDL_ReleaseGPUTransferBuffer(dev_, subida_luz_);
     SDL_ReleaseGPUTexture(dev_, copia_);
+    SDL_ReleaseGPUTexture(dev_, salida_);
     for (SDL_GPUGraphicsPipeline* p : a4k_pipe_) SDL_ReleaseGPUGraphicsPipeline(dev_, p);
     SDL_ReleaseGPUTexture(dev_, a4k_a_);
     SDL_ReleaseGPUTexture(dev_, a4k_b_);
@@ -889,10 +890,9 @@ void Gpu::dibujar_escalado(const RegionAtlas& r, float x, float y, float w, floa
     if (x >= grid_w_ || y >= grid_h_ || x + w <= 0 || y + h <= 0) return;  // fuera de pantalla
     empaquetado_.usar(r.pagina, frame_);
     // Al píxel real más cercano: con muestreo "nearest" el arte no se deforma en posiciones
-    // fraccionarias (cada texel ocupa siempre escala × escala píxeles). Con un filtro de escalado, al píxel
-    // lógico: el filtro lee un punto por bloque de escala × escala, y un sprite a mitad de bloque se le corre
-    // de a saltos que en x y en y caen en cuadros distintos (en diagonal, el borde tiembla).
-    const float e = escalado_ != Escalado::ENTERO ? 1.0f : static_cast<float>(escala_ > 0 ? escala_ : 1);
+    // fraccionarias (cada texel ocupa siempre escala × escala píxeles). Con un filtro de escalado la escena va a la
+    // grilla lógica, así que al píxel lógico: el filtro recibe la imagen entera de cada cuadro, sin bordes corridos.
+    const float e = static_cast<float>(escala_escena() > 0 ? escala_escena() : 1);
     x = std::round(x * e) / e;
     y = std::round(y * e) / e;
     constexpr float inv = 1.0f / TAM_PAGINA;
@@ -1061,7 +1061,26 @@ void Gpu::ajustar_vista(bool ampliable, int zoom, int franja, bool solo_mundo) {
 }
 
 bool Gpu::crear_destino() {
-    int w = grid_w_ * escala_, h = grid_h_ * escala_;
+    // Con un filtro de escalado la escena se dibuja a la grilla lógica: el filtro lee un punto por píxel lógico y hace el
+    // escalado él mismo (dibujarla a escala × escala sería trabajo que el filtro no usa).
+    salida_w_ = grid_w_ * escala_;
+    salida_h_ = grid_h_ * escala_;
+    if (escalado_ != Escalado::ENTERO && (!salida_ || salida_tw_ != salida_w_ || salida_th_ != salida_h_)) {
+        SDL_ReleaseGPUTexture(dev_, salida_);  // SDL la libera cuando la GPU termina de usarla
+        SDL_GPUTextureCreateInfo ts{};
+        ts.type = SDL_GPU_TEXTURETYPE_2D;
+        ts.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        ts.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+        ts.width = static_cast<Uint32>(salida_w_);
+        ts.height = static_cast<Uint32>(salida_h_);
+        ts.layer_count_or_depth = 1;
+        ts.num_levels = 1;
+        salida_ = SDL_CreateGPUTexture(dev_, &ts);
+        salida_tw_ = salida_ ? salida_w_ : 0;
+        salida_th_ = salida_ ? salida_h_ : 0;
+        if (!salida_) LIN_LOG("Textura de salida de %dx%d: %s", salida_w_, salida_h_, SDL_GetError());
+    }
+    int w = grid_w_ * escala_escena(), h = grid_h_ * escala_escena();
     if (destino_ && w == destino_w_ && h == destino_h_) return true;
     if (destino_) SDL_ReleaseGPUTexture(dev_, destino_);  // SDL la libera cuando la GPU termina de usarla
     SDL_GPUTextureCreateInfo td{};
@@ -1299,15 +1318,14 @@ void Gpu::presentar() {
     if (!ruta_captura_.empty()) cmd = guardar_captura(cmd, destino_, destino_w_, destino_h_, ruta_captura_, true);
     if (!cmd) return terminar_frame(n);  // el comando que sigue a la captura no se pudo obtener
 
-    // 2b. Filtro de escalado: destino_ (grilla lógica, muestreada por vecino más cercano en el centro de los texels) -> copia_ (mismo
-    // tamaño; a esta altura está libre). La captura final la lee de vuelta.
+    // 2b. Filtro de escalado: destino_ (la escena a la grilla lógica) -> salida_ (grilla × escala). La captura final la lee de vuelta.
     SDL_GPUTexture* final_tex = destino_;
     const bool hay_texto = texto_hd_ && primer_texto_ < n;
     if (escalado_ == Escalado::ANIME4K) {
         if (SDL_GPUTexture* t = pase_anime4k(cmd)) final_tex = t;
-    } else if (escalado_ != Escalado::ENTERO && pipeline_esc_[static_cast<int>(escalado_)] && copia_) {
+    } else if (escalado_ != Escalado::ENTERO && pipeline_esc_[static_cast<int>(escalado_)] && salida_) {
         SDL_GPUColorTargetInfo ot{};
-        ot.texture = copia_;
+        ot.texture = salida_;
         ot.load_op = SDL_GPU_LOADOP_DONT_CARE;
         ot.store_op = SDL_GPU_STOREOP_STORE;
         if (SDL_GPURenderPass* fp = SDL_BeginGPURenderPass(cmd, &ot, 1, nullptr)) {
@@ -1315,14 +1333,28 @@ void Gpu::presentar() {
             SDL_GPUTextureSamplerBinding sb{destino_, muestreo_};
             SDL_BindGPUFragmentSamplers(fp, 0, &sb, 1);
             const float u[4] = {static_cast<float>(grid_w_), static_cast<float>(grid_h_),
-                                static_cast<float>(destino_w_), static_cast<float>(destino_h_)};
+                                static_cast<float>(salida_w_), static_cast<float>(salida_h_)};
             SDL_PushGPUFragmentUniformData(cmd, 0, u, sizeof u);
             SDL_DrawGPUPrimitives(fp, 6, 1, 0, 0);
             SDL_EndGPURenderPass(fp);
-            final_tex = copia_;
+            final_tex = salida_;
         }
     }
-    if (hay_texto && !vista_fija_) pase_texto(cmd, final_tex, destino_w_, destino_h_, 0, nullptr);
+    // Si el filtro no se pudo aplicar (sin su pipeline o sin texturas), la escena a la grilla lógica se agranda por vecino.
+    if (final_tex == destino_ && escala_escena() != escala_ && salida_) {
+        SDL_GPUBlitInfo b{};
+        b.source.texture = destino_;
+        b.source.w = static_cast<Uint32>(destino_w_);
+        b.source.h = static_cast<Uint32>(destino_h_);
+        b.destination.texture = salida_;
+        b.destination.w = static_cast<Uint32>(salida_w_);
+        b.destination.h = static_cast<Uint32>(salida_h_);
+        b.load_op = SDL_GPU_LOADOP_DONT_CARE;
+        b.filter = SDL_GPU_FILTER_NEAREST;
+        SDL_BlitGPUTexture(cmd, &b);
+        final_tex = salida_;
+    }
+    if (hay_texto && !vista_fija_) pase_texto(cmd, final_tex, salida_w_, salida_h_, 0, nullptr);
     if (!ruta_final_.empty()) {
         SDL_GPUTexture* ventana_tex = nullptr;
         if (vista_fija_) {
@@ -1345,7 +1377,7 @@ void Gpu::presentar() {
             cmd = guardar_captura(cmd, ventana_tex, ventana_pw_, ventana_ph_, ruta_final_, false);
             SDL_ReleaseGPUTexture(dev_, ventana_tex);
         } else {
-            cmd = guardar_captura(cmd, final_tex, destino_w_, destino_h_, ruta_final_, false);
+            cmd = guardar_captura(cmd, final_tex, salida_w_, salida_h_, ruta_final_, false);
         }
     }
     if (!cmd) return terminar_frame(n);
@@ -1362,7 +1394,7 @@ void Gpu::presentar() {
             blit_vista(cmd, final_tex, swap);
             if (hay_texto) pase_texto(cmd, swap, static_cast<int>(sw), static_cast<int>(sh), 1, &rect_);
         } else {
-            Uint32 dw = static_cast<Uint32>(destino_w_), dh = static_cast<Uint32>(destino_h_);
+            Uint32 dw = static_cast<Uint32>(salida_w_), dh = static_cast<Uint32>(salida_h_);
             SDL_GPUBlitInfo b{};
             b.source.texture = final_tex;
             b.destination.texture = swap;
@@ -1396,8 +1428,8 @@ void Gpu::presentar() {
 void Gpu::blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUTexture* dst) {
     SDL_GPUBlitInfo b{};
     b.source.texture = src;
-    b.source.w = static_cast<Uint32>(destino_w_);
-    b.source.h = static_cast<Uint32>(destino_h_);
+    b.source.w = static_cast<Uint32>(salida_w_);
+    b.source.h = static_cast<Uint32>(salida_h_);
     b.destination.texture = dst;
     b.destination.x = static_cast<Uint32>(rect_.x);
     b.destination.y = static_cast<Uint32>(rect_.y);
@@ -1405,7 +1437,7 @@ void Gpu::blit_vista(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* src, SDL_GPUText
     b.destination.h = static_cast<Uint32>(rect_.h);
     b.load_op = SDL_GPU_LOADOP_CLEAR;
     b.clear_color = {0, 0, 0, 1};
-    const bool uno_a_uno = rect_.w == destino_w_ && rect_.h == destino_h_;
+    const bool uno_a_uno = rect_.w == salida_w_ && rect_.h == salida_h_;
     b.filter = uno_a_uno ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
     SDL_BlitGPUTexture(cmd, &b);
 }
@@ -1460,7 +1492,7 @@ SDL_GPUCommandBuffer* Gpu::guardar_captura(SDL_GPUCommandBuffer* cmd, SDL_GPUTex
             ih = grid_h_;
             img.resize(static_cast<size_t>(iw) * ih);
             for (int y = 0; y < ih; ++y)
-                for (int x = 0; x < iw; ++x) img[static_cast<size_t>(y) * iw + x] = px[static_cast<size_t>(y * escala_) * w + x * escala_];
+                for (int x = 0; x < iw; ++x) img[static_cast<size_t>(y) * iw + x] = px[static_cast<size_t>(y * escala_escena()) * w + x * escala_escena()];
             datos = img.data();
         }
         SDL_Surface* s = SDL_CreateSurfaceFrom(iw, ih, SDL_PIXELFORMAT_ABGR8888, const_cast<u32*>(datos), iw * 4);

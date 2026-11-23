@@ -11,9 +11,10 @@ lógica mide 1008 × 604 (0,61 Mpx) y la textura de destino `destino_`, 3024 × 
   La cámara se mueve de a fracciones de píxel lógico; el filtro lee un punto por píxel lógico, y los sprites que
   caían a mitad de bloque se le corrían de a saltos que en x y en y llegaban en cuadros distintos. Ahora, con un
   filtro activo, cada instancia se ubica en el píxel lógico entero (`Gpu::dibujar_escalado`).
-- **La mejora grande pendiente:** con un filtro activo la escena se dibuja a escala² (9 veces los píxeles a
-  escala 3) y el filtro usa uno de cada 9. Dibujar la escena a la grilla lógica y dejar que el filtro haga el
-  escalado ahorra ~89 % del trabajo de las pasadas de escena, agua y brillo (sección "Recomendaciones", 1).
+- **Hecho: con un filtro activo, la escena va a la grilla lógica.** Antes se dibujaba a escala² (9 veces los
+  píxeles a escala 3) y el filtro usaba uno de cada 9. Ahora las pasadas de escena, agua y brillo trabajan sobre
+  0,61 Mpx en vez de 5,48 (~89 % menos a escala 3, 94 % a escala 4) y el filtro escribe la imagen final en
+  `salida_` (sección "Recomendaciones", 1).
 - **En una GPU de Apple (M5) nada de esto limita:** todos los modos quedan por debajo de 6 ms por cuadro, con
   la pantalla a 120 Hz. Importa en GPUs integradas de PC (Intel, AMD de gama baja) y en Linux con render por
   software (lavapipe), donde el ancho de banda es 5 a 10 veces menor.
@@ -58,6 +59,26 @@ poca carga la GPU de Apple baja su reloj y el tiempo medido refleja más la frec
 estable es que Anime4K es el más caro (5,7 ms en las dos corridas). Para comparar filtros con precisión hace
 falta una GPU que trabaje cerca de su límite (una integrada de PC) o Instruments (Metal System Trace).
 
+### Después de la recomendación 1
+
+Mismas condiciones, dos corridas:
+
+| Caso | GPU (ms), corrida 1 | GPU (ms), corrida 2 |
+|---|---|---|
+| entero, vista amplia, texto HD | 5,40 | 5,40 |
+| xBR | 5,19 | 4,99 |
+| FSR | 5,21 | 5,30 |
+| CRT | 3,96 | 3,43 |
+| Anime4K | 5,44 | 4,86 |
+| entero, sin texto HD | 4,50 | 4,46 |
+| FSR, vista fija | 5,46 | 5,91 |
+| entero, vista fija | 4,28 | 4,13 |
+
+En la M5 no se ve la mejora: "entero", cuyo camino no cambió, también pasa de 3,4 a 5,4 ms entre series, y
+la variación por la frecuencia de la GPU sigue tapando las diferencias. La ganancia es de cuenta (9 veces menos
+fragmentos y ancho de banda en las pasadas de escena con un filtro) y se va a notar donde la GPU trabaja cerca de
+su límite.
+
 ## Hallazgos por shader
 
 - **`sprite.vert` / `sprite.frag` (escena):** bien. Una sola llamada instanciada por tramo, el vertex shader
@@ -84,7 +105,7 @@ falta una GPU que trabaje cerca de su límite (una integrada de PC) o Instrument
 
 ## Recomendaciones (de más a menos impacto)
 
-1. **Con un filtro activo, dibujar la escena a la grilla lógica.** `destino_` del tamaño de la grilla (0,61 Mpx en
+1. **Hecho (2026-11-22). Con un filtro activo, dibujar la escena a la grilla lógica.** `destino_` del tamaño de la grilla (0,61 Mpx en
    vez de 5,48) para las pasadas 2 a 5, y el filtro escribe directo a la resolución de salida. Ahorra ~89 % de esas
    pasadas a escala 3 (94 % a escala 4), le da al filtro su entrada exacta (ya no hace falta leer en el centro de
    cada bloque ni ubicar las instancias en el píxel lógico) y achica la copia del agua. Costo: los shaders de
