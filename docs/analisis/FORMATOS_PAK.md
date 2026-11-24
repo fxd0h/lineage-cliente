@@ -5,9 +5,12 @@
 tengamos un cliente con esos índices para probar.
 
 **Fuentes:** [srwh1234/L1MapViewer](https://github.com/srwh1234/L1MapViewer) (`Reader/L1IdxReader.cs`,
-`Reader/L1PakReader.cs`, `Algorithm.cs`, `Helper/L1MapHelper.cs`) y [tony1223/PakViewer](https://github.com/tony1223/PakViewer)
-(`PakReader.cs`, `src/Lin.Helper.Core/Pak/IdxHandler.cs`). **L1MapViewer no tiene licencia:** de ahí tomamos el
-formato y las constantes (datos), no el código; nuestra implementación es propia (AES según FIPS-197).
+`Reader/L1PakReader.cs`, `Algorithm.cs`, `Helper/L1MapHelper.cs`), su fork más nuevo
+[tony1223/L1MapViewer](https://github.com/tony1223/L1MapViewer) (`364fcff`, 2026-07-16: `plans/til-block-spec.md`,
+`CLI/S32Parser.cs`, `Reader/L1IdxReader.cs`) y [tony1223/PakViewer](https://github.com/tony1223/PakViewer) (`fbad692`:
+`PakReader.cs`, `src/Lin.Helper.Core/Pak/IdxHandler.cs`). **Ninguno de los L1MapViewer tiene licencia:** de ahí tomamos
+el formato y las constantes (datos), no el código; nuestra implementación es propia (AES según FIPS-197). Ninguno
+menciona `IDXC`.
 
 Todos los enteros son little-endian.
 
@@ -72,10 +75,14 @@ Entrada:              u32 offset en el .pak
 - **Text en `_EXT`:** en algunas versiones (V880, según PakViewer) las entradas y los archivos van además con
   el DES de §2. PakViewer prueba primero sin descifrar y, si los nombres no tienen sentido, con DES; para las
   entradas, el DES empieza en el byte 8 (después de la cabecera), no en el 4.
-- **`_EXTB$`** (PakViewer, `ExtBHandler`): después de la marca de 6 bytes, `i32 cantidad` y entradas de largo
-  variable: `u32 offset`, `i32 tamaño`, `i32 tamaño comprimido`, nombre terminado en 0. Datos en brotli y, si
-  falla, zlib sin los 2 bytes de cabecera. PakViewer documenta otra variante con entradas de 128 bytes en
-  `PakReader.cs:470`. Hay que verificar cuál corresponde con un archivo real antes de implementar.
+- **`_EXTB$`**: hay dos descripciones y hay que verificar con un archivo real cuál vale.
+  - Entradas fijas (`PakReader.cs:470` de PakViewer y `LoadExtB` del fork de L1MapViewer, que la usa para
+    `Tile.idx`): cabecera de 16 bytes y entradas de 128: `u32 ?` (clave de orden), `i32 compresión`,
+    `char nombre[112]`, `u32 offset`, `i32 tamaño sin comprimir`. No guarda el tamaño comprimido: se calcula como
+    la distancia al offset siguiente en orden.
+  - Entradas variables (`ExtBHandler` de PakViewer): después de la marca de 6 bytes, `i32 cantidad` y entradas
+    `u32 offset`, `i32 tamaño`, `i32 tamaño comprimido`, nombre terminado en 0. Datos en brotli y, si falla,
+    zlib sin los 2 bytes de cabecera.
 
 ### Plan
 
@@ -105,25 +112,61 @@ Según `Helper/L1MapHelper.cs`:
   ignoran y solo se usan los `.s32`.
 - **Tiles al doble:** cada medio rombo mide 48×24 en vez de 24×12, así que un bloque de mapa ocupa
   64·48·2 × 64·24·2 px (6144 × 3072) en vez de 3072 × 1536. En `drawTilBlockR` el origen de cada celda es
-  `x0 = −48·(x/2)`, `y0 = 63·24 − 24·(x/2)`, y los tiles rectos (tipos 0/1/8/9/16/17) tienen 48 filas.
-- Los tiles irregulares (tipos 34/35, con cabecera `x, y, ancho, alto`) ya los resolvemos por el bit 2 en
-  `src/recursos/tiles.cpp`; en Remastered vienen con las mismas cabeceras y dimensiones dobles.
+  `x0 = −48·(x/2)`, `y0 = 63·24 − 24·(x/2)`.
+- **El tipo de cada bloque dice el tamaño** (`plans/til-block-spec.md` del fork). Un `.til` es `i32 n` (casi
+  siempre 256), `n + 1` offsets relativos al inicio de los datos (el último marca el final; varios bloques
+  pueden compartir datos) y los bloques, cada uno con un byte de tipo:
+
+  | Tipo | Forma | Tamaño |
+  |---|---|---|
+  | 0, 1, 8, 9 | rombo simple (RGB555 fila por fila, 2, 4… 24… 4, 2 px; 1/9 con transparencia) | 24×24 |
+  | 16, 17 | rombo simple | **48×48, Remastered** |
+  | 2, 3, 6, 7, 22, 23, 34, 35 | comprimido: `u8 x, u8 y, u8 ancho, u8 alto` + filas en RLE | 24×24 |
+  | 18, 19 | comprimido | **48×48, Remastered** |
+
+  Cualquier otro tipo es un bloque dañado. Hay además tiles "híbridos" con coordenadas de 48 y píxeles de 24
+  (un comprimido con `x`/`y` > 24 pero ancho y alto ≤ 24). Para clasificar un `.til` entero, el fork mira el bloque
+  más grande: ≥ 1800 bytes es Remastered, 10–1000 es clásico, y si no, revisa los bloques.
+- Los tiles irregulares ya los resolvemos por el bit 2 del tipo en `src/recursos/tiles.cpp`; lo nuevo es el bit 4
+  (16), que marca los de 48.
 
 ### Plan
 
-1. `tiles.cpp`: leer el tamaño del tile en vez de suponer 24×12 (el largo del bloque recto lo dice: 24 filas
-   clásico, 48 Remastered) y guardar la escala en la tabla de tiles.
+1. `tiles.cpp`: decidir el tamaño por el bit 4 del tipo (16 = 48×48) en vez de suponer 24×24, y guardar la
+   escala en la tabla de tiles. Un bloque de tipo desconocido se descarta.
 2. Render: dibujar el bloque Remastered a la mitad (a la cuadrícula lógica de 24×12, igual que hoy) o
    aprovecharlo como textura de doble resolución en las vistas con escala ≥ 2.
 3. Probar con un `.til` Remastered de cada tipo y un `.s32` contra una captura de L1MapViewer.
 
-## 5. Nombres de zona (opcional)
+## 5. Capa 8 del `.s32`: luces y efectos fijos del mapa (sin implementar)
+
+Después de los portales, el `.s32` trae una octava capa que `mapa.cpp` no lee (formato según `CLI/S32Parser.cs`
+del fork, comprobado contra nuestros archivos):
+
+```
+u16 n          bit alto en 1: cada entrada trae 4 bytes más
+n × { u16 gfx, u16 x, u16 y [, i32 ?] }
+```
+
+En la instalación de 2009, 8158 de 8375 `.s32` la tienen, **2801 con entradas**, y el archivo termina justo ahí
+(0 bytes sobrantes en todos). En el cliente nuevo de Justice, 1408 usan la forma extendida. Los gfx más usados,
+según el `list.spz`:
+- **Luces fijas:** 3442–3446 "dot range five/seven/nine/eleven/thirteen". Son gfx de un cuadro con `104.attr(8)`:
+  fuentes de luz de radio 5–13 que no se dibujan. Deberían entrar como fuentes al mapa de luz de
+  `docs/analisis/PLAN_LUZ_AGUA.md`, que hoy solo considera los objetos con luz.
+- **Efectos ambientales:** 1904 "spark", 1909/1910 "steam", 3996 "seaplant": animaciones en bucle que se dibujan
+  en el lugar.
+
+Falta confirmar en qué unidades van `x`/`y` (celdas o medias celdas, absolutas o relativas al segmento) y qué es
+el `i32` extendido, comparando con capturas del cliente original.
+
+## 6. Nombres de zona (opcional)
 
 `zone3desc-c.tbl` (Text) y `zone3-c.xml` (Tile o Data; `zone3.tbl`/`zone2-c.tbl` en clientes viejos) dan el
 nombre de cada zona del mapa (`<zoneinfo><zone><zone3desc>…</zone3desc><map>…</map>`). Servirían para mostrar
 el nombre de la zona en el minimapa.
 
-## 6. Lineage Justice (`IDXC`): no
+## 7. Lineage Justice (`IDXC`): no
 
 El cliente nuevo de Justice usa índices `IDXC 02 01` con el cuerpo cifrado por bloques de 16 bytes, y su
 launcher prohíbe expresamente analizarlo. No aparece en ninguna de las fuentes de arriba. Para leerlo hace
