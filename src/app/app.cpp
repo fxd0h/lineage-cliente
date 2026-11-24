@@ -350,6 +350,7 @@ void leer_entrada(App& a) {
 
 // Red: transiciones de estado y paquetes -> eventos -> pantallas y mundo.
 void procesar_red(App& a) {
+    atender_lanzador(a);
     EstadoRed st = a.red.estado();
     if (st != a.estado_red_previo) {
         if (st == EstadoRed::CONECTADA) {
@@ -413,7 +414,8 @@ void procesar_red(App& a) {
             empujar_texto_combate(a, "Miss", 230, 230, 230);
     }
     a.mundo.jugador.clase = clase_personaje(a);
-aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    aplicar_eventos(a.mundo, a.eventos, a.entrada.ahora_ms);
+    avanzar_colas(a.mundo, a.entrada.ahora_ms);
     a.red.en_juego(a.mundo.en_juego && a.pantalla == Pantalla::JUEGO);  // el keepalive lo manda el hilo de red
     if (a.cfg.texto_dano && a.mundo.jugador.hp_max > 0 && a.mundo.jugador.hp < a.hp_anterior) {
         char t[12];
@@ -641,6 +643,7 @@ void cerrar_app(App& a) {
         SDL_Delay(200);  // tiempo para que el hilo escritor lo envíe
     }
     a.red.cerrar();
+    a.lanzador.parar();  // el proxy del lanzador ya no hace falta (espera a lo sumo Lanzador::PLAZO_STOP_MS)
     a.audio.cerrar();
     emblemas_guardar(a, a.entrada.ahora_ms, true);
     a.g.reset();
