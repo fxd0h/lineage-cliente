@@ -220,8 +220,8 @@ static void efecto_subida_nivel(Mundo& m, i32 previo, u64 ahora) {
     agregar_efecto(m, ef);
 }
 
-// Step length of an object: the walk animation (duracion_paso) with the walk-only factors of 0x4cda90: brave 1 and 4 x3/4,
-// elven wafer (3) x7/8, third accelerator x29/32, and half length while two or more steps wait in the queue.
+// Largo del paso de un objeto: la animación de caminar (duracion_paso) con los factores de 0x4cda90 para pasos: brave 1 y 4 x3/4,
+// elven wafer (3) x7/8, brave 5 x3/8, tercer acelerador x29/32, y la mitad mientras esperan dos o más pasos en la cola.
 u16 duracion_paso_objeto(const Mundo& m, Slot s) {
     const TablaObjetos& o = m.objetos;
     u32 ms = duracion_paso(m, o.col<O_GFX>()[s], o.col<O_ESTADO>()[s], o.col<O_VEL>()[s]);
@@ -242,14 +242,14 @@ void mover_objeto(Mundo& m, const Evento& e, u64 ahora);
 void accion_objeto(Mundo& m, const Evento& e, u64 ahora);
 void ataque_objeto(Mundo& m, const Evento& e, u64 ahora);
 
-// The exe queues a step, an action or an attack of a busy object (S_MoveCharPacket 0x484397, S_AttackPacket 0x487d80...)
-// instead of cutting the current animation. The own character is not queued: its steps and attacks are predicted locally.
+// El exe encola un paso, una acción o un ataque de un objeto ocupado (S_MoveCharPacket 0x484397, S_AttackPacket 0x487d80...)
+// en vez de cortar la animación en curso. El personaje propio no se encola: sus pasos y ataques se predicen localmente.
 bool encolar(Mundo& m, const Evento& e, u64 ahora) {
     TablaObjetos& o = m.objetos;
     const Slot s = o.buscar(e.id);
     if (s == SIN_SLOT || e.id == m.jugador.id || !ocupado(m, s, ahora)) return false;
     ColaObjeto& c = o.col<O_COLA>()[s];
-    if (c.n == MAX_COLA) {  // far behind: play the oldest now to make room
+    if (c.n == MAX_COLA) {  // muy atrasado: el más viejo se reproduce ya para hacer lugar
         const Evento primero = c.e[0];
         std::copy(c.e + 1, c.e + c.n, c.e);
         --c.n;
@@ -261,7 +261,7 @@ bool encolar(Mundo& m, const Evento& e, u64 ahora) {
     }
     Evento& q = o.col<O_COLA>()[s].e[o.col<O_COLA>()[s].n++];
     q = e;
-    q.s[0] = q.s[1] = {};  // these events carry no text; the frame arena would not outlive the queue anyway
+    q.s[0] = q.s[1] = {};  // estos eventos no traen texto; la arena del cuadro tampoco sobreviviría a la cola
     return true;
 }
 
@@ -296,7 +296,7 @@ void accion_objeto(Mundo& m, const Evento& e, u64 ahora) {
     if (e.id == m.jugador.id && o.col<O_ACCION>()[s] == e.v[0] && ahora - o.col<O_TACCION>()[s] < 500) return;
     o.col<O_ACCION>()[s] = static_cast<u8>(e.v[0]);
     o.col<O_TACCION>()[s] = ahora;
-    o.col<O_DANO_RAPIDO>()[s] = 0;  // S_DoActionGFX(2) plays the damage at its full length
+    o.col<O_DANO_RAPIDO>()[s] = 0;  // S_DoActionGFX(2) reproduce el daño con su largo completo
     gastar_rafaga(o, s, e.v[0]);
     fijar_ritmo(m, s);
     // Una puerta queda abierta o cerrada (un portón o una torre, dañados): el estado guarda la
@@ -346,7 +346,7 @@ void ataque_objeto(Mundo& m, const Evento& e, u64 ahora) {
         u8 accion = base == ACC_ATACAR || base == ACC_DANADO ? static_cast<u8>(base + o.col<O_ESTADO>()[sa]) : base;
         if (!m.sprites->accion(g, accion)) accion = base;
         impacto = m.sprites->ms_hasta_impacto(g, accion);
-        if (impacto != TablaSprites::SIN_IMPACTO) {  // haste, brave... move the "!" frame too
+        if (impacto != TablaSprites::SIN_IMPACTO) {  // haste, brave... también corren el cuadro "!"
             const Ritmo rt = ritmo_de(m, sa, accion);
             impacto = static_cast<u32>(u64{impacto} * rt.num / rt.den);
         }
@@ -441,11 +441,11 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             o.col<O_XANT>()[s] = o.col<O_X>()[s];
             o.col<O_YANT>()[s] = o.col<O_Y>()[s];
             o.col<O_TMOV>()[s] = 0;
-            // Speed byte 8 is the third accelerator, not a walk speed (0x4843fb).
+            // El byte de velocidad 8 es el tercer acelerador, no una velocidad de paso (0x4843fb).
             o.col<O_VEL>()[s] = e.v[OB_VEL] == 8 ? u8{0} : static_cast<u8>(e.v[OB_VEL]);
             o.col<O_TERCERA>()[s] = e.v[OB_VEL] == 8;
             o.col<O_BRAVE>()[s] = static_cast<u8>(e.v[OB_FLAGS] >> 4 & 7);  // 0x4cceff
-            o.col<O_COLA>()[s].n = 0;  // a re-sent object (teleport, new look) drops what was waiting
+            o.col<O_COLA>()[s].n = 0;  // un objeto reenviado (teletransporte, aspecto nuevo) descarta lo que esperaba
             if (!existia) o.col<O_RAFAGA>()[s] = 0;
             o.col<O_CANTIDAD>()[s] = static_cast<u32>(e.v[OB_CANTIDAD]);
             o.col<O_CLAN>()[s] = static_cast<u32>(e.v[OB_CLAN]);
@@ -558,7 +558,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
             ef.inicio = ahora;
             if (gfx_con_flash(ef.gfx)) ef.flash = 2;
             if (ef.gfx > 0 && !e.v[EF_AREA]) agregar_efecto(m, ef);  // los de área los reparte la app
-            // Triple Arrow (4394) and Foe Slayer (7020) on an object: its next attacks play at a third of their length (0x48babd).
+            // Triple Arrow (4394) y Foe Slayer (7020) sobre un objeto: sus próximos ataques duran un tercio (0x48babd).
             if (ef.gfx == 0x112a || ef.gfx == 0x1b6c)
                 if (const Slot sr = o.buscar(e.id); sr != SIN_SLOT) o.col<O_RAFAGA>()[sr] = ef.gfx == 0x112a ? 4 : 3;
             if (ef.gfx > 0 && !e.v[EF_AREA] && e.id == m.jugador.id && m.jugador.id != 0) {
@@ -922,17 +922,17 @@ Ritmo ritmo_accion(const Mundo& m, Slot s, u8 accion) {
     const TablaObjetos& o = m.objetos;
     Ritmo r;
     auto por = [&r](u32 num, u32 den) { r.num *= num, r.den *= den; };
-    if (o.col<O_COLA>()[s].n >= 2) por(1, 2);  // catching up with a queue
+    if (o.col<O_COLA>()[s].n >= 2) por(1, 2);  // recuperando una cola
     // [+0x11d]: el daño de un golpe va a la mitad, con la fila del arma o, si falta, la de daño sola (accion_con_arma).
     if (o.col<O_DANO_RAPIDO>()[s] && o.col<O_ACCION>()[s] == ACC_DANADO &&
         (accion == static_cast<u8>(o.col<O_ESTADO>()[s] + ACC_DANADO) || accion == ACC_DANADO))
         por(1, 2);
-    // Fast attacks of Triple Arrow / Foe Slayer: the attack rows of sword, axe, bow, spear and two-hand sword.
+    // Ataques rápidos de Triple Arrow / Foe Slayer: las filas de ataque de espada, hacha, arco, lanza y espada a dos manos.
     if (o.col<O_RAFAGA>()[s] > 0 && (accion == 5 || accion == 12 || accion == 21 || accion == 25 || accion == 51)) por(1, 3);
     if (o.col<O_TERCERA>()[s]) por(29, 32);
     if (o.col<O_VEL>()[s] == 1) por(3, 4);
     else if (o.col<O_VEL>()[s] == 2) por(2, 1);
-    // Brave: potion (1) x3/4, elven wafer (3) x7/8, blood lust (6) x3/4 on actions; Holy Walk (4) only speeds steps.
+    // Brave: poción (1) x3/4, elven wafer (3) x7/8, blood lust (6) x3/4 en acciones; Holy Walk (4) solo acelera los pasos.
     switch (o.col<O_BRAVE>()[s]) {
     case 1: case 6: por(3, 4); break;
     case 3: por(7, 8); break;
@@ -950,7 +950,7 @@ void fijar_ritmo(Mundo& m, Slot s) {
         return;
     }
     const Ritmo r = ritmo_accion(m, s, accion_con_arma(m, s, base));
-    o.col<O_RITMO>()[s] = (r.num << 16) | (r.den & 0xFFFF);  // num <= 1218, den <= 12288: entran en 16 bits
+    o.col<O_RITMO>()[s] = (r.num << 16) | (r.den & 0xFFFF);  // num <= 29·2·7 = 406, den <= 2·2·3·32·4·8 = 12288: entran en 16 bits
 }
 
 Ritmo ritmo_de(const Mundo& m, Slot s, u8 accion) {
@@ -962,7 +962,7 @@ Ritmo ritmo_de(const Mundo& m, Slot s, u8 accion) {
 }
 
 namespace {
-// End of the current one-shot action (0 if none or unknown), with its frame factors.
+// Fin de la acción puntual en curso (0 si no hay o no se sabe), con sus factores de cuadro.
 u64 fin_accion(const Mundo& m, Slot s) {
     const TablaObjetos& o = m.objetos;
     const u8 base = o.col<O_ACCION>()[s];
@@ -978,7 +978,7 @@ u64 fin_accion(const Mundo& m, Slot s) {
 bool ocupado(const Mundo& m, Slot s, u64 ahora) {
     const TablaObjetos& o = m.objetos;
     if (o.col<O_COLA>()[s].n > 0 || moviendose(m, s, ahora)) return true;
-    // An action not yet started (a flinch waiting for the attacker's "!" frame) does not hold the object.
+    // Una acción que todavía no empezó (un estremecimiento esperando el "!" del atacante) no ocupa al objeto.
     return o.col<O_TACCION>()[s] <= ahora && ahora < fin_accion(m, s);
 }
 
@@ -986,7 +986,7 @@ void avanzar_colas(Mundo& m, u64 ahora) {
     TablaObjetos& o = m.objetos;
     for (Slot s = 0; s < o.tamano(); ++s) {
         while (o.col<O_COLA>()[s].n > 0) {
-            // Start the next one where the current one ended, so steps chain without a pause.
+            // La siguiente empieza donde terminó la actual, así los pasos se encadenan sin pausa.
             const u64 fin_paso = o.col<O_TMOV>()[s] + o.col<O_DURMOV>()[s];
             const u64 fa = o.col<O_TACCION>()[s] <= ahora ? fin_accion(m, s) : 0;
             const u64 fin = std::max(fin_paso, fa);
@@ -1002,7 +1002,7 @@ void avanzar_colas(Mundo& m, u64 ahora) {
             case Ev::ACCION_OBJETO: accion_objeto(m, e, t); break;
             default: ataque_objeto(m, e, t); break;
             }
-            if (o.buscar(id) != s) break;  // the handlers never remove objects, but stay safe
+            if (o.buscar(id) != s) break;  // los manejadores nunca quitan objetos, pero por las dudas
         }
     }
 }

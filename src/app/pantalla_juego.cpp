@@ -145,7 +145,7 @@ struct AccionVisible {
     u64 inicio = 0;
     bool puntual = false;  // al terminar se vuelve a caminar/quieto
     bool bucle = true;
-    u8 accion = 0;  // action id drawn (with the weapon), for its frame factors (ritmo_accion)
+    u8 accion = 0;  // acción que se dibuja (con el arma), para sus factores de cuadro (ritmo_de)
 };
 AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
     const TablaObjetos& o = a.mundo.objetos;
@@ -812,8 +812,8 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
         if (r) {
             bool termino = false;
             bool camina = !acc.puntual && acc.bucle && caminando(a.mundo, s, ahora);
-            // Frame length factors of 0x4cda90 (not on a walk, which follows the step time): haste, slow, brave, wafer, third
-            // accelerator, Triple Arrow, the half-length damage of a hit and the catch-up of a queue (ritmo_accion).
+            // Factores de largo de cuadro de 0x4cda90 (no al caminar, que sigue el tiempo del paso): haste, lentitud, brave, wafer,
+            // tercer acelerador, Triple Arrow, el daño a la mitad de un golpe y la recuperación de una cola (ritmo_de).
             u64 transcurrido = ahora - acc.inicio;
             if (!camina) {
                 const Ritmo rt = ritmo_de(a.mundo, s, acc.accion);

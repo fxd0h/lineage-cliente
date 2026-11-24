@@ -89,7 +89,7 @@ TEST_CASE("Mundo: el paso dura lo que la animación de caminar del sprite") {
     CHECK(m.objetos.col<O_DURMOV>()[s] == 1440);
 }
 
-TEST_CASE("Mundo: a step that arrives mid-step waits in the queue and starts where the current one ends") {
+TEST_CASE("Mundo: un paso que llega a mitad del anterior espera en la cola y empieza donde termina el actual") {
     Mundo m;
     Evento ev[] = {poner(7, 10, 10, "Orco")};
     aplicar_eventos(m, ev, 0);
@@ -106,7 +106,7 @@ TEST_CASE("Mundo: a step that arrives mid-step waits in the queue and starts whe
     double x0, y0;
     posicion_interpolada(m, s, medio, x0, y0);
     CHECK(x0 == doctest::Approx(10.5));
-    // The next one arrives mid-step: the exe queues it (busy object), the current step is not cut.
+    // Llega el siguiente a mitad del paso: el exe lo encola (objeto ocupado) y el paso actual no se corta.
     mov.v[0] = 12;
     Evento lote2[] = {mov};
     aplicar_eventos(m, lote2, medio);
@@ -115,7 +115,7 @@ TEST_CASE("Mundo: a step that arrives mid-step waits in the queue and starts whe
     double x1, y1;
     posicion_interpolada(m, s, medio, x1, y1);
     CHECK(x1 == doctest::Approx(x0));
-    // A few ms after the first step ends the queued one starts at that end, with no pause.
+    // Unos ms después de terminar el primer paso, el encolado empieza en ese fin, sin pausa.
     const u64 fin = 1000 + DURACION_PASO_MS;
     avanzar_colas(m, fin + 5);
     CHECK(m.objetos.col<O_X>()[s] == 12);
@@ -128,7 +128,7 @@ TEST_CASE("Mundo: a step that arrives mid-step waits in the queue and starts whe
     CHECK_FALSE(caminando(m, s, fin + DURACION_PASO_MS * 2));
 }
 
-TEST_CASE("Mundo: frame factors of 0x4cda90 (haste, brave, wafer, Triple Arrow)") {
+TEST_CASE("Mundo: factores de cuadro de 0x4cda90 (haste, brave, wafer, Triple Arrow)") {
     Mundo m;
     Evento ev[] = {poner(7, 10, 10, "Orco")};
     aplicar_eventos(m, ev, 0);
@@ -143,10 +143,10 @@ TEST_CASE("Mundo: frame factors of 0x4cda90 (haste, brave, wafer, Triple Arrow)"
     m.objetos.col<O_VEL>()[s] = 0;
     m.objetos.col<O_BRAVE>()[s] = 3;
     CHECK(f(1) == doctest::Approx(0.875));
-    m.objetos.col<O_BRAVE>()[s] = 4;  // Holy Walk: steps only
+    m.objetos.col<O_BRAVE>()[s] = 4;  // Holy Walk: solo pasos
     CHECK(f(1) == doctest::Approx(1.0));
     m.objetos.col<O_BRAVE>()[s] = 0;
-    // Triple Arrow: 4 on the effect, one spent per attack, a third of the length on the bow attack row (21).
+    // Triple Arrow: 4 con el efecto, uno menos por ataque, un tercio del largo en la fila de ataque con arco (21).
     Evento efecto{};
     efecto.tipo = Ev::EFECTO;
     efecto.id = 7;
