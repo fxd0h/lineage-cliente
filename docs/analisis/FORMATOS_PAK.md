@@ -138,27 +138,26 @@ Según `Helper/L1MapHelper.cs`:
    aprovecharlo como textura de doble resolución en las vistas con escala ≥ 2.
 3. Probar con un `.til` Remastered de cada tipo y un `.s32` contra una captura de L1MapViewer.
 
-## 5. Capa 8 del `.s32`: luces y efectos fijos del mapa (sin implementar)
+## 5. Capa 8 del `.s32`: luces y efectos fijos del mapa (implementado)
 
-Después de los portales, el `.s32` trae una octava capa que `mapa.cpp` no lee (formato según `CLI/S32Parser.cs`
-del fork, comprobado contra nuestros archivos):
+Después de los portales, el `.s32` trae una octava capa (formato según `CLI/S32Parser.cs` del fork, confirmado
+con el cargador del exe de 2009, `0x460580`):
 
 ```
-u16 n          bit alto en 1: cada entrada trae 4 bytes más
-n × { u16 gfx, u16 x, u16 y [, i32 ?] }
+u16 n          bit alto en 1: cada entrada trae 4 bytes más (solo el cliente nuevo de Justice)
+n × { u16 gfx, u16 x, u16 y [, i32 ?] }      x, y: celda absoluta del juego
 ```
 
 En la instalación de 2009, 8158 de 8375 `.s32` la tienen, **2801 con entradas**, y el archivo termina justo ahí
-(0 bytes sobrantes en todos). En el cliente nuevo de Justice, 1408 usan la forma extendida. Los gfx más usados,
-según el `list.spz`:
-- **Luces fijas:** 3442–3446 "dot range five/seven/nine/eleven/thirteen". Son gfx de un cuadro con `104.attr(8)`:
-  fuentes de luz de radio 5–13 que no se dibujan. Deberían entrar como fuentes al mapa de luz de
-  `docs/analisis/PLAN_LUZ_AGUA.md`, que hoy solo considera los objetos con luz.
-- **Efectos ambientales:** 1904 "spark", 1909/1910 "steam", 3996 "seaplant": animaciones en bucle que se dibujan
-  en el lugar.
+(0 bytes sobrantes en todos). En el cliente nuevo de Justice, 1408 usan la forma extendida.
 
-Falta confirmar en qué unidades van `x`/`y` (celdas o medias celdas, absolutas o relativas al segmento) y qué es
-el `i32` extendido, comparando con capturas del cliente original.
+El original crea un objeto por entrada al cargar el segmento (`0x45f840` -> `FUN_004cc980`), con una luz que depende
+solo del gfx. Los "dot range" 3442–3446 son luces sin imagen de radio 5–13; braseros, fuegos, chispas y lava traen su
+luz; algas y vapor solo se dibujan. Implementación: `SegmentoMapa::efectos` (`src/recursos/mapa.cpp`),
+`luz_efecto_mapa` (`src/mundo/luz.cpp`, con la tabla completa del exe) y `dibujar_efectos_mapa`
+(`src/app/pantalla_juego.cpp`).
+
+Falta saber qué guarda el `i32` de las entradas extendidas (se salta).
 
 ## 6. Nombres de zona (opcional)
 

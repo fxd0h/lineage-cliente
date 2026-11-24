@@ -209,6 +209,18 @@ TEST_CASE("Mapa generado .mg: cabecera inválida") {
     CHECK_FALSE(decodificar_mg(malo, 0, 0, s));  // magic equivocado
 }
 
+TEST_CASE("Mapa 4: efectos fijos de la capa 8 del .s32" * doctest::skip(carpeta_juego().empty())) {
+    std::vector<u8> d;
+    REQUIRE(leer_archivo(carpeta_juego() + nombre_segmento(4, 32623, 32830), d));  // map/4/7ffd8000.s32
+    SegmentoMapa s;
+    REQUIRE(decodificar_s32(d, 32623 & ~63, 32830 & ~63, s));
+    REQUIRE(s.efectos.size() == 10);
+    CHECK(s.efectos[0].gfx == 1630);
+    CHECK(s.efectos[0].x == 32623);  // celdas absolutas, dentro del segmento
+    CHECK(s.efectos[0].y == 32830);
+    CHECK(s.efectos[2].gfx == 3443);  // "dot range seven": una luz
+}
+
 TEST_CASE("Mapa 2005: la copa de un árbol se ordena con el pie del tronco" * doctest::skip(carpeta_juego().empty())) {
     // Árbol junto al punto de inicio (32691, 32864): su pieza más alta está en (110, 32) del segmento.
     std::vector<u8> d;
