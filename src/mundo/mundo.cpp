@@ -228,12 +228,12 @@ u16 duracion_paso_objeto(const Mundo& m, Slot s) {
     const u8 brave = o.col<O_BRAVE>()[s];
     if (brave == 1 || brave == 4) ms = ms * 3 / 4;
     else if (brave == 3) ms = ms * 7 / 8;
+    else if (brave == 5) ms = ms * 3 / 8;  // 0x4cda90 lo aplica a toda acción, también a los pasos
     if (o.col<O_TERCERA>()[s]) ms = ms * 29 / 32;
     if (o.col<O_COLA>()[s].n >= 2) ms /= 2;
     return static_cast<u16>(std::max<u32>(ms, 1));
 }
 
-// SetAction(1) spends one of the fast attacks of Triple Arrow / Foe Slayer (0x4c96e3).
 void gastar_rafaga(TablaObjetos& o, Slot s, i32 accion) {
     if (accion == ACC_ATACAR && o.col<O_RAFAGA>()[s] > 0) --o.col<O_RAFAGA>()[s];
 }
@@ -298,6 +298,7 @@ void accion_objeto(Mundo& m, const Evento& e, u64 ahora) {
     o.col<O_TACCION>()[s] = ahora;
     o.col<O_DANO_RAPIDO>()[s] = 0;  // S_DoActionGFX(2) plays the damage at its full length
     gastar_rafaga(o, s, e.v[0]);
+    fijar_ritmo(m, s);
     // Una puerta queda abierta o cerrada (un portón o una torre, dañados): el estado guarda la
     // última (ver elegir_accion).
     if (m.sprites && accion_fija(m.sprites->tipo(o.col<O_GFX>()[s]), static_cast<u8>(e.v[0]))) {
@@ -321,7 +322,8 @@ void ataque_objeto(Mundo& m, const Evento& e, u64 ahora) {
             o.col<O_ACCION>()[sa] = accion;
             o.col<O_TACCION>()[sa] = ahora;
             o.col<O_DANO_RAPIDO>()[sa] = 0;
-            gastar_rafaga(o, sa, e.v[AT_ACCION]);
+            gastar_rafaga(o, sa, e.v[AT_ACCION]);  // el ataque predicho ya lo gastó (atacar, pantalla_juego.cpp)
+            fijar_ritmo(m, sa);
             // El atacante gira hacia su objetivo cuando se lo conoce (0x4c64d0 -> 0x4cc6c0); si no, solo el rumbo
             // del paquete (S_AttackPacketForNpc trae el rumbo del objetivo).
             o.col<O_DIR>()[sa] = static_cast<u8>(e.v[AT_DIR]);
@@ -345,7 +347,7 @@ void ataque_objeto(Mundo& m, const Evento& e, u64 ahora) {
         if (!m.sprites->accion(g, accion)) accion = base;
         impacto = m.sprites->ms_hasta_impacto(g, accion);
         if (impacto != TablaSprites::SIN_IMPACTO) {  // haste, brave... move the "!" frame too
-            const Ritmo rt = ritmo_accion(m, sa, accion);
+            const Ritmo rt = ritmo_de(m, sa, accion);
             impacto = static_cast<u32>(u64{impacto} * rt.num / rt.den);
         }
     }
@@ -378,7 +380,8 @@ void ataque_objeto(Mundo& m, const Evento& e, u64 ahora) {
         if (!ya) {
             o.col<O_ACCION>()[so] = ACC_DANADO;
             o.col<O_TACCION>()[so] = std::max(ahora, inicio + impacto);
-            o.col<O_DANO_RAPIDO>()[so] = 1;  // [+0x11d]: half length
+            o.col<O_DANO_RAPIDO>()[so] = 1;  // [+0x11d]: a la mitad de largo
+            fijar_ritmo(m, so);
         }
     }
     return;
@@ -462,6 +465,7 @@ void aplicar_eventos(Mundo& m, std::span<const Evento> eventos, u64 ahora) {
                 o.col<O_ACCION>()[s] = accion_previa;
                 o.col<O_TACCION>()[s] = t_previa;
             }
+            fijar_ritmo(m, s);
             if (e.id == m.jugador.id) m.jugador.muerto = e.v[OB_ESTADO] == ESTADO_MUERTO;
             // Tres gfx traen siempre luz 14, mande lo que mande el servidor (4ccf04 del original).
             const i32 gfx_luz = e.v[OB_GFX];
@@ -919,7 +923,10 @@ Ritmo ritmo_accion(const Mundo& m, Slot s, u8 accion) {
     Ritmo r;
     auto por = [&r](u32 num, u32 den) { r.num *= num, r.den *= den; };
     if (o.col<O_COLA>()[s].n >= 2) por(1, 2);  // catching up with a queue
-    if (o.col<O_DANO_RAPIDO>()[s] && accion == static_cast<u8>(o.col<O_ESTADO>()[s] + ACC_DANADO)) por(1, 2);  // [+0x11d]
+    // [+0x11d]: el daño de un golpe va a la mitad, con la fila del arma o, si falta, la de daño sola (accion_con_arma).
+    if (o.col<O_DANO_RAPIDO>()[s] && o.col<O_ACCION>()[s] == ACC_DANADO &&
+        (accion == static_cast<u8>(o.col<O_ESTADO>()[s] + ACC_DANADO) || accion == ACC_DANADO))
+        por(1, 2);
     // Fast attacks of Triple Arrow / Foe Slayer: the attack rows of sword, axe, bow, spear and two-hand sword.
     if (o.col<O_RAFAGA>()[s] > 0 && (accion == 5 || accion == 12 || accion == 21 || accion == 25 || accion == 51)) por(1, 3);
     if (o.col<O_TERCERA>()[s]) por(29, 32);
@@ -935,6 +942,25 @@ Ritmo ritmo_accion(const Mundo& m, Slot s, u8 accion) {
     return r;
 }
 
+void fijar_ritmo(Mundo& m, Slot s) {
+    TablaObjetos& o = m.objetos;
+    const u8 base = o.col<O_ACCION>()[s];
+    if (base == 0xFF) {
+        o.col<O_RITMO>()[s] = 0;
+        return;
+    }
+    const Ritmo r = ritmo_accion(m, s, accion_con_arma(m, s, base));
+    o.col<O_RITMO>()[s] = (r.num << 16) | (r.den & 0xFFFF);  // num <= 1218, den <= 12288: entran en 16 bits
+}
+
+Ritmo ritmo_de(const Mundo& m, Slot s, u8 accion) {
+    const TablaObjetos& o = m.objetos;
+    const u32 fijo = o.col<O_RITMO>()[s];
+    const u8 base = o.col<O_ACCION>()[s];
+    if (fijo && base != 0xFF && accion == accion_con_arma(m, s, base)) return {fijo >> 16, fijo & 0xFFFF};
+    return ritmo_accion(m, s, accion);
+}
+
 namespace {
 // End of the current one-shot action (0 if none or unknown), with its frame factors.
 u64 fin_accion(const Mundo& m, Slot s) {
@@ -944,7 +970,7 @@ u64 fin_accion(const Mundo& m, Slot s) {
     const u8 accion = accion_con_arma(m, s, base);
     const RangoAccion* r = m.sprites->accion(o.col<O_GFX>()[s], accion);
     if (!r || r->velocidad == 0) return 0;
-    const Ritmo rt = ritmo_accion(m, s, accion);
+    const Ritmo rt = ritmo_de(m, s, accion);
     return o.col<O_TACCION>()[s] + u64{m.sprites->ticks(*r)} * 1000 * rt.num / (u64{r->velocidad} * rt.den);
 }
 }  // namespace

@@ -816,7 +816,7 @@ void dibujar_personajes(App& a, u64 ahora, double ox, double oy) {
             // accelerator, Triple Arrow, the half-length damage of a hit and the catch-up of a queue (ritmo_accion).
             u64 transcurrido = ahora - acc.inicio;
             if (!camina) {
-                const Ritmo rt = ritmo_accion(a.mundo, s, acc.accion);
+                const Ritmo rt = ritmo_de(a.mundo, s, acc.accion);
                 transcurrido = transcurrido * rt.den / rt.num;
             }
             const FrameAccion* f =
@@ -1245,12 +1245,20 @@ void atacar(App& a, Slot yo, Slot obj, u64 ahora) {
     if (a.cfg.compensar_ataque && !sobrecargado(a.mundo.jugador.peso) && !pvp_seguro) {
         o.col<O_ACCION>()[yo] = ACC_ATACAR;
         o.col<O_TACCION>()[yo] = ahora;
+        o.col<O_DANO_RAPIDO>()[yo] = 0;
+        // El SetAction(1) del original pasa acá: el eco ya no gasta (mundo.cpp, ataque_objeto con `previsto`).
+        gastar_rafaga(o, yo, ACC_ATACAR);
+        fijar_ritmo(a.mundo, yo);
         if (o.col<O_ESTADO>()[obj] != ESTADO_MUERTO) {
-            u64 impacto = a.sprites.ms_hasta_impacto(gfx, static_cast<u8>(ACC_ATACAR + o.col<O_ESTADO>()[yo]));
-            if (impacto == TablaSprites::SIN_IMPACTO) impacto = a.sprites.ms_hasta_impacto(gfx, ACC_ATACAR);
+            const u8 acc_ataque = accion_con_arma(a.mundo, yo, ACC_ATACAR);
+            u64 impacto = a.sprites.ms_hasta_impacto(gfx, acc_ataque);
             if (impacto == TablaSprites::SIN_IMPACTO) impacto = 0;
+            const Ritmo rt = ritmo_de(a.mundo, yo, acc_ataque);  // el "!" se corre con haste, brave... como en el eco
+            impacto = impacto * rt.num / rt.den;
             o.col<O_ACCION>()[obj] = ACC_DANADO;
             o.col<O_TACCION>()[obj] = ahora + impacto;
+            o.col<O_DANO_RAPIDO>()[obj] = 1;
+            fijar_ritmo(a.mundo, obj);
         }
     }
     u32 ms = a.sprites.duracion_ms(gfx, static_cast<u8>(ACC_ATACAR + o.col<O_ESTADO>()[yo]));

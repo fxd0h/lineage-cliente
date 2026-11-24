@@ -158,6 +158,59 @@ TEST_CASE("Mundo: frame factors of 0x4cda90 (haste, brave, wafer, Triple Arrow)"
     CHECK(f(1) == doctest::Approx(1.0));
 }
 
+TEST_CASE("Mundo: el factor de una acción se fija al empezar y el daño de un golpe va a la mitad sin la fila del arma") {
+    Mundo m;
+    Evento ev[] = {poner(7, 10, 10, "Orco")};
+    aplicar_eventos(m, ev, 0);
+    const Slot s = m.objetos.buscar(7);
+    auto& o = m.objetos;
+    // Daño de un golpe sin tabla de sprites: accion_con_arma vuelve a la fila de daño sola (2), que también va a la mitad.
+    o.col<O_ESTADO>()[s] = 20;
+    o.col<O_ACCION>()[s] = ACC_DANADO;
+    o.col<O_TACCION>()[s] = 100;
+    o.col<O_DANO_RAPIDO>()[s] = 1;
+    fijar_ritmo(m, s);
+    Ritmo r = ritmo_de(m, s, ACC_DANADO);
+    CHECK(static_cast<double>(r.num) / r.den == doctest::Approx(0.5));
+    // Un haste que llega a mitad de la acción no cambia su factor (la animación no salta); la próxima acción sí lo usa.
+    o.col<O_VEL>()[s] = 1;
+    r = ritmo_de(m, s, accion_con_arma(m, s, ACC_DANADO));  // la acción que se dibuja
+    CHECK(static_cast<double>(r.num) / r.den == doctest::Approx(0.5));
+    o.col<O_DANO_RAPIDO>()[s] = 0;
+    o.col<O_ACCION>()[s] = ACC_ATACAR;
+    fijar_ritmo(m, s);
+    r = ritmo_de(m, s, ACC_ATACAR);
+    CHECK(static_cast<double>(r.num) / r.den == doctest::Approx(0.75));
+    // Brave 5 acorta también el paso.
+    const u16 paso = duracion_paso_objeto(m, s);
+    o.col<O_BRAVE>()[s] = 5;
+    CHECK(duracion_paso_objeto(m, s) == paso * 3 / 8);
+}
+
+TEST_CASE("Mundo: el eco de un ataque propio predicho no vuelve a gastar Triple Arrow") {
+    Mundo m;
+    m.jugador.id = 7;
+    Evento ev[] = {poner(7, 10, 10, "Yo")};
+    aplicar_eventos(m, ev, 0);
+    const Slot s = m.objetos.buscar(7);
+    auto& o = m.objetos;
+    o.col<O_RAFAGA>()[s] = 4;
+    // Predicción (atacar, pantalla_juego.cpp): gasta uno al empezar.
+    o.col<O_ACCION>()[s] = ACC_ATACAR;
+    o.col<O_TACCION>()[s] = 1000;
+    gastar_rafaga(o, s, ACC_ATACAR);
+    CHECK(o.col<O_RAFAGA>()[s] == 3);
+    Evento at{};
+    at.tipo = Ev::ATAQUE;
+    at.id = 7;
+    at.v[AT_ACCION] = ACC_ATACAR;
+    Evento lote[] = {at};
+    aplicar_eventos(m, lote, 1100);  // el eco llega 100 ms después: es el mismo ataque
+    CHECK(o.col<O_RAFAGA>()[s] == 3);
+    aplicar_eventos(m, lote, 3000);  // un ataque nuevo (no predicho) sí gasta
+    CHECK(o.col<O_RAFAGA>()[s] == 2);
+}
+
 TEST_CASE("Mundo: el sprite se dibuja desde la celda de origen y el frame aporta el avance") {
     // Sin tabla de sprites: 4 frames iguales, que avanzan 0, ¼, ½, ¾ de celda.
     Mundo m;
