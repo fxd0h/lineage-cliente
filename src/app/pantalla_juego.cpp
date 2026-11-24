@@ -206,8 +206,8 @@ AccionVisible elegir_accion(const App& a, Slot s, u64 ahora) {
         }
     }
     if (!v.rango) v.rango = a.sprites.accion(gfx, base);
-    // TODO(PARCHE PROVISIONAL): la tabla que tenemos no trae el "quieto" de estas formas; la real (list.spz,
-    // ver TablaSprites::copiar_filas_faltantes) diría qué cuadros y tiempos usar.
+    // TODO(PARCHE PROVISIONAL): sprite_table.txt no trae el "quieto" de estas formas. El list.spz de Text.pak sí
+    // (las 75/80 ya lo usan), pero no reemplaza las filas que sprite_table.txt ya tiene (ver fusionar_lista).
     // Un personaje transformado en una forma sin "quieto" (los dark elf 52-80): el quieto de otra arma y,
     // si no hay, parado en el primer cuadro de caminar, no dando pasos en el lugar. Los objetos sin
     // quieto (los braseros, por ejemplo) sí se animan con caminar.
@@ -1181,6 +1181,32 @@ void dibujar_efectos(App& a, u64 ahora, double ox, double oy) {
         g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof_ef),
                            color_ef, mezcla_ef);
     }
+}
+
+// Efectos fijos del mapa (capa 8 del .s32, SegmentoMapa::efectos): el sprite en bucle en su celda, ordenado como un personaje parado
+// ahí, y su luz (luz_efecto_mapa) desde el centro del rombo, como la de un objeto. Va después de dibujar_personajes, que vacía a.luces.
+void dibujar_efectos_mapa(App& a, u64 ahora, double ox, double oy) {
+    Graficos& g = *a.g;
+    const Vista vi = vista_mundo(a);
+    for (const SegmentoMapa& seg : a.mundo.segmentos)
+        for (const EfectoMapa& e : seg.efectos) {
+            const float px = static_cast<float>(mundo_px(e.x, e.y) + ox), py = static_cast<float>(mundo_py(e.x, e.y) + oy);
+            auto fuera = [&](float mx, float my) { return px < -mx || px > vi.w + mx || py < -my || py > vi.h + my; };
+            if (const int radio = luz_efecto_mapa(e.gfx); radio > 0 && !fuera(360, 200)) a.luces.push_back({radio, px + 24, py + 12});
+            if (fuera(150, 150)) continue;
+            const RangoAccion* r = a.sprites.accion(e.gfx, ACC_QUIETO);
+            if (!r) r = a.sprites.accion(e.gfx, ACC_CAMINAR);
+            if (!r) continue;
+            bool termino = false;
+            const FrameAccion& f = a.sprites.frame_en(*r, ahora, termino, 0, true);
+            u32 color = BLANCO;
+            Mezcla mezcla = Mezcla::NORMAL;
+            if (!preparar_mezcla(a.sprites, e.gfx, color, mezcla)) continue;
+            const RegionAtlas& rg = g.frame_sprite(a.sprites.gfx_archivos(e.gfx), f.sub, f.frame);
+            const u32 prof = a.cfg.ui_simple ? profundidad(static_cast<float>(mundo_py(e.x, e.y)) + 12.0f, ORDEN_PERSONAJE, 6)
+                                             : clave_celda(px, py, CAPA_CUERPO_ORIGINAL, 6);
+            g.gpu().dibujar_en(rg, px, py, clave_orden(CAPA_MUNDO, prof), color, mezcla);
+        }
 }
 
 }  // namespace
@@ -2642,6 +2668,7 @@ void frame_juego(App& a) {
     dibujar_suelo(a, cam_x, cam_y, ox, oy);
     dibujar_objetos_mapa(a, cam_x, cam_y, ox, oy);
     dibujar_personajes(a, ahora, ox, oy);
+    dibujar_efectos_mapa(a, ahora, ox, oy);
     dibujar_efectos(a, ahora, ox, oy);
     dibujar_pesca(a, ahora, ox, oy);
     aplicar_luz(a, ahora);

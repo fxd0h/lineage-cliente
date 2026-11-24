@@ -7,6 +7,7 @@
 #include <ctime>
 #include "app/app.h"
 #include "mundo/ataque.h"
+#include "recursos/aes.h"
 #include "recursos/sprites.h"
 #include "i18n/textos.h"
 #include "core/asignaciones.h"
@@ -82,7 +83,8 @@ static std::string lista_de_juego(const App& a) {
 static void cargar_lista_sprites(App& a) {
     LIN_LOG("Sprite table: %u gfx from sprite_table.txt", a.sprites.gfx_de_tabla());
     std::vector<std::string> rutas;
-    if (const std::string p = lista_de_juego(a); !p.empty()) {
+    const std::string p = lista_de_juego(a);
+    if (!p.empty()) {
         rutas.push_back(p);
         if (!a.cfg.lista_sprites.empty() && !std::filesystem::exists(p)) LIN_LOG("Sprite table: lista_sprites=%s does not exist", p.c_str());
     }
@@ -94,14 +96,24 @@ static void cargar_lista_sprites(App& a) {
         std::snprintf(nombre, sizeof nombre, "%u-%u.spr", g, sub);
         return contar_frames_spr(a.rec.sprite(nombre));
     };
-    for (const std::string& ruta : rutas) {
-        ResumenLista r;
-        if (a.sprites.fusionar_lista_archivo(ruta, r, &contador))
+    auto informar = [](bool ok, const ResumenLista& r, const char* origen) {
+        if (ok)
             LIN_LOG("Sprite table: %u gfx from %s (%u new with actions, %u attribute-only, %u already known kept, %u skipped; "
-                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos + r.atributos, ruta.c_str(), r.nuevos, r.atributos,
+                    "%u with a missing/redirected file, %u with frames dropped)", r.nuevos + r.atributos, origen, r.nuevos, r.atributos,
                     r.reemplazados, r.omitidos, r.sin_archivo, r.recortados);
         else
-            LIN_LOG("Sprite table: %s has no usable entry", ruta.c_str());
+            LIN_LOG("Sprite table: %s has no usable entry", origen);
+    };
+    // Sin lista en texto plano, la del juego: list.spz de Text.pak, con 5 bytes en claro ("S1354") y el resto en AES
+    // (docs/analisis/FORMATOS_PAK.md).
+    if (std::vector<u8> t; p.empty() && a.rec.texto("list.spz", t) && t.size() > 5) {
+        descifrar_aes_lineage(t.data() + 5, t.size() - 5);
+        ResumenLista r;
+        informar(a.sprites.fusionar_lista({reinterpret_cast<const char*>(t.data()), t.size()}, r, &contador), r, "Text.pak list.spz");
+    }
+    for (const std::string& ruta : rutas) {
+        ResumenLista r;
+        informar(a.sprites.fusionar_lista_archivo(ruta, r, &contador), r, ruta.c_str());
     }
 }
 
