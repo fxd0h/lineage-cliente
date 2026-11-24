@@ -24,9 +24,10 @@ X(LOGIN_ERR_EN_USO, "La cuenta ya está en uso.", "The account is already in use
   "Das Konto wird bereits verwendet.", "Le compte est déjà utilisé.")
 X(LOGIN_ERR_RECHAZO, "El servidor rechazó el ingreso.", "The server rejected the login.",
   "O servidor recusou o acesso.", "Der Server hat die Anmeldung abgelehnt.", "Le serveur a refusé la connexion.")
-X(LOGIN_ERR_LANZADOR, "El lanzador del servidor no dio un puerto.", "The server launcher gave no port.",
-  "O lançador do servidor não deu uma porta.", "Der Server-Launcher hat keinen Port geliefert.",
-  "Le lanceur du serveur n'a donné aucun port.")
+X(LOGIN_ERR_LANZADOR, "El lanzador del servidor no dio un puerto (o tardó más de 30 s).",
+  "The server launcher gave no port (or took over 30 s).", "O lançador do servidor não deu uma porta (ou levou mais de 30 s).",
+  "Der Server-Launcher hat keinen Port geliefert (oder brauchte über 30 s).",
+  "Le lanceur du serveur n'a donné aucun port (ou a pris plus de 30 s).")
 X(LOGIN_ERR_PROTOCOLO, "Versión de protocolo desconocida: ", "Unknown protocol version: ",
   "Versão de protocolo desconhecida: ", "Unbekannte Protokollversion: ", "Version de protocole inconnue : ")
 

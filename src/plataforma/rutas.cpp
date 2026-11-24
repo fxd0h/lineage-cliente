@@ -34,7 +34,7 @@ Servidor leer_servidor(std::string_view v) {
     Servidor sv;
     std::string_view campos[6];
     for (int i = 0; i < 6 && !v.empty(); ++i) {
-        const size_t b = i == 5 ? std::string_view::npos : v.find('|');  // the launcher command takes the rest
+        const size_t b = i == 5 ? std::string_view::npos : v.find('|');  // el comando del lanzador se lleva el resto
         campos[i] = v.substr(0, b);
         v = b == std::string_view::npos ? std::string_view{} : v.substr(b + 1);
     }

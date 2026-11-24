@@ -62,7 +62,7 @@ void iniciar_login(App& a) {
     }
     a.aviso.clear();
     a.esperando = true;
-    if (!sv.lanzador.empty()) {  // first the server's launcher, which prints the port of its local proxy
+    if (!sv.lanzador.empty()) {  // primero el lanzador del servidor, que imprime el puerto de su proxy local
         a.lanzador.iniciar(sv.lanzador);
         return;
     }

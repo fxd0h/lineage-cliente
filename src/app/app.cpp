@@ -631,7 +631,7 @@ void cerrar_app(App& a) {
         SDL_Delay(200);  // tiempo para que el hilo escritor lo envíe
     }
     a.red.cerrar();
-    a.lanzador.parar();  // the launcher's proxy is not needed any more
+    a.lanzador.parar();  // el proxy del lanzador ya no hace falta (espera a lo sumo Lanzador::PLAZO_STOP_MS)
     a.audio.cerrar();
     emblemas_guardar(a, a.entrada.ahora_ms, true);
     a.g.reset();
