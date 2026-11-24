@@ -10,6 +10,8 @@
 //   u32 n, n × u32 (juegos de tiles del segmento; sin usar)
 //   u16 n, n portales × {u8 largo, nombre, u8 x en medias celdas, u8 y, u16 mapa destino, i16, i16}
 //     (los dos i16 no se sabe qué son; l1j-client leía los portales con otro formato, mal)
+//   u16 n (bit alto: entradas de 10 bytes), n × {u16 gfx, u16 x, u16 y [, i32]}  (luces y efectos fijos; sin usar:
+//     ver docs/analisis/FORMATOS_PAK.md §5)
 // El orden de las celdas en el archivo es fila por fila: y exterior, x interior. Esto está
 // verificado contra los mapas del servidor en tests/test_recursos.cpp.
 #pragma once

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include "comun.h"
+#include "recursos/aes.h"
 #include "recursos/fuente.h"
 #include "recursos/mapa.h"
 #include "recursos/pak.h"
@@ -65,14 +66,6 @@ TEST_CASE("Recursos del juego: .pak, imágenes, textos, tiles y sprites" * docte
 TEST_CASE("Tabla de sprites (datos/sprite_table.txt)") {
     TablaSprites t;
     if (!t.cargar_archivo("datos/sprite_table.txt") && !t.cargar_archivo("../../datos/sprite_table.txt")) return;
-    // Filas agregadas a mano: los dark elf 75 y 80 usan los archivos de los otros dark elf.
-    CHECK(t.gfx_archivos(9225) == t.gfx_archivos(6160));
-    CHECK(t.gfx_archivos(9226) == t.gfx_archivos(6160));
-    CHECK(t.gfx_archivos(9206) == t.gfx_archivos(6157));
-    CHECK(t.gfx_archivos(9012) == t.gfx_archivos(7341));
-    CHECK(t.accion(9225, ACC_CAMINAR) != nullptr);
-    CHECK(t.accion(9226, 8) != nullptr);
-    CHECK(t.gfx_archivos(9224) == 9224);
     CHECK(t.cantidad_gfx() > 1000);
     CHECK(t.gfx_archivos(0) == 3225);  // "312=3225"
     const RangoAccion* caminar = t.accion(0, ACC_CAMINAR);
@@ -83,6 +76,24 @@ TEST_CASE("Tabla de sprites (datos/sprite_table.txt)") {
     const RangoAccion* quieto = t.accion(0, ACC_QUIETO);
     REQUIRE(quieto);
     CHECK(t.frame(quieto->primer).sub == 8);
+}
+
+TEST_CASE("Tabla de sprites: list.spz cifrado de Text.pak" * doctest::skip(carpeta_juego().empty())) {
+    Recursos r;
+    REQUIRE(r.abrir(carpeta_juego()));
+    std::vector<u8> d;
+    if (!r.texto("list.spz", d)) return;  // instalaciones sin la tabla cifrada
+    REQUIRE(d.size() > 5);
+    CHECK(d[0] == 'S');
+    descifrar_aes_lineage(d.data() + 5, d.size() - 5);
+    TablaSprites t;
+    if (!t.cargar_archivo("datos/sprite_table.txt") && !t.cargar_archivo("../../datos/sprite_table.txt")) return;
+    CHECK(!t.accion(9225, ACC_CAMINAR));  // sprite_table.txt (l1j-client) llega al 8682
+    ResumenLista res;
+    REQUIRE(t.fusionar_lista({reinterpret_cast<const char*>(d.data()), d.size()}, res));
+    CHECK(res.nuevos > 1000);
+    CHECK(t.accion(9225, ACC_CAMINAR) != nullptr);  // ancient platinum darkelf polymorph
+    CHECK(t.gfx_archivos(9225) == 1125);            // "#9225 48=1125"
 }
 
 TEST_CASE("Tabla de sprites: sufijos sueltos y pegados") {
