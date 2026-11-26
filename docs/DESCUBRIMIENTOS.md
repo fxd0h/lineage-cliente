@@ -409,6 +409,10 @@ Visto en los datos de su cliente (TW13032701 con archivos propios; sin conectars
   hombre resaltado, `1135..1218` animación del hombre, `1219` mujer resaltada, `1220..1302` animación de la
   mujer (brillo medio de quieto ≈ 5 y resaltado ≈ 11, como el 906/907 del caballero dragón). En el juego:
   gfx 12490 y 12494, con las acciones en `list.spz`.
+- **Dos listas de sprites:** el `TW13032701.txt` de su carpeta (2013) llega al gfx 12413 y el `list.spz` de su
+  Text.pak al 15438. Por eso el list.spz de Text.pak se fusiona también cuando hay una lista en texto plano, después de
+  ella (suma unos 2.950 gfx). Los gfx 12490/12494 figuran ahí como `dummy`, sin acciones: la animación del
+  Guerrero en el juego no está en los datos. Unos 570 gfx (15528..30103) no están en ninguna lista.
 - **Cómo se activa:** protocolo `<versión>+reborn` en `servidor=`; los números están en
   `datos/extensiones/reborn.ini` (`mundo/clases.h`). Un servidor estándar nunca manda la clase 7 y su tabla es
   la de siempre.
