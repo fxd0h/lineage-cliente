@@ -56,7 +56,7 @@ const char* motivo_login(int codigo) {
 void iniciar_login(App& a) {
     if (a.usuario.empty() || a.clave.empty() || a.esperando) return;
     const Servidor& sv = servidor_elegido(a.cfg);
-    if (!tabla_opcodes(sv.protocolo, a.op)) {
+    if (!tabla_opcodes(sv.protocolo, a.op, sv.dialecto)) {
         a.aviso = std::string(tr(Tx::LOGIN_ERR_PROTOCOLO)) + sv.protocolo;
         return;
     }

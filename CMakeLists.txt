@@ -247,6 +247,7 @@ if(LIN_TESTS)
         tests/test_aes.cpp
         tests/test_des.cpp
         tests/test_proto.cpp
+        tests/test_dialectos.cpp
         tests/test_recursos.cpp
         tests/test_muerte_ogro.cpp
         tests/test_lista_sprites.cpp

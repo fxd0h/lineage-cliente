@@ -11,6 +11,10 @@ namespace lin {
 
 namespace {
 
+// CA del personaje propio como la muestra el original (0x4b0c16, 0x4b4ce2, 0x4b3b09): el byte [0x8f07df] se extiende con signo y después
+// a todo lo >= 0x28 se le resta 0x100, así un byte 0x28..0x7f del protocolo se lee como -216..-129 en vez de +40..+127.
+int ca_original(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
+
 struct Lector : LectorBinario {
     Arena* arena;
     PerfilProtocolo perfil;
@@ -23,6 +27,13 @@ struct Lector : LectorBinario {
         for (u8 i = 0; i < n; ++i) v |= static_cast<u32>(c()) << (8 * i);
         return static_cast<i32>(v);
     }
+    // Same as leer() but sign-extended (resistances, MR and AC can be negative in wide dialects).
+    i32 firmado(u8 n) {
+        const i32 v = leer(n);
+        return n >= 4 ? v : static_cast<i32>(static_cast<u32>(v) << (32 - 8 * n)) >> (32 - 8 * n);
+    }
+    // Armor class: the 1-byte form is the original client's odd display convention; wider forms are plain signed ints.
+    i32 ca(u8 n) { return n == 1 ? ca_original(c()) : firmado(n); }
     // Vida y maná: su ancho lo da el perfil (2 bytes hasta 3.63, 4 en 3.80C).
     i32 vida() { return leer(perfil.bytes_vida); }
     // Cadena CP949 terminada en \0, copiada a la arena del frame.
@@ -43,10 +54,6 @@ struct Lector : LectorBinario {
 
 using Decodificador = bool (*)(Lector&, Evento&);
 
-// CA del personaje propio como la muestra el original (0x4b0c16, 0x4b4ce2, 0x4b3b09): el byte [0x8f07df] se extiende con signo y después
-// a todo lo >= 0x28 se le resta 0x100, así un byte 0x28..0x7f del protocolo se lee como -216..-129 en vez de +40..+127.
-int ca_original(u8 b) { return b >= 0x28 ? static_cast<int>(b) - 256 : b; }
-
 bool ignorar(Lector&, Evento& e) { e.tipo = Ev::IGNORADO; return true; }
 
 // S_ServerVersion: c c d d d d d c c c d d h
@@ -65,8 +72,8 @@ bool personaje(Lector& l, Evento& e) {
     e.v[PJ_CLASE] = l.c();
     e.v[PJ_SEXO] = l.c();
     e.v[PJ_LEGAL] = static_cast<i16>(l.h());
-    e.v[PJ_HP] = l.h();
-    e.v[PJ_MP] = l.h();
+    e.v[PJ_HP] = l.leer(l.perfil.bytes_vida_lista);  // login38 dialect: d instead of h
+    e.v[PJ_MP] = l.leer(l.perfil.bytes_vida_lista);
     e.v[PJ_CA] = ca_original(l.c());
     e.v[PJ_NIVEL] = l.c();
     e.v[PJ_FUE] = l.c();
@@ -95,7 +102,7 @@ bool estado(Lector& l, Evento& e) {
     e.v[EP_HPMAX] = l.vida();
     e.v[EP_MP] = l.vida();
     e.v[EP_MPMAX] = l.vida();
-    e.v[EP_CA] = ca_original(l.c());
+    e.v[EP_CA] = l.ca(l.perfil.bytes_ca);  // login38 dialect: d instead of c
     l.d();
     e.v[EP_COMIDA] = l.c();
     e.v[EP_PESO] = l.c();
@@ -225,12 +232,13 @@ bool experiencia(Lector& l, Evento& e) { e.tipo = Ev::EXPERIENCIA; e.v[0] = l.c(
 // S_Lawful: d id, h alineamiento, d 0
 bool legal(Lector& l, Evento& e) { e.tipo = Ev::LEGAL; e.id = l.d(); e.v[0] = static_cast<i16>(l.h()); return true; }
 // S_SpMr: c SP agregado por equipo, c MR agregada
-bool sp_mr(Lector& l, Evento& e) { e.tipo = Ev::SP_MR; e.v[0] = static_cast<i8>(l.c()); e.v[1] = static_cast<i8>(l.c()); return true; }
+// login38 dialect: MR is a signed d.
+bool sp_mr(Lector& l, Evento& e) { e.tipo = Ev::SP_MR; e.v[0] = l.firmado(1); e.v[1] = l.firmado(l.perfil.bytes_mr); return true; }
 // S_OwnCharAttrDef: c CA, c fuego, c agua, c viento, c tierra
 bool defensa(Lector& l, Evento& e) {
     e.tipo = Ev::DEFENSA;
     e.v[DF_CA] = ca_original(l.c());
-    for (int i = DF_FUEGO; i <= DF_TIERRA; ++i) e.v[i] = static_cast<i8>(l.c());
+    for (int i = DF_FUEGO; i <= DF_TIERRA; ++i) e.v[i] = l.firmado(l.perfil.bytes_resistencia);  // login38 dialect: h
     return true;
 }
 // S_OwnCharStatus2: c fue int sab des con car, c peso (0–240). Mismos índices que ESTADO_PROPIO.
@@ -648,7 +656,7 @@ bool mascota(Lector& l, Evento& e) {
         if (sub == 1) {
             e.v[RE_HP] = l.vida();
             e.v[RE_MP] = l.vida();
-            e.v[RE_AC] = l.c();
+            e.v[RE_AC] = l.leer(l.perfil.bytes_ca_reinicio1);
             e.v[RE_MAX] = l.c();
             e.v[RE_NIVEL] = 1;
         } else if (sub == 2) {
@@ -656,7 +664,7 @@ bool mascota(Lector& l, Evento& e) {
             e.v[RE_MAX] = l.c();
             e.v[RE_HP] = l.vida();
             e.v[RE_MP] = l.vida();
-            e.v[RE_AC] = l.h();
+            e.v[RE_AC] = l.leer(l.perfil.bytes_ca_reinicio2);
             for (int i = 0; i < 6; ++i) e.v[RE_FUE + i] = l.c();
         } else {
             e.v[RE_PUNTOS] = l.c();
@@ -1259,7 +1267,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
     }
     if (e.origen == Srv::RANGESKILLS) {
         // S_RangeSkill: c acción, d lanzador, h x, h y, c dirección, d secuencia, h gráfico, c tipo,
-        // h 0, h n, n × (d objetivo, c marca). El lanzador hace la acción. El gráfico: con tipo 0
+        // h 0, h n, n × (d objetivo, c marca; login38: d objetivo, h acierto, d daño). El lanzador hace la acción. El gráfico: con tipo 0
         // (área alrededor del lanzador: Tornado, Fire Storm, Blizzard, Freezing Blizzard) una sola
         // vez, sobre el lanzador (el sprite ya trae los 4 tornados, o la ventisca que cubre la
         // pantalla); si no, sobre cada objetivo.
@@ -1289,7 +1297,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             ef.v[EF_Y] = cy;
             ef.v[EF_AREA] = 1;
             salida.push_back(ef);
-            l.saltar(static_cast<size_t>(n) * 5);
+            l.saltar(static_cast<size_t>(n) * (4 + l.perfil.bytes_marca_rango + l.perfil.bytes_dano_rango));
             return !l.error;
         }
         for (int i = 0; i < n && !l.error; ++i) {
@@ -1297,7 +1305,7 @@ bool decodificar(Bytes cuerpo, const TablaOpcodes& tabla, Arena& arena, std::vec
             ef.tipo = Ev::EFECTO;
             ef.id = l.d();
             ef.v[EF_GFX] = gfx;
-            l.c();
+            l.saltar(l.perfil.bytes_marca_rango + l.perfil.bytes_dano_rango);
             if (!l.error) salida.push_back(ef);
         }
         return !l.error;

@@ -1255,7 +1255,8 @@ void atacar(App& a, Slot yo, Slot obj, u64 ahora) {
     TablaObjetos& o = a.mundo.objetos;
     int dir = direccion_de(o.col<O_X>()[obj] - o.col<O_X>()[yo], o.col<O_Y>()[obj] - o.col<O_Y>()[yo]);
     if (dir >= 0) o.col<O_DIR>()[yo] = static_cast<u8>(dir);
-    enviar(a, cmd::atacar(a.op, o.ids()[obj], o.col<O_X>()[obj], o.col<O_Y>()[obj]));
+    enviar(a, cmd::atacar(a.op, o.ids()[obj], o.col<O_X>()[obj], o.col<O_Y>()[obj],
+                          alcance_ataque(o.col<O_ESTADO>()[yo]) >= ALCANCE_DISTANCIA));
     combate_musica(a, obj, ahora);
     GfxId gfx = o.col<O_GFX>()[yo];
     // Compensación de ataque (opcional, en vivo): sin esperar el eco del servidor, mostrar ya el golpe

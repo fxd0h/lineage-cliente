@@ -20,7 +20,12 @@ struct Servidor {
     std::string protocolo = "jp363";
     std::string usuario;
     std::string lanzador;
+    std::string dialecto = "original";  // protocol dialect on top of `protocolo` (opcodes.cpp DIALECTOS); 6th field of servidor=
 };
+
+// Names accepted as the dialect field of servidor= (must match DIALECTOS in proto/opcodes.cpp). They are told apart
+// from a launcher command, which used to be the 6th field, by name.
+constexpr std::string_view DIALECTOS_CONOCIDOS[] = {"original", "login38"};
 
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos
 constexpr int MS_MANTENER_MIN = 150, MS_MANTENER_MAX = 1000;

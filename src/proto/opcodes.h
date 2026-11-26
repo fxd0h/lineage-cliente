@@ -46,6 +46,7 @@ enum class Cli : u8 {
     EXTCOMMAND,       // C_ExtraCommand (s3ep1 38): c acción, un gesto que el servidor reenvía como S_DoActionGFX
     RANK,             // C_Rank: c sub (1 rango, 2 lista de alianza, 3 unirse a la alianza, 4 salir de la alianza), c rango, s nombre
     FISHCLICK,        // C_FishClick: c flag de picada (el servidor lo ignora y juzga el momento él mismo)
+    FARATTACK,        // C_FarAttack (tw380 123): same body as ATTACK, sent for bows; where undefined the bow uses ATTACK
     CANTIDAD
 };
 
@@ -81,6 +82,15 @@ struct PerfilProtocolo {
     // Filas de la lista de S_Mail: l1j-en classic (US 2009) manda `d id, c leída, c aa, c mm, c dd, s remitente, asunto` (toda fila es una
     // carta recibida); L1J-JP / Whale mandan `d id, c leída, d hora unix, c copia propia, s otro, asunto`.
     bool correo_ymd = false;
+    // Field widths that dialects override (see Dialecto in opcodes.cpp). Defaults are the stock 3.63 layout.
+    u8 bytes_vida_lista = 2;      // HP/MP in the character list (S_CharPacks, S_NewCharPacket); login38: 4
+    u8 bytes_ca = 1;              // AC in S_OwnCharStatus; login38: 4
+    u8 bytes_ca_reinicio1 = 1;    // AC in S_CharReset sub 1 (reset init); login38: 4
+    u8 bytes_ca_reinicio2 = 2;    // AC in S_CharReset sub 2 (level up); login38: 4
+    u8 bytes_resistencia = 1;     // elemental resistances in S_OwnCharAttrDef; login38: 2
+    u8 bytes_mr = 1;              // MR in S_SPMR; login38: 4
+    u8 bytes_marca_rango = 1;     // per-target hit mark in S_RangeSkill; login38: 2
+    u8 bytes_dano_rango = 0;      // per-target damage in S_RangeSkill; login38: 4
 };
 
 struct TablaOpcodes {
@@ -99,7 +109,9 @@ struct TablaOpcodes {
 // Versiones disponibles: "jp363" (L1J-JP 3.63c), "tw380" (3.80C de Taiwán, L1JGO-Whale) y "s3ep1"
 // (3.0 English / US 2009, l1j-en/classic).
 // PENDIENTE: cargar las demás desde los opcodes.txt de docs/analisis/opcodes (s3ep1, kr380...).
-bool tabla_opcodes(std::string_view version, TablaOpcodes& salida);
+// `dialecto`: a small set of overrides (field widths, opcode remaps) on top of the profile; "original" = none.
+// Returns false for an unknown profile or a dialect the profile does not have (tw380 has "login38").
+bool tabla_opcodes(std::string_view version, TablaOpcodes& salida, std::string_view dialecto = "original");
 
 const char* nombre_srv(Srv s);
 

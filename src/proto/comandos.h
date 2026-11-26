@@ -89,8 +89,9 @@ inline Escritor chat(const TablaOpcodes& t, u8 tipo, std::string_view texto) {
     return e;
 }
 // C_Attack: d objetivo, h x, h y (celda del objetivo; 0 para golpear al aire)
-inline Escritor atacar(const TablaOpcodes& t, u32 objetivo, u16 x, u16 y) {
-    Escritor e(t, Cli::ATTACK);
+// `a_distancia` (bow): C_FarAttack where the profile has it (tw380 123), else the plain C_Attack.
+inline Escritor atacar(const TablaOpcodes& t, u32 objetivo, u16 x, u16 y, bool a_distancia = false) {
+    Escritor e(t, a_distancia && t.tiene(Cli::FARATTACK) ? Cli::FARATTACK : Cli::ATTACK);
     e.d(objetivo).h(x).h(y);
     return e;
 }

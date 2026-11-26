@@ -1,4 +1,5 @@
 #include "proto/opcodes.h"
+#include <span>
 
 namespace lin {
 
@@ -94,7 +95,7 @@ constexpr ParSrv TW380_SRV[] = {
     {65, Srv::SHOWSHOPSELLLIST}, {176, Srv::SHOWRETRIEVELIST}, {219, Srv::YES_NO},  {52, Srv::TRADE},
     {35, Srv::TRADEADDITEM},   {112, Srv::TRADESTATUS},   {118, Srv::EMBLEM},       {23, Srv::SKILLBUY},
     {202, Srv::PARALYSIS},     {165, Srv::POISON},        {47, Srv::CURSEBLIND},    {136, Srv::INPUTAMOUNT},
-    {236, Srv::SELECTTARGET},  {11, Srv::TRUETARGET},     {92, Srv::BOOKMARKS},     {83, Srv::SELECTLIST},
+    {54, Srv::SELECTTARGET},   {11, Srv::TRUETARGET},     {92, Srv::BOOKMARKS},     {83, Srv::SELECTLIST},
     {245, Srv::IDENTIFYDESC},  {171, Srv::INVIS},         {85, Srv::RESURRECTION},  {166, Srv::STRUP},
     {188, Srv::DEXUP},         {60, Srv::PINKNAME},       {103, Srv::LIQUOR},       {22, Srv::SOUND},
     {140, Srv::PRIVATESHOPLIST}, {68, Srv::BOARD},        {148, Srv::BOARDREAD},    {186, Srv::MAIL},
@@ -105,6 +106,7 @@ constexpr ParSrv TW380_SRV[] = {
     {64, Srv::PETCTRL},        {105, Srv::REDMESSAGE},    {72, Srv::CLANNAME},      {200, Srv::CLANATTENTION},
     {46, Srv::CHANGENAME},
     {231, Srv::WARTIME},
+    {126, Srv::BLESSOFEVA},    {160, Srv::DELSKILL},  // S_SkillIconBlessOfEva, S_DelSkill (handler/broadcast.go:882, elf_attribute.go:18)
 };
 constexpr ParCli TW380_CLI[] = {
     {Cli::CLIENTVERSION, 14},  {Cli::LOGINPACKET, 119},  {Cli::COMMONCLICK, 16},   {Cli::NEWCHAR, 84},
@@ -125,7 +127,10 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::BOARD, 23},          {Cli::BOARDREAD, 114},    {Cli::BOARDWRITE, 141},   {Cli::BOARDDELETE, 153},
     {Cli::MAIL, 87},           {Cli::WAR, 227},          {Cli::TAXRATE, 19},       {Cli::DEPOSIT, 56},
     {Cli::DRAWAL, 44},         {Cli::RANK, 63},
+    {Cli::FARATTACK, 123},  // C_FarAttack: Whale only treats 123 as a ranged attack (system/combat.go:109)
     {Cli::PROPOSE, 50},        {Cli::FIGHT, 5},          {Cli::CHECKPK, 51},  // Whale: C_OPCODE_MARRIAGE / DUEL / CHECK_PK
+    // TODO(open question 2, PROTOCOLO_380.md): Whale registers 230 as party invite and 43 as party list, the opposite
+    // of CREATEPARTY=43 / PARTYLIST=230 above. Not changed: check against the original client first.
 };
 
 // L1J 3.0 English / US 2009 (S3EP1): encryptions/Opcodes.java de l1j-en/classic, por nombre. El
@@ -211,6 +216,37 @@ static_assert(sizeof(NOMBRES) / sizeof(NOMBRES[0]) == static_cast<size_t>(Srv::C
 
 }  // namespace
 
+namespace {
+
+// Dialects: per-server variations of a profile, as a few overrides on top of it. Add one by writing a
+// function that edits the PerfilProtocolo (and/or a list of opcode remaps) and listing it in DIALECTOS.
+struct Dialecto {
+    std::string_view version;  // profile it applies to
+    std::string_view nombre;
+    void (*perfil)(PerfilProtocolo&);
+    std::span<const ParSrv> srv;  // wire number -> internal, applied after the profile table
+    std::span<const ParCli> cli;  // internal -> wire number
+};
+
+// L1JGO-Whale, TWU68 / Login38 launcher-patched client (PROTOCOLO_380.md section 0 and 8c): wider HP/MP, AC, MR,
+// resistances and per-target damage. Sources: handler/charlist.go:75, broadcast.go:523/253/451, statalloc.go:53, charreset.go:79.
+void login38(PerfilProtocolo& p) {
+    p.bytes_vida_lista = 4;
+    p.bytes_ca = 4;
+    p.bytes_ca_reinicio1 = 4;
+    p.bytes_ca_reinicio2 = 4;
+    p.bytes_resistencia = 2;
+    p.bytes_mr = 4;
+    p.bytes_marca_rango = 2;
+    p.bytes_dano_rango = 4;
+}
+
+constexpr Dialecto DIALECTOS[] = {
+    {"tw380", "login38", login38, {}, {}},
+};
+
+}  // namespace
+
 template <size_t NS, size_t NC>
 void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u8 init, PerfilProtocolo perfil) {
     for (Srv& s : t.srv_de_cable) s = Srv::DESCONOCIDO;
@@ -225,12 +261,23 @@ void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u
     t.perfil = perfil;
 }
 
-bool tabla_opcodes(std::string_view version, TablaOpcodes& t) {
+bool tabla_opcodes(std::string_view version, TablaOpcodes& t, std::string_view dialecto) {
     if (version == "jp363") cargar(t, JP363_SRV, JP363_CLI, 161, PerfilProtocolo{});
     else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true});
     else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1, .correo_ymd = true});
     else return false;
-    return true;
+    if (dialecto.empty() || dialecto == "original") return true;
+    for (const Dialecto& d : DIALECTOS) {
+        if (d.version != version || d.nombre != dialecto) continue;
+        if (d.perfil) d.perfil(t.perfil);
+        for (const ParSrv& p : d.srv) t.srv_de_cable[p.cable] = p.interno;
+        for (const ParCli& p : d.cli) {
+            t.cable_de_cli[static_cast<int>(p.interno)] = p.cable;
+            t.cli_definido[static_cast<int>(p.interno)] = true;
+        }
+        return true;
+    }
+    return false;
 }
 
 const char* nombre_srv(Srv s) { return NOMBRES[static_cast<int>(s) < static_cast<int>(Srv::CANTIDAD) ? static_cast<int>(s) : 0]; }
