@@ -134,8 +134,9 @@ TEST_CASE("Dialectos: lista de personajes (93) y personaje nuevo (127), HP/MP h 
 TEST_CASE("Dialectos: STATUS (8), AC c o d") {
     auto armar = [](bool ancho) {
         Pkt p(8);
-        p.d(99).c(50).d(1234).c(10).c(11).c(12).c(13).c(14).c(15).d(100).d(200).d(300).d(400);
-        if (ancho) p.d(static_cast<u32>(-5)); else p.c(0x30);
+        p.d(99).c(50).d(1234).c(10).c(11).c(12).c(13).c(14).c(15);
+        if (ancho) p.d(100).d(200).d(300).d(400).d(static_cast<u32>(-5));  // login38: d HP/MaxHP/MP/MaxMP, d AC
+        else p.h(100).h(200).h(300).h(400).c(0x30);                         // stock: h x4, c AC
         p.d(0).c(77).c(88).h(32768 + 100).h(1).h(2).h(3).h(4).d(0).pad();
         return p;
     };
@@ -150,17 +151,21 @@ TEST_CASE("Dialectos: STATUS (8), AC c o d") {
     CHECK(ev[0].v[EP_LEGAL] == static_cast<i16>(32768 + 100));
     ev = dec(tabla("original"), armar(false));
     REQUIRE(ev.size() == 1);
+    CHECK(ev[0].v[EP_HP] == 100);
+    CHECK(ev[0].v[EP_HPMAX] == 200);
+    CHECK(ev[0].v[EP_MP] == 300);
+    CHECK(ev[0].v[EP_MPMAX] == 400);
     CHECK(ev[0].v[EP_CA] == (0x30 - 256));
     CHECK(ev[0].v[EP_COMIDA] == 77);
     CHECK(ev[0].v[EP_PESO] == 88);
 }
 
-TEST_CASE("Dialectos: ABILITY_SCORES (174), resistencias c o h") {
-    auto ev = dec(tabla("original"), Pkt(174).c(8).c(10).c(20).c(30).c(40).pad());
+TEST_CASE("Dialectos: ABILITY_SCORES (174), c AC + h x4 en ambos") {
+    auto ev = dec(tabla("original"), Pkt(174).c(8).h(10).h(20).h(30).h(static_cast<u32>(-40)).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].tipo == Ev::DEFENSA);
     CHECK(ev[0].v[DF_FUEGO] == 10);
-    CHECK(ev[0].v[DF_TIERRA] == 40);
+    CHECK(ev[0].v[DF_TIERRA] == -40);
     ev = dec(tabla("login38"), Pkt(174).c(8).h(10).h(20).h(300).h(static_cast<u32>(-4)).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].v[DF_FUEGO] == 10);
@@ -169,12 +174,12 @@ TEST_CASE("Dialectos: ABILITY_SCORES (174), resistencias c o h") {
     CHECK(ev[0].v[DF_TIERRA] == -4);
 }
 
-TEST_CASE("Dialectos: MAGIC_STATUS (37), MR c o d") {
-    auto ev = dec(tabla("original"), Pkt(37).c(3).c(15).pad());
+TEST_CASE("Dialectos: MAGIC_STATUS (37), MR h o d") {
+    auto ev = dec(tabla("original"), Pkt(37).c(3).h(300).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].tipo == Ev::SP_MR);
     CHECK(ev[0].v[0] == 3);
-    CHECK(ev[0].v[1] == 15);
+    CHECK(ev[0].v[1] == 300);
     ev = dec(tabla("login38"), Pkt(37).c(3).d(1000).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].v[0] == 3);
@@ -184,18 +189,26 @@ TEST_CASE("Dialectos: MAGIC_STATUS (37), MR c o d") {
     CHECK(ev[0].v[1] == -20);
 }
 
-TEST_CASE("Dialectos: RANGESKILLS (42), objetivos de 5 o 10 bytes") {
+TEST_CASE("Dialectos: RANGESKILLS (42), objetivos de 6 o 10 bytes") {
     auto cabecera = [](Pkt& p, int tipo, int n) {
         p.c(18).d(500).h(100).h(200).c(3).d(9).h(1810).c(tipo).h(0).h(n);
     };
-    // original: d id, c mark
+    // original: d id, h flag (6 bytes)
     Pkt o(42);
     cabecera(o, 1, 2);
-    o.d(11).c(0x20).d(12).c(0).pad();
+    o.d(11).h(0x20).d(12).h(0).pad();
     auto ev = dec(tabla("original"), o);
     std::vector<i32> ids;
     for (const Evento& e : ev) if (e.tipo == Ev::EFECTO) ids.push_back(static_cast<i32>(e.id));
     CHECK(ids == std::vector<i32>{11, 12});
+    // original area: 6 bytes per target skipped without error
+    Pkt oa(42);
+    cabecera(oa, 0, 2);
+    oa.d(11).h(0x20).d(12).h(0).pad();
+    ev = dec(tabla("original"), oa);
+    int efo = 0;
+    for (const Evento& e : ev) efo += e.tipo == Ev::EFECTO;
+    CHECK(efo == 1);
     // login38: d id, h hit, d damage
     Pkt l(42);
     cabecera(l, 1, 3);
@@ -215,18 +228,26 @@ TEST_CASE("Dialectos: RANGESKILLS (42), objetivos de 5 o 10 bytes") {
 }
 
 TEST_CASE("Dialectos: S_CharReset (64) sub 1 y 2, AC c/h o d") {
-    // sub 1: d hp, d mp, AC, c maxLevel
-    auto ev = dec(tabla("original"), Pkt(64).c(1).d(60).d(30).c(10).c(50).pad());
+    // sub 1 stock: h hp, h mp, c AC, c maxLevel
+    auto ev = dec(tabla("original"), Pkt(64).c(1).h(60).h(30).c(10).c(50).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].tipo == Ev::REINICIO);
     CHECK(ev[0].v[RE_HP] == 60);
     CHECK(ev[0].v[RE_AC] == 10);
     CHECK(ev[0].v[RE_MAX] == 50);
+    CHECK(ev[0].v[RE_MP] == 30);
     ev = dec(tabla("login38"), Pkt(64).c(1).d(60).d(30).d(10).c(50).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].v[RE_AC] == 10);
     CHECK(ev[0].v[RE_MAX] == 50);
-    // sub 2: c level, c max, d hp, d mp, AC, 6 x c stats
+    // sub 2 stock: c level, c max, h hp, h mp, h AC, 6 x c stats
+    ev = dec(tabla("original"), Pkt(64).c(2).c(9).c(52).h(700).h(300).h(0x0123).c(1).c(2).c(3).c(4).c(5).c(6).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].v[RE_HP] == 700);
+    CHECK(ev[0].v[RE_MP] == 300);
+    CHECK(ev[0].v[RE_AC] == 0x0123);  // u16, unsigned
+    CHECK(ev[0].v[RE_FUE + 5] == 6);
+    // sub 2 login38: d hp, d mp, d AC
     ev = dec(tabla("login38"), Pkt(64).c(2).c(9).c(52).d(700).d(300).d(static_cast<u32>(-12)).c(1).c(2).c(3).c(4).c(5).c(6).pad());
     REQUIRE(ev.size() == 1);
     CHECK(ev[0].v[RE_NIVEL] == 9);
@@ -234,4 +255,43 @@ TEST_CASE("Dialectos: S_CharReset (64) sub 1 y 2, AC c/h o d") {
     CHECK(ev[0].v[RE_AC] == -12);
     CHECK(ev[0].v[RE_FUE] == 1);
     CHECK(ev[0].v[RE_FUE + 5] == 6);
+}
+
+TEST_CASE("Dialectos: SOUND (22), c tipo + h id o d objeto + h id") {
+    auto ev = dec(tabla("original"), Pkt(22).c(0).h(1091).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::SONIDO);
+    CHECK(ev[0].v[0] == 1091);
+    ev = dec(tabla("login38"), Pkt(22).d(0x1234).h(1091).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::SONIDO);
+    CHECK(ev[0].v[0] == 1091);
+}
+
+TEST_CASE("Dialectos: POLY (76), d h c h c (original) y d h c c c (Whale) decodifican igual") {
+    auto ev = dec(tabla("original"), Pkt(76).d(7).h(1500).c(1).h(0xffff).c(0).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::CAMBIO_FORMA);
+    CHECK(ev[0].id == 7);
+    CHECK(ev[0].v[CF_GFX] == 1500);
+    ev = dec(tabla("login38"), Pkt(76).d(7).h(1500).c(1).c(0xff).c(0xff).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].v[CF_GFX] == 1500);
+}
+
+TEST_CASE("tw380: grupo, invitar = 230 y lista = 43 sin cuerpo (ambos dialectos)") {
+    for (const char* d : {"original", "login38"}) {
+        TablaOpcodes t = tabla(d);
+        CHECK(t.cli(Cli::CREATEPARTY) == 230);
+        CHECK(t.cli(Cli::PARTYLIST) == 43);
+        Escritor ei = cmd::invitar_chat(t, "Ana");
+        Bytes inv = ei.cuerpo();
+        CHECK(inv[0] == 230);
+        CHECK(inv[1] == 2);
+        CHECK(inv[2] == 'A');
+        Escritor el = cmd::ver_grupo(t);
+        Bytes lista = el.cuerpo();
+        CHECK(lista[0] == 43);
+        CHECK(lista[1] == 0);  // empty body (padding only)
+    }
 }

@@ -55,7 +55,7 @@ enum class Cli : u8 {
 // decodificadores (ver docs/analisis/PLAN_MULTIVERSION.md). Cada campo arranca con el valor del
 // 3.63c, que es el caso base.
 struct PerfilProtocolo {
-    u8 bytes_vida = 2;  // ancho de vida y maná (S_OwnCharStatus, S_HPUpdate, S_MPUpdate); 4 en 3.80C
+    u8 bytes_vida = 2;  // ancho de vida y maná (S_OwnCharStatus, S_HPUpdate, S_MPUpdate); 3.80C stock: 2, login38: 4
     // Cuerpo de ítem (S_AddItem, S_InvList): el 3.63/3.80 ponen antes del tipo un campo h de
     // catalizador mágico (2 bytes) y cierran con una cola fija (c 10, d 0, d 0, h 0 = 11 bytes); el
     // US 2009 no tiene ni uno ni otra.
@@ -87,10 +87,11 @@ struct PerfilProtocolo {
     u8 bytes_ca = 1;              // AC in S_OwnCharStatus; login38: 4
     u8 bytes_ca_reinicio1 = 1;    // AC in S_CharReset sub 1 (reset init); login38: 4
     u8 bytes_ca_reinicio2 = 2;    // AC in S_CharReset sub 2 (level up); login38: 4
-    u8 bytes_resistencia = 1;     // elemental resistances in S_OwnCharAttrDef; login38: 2
+    u8 bytes_resistencia = 1;     // elemental resistances in S_OwnCharAttrDef; tw380: 2
     u8 bytes_mr = 1;              // MR in S_SPMR; login38: 4
     u8 bytes_marca_rango = 1;     // per-target hit mark in S_RangeSkill; login38: 2
     u8 bytes_dano_rango = 0;      // per-target damage in S_RangeSkill; login38: 4
+    bool sonido_objeto = false;   // S_Sound starts with d object (login38) instead of c type
 };
 
 struct TablaOpcodes {

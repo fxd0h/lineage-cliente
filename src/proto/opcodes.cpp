@@ -115,7 +115,7 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::ATTACK, 229},        {Cli::RESTART, 177},      {Cli::USEITEM, 164},      {Cli::PICKUPITEM, 112},
     {Cli::DROPITEM, 25},       {Cli::USESKILL, 6},       {Cli::NPCACTION, 125},    {Cli::NPCTALK, 34},
     {Cli::RESULT, 161},        {Cli::TELEPORT, 52},      {Cli::ATTR, 121},
-    {Cli::CREATEPARTY, 43},    {Cli::PARTYLIST, 230},    {Cli::LEAVEPARTY, 33},    {Cli::BANPARTY, 255},
+    {Cli::CREATEPARTY, 230},   {Cli::PARTYLIST, 43},    {Cli::LEAVEPARTY, 33},    {Cli::BANPARTY, 255},
     {Cli::TRADE, 2},           {Cli::TRADEADDITEM, 37},  {Cli::TRADEADDOK, 71},    {Cli::TRADEADDCANCEL, 86},
     {Cli::CREATECLAN, 222},    {Cli::JOINCLAN, 194},     {Cli::LEAVECLAN, 61},     {Cli::BANCLAN, 69},
     {Cli::TITLE, 90},          {Cli::PLEDGE, 68},        {Cli::WHO, 206},          {Cli::EMBLEM, 18},         {Cli::CLAN, 72},
@@ -129,8 +129,10 @@ constexpr ParCli TW380_CLI[] = {
     {Cli::DRAWAL, 44},         {Cli::RANK, 63},
     {Cli::FARATTACK, 123},  // C_FarAttack: Whale only treats 123 as a ranged attack (system/combat.go:109)
     {Cli::PROPOSE, 50},        {Cli::FIGHT, 5},          {Cli::CHECKPK, 51},  // Whale: C_OPCODE_MARRIAGE / DUEL / CHECK_PK
-    // TODO(open question 2, PROTOCOLO_380.md): Whale registers 230 as party invite and 43 as party list, the opposite
-    // of CREATEPARTY=43 / PARTYLIST=230 above. Not changed: check against the original client first.
+    // Party (PROTOCOLO_380_ORIGINAL.md 2.6): the stock client invites with 230 (sub 2 by name, sub 3 by target id)
+    // and asks for the party list with 43 and an empty body; both match Whale's registration.
+    // Bow attack, 123 (FARATTACK) vs 229 (ATTACK): UNRESOLVED in the stock client (PROTOCOLO_380_ORIGINAL.md 2.7);
+    // behaviour left as is until a runtime capture settles it.
 };
 
 // L1J 3.0 English / US 2009 (S3EP1): encryptions/Opcodes.java de l1j-en/classic, por nombre. El
@@ -228,17 +230,20 @@ struct Dialecto {
     std::span<const ParCli> cli;  // internal -> wire number
 };
 
+// The stock 3.80C client (PROTOCOLO_380_ORIGINAL.md, the "original" dialect) is the tw380 profile itself: u16 HP/MP, u8 AC
+// in 8 / 93 / 127, u16 AC in 64 sub 2, u16 resistances, u16 MR, 6-byte RANGESKILLS targets, SOUND = c type + h id.
+// POLY (76): stock reads d h c h c, Whale sends d h c c c; the decoder reads d h h and works with both (kept).
 // L1JGO-Whale, TWU68 / Login38 launcher-patched client (PROTOCOLO_380.md section 0 and 8c): wider HP/MP, AC, MR,
 // resistances and per-target damage. Sources: handler/charlist.go:75, broadcast.go:523/253/451, statalloc.go:53, charreset.go:79.
 void login38(PerfilProtocolo& p) {
+    p.bytes_vida = 4;
     p.bytes_vida_lista = 4;
     p.bytes_ca = 4;
     p.bytes_ca_reinicio1 = 4;
     p.bytes_ca_reinicio2 = 4;
-    p.bytes_resistencia = 2;
     p.bytes_mr = 4;
-    p.bytes_marca_rango = 2;
     p.bytes_dano_rango = 4;
+    p.sonido_objeto = true;
 }
 
 constexpr Dialecto DIALECTOS[] = {
@@ -263,7 +268,7 @@ void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u
 
 bool tabla_opcodes(std::string_view version, TablaOpcodes& t, std::string_view dialecto) {
     if (version == "jp363") cargar(t, JP363_SRV, JP363_CLI, 161, PerfilProtocolo{});
-    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 4, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true});
+    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 2, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true, .bytes_resistencia = 2, .bytes_mr = 2, .bytes_marca_rango = 2});
     else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1, .correo_ymd = true});
     else return false;
     if (dialecto.empty() || dialecto == "original") return true;

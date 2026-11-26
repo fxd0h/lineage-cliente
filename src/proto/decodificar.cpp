@@ -761,7 +761,8 @@ bool bendicion_eva(Lector& l, Evento& e) {
 // S_Ability: c tipo (1 anillo de control de teletransporte, 5 de control de invocación), c puesto.
 bool anillo(Lector& l, Evento& e) { e.tipo = Ev::ANILLO; e.v[0] = l.c(); e.v[1] = l.c(); return true; }
 // S_Sound: c repetir, h sonido (sound/<n>.wav).
-bool sonido(Lector& l, Evento& e) { e.tipo = Ev::SONIDO; l.c(); e.v[0] = l.h(); return true; }
+// S_Sound: c type, h id; login38 (Whale) sends d object, h id.
+bool sonido(Lector& l, Evento& e) { e.tipo = Ev::SONIDO; if (l.perfil.sonido_objeto) l.d(); else l.c(); e.v[0] = l.h(); return true; }
 // Texto UTF-16LE terminado en 0 0 (el correo) a la arena, en ASCII: lo demás queda como '?'.
 std::string_view texto_utf16(Lector& l) {
     char buf[1024];
