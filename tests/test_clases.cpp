@@ -33,8 +33,8 @@ TEST_CASE("cargar_clases_ini: el guerrero de reborn") {
         "bonus = 4\n"
         "boton=2257  ; ícono\n"
         "posicion=542,166\n"
-        "hombre=1132,87,1132,1134\n"
-        "mujer=1219,84,1219,1221\n";
+        "hombre=1135,84,1132,1134\n"
+        "mujer=1220,83,1133,1219\n";
     REQUIRE(cargar_clases_ini(ini, t));
     REQUIRE(t.n == 8);
     const Clase& g = t.c[7];
@@ -46,8 +46,8 @@ TEST_CASE("cargar_clases_ini: el guerrero de reborn") {
     CHECK(g.boton == 2257);
     CHECK(g.x == 542);
     CHECK(g.y == 166);
-    CHECK(g.anim[1].primero == 1219);
-    CHECK(g.anim[1].cantidad == 84);
+    CHECK(g.anim[1].primero == 1220);
+    CHECK(g.anim[1].cantidad == 83);
     CHECK(t.c[1].bonus == 4);  // las demás no cambian
 }
 

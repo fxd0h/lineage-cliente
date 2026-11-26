@@ -404,10 +404,11 @@ Visto en los datos de su cliente (TW13032701 con archivos propios; sin conectars
   sugeridos por clase (`clase tipo fue des con int sab car`). La base de cada stat es el mínimo de los tres y
   el bonus lo que falta para 75; con las clases del juego da exactamente las bases de `C_CreateChar`.
 - **Imágenes:** botón `2257.img` (2258 marcado), cuya cabecera dice transparente `0x421` pero el fondo es
-  `0x422`, así que se ve como un recuadro oscuro, igual que en sus datos. Animación de la selección:
-  `1132.png`..`1218.png` hombre y `1219.png`..`1302.png` mujer, sin PNG "quieto" ni "resaltado" aparte: se usan el
-  primer cuadro (en gris, como los quietos del juego) y el tercero. En el juego: gfx 12490 y 12494, con las
-  acciones en `list.spz`.
+  `0x422`, así que se ve como un recuadro oscuro, igual que en sus datos. Selección: los quietos y
+  resaltados en gris van intercalados con las animaciones: `1132` hombre quieto, `1133` mujer quieta, `1134`
+  hombre resaltado, `1135..1218` animación del hombre, `1219` mujer resaltada, `1220..1302` animación de la
+  mujer (brillo medio de quieto ≈ 5 y resaltado ≈ 11, como el 906/907 del caballero dragón). En el juego:
+  gfx 12490 y 12494, con las acciones en `list.spz`.
 - **Cómo se activa:** protocolo `<versión>+reborn` en `servidor=`; los números están en
   `datos/extensiones/reborn.ini` (`mundo/clases.h`). Un servidor estándar nunca manda la clase 7 y su tabla es
   la de siempre.
