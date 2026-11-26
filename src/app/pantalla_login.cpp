@@ -213,6 +213,10 @@ void frame_login(App& a) {
     EntradaFrame sin_texto = e;
     sin_texto.ntexto = 0;
     sin_texto.retroceso = false;
+    if (a.mostrando_noticias) {  // la ventana de noticias tapa el formulario: su OK se pisaba con Salir
+        sin_texto.mx = sin_texto.my = -1;
+        sin_texto.clic = sin_texto.pulsado = sin_texto.presionado = false;
+    }
     const EntradaFrame& ec = bloqueado ? sin_texto : e;
     auto caja = simple ? ui::campo : ui::caja_texto;
     if (caja(g, ec, a.usuario, x_cajas, y_usuario, ancho_caja, a.foco == 0, false, 20)) a.foco = 1;
@@ -220,14 +224,14 @@ void frame_login(App& a) {
 
     bool login = enter_clave;
     if (simple) {
-        login |= ui::boton_texto(g, e, tr(Tx::LOGIN_ENTRAR), 206, 326, 108, 20);
-        if (ui::boton_texto(g, e, tr(Tx::LOGIN_SALIR), 326, 326, 108, 20)) a.salir = true;
-        if (ui::boton_texto(g, e, tr(Tx::UI_AJUSTES), 266, 350, 108, 20)) a.ventana_ajustes = true;
+        login |= ui::boton_texto(g, ec, tr(Tx::LOGIN_ENTRAR), 206, 326, 108, 20);
+        if (ui::boton_texto(g, ec, tr(Tx::LOGIN_SALIR), 326, 326, 108, 20)) a.salir = true;
+        if (ui::boton_texto(g, ec, tr(Tx::UI_AJUSTES), 266, 350, 108, 20)) a.ventana_ajustes = true;
     } else {
-        login |= ui::boton(g, e, 53, X_BOTONES, 0x183);
-        ui::boton(g, e, 65, X_BOTONES, 0x195);  // nueva cuenta: L1J las crea solas al primer login
-        ui::boton(g, e, 55, X_BOTONES, 0x1a8);  // options: no-op like the 2009 login (settings window is simple-UI only)
-        if (ui::boton(g, e, 57, X_BOTONES, 0x1c2)) a.salir = true;
+        login |= ui::boton(g, ec, 53, X_BOTONES, 0x183);
+        ui::boton(g, ec, 65, X_BOTONES, 0x195);  // nueva cuenta: L1J las crea solas al primer login
+        ui::boton(g, ec, 55, X_BOTONES, 0x1a8);  // options: no-op like the 2009 login (settings window is simple-UI only)
+        if (ui::boton(g, ec, 57, X_BOTONES, 0x1c2)) a.salir = true;
     }
     if (e.escape && !a.mostrando_noticias) a.salir = true;
     if (login && !bloqueado) iniciar_login(a);
