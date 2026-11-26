@@ -295,3 +295,40 @@ TEST_CASE("tw380: grupo, invitar = 230 y lista = 43 sin cuerpo (ambos dialectos)
         CHECK(lista[1] == 0);  // empty body (padding only)
     }
 }
+
+TEST_CASE("Dialectos: HPUPDATE (225) y MPUPDATE (33), h h o d d") {
+    auto ev = dec(tabla("original"), Pkt(225).h(120).h(300).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::HP);
+    CHECK(ev[0].v[0] == 120);
+    CHECK(ev[0].v[1] == 300);
+    ev = dec(tabla("login38"), Pkt(225).d(70000).d(90000).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::HP);
+    CHECK(ev[0].v[0] == 70000);
+    CHECK(ev[0].v[1] == 90000);
+    ev = dec(tabla("original"), Pkt(33).h(15).h(40).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::MP);
+    CHECK(ev[0].v[1] == 40);
+    ev = dec(tabla("login38"), Pkt(33).d(70001).d(90001).pad());
+    REQUIRE(ev.size() == 1);
+    CHECK(ev[0].tipo == Ev::MP);
+    CHECK(ev[0].v[0] == 70001);
+}
+
+// The patched client reads the time of 166/188 through readH (u32), but Whale still writes h: no dialect widens it (see
+// PROTOCOLO_380.md "readH widening vs Whale"), so both dialects must decode the h form.
+TEST_CASE("Dialectos: STRUP (166) y DEXUP (188), segundos h en ambos") {
+    for (const char* dialecto : {"original", "login38"}) {
+        auto ev = dec(tabla(dialecto), Pkt(166).h(300).c(18).c(0).c(5).pad());
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].tipo == Ev::ICONO_EFECTO);
+        CHECK(ev[0].v[IE_SEG] == 300);
+        CHECK(ev[0].v[IE_TIPO] == 5);
+        ev = dec(tabla(dialecto), Pkt(188).h(300).c(18).c(5).pad());
+        REQUIRE(ev.size() == 1);
+        CHECK(ev[0].v[IE_SEG] == 300);
+        CHECK(ev[0].v[IE_TIPO] == 5);
+    }
+}
