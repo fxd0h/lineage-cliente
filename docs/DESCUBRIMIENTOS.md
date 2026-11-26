@@ -393,6 +393,25 @@ Visto al probar la barra de atajos, los auto-buffs y la auto-poción en los dos:
 - **Whale no guarda lo que da `.allskill`:** al volver a entrar, `S_AddSkill` trae solo las magias
   iniciales. Hay que repetirlo en cada sesión de prueba.
 
+### Lineage 1 Reborn: el Guerrero (extensión `reborn`)
+
+Visto en los datos de su cliente (TW13032701 con archivos propios; sin conectarse a su servidor):
+
+- **Los `.pak` son del formato clásico** (Sprite, Sprite00–15, Tile, Text con DES): los lee el cliente sin
+  cambios. Su actualizador baja archivos sueltos y los empaqueta con `eat.exe`; los de los SpriteNN, más
+  nuevos, ganan sobre Sprite.pak, que es lo que ya hace `pak.h`.
+- **El Guerrero es la clase 7:** lo dice `text/charattrtype.tbl` ("7:warrior"), que trae tres repartos
+  sugeridos por clase (`clase tipo fue des con int sab car`). La base de cada stat es el mínimo de los tres y
+  el bonus lo que falta para 75; con las clases del juego da exactamente las bases de `C_CreateChar`.
+- **Imágenes:** botón `2257.img` (2258 marcado), cuya cabecera dice transparente `0x421` pero el fondo es
+  `0x422`, así que se ve como un recuadro oscuro, igual que en sus datos. Animación de la selección:
+  `1132.png`..`1218.png` hombre y `1219.png`..`1302.png` mujer, sin PNG "quieto" ni "resaltado" aparte: se usan el
+  primer cuadro (en gris, como los quietos del juego) y el tercero. En el juego: gfx 12490 y 12494, con las
+  acciones en `list.spz`.
+- **Cómo se activa:** protocolo `<versión>+reborn` en `servidor=`; los números están en
+  `datos/extensiones/reborn.ini` (`mundo/clases.h`). Un servidor estándar nunca manda la clase 7 y su tabla es
+  la de siempre.
+
 ---
 
 ## 6. Decisiones de interfaz

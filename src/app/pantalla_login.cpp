@@ -6,10 +6,26 @@
 #include <algorithm>
 #include "app/app.h"
 #include "i18n/textos.h"
+#include "plataforma/archivo_mapeado.h"
 
 namespace lin {
 
 namespace {
+
+// Clases del servidor: las del juego, más las de datos/extensiones/<extension>.ini (junto al ejecutable o en
+// el directorio actual, como sprite_table.txt) si el protocolo trae "+extension". false si no está o no se entiende.
+bool cargar_clases(App& a, std::string_view extension) {
+    a.clases = clases_estandar();
+    if (extension.empty()) return true;
+    const std::string rel = "datos/extensiones/" + std::string(extension) + ".ini";
+    const char* base = SDL_GetBasePath();
+    std::vector<u8> texto;
+    if (!leer_archivo(std::string(base ? base : "") + rel, texto) && !leer_archivo(rel, texto)) return false;
+    TablaClases t = clases_estandar();
+    if (!cargar_clases_ini(std::string_view(reinterpret_cast<const char*>(texto.data()), texto.size()), t)) return false;
+    a.clases = t;
+    return true;
+}
 
 // Parte `t` en renglones que caben en `ancho` píxeles (corta entre palabras; un carácter no se parte)
 // y llama a `f` con cada uno. Los '\n' son renglones aparte; una línea vacía da un renglón vacío.
@@ -56,8 +72,13 @@ const char* motivo_login(int codigo) {
 void iniciar_login(App& a) {
     if (a.usuario.empty() || a.clave.empty() || a.esperando) return;
     const Servidor& sv = servidor_elegido(a.cfg);
-    if (!tabla_opcodes(sv.protocolo, a.op)) {
+    std::string_view extension;
+    if (!tabla_opcodes(separar_extension(sv.protocolo, extension), a.op)) {
         a.aviso = std::string(tr(Tx::LOGIN_ERR_PROTOCOLO)) + sv.protocolo;
+        return;
+    }
+    if (!cargar_clases(a, extension)) {
+        a.aviso = std::string(tr(Tx::LOGIN_ERR_EXTENSION)) + std::string(extension);
         return;
     }
     a.aviso.clear();
