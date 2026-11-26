@@ -332,3 +332,26 @@ TEST_CASE("Dialectos: STRUP (166) y DEXUP (188), segundos h en ambos") {
         CHECK(ev[0].v[IE_TIPO] == 5);
     }
 }
+
+TEST_CASE("tw380: version packet carries the client build, login uses 210 with action 0x06") {
+    TablaOpcodes t{};
+    REQUIRE(tabla_opcodes("tw380", t));
+    auto ev = cmd::version(t);
+    const auto v = ev.cuerpo();
+    // opcode 14, h 0x34, c 0, d 3, h 0, h 0, d 13081901 (what the stock L1J-TW C_ServerVersion reads), 16 bytes
+    REQUIRE(v.size() == 16);
+    CHECK(v[0] == 14);
+    CHECK(v[1] == 0x34);
+    CHECK((v[12] | v[13] << 8 | v[14] << 16 | v[15] << 24) == 13081901);
+    auto el = cmd::login(t, "ab", "cd");
+    const auto l = el.cuerpo();
+    CHECK(l[0] == 210);
+    CHECK(l[1] == 0x06);
+    CHECK(l[2] == 'a');
+    TablaOpcodes jp{};
+    REQUIRE(tabla_opcodes("jp363", jp));
+    auto vj = cmd::version(jp);
+    CHECK(vj.cuerpo().size() == 4);  // empty body (padded) for L1J-JP, unchanged
+    auto lj = cmd::login(jp, "ab", "cd");
+    CHECK(lj.cuerpo()[1] == 'a');
+}

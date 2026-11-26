@@ -109,7 +109,7 @@ constexpr ParSrv TW380_SRV[] = {
     {126, Srv::BLESSOFEVA},    {160, Srv::DELSKILL},  // S_SkillIconBlessOfEva, S_DelSkill (handler/broadcast.go:882, elf_attribute.go:18)
 };
 constexpr ParCli TW380_CLI[] = {
-    {Cli::CLIENTVERSION, 14},  {Cli::LOGINPACKET, 119},  {Cli::COMMONCLICK, 16},   {Cli::NEWCHAR, 84},
+    {Cli::CLIENTVERSION, 14},  {Cli::LOGINPACKET, 210},  {Cli::COMMONCLICK, 16},   {Cli::NEWCHAR, 84},
     {Cli::DELETECHAR, 162},    {Cli::LOGINTOSERVER, 137}, {Cli::MOVECHAR, 29},     {Cli::CHANGEHEADING, 225},
     {Cli::KEEPALIVE, 95},      {Cli::QUITGAME, 122},     {Cli::CHAT, 40},          {Cli::CHATWHISPER, 184},
     {Cli::ATTACK, 229},        {Cli::RESTART, 177},      {Cli::USEITEM, 164},      {Cli::PICKUPITEM, 112},
@@ -268,7 +268,7 @@ void cargar(TablaOpcodes& t, const ParSrv (&srv)[NS], const ParCli (&cli)[NC], u
 
 bool tabla_opcodes(std::string_view version, TablaOpcodes& t, std::string_view dialecto) {
     if (version == "jp363") cargar(t, JP363_SRV, JP363_CLI, 161, PerfilProtocolo{});
-    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 2, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true, .bytes_resistencia = 2, .bytes_mr = 2, .bytes_marca_rango = 2});
+    else if (version == "tw380") cargar(t, TW380_SRV, TW380_CLI, 150, PerfilProtocolo{.bytes_vida = 2, .texto_big5 = true, .rango_principe = 10, .marcadores_ranuras = 127, .respuesta_corta = true, .bytes_resistencia = 2, .bytes_mr = 2, .bytes_marca_rango = 2, .build_cliente = 13081901, .accion_login = 0x06});
     else if (version == "s3ep1") cargar(t, S3EP1_SRV, S3EP1_CLI, 125, PerfilProtocolo{.bytes_catalizador_item = 0, .bytes_cola_item = 0, .bytes_pre_pregunta = 0, .bytes_numero_pregunta = 0, .bytes_golpe_ataque = 1, .correo_ymd = true});
     else return false;
     if (dialecto.empty() || dialecto == "original") return true;

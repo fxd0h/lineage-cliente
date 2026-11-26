@@ -971,7 +971,7 @@ TEST_CASE("3.80C (tw380): opcodes, vida en 2 (original) o 4 (login38) bytes y S_
     TablaOpcodes t;
     REQUIRE(tabla_opcodes("tw380", t));
     CHECK(t.cable_init == 150);
-    CHECK(t.cli(Cli::LOGINPACKET) == 119);
+    CHECK(t.cli(Cli::LOGINPACKET) == 210);
     CHECK(t.srv(87) == Srv::CHARPACK);
     Arena arena(1024);
     std::vector<Evento> ev;

@@ -90,6 +90,14 @@ struct PerfilProtocolo {
     u8 bytes_resistencia = 1;     // elemental resistances in S_OwnCharAttrDef; tw380: 2
     u8 bytes_mr = 1;              // MR in S_SPMR; login38: 4
     u8 bytes_marca_rango = 1;     // per-target hit mark in S_RangeSkill; login38: 2
+    // C_ClientVersion body. 0 = empty body (L1J-JP, Whale ignore it). Otherwise the client build sent in the layout
+    // the stock L1J-TW 3.80C server reads (C_ServerVersion.java: h, c, d language, h, h, d build); it reads past the
+    // end of an empty body and drops the connection.
+    u32 build_cliente = 0;
+    // Action byte before account/password in the login packet (0 = none). 3.80C: login goes on opcode 210 (the
+    // beanfun login) with action 0x06, which both the stock L1J-TW server (119 and 210 need it) and Whale (210)
+    // accept; Whale's 119 has no action byte.
+    u8 accion_login = 0;
     u8 bytes_dano_rango = 0;      // per-target damage in S_RangeSkill; login38: 4
     bool sonido_objeto = false;   // S_Sound starts with d object (login38) instead of c type
 };

@@ -50,9 +50,16 @@ struct LineaResultado {
 
 namespace cmd {
 // Formatos: C_*.java de L1J-JP 3.63c.
-inline Escritor version(const TablaOpcodes& t) { return Escritor(t, Cli::CLIENTVERSION); }
+inline Escritor version(const TablaOpcodes& t) {
+    Escritor e(t, Cli::CLIENTVERSION);
+    // 3.80C: same layout as the stock server's capture (0e 34 00 b6 03 00 00 00 ...): h 0x34, c, d language 3
+    // (Taiwan), h, h, d client build.
+    if (t.perfil.build_cliente != 0) e.h(0x34).c(0).d(3).h(0).h(0).d(t.perfil.build_cliente);
+    return e;
+}
 inline Escritor login(const TablaOpcodes& t, std::string_view usuario, std::string_view clave) {
     Escritor e(t, Cli::LOGINPACKET);
+    if (t.perfil.accion_login != 0) e.c(t.perfil.accion_login);
     e.s(usuario).s(clave);
     return e;
 }
