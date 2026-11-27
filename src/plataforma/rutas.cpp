@@ -30,8 +30,29 @@ struct Anterior {
     std::string elegido;  // servidor_elegido=
 };
 
-// servidor=nombre|host|puerto|protocolo|cuenta[|dialecto][|lanzador]. The dialect is optional and recognised by name
-// (DIALECTOS_CONOCIDOS), so old lines whose 6th field is a launcher command stay valid; the launcher takes the rest.
+// Moves a dialect suffix out of the profile field: "tw380+login38+reborn" -> protocolo "tw380+reborn", dialecto "login38".
+// Other suffixes are server extensions (datos/extensiones/, see separar_extension) and stay.
+void separar_dialecto(Servidor& sv) {
+    std::string_view resto = sv.protocolo;
+    const size_t mas = resto.find('+');
+    if (mas == std::string_view::npos) return;
+    std::string protocolo(resto.substr(0, mas));
+    resto = resto.substr(mas + 1);
+    while (true) {
+        const size_t b = resto.find('+');
+        const std::string_view parte = resto.substr(0, b);
+        if (std::find(std::begin(DIALECTOS_CONOCIDOS), std::end(DIALECTOS_CONOCIDOS), parte) != std::end(DIALECTOS_CONOCIDOS))
+            sv.dialecto = parte;
+        else
+            (protocolo += '+') += parte;
+        if (b == std::string_view::npos) break;
+        resto = resto.substr(b + 1);
+    }
+    sv.protocolo = protocolo;
+}
+
+// servidor=nombre|host|puerto|protocolo[+dialecto][+extension]|cuenta[|lanzador]. Lines written before the suffix form
+// may carry the dialect as the 6th field (recognised by name, DIALECTOS_CONOCIDOS); the launcher takes the rest.
 Servidor leer_servidor(std::string_view v) {
     Servidor sv;
     std::string_view campos[5];
@@ -44,6 +65,7 @@ Servidor leer_servidor(std::string_view v) {
     sv.host = campos[1];
     if (!campos[2].empty()) sv.puerto = static_cast<u16>(std::atoi(std::string(campos[2]).c_str()));
     if (!campos[3].empty()) sv.protocolo = campos[3];
+    separar_dialecto(sv);
     sv.usuario = campos[4];
     const size_t b = v.find('|');
     const std::string_view cand = v.substr(0, b);
@@ -243,10 +265,15 @@ std::string escribir_config(const Config& c) {
     linea("juego", c.carpeta_juego);
     for (const std::string& e : c.carpetas_extra) linea("juego_extra", e);
     if (!c.carpeta_hd.empty()) linea("hd", c.carpeta_hd);
-    // Servidores: nombre|host|puerto|protocolo|cuenta (la última usada en ese servidor)[|dialecto][|lanzador].
-    for (const Servidor& sv : c.servidores)
-        linea("servidor", sv.nombre + '|' + sv.host + '|' + std::to_string(sv.puerto) + '|' + sv.protocolo + '|' + sv.usuario +
-                              (sv.dialecto == "original" ? "" : '|' + sv.dialecto) + (sv.lanzador.empty() ? "" : '|' + sv.lanzador));
+    // Servidores: nombre|host|puerto|protocolo[+dialecto][+extension]|cuenta (la última usada en ese servidor)[|lanzador].
+    // The dialect goes right after the profile; a build that predates dialects then rejects the profile instead of
+    // running the dialect name as a launcher command.
+    for (const Servidor& sv : c.servidores) {
+        std::string protocolo = sv.protocolo;
+        if (sv.dialecto != "original") protocolo.insert(std::min(protocolo.find('+'), protocolo.size()), '+' + sv.dialecto);
+        linea("servidor", sv.nombre + '|' + sv.host + '|' + std::to_string(sv.puerto) + '|' + protocolo + '|' + sv.usuario +
+                              (sv.lanzador.empty() ? "" : '|' + sv.lanzador));
+    }
     linea("servidor_elegido", servidor_elegido(c).nombre);
     linea("zoom", std::to_string(c.zoom));
     linea("escalado", c.escalado);

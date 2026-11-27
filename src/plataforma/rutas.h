@@ -20,11 +20,11 @@ struct Servidor {
     std::string protocolo = "jp363";
     std::string usuario;
     std::string lanzador;
-    std::string dialecto = "original";  // protocol dialect on top of `protocolo` (opcodes.cpp DIALECTOS); 6th field of servidor=
+    std::string dialecto = "original";  // protocol dialect on top of `protocolo` (opcodes.cpp DIALECTOS); "+name" suffix in servidor=
 };
 
-// Names accepted as the dialect field of servidor= (must match DIALECTOS in proto/opcodes.cpp). They are told apart
-// from a launcher command, which used to be the 6th field, by name.
+// Dialect names (must match DIALECTOS in proto/opcodes.cpp): a "+name" suffix of the profile in servidor= that is one
+// of these is the dialect, any other is a server extension. Older lines with the dialect as the 6th field also parse.
 constexpr std::string_view DIALECTOS_CONOCIDOS[] = {"original", "login38"};
 
 constexpr int PAGINAS_BARRA_MAX = 9;  // páginas de la barra de atajos

@@ -46,6 +46,25 @@ TEST_CASE("Dialectos: nombres validos y rechazo de desconocidos") {
     for (std::string_view d : DIALECTOS_CONOCIDOS) CHECK(tabla_opcodes("tw380", t, d));
 }
 
+TEST_CASE("Dialectos: sufijo +dialecto en el perfil, junto con una extension") {
+    Config c = leer_config("servidor=A|h|7001|tw380+login38|fx\nservidor=B|h|7001|tw380+login38+reborn|fx\n"
+                           "servidor=C|h|7001|tw380+reborn+login38|fx|./l.sh\nservidor=D|h|2000|jp363+reborn|fx\n");
+    REQUIRE(c.servidores.size() == 4);
+    CHECK(c.servidores[0].protocolo == "tw380");
+    CHECK(c.servidores[0].dialecto == "login38");
+    CHECK(c.servidores[1].protocolo == "tw380+reborn");
+    CHECK(c.servidores[1].dialecto == "login38");
+    CHECK(c.servidores[2].protocolo == "tw380+reborn");
+    CHECK(c.servidores[2].dialecto == "login38");
+    CHECK(c.servidores[2].lanzador == "./l.sh");
+    CHECK(c.servidores[3].protocolo == "jp363+reborn");
+    CHECK(c.servidores[3].dialecto == "original");
+    const std::string texto = escribir_config(c);
+    CHECK(texto.find("servidor=B|h|7001|tw380+login38+reborn|fx\n") != std::string::npos);
+    CHECK(texto.find("servidor=C|h|7001|tw380+login38+reborn|fx|./l.sh\n") != std::string::npos);
+    CHECK(texto.find("servidor=D|h|2000|jp363+reborn|fx\n") != std::string::npos);
+}
+
 TEST_CASE("Dialectos: servidor= con y sin dialecto, el lanzador sigue valiendo") {
     Config c = leer_config("servidor=W|127.0.0.1|7001|tw380|fx|login38\nservidor=V|h|7001|tw380|fx\n"
                            "servidor=L|h|7001|tw380|fx|./lanzar.sh a|b\nservidor=M|h|7001|tw380|fx|login38|./lanzar.sh\n");
@@ -58,7 +77,8 @@ TEST_CASE("Dialectos: servidor= con y sin dialecto, el lanzador sigue valiendo")
     CHECK(c.servidores[3].dialecto == "login38");
     CHECK(c.servidores[3].lanzador == "./lanzar.sh");
     const std::string texto = escribir_config(c);
-    CHECK(texto.find("servidor=W|127.0.0.1|7001|tw380|fx|login38\n") != std::string::npos);
+    CHECK(texto.find("servidor=W|127.0.0.1|7001|tw380+login38|fx\n") != std::string::npos);  // saved as a suffix
+    CHECK(texto.find("servidor=M|h|7001|tw380+login38|fx|./lanzar.sh\n") != std::string::npos);
     CHECK(texto.find("servidor=V|h|7001|tw380|fx\n") != std::string::npos);
     Config c2 = leer_config(texto);
     CHECK(c2.servidores[3].dialecto == "login38");
