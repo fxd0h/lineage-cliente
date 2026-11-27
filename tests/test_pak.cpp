@@ -108,3 +108,16 @@ TEST_CASE("Pak: un brotli dañado devuelve vacío en vez de basura") {
     REQUIRE(p.abrir(escribir("Malo", "_EXT", 128, malos, false), false));
     CHECK(p.buscar("malo.txt").empty());
 }
+
+TEST_CASE("Pak _RMS: mismo nombre en dos carpetas, cada uno por su ruta") {
+    std::string a = CLARO, b = CLARO;
+    a[0] = 'A';
+    b[0] = 'B';
+    const std::vector<Archivo> dos = {{"ui\\s1\\clip13.dds", {a.begin(), a.end()}, 0}, {"ui\\s11\\clip13.dds", {b.begin(), b.end()}, 0}};
+    Pak p;
+    REQUIRE(p.abrir(escribir("Carpetas", "_RMS", 276, dos, false), false));
+    CHECK(texto(p.buscar("ui\\s1\\clip13.dds")) == a);
+    CHECK(texto(p.buscar("UI/S11/Clip13.dds")) == b);  // '/' = '\', no case
+    CHECK(texto(p.buscar("clip13.dds")) == b);         // the plain name: the last one in the index
+    CHECK(p.buscar("ui\\s2\\clip13.dds").empty());
+}

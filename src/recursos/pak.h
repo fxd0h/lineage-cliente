@@ -28,7 +28,8 @@ public:
     // puede_ir_cifrado: Text (el clásico va siempre con DES; en _EXT / _RMS se prueba sin y con). avisar: al log si falla.
     bool abrir(const std::string& ruta_sin_extension, bool puede_ir_cifrado, bool avisar = true);
     // Devuelve el contenido (descifrado y descomprimido) o vacío si no existe o no se pudo decodificar. Sin distinguir
-    // mayúsculas; un nombre con carpeta en el índice también se encuentra por su nombre solo.
+    // mayúsculas. A name with folders ('/' or '\\') looks up that exact path; a plain name finds an indexed path by its
+    // last component (the last such entry when several folders share it).
     Bytes buscar(std::string_view nombre) const;
     size_t cantidad() const { return entradas_.size(); }
     // Para el explorador: nombre de la entrada i (con su carpeta, si tiene).
@@ -50,6 +51,9 @@ private:
     void agregar(u32 offset, u32 guardado, u32 tam, u8 compresion, std::string_view nombre);
 
     std::vector<Entrada> entradas_;  // ordenadas por hash para búsqueda binaria
+    // Entries whose index name has folders, by full-path hash ('/' = '\\'), sorted: two files with the same name in
+    // different folders (Remastered ui/, image*, data) are reachable by their path; the plain name finds the last one.
+    std::vector<std::pair<u64, u32>> rutas_;
     std::string nombres_;
     ArchivoMapeado datos_;
     Formato formato_ = Formato::CLASICO;

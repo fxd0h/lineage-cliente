@@ -13,7 +13,7 @@ static char minuscula(char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char
 u64 hash_nombre(std::string_view nombre) {
     u64 h = 0xcbf29ce484222325ull;
     for (char c : nombre) {
-        h ^= static_cast<u8>(minuscula(c));
+        h ^= static_cast<u8>(c == '/' ? '\\' : minuscula(c));
         h *= 0x100000001b3ull;
     }
     return h;
@@ -50,6 +50,10 @@ bool Pak::abrir(const std::string& base, bool puede_ir_cifrado, bool avisar) {
     }
     // Ante nombres repetidos gana la última entrada del índice: stable_sort + búsqueda por el final.
     std::stable_sort(entradas_.begin(), entradas_.end(), [](const Entrada& a, const Entrada& b) { return a.hash < b.hash; });
+    rutas_.clear();
+    for (u32 i = 0; i < entradas_.size(); ++i)
+        if (const std::string_view n = nombre(i); n.find_first_of("/\\") != std::string_view::npos) rutas_.emplace_back(hash_nombre(n), i);
+    std::stable_sort(rutas_.begin(), rutas_.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
     return true;
 }
 
@@ -154,9 +158,17 @@ bool Pak::decodificar(const Entrada& e, std::vector<u8>& salida) const {
 
 Bytes Pak::buscar(std::string_view nombre) const {
     const u64 h = hash_nombre(nombre);
-    auto it = std::upper_bound(entradas_.begin(), entradas_.end(), h, [](u64 v, const Entrada& e) { return v < e.hash; });
-    if (it == entradas_.begin() || (it - 1)->hash != h) return {};
-    const Entrada& e = *(it - 1);
+    const Entrada* encontrada = nullptr;
+    if (nombre.find_first_of("/\\") != std::string_view::npos) {  // with folders: the exact path
+        auto r = std::upper_bound(rutas_.begin(), rutas_.end(), h, [](u64 v, const auto& x) { return v < x.first; });
+        if (r == rutas_.begin() || (r - 1)->first != h) return {};
+        encontrada = &entradas_[(r - 1)->second];
+    } else {
+        auto it = std::upper_bound(entradas_.begin(), entradas_.end(), h, [](u64 v, const Entrada& e) { return v < e.hash; });
+        if (it == entradas_.begin() || (it - 1)->hash != h) return {};
+        encontrada = &*(it - 1);
+    }
+    const Entrada& e = *encontrada;
     if (!des_ && e.compresion == 0) return datos_.datos().subspan(e.offset, e.tam);
     std::lock_guard l(mu_);
     auto [pos, nuevo] = decodificados_.try_emplace(static_cast<u32>(&e - entradas_.data()));
